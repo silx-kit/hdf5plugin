@@ -53,8 +53,9 @@ if sys.platform.startswith("win"):
         plugin_path = os.path.join(os.path.dirname(__file__),
                                        compiler,
                                        arch)
-        os.environ["HDF5_PLUGIN_PATH"]  = plugin_path
-        if current_path is not None:
-            os.environ["HDF5_PLUGIN_PATH"] += ";" + current_path
-                          
         
+        if current_path is None:
+            os.environ["HDF5_PLUGIN_PATH"]  = plugin_path
+        else:
+            os.environ["HDF5_PLUGIN_PATH"] = current_path + ";" + plugin_path
+

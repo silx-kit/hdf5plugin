@@ -28,12 +28,13 @@ __date__ = "06/07/2016"
 
 from setuptools import setup
 
-version="1.0.0"
+version="1.0.1"
 name = "hdf5plugin"
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows"
-long_description="Set HDF5_PLUGIN_PATH at run time as function of Python version used.\n"
-long_description += "For the time being, only LZ4 filter added."
+f = open("README.rst")
+long_description=f.read()
+f.close()
 classifiers = ["Development Status :: 3 - Alpha",
                "Environment :: Console",
                "Environment :: Win32 (MS Windows)",
