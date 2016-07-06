@@ -1,0 +1,5 @@
+include README.rst
+include MANIFEST.in
+include setup.py
+include setup.cfg
+recursive-include hdf5plugin *.py *.dll
