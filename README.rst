@@ -3,11 +3,11 @@ hdf5plugin
 
 This module provides HDF5 plugins and sets the HDF5_PLUGIN_PATH to the appropriate value according to the version of python used.
 
-The module is intended for use under windows because at this point no other shared libraries are provided.
+The module is mainly intended for use under windows but shared libraries for MacOS are also provided.
 
-The LZ4 plugin (H5Zlz4.dll) sources were obtained from https://github.com/nexusformat/HDF5-External-Filter-Plugins
+The LZ4 plugin sources were obtained from https://github.com/nexusformat/HDF5-External-Filter-Plugins
 
-The bitshuffle plugin (H5bshuf.dll) sources were obtained from https://github.com/kiyo-masui/bitshuffle
+The bitshuffle plugin sources were obtained from https://github.com/kiyo-masui/bitshuffle
 
 
 Installation
