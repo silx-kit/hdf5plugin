@@ -49,7 +49,8 @@ classifiers = ["Development Status :: 3 - Alpha",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
 package_data = {'hdf5plugin': ["VS2008/x86/*" ,"VS2008/x64/*",
-                               "VS2015/x86/*", "VS2015/x64/*"]}
+                               "VS2015/x86/*", "VS2015/x64/*",
+                               "darwin/*"]}
 
 if __name__ == "__main__":
     setup(name=name,
