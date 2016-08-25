@@ -31,7 +31,7 @@ from setuptools import setup
 version="1.2.0"
 name = "hdf5plugin"
 author = "ESRF - Data Analysis Unit"
-description = "HDF5 Plugins for windows"
+description = "HDF5 Plugins for windows (and MacOS)"
 f = open("README.rst")
 long_description=f.read()
 f.close()
