@@ -27,15 +27,15 @@ under windows."""
 
 __authors__ = ["V.A. Sole"]
 __license__ = "MIT"
-__date__ = "06/07/2016"
+__date__ = "17/08/2016"
 
 import os
 import sys
 
-if sys.platform.startswith("win"):
+if sys.platform.startswith("darwin"):
+    compiler = "darwin"
     arch = None
-    if ("h5py" in sys.modules) or ("PyTables" in sys.modules):
-        raise ImportError("You should import hdf5plugin before importing h5py or PyTables")
+elif sys.platform.startswith("win"):
     if sys.version.startswith("3.5"):
         compiler = "VS2015"
     elif sys.version.startswith("2.7"):
@@ -48,14 +48,21 @@ if sys.platform.startswith("win"):
     else:
         # 32 bit
         arch = "x86"
+else:
+   compiler = None
+
+if compiler is not None:
+    if ("h5py" in sys.modules) or ("PyTables" in sys.modules):
+        raise ImportError("You should import hdf5plugin before importing h5py or PyTables")
     current_path = os.getenv("HDF5_PLUGIN_PATH", None)
-    if arch is not None:
-        plugin_path = os.path.join(os.path.dirname(__file__),
-                                       compiler,
+    plugin_path = os.path.join(os.path.dirname(__file__),
+                                       compiler)
+    if arch:
+        plugin_path = os.path.join(plugin_path,
                                        arch)
         
-        if current_path is None:
-            os.environ["HDF5_PLUGIN_PATH"]  = plugin_path
-        else:
-            os.environ["HDF5_PLUGIN_PATH"] = current_path + ";" + plugin_path
+    if current_path is None:
+        os.environ["HDF5_PLUGIN_PATH"]  = plugin_path
+    else:
+        os.environ["HDF5_PLUGIN_PATH"] = current_path + ";" + plugin_path
 

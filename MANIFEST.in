@@ -2,6 +2,4 @@ include README.rst
 include MANIFEST.in
 include setup.py
 include setup.cfg
-include LICENSE_H5Zlz4
-include LICENSE_H5bitshuf
-recursive-include hdf5plugin *.py *.dll
+recursive-include hdf5plugin *.py *.dll *.so *.dylib
