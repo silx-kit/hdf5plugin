@@ -25,9 +25,9 @@
 """This module provides compiled shared libraries for their use as HDF5 plugins
 under windows."""
 
-__authors__ = ["V.A. Sole"]
+__authors__ = ["V.A. Sole", "H. Payno"]
 __license__ = "MIT"
-__date__ = "17/08/2016"
+__date__ = "25/08/2016"
 
 import os
 import sys
