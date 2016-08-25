@@ -9,6 +9,11 @@ The LZ4 plugin sources were obtained from https://github.com/nexusformat/HDF5-Ex
 
 The bitshuffle plugin sources were obtained from https://github.com/kiyo-masui/bitshuffle
 
+Known issues
+------------
+
+Under MacOS, the bitshuffle plugin is limited to decompression (i.e. it can be used to read bitshuffle compressed data).
+
 
 Installation
 ------------
