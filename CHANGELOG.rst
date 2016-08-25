@@ -1,3 +1,10 @@
+1.2.0
+-----
+
+- Add LZ4 filter plugin for MacOS
+
+- Add bitshuffle plugin decompressor for MacOS
+
 1.1.0
 -----
 

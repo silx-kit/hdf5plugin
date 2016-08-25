@@ -24,11 +24,11 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole"]
 __license__ = "MIT"
-__date__ = "11/07/2016"
+__date__ = "25/08/2016"
 
 from setuptools import setup
 
-version="1.1.0"
+version="1.2.0"
 name = "hdf5plugin"
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows"
@@ -37,13 +37,16 @@ long_description=f.read()
 f.close()
 classifiers = ["Development Status :: 3 - Alpha",
                "Environment :: Console",
+               "Environment :: MacOS X",
                "Environment :: Win32 (MS Windows)",
                "Intended Audience :: Education",
                "Intended Audience :: Science/Research",
                "License :: OSI Approved :: MIT License",
                "Natural Language :: English",
+               "Operating System :: MacOS",
                "Operating System :: Microsoft :: Windows",
                "Programming Language :: Python :: 2.7",
+               "Programming Language :: Python :: 3.4",
                "Programming Language :: Python :: 3.5",
                "Topic :: Scientific/Engineering :: Physics",
                "Topic :: Software Development :: Libraries :: Python Modules",
