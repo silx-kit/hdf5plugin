@@ -2,4 +2,8 @@ include README.rst
 include MANIFEST.in
 include setup.py
 include setup.cfg
+include .travis.yml
+include appveyor.yml
+recursive-include ci *.py *.sh
 recursive-include hdf5plugin *.py *.dll *.so *.dylib
+recursive-include test *.py *.h5
