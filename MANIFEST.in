@@ -3,3 +3,4 @@ include MANIFEST.in
 include setup.py
 include setup.cfg
 recursive-include hdf5plugin *.py *.dll *.so *.dylib
+recursive-include test *.py *.h5
