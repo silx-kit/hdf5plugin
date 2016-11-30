@@ -3,7 +3,7 @@ hdf5plugin
 
 This module provides HDF5 plugins and sets the HDF5_PLUGIN_PATH to the appropriate value according to the version of python used.
 
-The module is mainly intended for use under windows but shared libraries for MacOS are also provided.
+The module is mainly intended for use under windows but shared libraries for MacOS and manylinux are also provided.
 
 The LZ4 plugin sources were obtained from https://github.com/nexusformat/HDF5-External-Filter-Plugins
 
@@ -12,7 +12,7 @@ The bitshuffle plugin sources were obtained from https://github.com/kiyo-masui/b
 Known issues
 ------------
 
-Under MacOS, the bitshuffle plugin is limited to decompression (i.e. it can be used to read bitshuffle compressed data).
+Under MacOS and linux, the bitshuffle plugin is limited to decompression (i.e. it can be used to read bitshuffle compressed data).
 
 
 Installation
