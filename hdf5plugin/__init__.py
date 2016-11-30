@@ -37,7 +37,7 @@ if sys.platform.startswith("darwin"):
     compiler = "darwin"
     arch = None
     path_separator = ":"
-elif sys.platform.startswith("linux2"):
+elif sys.platform.startswith("linux"):
     if sys.maxsize > 2**32:
         # 64 bit
         arch = "x86_64"
