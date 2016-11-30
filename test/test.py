@@ -87,7 +87,12 @@ def getSuite(auto=True):
     return testSuite
 
 def test(auto=False):
-    unittest.TextTestRunner(verbosity=2).run(getSuite(auto=auto))
+    result = unittest.TextTestRunner(verbosity=2).run(getSuite(auto=auto))
+    return(result)
 
 if __name__ == "__main__":
-    test()
+    result = test()
+    if result.wasSuccessful():
+        sys.exit(0)
+    else:
+        sys.exit(1)
