@@ -32,9 +32,21 @@ __date__ = "25/08/2016"
 import os
 import sys
 
+
 if sys.platform.startswith("darwin"):
     compiler = "darwin"
     arch = None
+    path_separator = ":"
+elif sys.platform.startswith("linux2"):
+    if sys.maxsize > 2**32:
+        # 64 bit
+        arch = "x86_64"
+        compiler = "manylinux"
+    else:
+        # 32 bit
+        arch = None
+        compiler = None
+    path_separator = ":"    
 elif sys.platform.startswith("win"):
     if sys.version.startswith("3.5"):
         compiler = "VS2015"
@@ -48,6 +60,7 @@ elif sys.platform.startswith("win"):
     else:
         # 32 bit
         arch = "x86"
+    path_separator = ";"
 else:
    compiler = None
 
@@ -64,5 +77,4 @@ if compiler is not None:
     if current_path is None:
         os.environ["HDF5_PLUGIN_PATH"]  = plugin_path
     else:
-        os.environ["HDF5_PLUGIN_PATH"] = current_path + ";" + plugin_path
-
+        os.environ["HDF5_PLUGIN_PATH"] = current_path + path_separator + plugin_path

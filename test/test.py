@@ -35,6 +35,7 @@ class TestHDF5Plugin(unittest.TestCase):
         if "hdf5plugin" not in sys.modules:
             self.assertFalse("h5py" in sys.modules)        
             import hdf5plugin
+            
 
     def tearDown(self):
         pass
