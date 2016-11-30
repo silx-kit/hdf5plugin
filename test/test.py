@@ -48,7 +48,7 @@ class TestHDF5Plugin(unittest.TestCase):
     def testLZ4(self):
         import h5py
         version = h5py.version.hdf5_version
-        if LooseVersion(version) < LooseVersion("1.10"):
+        if LooseVersion(version) < LooseVersion("1.8.11"):
             self.skipTest("HDF5 %s Version is lower than 1.8.11" % version)
         dirname = os.path.abspath(os.path.dirname(__file__))
         fname = os.path.join(dirname, "lz4.h5")
@@ -66,7 +66,7 @@ class TestHDF5Plugin(unittest.TestCase):
     def testBitshuffle(self):
         import h5py
         version = h5py.version.hdf5_version
-        if LooseVersion(version) < LooseVersion("1.10"):
+        if LooseVersion(version) < LooseVersion("1.8.11"):
             self.skipTest("HDF5 %s Version is lower than 1.8.11" % version)
         dirname = os.path.abspath(os.path.dirname(__file__))
         fname = os.path.join(dirname, "bitshuffle.h5")
