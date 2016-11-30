@@ -1,3 +1,13 @@
+1.3.0
+-----
+
+- Add 64-bit manylinux version LZ4 filter plugin
+
+- Add 64-bit manylinux version bitshuffle plugin
+
+- Implement continuous imtegration testing
+
+
 1.2.0
 -----
 

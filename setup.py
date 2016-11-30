@@ -24,14 +24,14 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole"]
 __license__ = "MIT"
-__date__ = "25/08/2016"
+__date__ = "30/11/2016"
 
 from setuptools import setup
 
-version="1.2.0"
+version="1.3.0"
 name = "hdf5plugin"
 author = "ESRF - Data Analysis Unit"
-description = "HDF5 Plugins for windows (and MacOS)"
+description = "HDF5 Plugins for windows,MacOS and linux"
 f = open("README.rst")
 long_description=f.read()
 f.close()
@@ -43,6 +43,7 @@ classifiers = ["Development Status :: 3 - Alpha",
                "Intended Audience :: Science/Research",
                "License :: OSI Approved :: MIT License",
                "Natural Language :: English",
+	       "Operating System :: POSIX :: Linux",
                "Operating System :: MacOS",
                "Operating System :: Microsoft :: Windows",
                "Programming Language :: Python :: 2.7",
@@ -53,7 +54,8 @@ classifiers = ["Development Status :: 3 - Alpha",
                ]
 package_data = {'hdf5plugin': ["VS2008/x86/*" ,"VS2008/x64/*",
                                "VS2015/x86/*", "VS2015/x64/*",
-                               "darwin/*"]}
+                               "darwin/*",
+                               "manylinux/x86_64/*"]}
 
 if __name__ == "__main__":
     setup(name=name,
