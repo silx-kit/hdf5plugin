@@ -28,7 +28,7 @@ __date__ = "30/11/2016"
 
 from setuptools import setup
 
-version="1.3.0"
+version="1.3.1"
 name = "hdf5plugin"
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows,MacOS and linux"

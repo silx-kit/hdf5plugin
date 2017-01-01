@@ -1,3 +1,8 @@
+1.3.1
+-----
+
+- Support Python 3.6 under 64-bit windows.
+
 1.3.0
 -----
 
