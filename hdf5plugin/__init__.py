@@ -27,7 +27,7 @@ under windows."""
 
 __authors__ = ["V.A. Sole", "H. Payno"]
 __license__ = "MIT"
-__date__ = "25/08/2016"
+__date__ = "01/01/2017"
 
 import os
 import sys
@@ -48,7 +48,7 @@ elif sys.platform.startswith("linux"):
         compiler = None
     path_separator = ":"    
 elif sys.platform.startswith("win"):
-    if sys.version.startswith("3.5"):
+    if sys.version.startswith("3.5") or sys.version.startswith("3.6"):
         compiler = "VS2015"
     elif sys.version.startswith("2.7"):
         compiler = "VS2008"
