@@ -1,3 +1,13 @@
+1.4.1
+-----
+
+- Support Python 3.7 under 64-bit windows
+
+1.4.0
+-----
+
+Manylinux support
+
 1.3.1
 -----
 

@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2017 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2018 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,11 +24,11 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole"]
 __license__ = "MIT"
-__date__ = "04/01/2017"
+__date__ = "11/07/2018"
 
 from setuptools import setup
 
-version="1.4.0"
+version="1.4.1"
 name = "hdf5plugin"
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows,MacOS and linux"
@@ -50,6 +50,7 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.4",
                "Programming Language :: Python :: 3.5",
                "Programming Language :: Python :: 3.6",
+               "Programming Language :: Python :: 3.7",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
 package_data = {'hdf5plugin': ["VS2008/x86/*" ,"VS2008/x64/*",

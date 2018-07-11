@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2018 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,11 @@
 #
 # ###########################################################################*/
 """This module provides compiled shared libraries for their use as HDF5 plugins
-under windows."""
+under windows, MacOS and linux."""
 
 __authors__ = ["V.A. Sole", "H. Payno"]
 __license__ = "MIT"
-__date__ = "01/01/2017"
+__date__ = "11/07/2018"
 
 import os
 import sys
@@ -48,7 +48,7 @@ elif sys.platform.startswith("linux"):
         compiler = None
     path_separator = ":"    
 elif sys.platform.startswith("win"):
-    if sys.version.startswith("3.5") or sys.version.startswith("3.6"):
+    if sys.version_info >= (3, 5):
         compiler = "VS2015"
     elif sys.version.startswith("2.7"):
         compiler = "VS2008"
