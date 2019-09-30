@@ -87,6 +87,9 @@ BSHUF = 32008
 LZ4 = 32004
 """LZ4 filter ID"""
 
+FILTERS = {'blosc': BLOSC, 'bshuf': BSHUF, 'lz4': LZ4}
+"""Mapping of filter name to HDF5 filter ID for available filters"""
+
 
 def _init_plugins():
     """Initialise and register HDF5 filter plugins with h5py
@@ -95,8 +98,17 @@ def _init_plugins():
     """
     import h5py
 
-    for filename in _glob(os.path.join(PLUGINS_PATH, 'libh5*')):
+    hdf5_version = h5py.h5.get_libversion()
+
+    for name, filter_id in FILTERS.items():
+        # Check if filter is already loaded (not on buggy HDF5 versions)
+        if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
+            if h5py.h5z.filter_avail(filter_id):
+                _logger.warning("%s filter already loaded, skip it.", name)
+                continue
+
         # Load DLL
+        filename = _glob(os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
         lib = ctypes.CDLL(filename)
 
         if hasattr(lib, 'init_plugin'):
@@ -116,8 +128,7 @@ def _init_plugins():
         h5zlib = ctypes.CDLL(h5py.h5z.__file__)
         h5zlib.H5Zregister.argtypes = [ctypes.c_void_p]
         h5zlib.H5Zregister.restype = ctypes.c_int
-        retval = h5zlib.H5Zregister(plugin_info)
-        if retval != 0:
+        if h5zlib.H5Zregister(plugin_info) != 0:
             _logger.error('cannot register plugin: %s', filename)
         else:
             yield filename, lib
