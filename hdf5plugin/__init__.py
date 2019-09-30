@@ -39,11 +39,7 @@ import sys
 _logger = logging.getLogger(__name__)
 
 
-if sys.platform.startswith("darwin"):
-    compiler = "darwin"
-    arch = None
-    path_separator = ":"
-elif sys.platform.startswith("win"):
+if sys.platform.startswith("win"):
     if sys.version_info >= (3, 5):
         compiler = "VS2015"
     elif sys.version.startswith("2.7"):
