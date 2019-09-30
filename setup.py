@@ -133,11 +133,11 @@ lz4_plugin = Extension(
     include_dirs=[HDF5_INC_DIR] + lz4_include_dirs,
     )
 
-extensions=[
-    lz4_plugin,
-    bithsuffle_plugin,
-    blosc_plugin,
-    ]
+
+extensions=[lz4_plugin,
+            bithsuffle_plugin,
+            blosc_plugin,
+            ]
 
 # setup
 
@@ -181,5 +181,7 @@ if __name__ == "__main__":
           package_data=package_data,
           packages=[name],
           ext_modules=extensions,
+          install_requires=['h5py'],
+          setup_requires=['setuptools'],
           )
 
