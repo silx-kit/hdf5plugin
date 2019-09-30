@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2019 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,22 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
-__authors__ = ["V.A. Sole"]
+__authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "25/08/2016"
+__date__ = "30/09/2019"
+
 
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 from distutils.version import LooseVersion
 
-class TestHDF5Plugin(unittest.TestCase):
+import numpy
+
+
+class TestHDF5PluginRead(unittest.TestCase):
     def setUp(self):
         if "hdf5plugin" not in sys.modules:
             self.assertFalse("h5py" in sys.modules)        
@@ -81,21 +87,86 @@ class TestHDF5Plugin(unittest.TestCase):
         self.assertTrue(data.shape[2] == 2070, "Incorrect shape")
         self.assertTrue(data[0, 1372, 613] == 922, "Incorrect value")
 
+
+class TestHDF5PluginRW(unittest.TestCase):
+    """Test write/read a HDF5 file with the plugins"""
+
+    @classmethod
+    def setUpClass(cls):
+        import hdf5plugin
+
+        cls.tempdir = tempfile.mkdtemp()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir)
+
+    def _test(self, filter_name):
+        """Run test for a particular filter
+
+        :param str filter_name: The name of the filter to use
+        """
+        import hdf5plugin
+        import h5py
+
+        data = numpy.arange(100, dtype='float32')
+        filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
+
+        # Write
+        f = h5py.File(filename, "w")
+        f.create_dataset("data",
+                         data=data,
+                         compression=hdf5plugin.FILTERS[filter_name])
+        f.close()
+
+        # Read
+        f = h5py.File(filename, "r")
+        saved = f['data'][()]
+        plist = f['data'].id.get_create_plist()
+        filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
+        f.close()
+
+        self.assertTrue(numpy.array_equal(saved, data))
+        self.assertEqual(saved.dtype, data.dtype)
+
+        self.assertEqual(len(filters), 1)
+        self.assertEqual(filters[0][0], hdf5plugin.FILTERS[filter_name])
+
+        os.remove(filename)
+
+    def testBitshuffle(self):
+        """Write/read test with bitshuffle filter plugin"""
+        self._test('bshuf')
+
+    def testBlosc(self):
+        """Write/read test with blosc filter plugin"""
+        self._test('blosc')
+
+    def testLZ4(self):
+        """Write/read test with lz4 filter plugin"""
+        self._test('lz4')
+
+
 def getSuite(auto=True):
     testSuite = unittest.TestSuite()
     if auto:
-        testSuite.addTest(\
-            unittest.TestLoader().loadTestsFromTestCase(TestHDF5Plugin))
+        testSuite.addTest(
+            unittest.TestLoader().loadTestsFromTestCase(TestHDF5PluginRead))
     else:
         # use a predefined order
-        testSuite.addTest(TestHDF5Plugin("testHDF5PluginImport"))
-        testSuite.addTest(TestHDF5Plugin("testLZ4"))
-        testSuite.addTest(TestHDF5Plugin("testBitshuffle"))
+        testSuite.addTest(TestHDF5PluginRead("testHDF5PluginImport"))
+        testSuite.addTest(TestHDF5PluginRead("testLZ4"))
+        testSuite.addTest(TestHDF5PluginRead("testBitshuffle"))
+
+    testSuite.addTest(
+        unittest.TestLoader().loadTestsFromTestCase(TestHDF5PluginRW))
     return testSuite
+
 
 def test(auto=False):
     result = unittest.TextTestRunner(verbosity=2).run(getSuite(auto=auto))
     return(result)
+
 
 if __name__ == "__main__":
     result = test()
