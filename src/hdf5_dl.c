@@ -23,7 +23,7 @@
 # ###########################################################################*/
 /* This provides replacement for HDF5 functions/variables used by filters.
  *
- * Those replacement provides no-op functions by default and if init_plugin
+ * Those replacement provides no-op functions by default and if init_filter
  * is called it provides access to HDF5 functions/variables through dynamic
  * loading.
  * This is useful on Linux/macOS to avoid linking the plugin with a dedicated
@@ -122,7 +122,7 @@ typedef const char* libname_t;
  * libname: Name of the DLL from which to load libHDF5 symbols
  * Returns: a value < 0 if an error occured
  */
-int init_plugin(libname_t libname)
+int init_filter(libname_t libname)
 {
     int retval = -1;
   	void * handle;

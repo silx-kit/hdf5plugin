@@ -22,7 +22,7 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
-"""This module provides compiled shared libraries for their use as HDF5 plugins
+"""This module provides compiled shared libraries for their use as HDF5 filters
 under windows, MacOS and linux."""
 
 __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
@@ -68,8 +68,8 @@ FILTERS = {'blosc': BLOSC, 'bshuf': BSHUF, 'lz4': LZ4}
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
 
-def _init_plugins():
-    """Initialise and register HDF5 filter plugins with h5py
+def _init_filters():
+    """Initialise and register HDF5 filters with h5py
 
     Generator of tuples: (filename, library handle)
     """
@@ -93,10 +93,10 @@ def _init_plugins():
             lib.register_filter.restype = ctypes.c_int
             retval = lib.register_filter()
         else:
-            # Use init_plugin function to initialize DLL and register plugin
-            lib.init_plugin.argtypes = [ctypes.c_char_p]
-            lib.init_plugin.restype = ctypes.c_int
-            retval = lib.init_plugin(bytes(h5py.h5z.__file__, encoding='utf-8'))
+            # Use init_filter function to initialize DLL and register filter
+            lib.init_filter.argtypes = [ctypes.c_char_p]
+            lib.init_filter.restype = ctypes.c_int
+            retval = lib.init_filter(bytes(h5py.h5z.__file__, encoding='utf-8'))
 
         if retval < 0:
             _logger.error("Cannot initialize filter %s: %d", name, retval)
@@ -105,4 +105,4 @@ def _init_plugins():
         yield filename, lib
 
 
-_plugins = dict(_init_plugins())  # Store loaded plugins
+_filters = dict(_init_filters())  # Store loaded filters

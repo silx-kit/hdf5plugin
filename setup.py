@@ -63,7 +63,7 @@ class HDF5PluginExtension(Extension):
                 self.__extend(kwargs, 'library_dirs', [hdf5_lib_dir])
         else:
             self.__extend(kwargs, 'sources', ['src/hdf5_dl.c'])
-            self.__extend(kwargs, 'export_symbols', ['init_plugin'])
+            self.__extend(kwargs, 'export_symbols', ['init_filter'])
 
         hdf5_inc_dir = os.environ.get('HDF5_INC_DIR', None)
         if hdf5_inc_dir:
