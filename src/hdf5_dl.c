@@ -21,8 +21,16 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
-
+/* This provides replacement for HDF5 functions/variables used by filters.
+ *
+ * Those replacement provides no-op functions by default and if init_plugin
+ * is called it provides access to HDF5 functions/variables through dynamic
+ * loading.
+ * This is useful on Linux/macOS to avoid linking the plugin with a dedicated
+ * HDF5 library.
+ */
 #include "hdf5.h"
+#include "H5PLextern.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -34,7 +42,9 @@
 #define DL_OPEN(libname) dlopen(libname, RTLD_LAZY | RTLD_LOCAL)
 #define DL_SYM(handle, symbol) dlsym(handle, symbol)
 
-#endif /*WIN32*/
+#endif /*_WIN32*/
+
+
 
 /*Function types*/
 /*H5*/
@@ -99,10 +109,24 @@ hid_t H5E_ERR_CLS_g = -1;
 static bool is_init = false;
 
 
-void init_plugin(const char * libname)
+/* Handle difference between dlopen and LoadLibraryExW */
+#ifdef _WIN32
+typedef const wchar_t* libname_t; /* Using utf-16-le encoding */
+#else
+typedef const char* libname_t;
+#endif /*_WIN32*/
+
+
+/* Initialize the dynamic loading of symbols and register the plugin
+ *
+ * libname: Name of the DLL from which to load libHDF5 symbols
+ * Returns: a value < 0 if an error occured
+ */
+int init_plugin(libname_t libname)
 {
+    int retval = -1;
   	void * handle;
-    
+
     handle = DL_OPEN(libname);
 
     if (handle != NULL) {
@@ -124,13 +148,20 @@ void init_plugin(const char * libname)
         DL_H5Functions.H5Zregister = (DL_func_H5Zregister)DL_SYM(handle, "H5Zregister");
 
         /*Variables*/
+#ifndef _WIN32 /* This crashes on Windows... */
         H5E_CANTREGISTER_g = *((hid_t *)DL_SYM(handle, "H5E_CANTREGISTER_g"));
         H5E_CALLBACK_g = *((hid_t *)DL_SYM(handle, "H5E_CALLBACK_g"));
         H5E_PLINE_g = *((hid_t *)DL_SYM(handle, "H5E_PLINE_g"));
         H5E_ERR_CLS_g = *((hid_t *)DL_SYM(handle, "H5E_ERR_CLS_g"));
+#endif /*_WIN32*/
+
+        /*Register plugin*/
+        retval = H5Zregister(H5PLget_plugin_info());
 
         is_init = true;
     }
+
+    return retval;
 };
 
 
@@ -208,6 +239,6 @@ CALL(0, H5Tclose, type_id)
 /*H5Z*/
 herr_t H5Zregister(const void *cls)
 {
-CALL(0, H5Zregister, cls)
+CALL(-1, H5Zregister, cls)
 }
 

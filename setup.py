@@ -48,6 +48,7 @@ class PluginBuildExt(build_ext):
 HDF5_INC_DIR = '/users/tvincent/src/libhdf5/10.5/include'
 HDF5_INC_DIR = 'include'
 
+
 def prefix(directory, files):
     """Add a directory as prefix to a list of files.
 
@@ -73,7 +74,6 @@ bithsuffle_plugin = Extension(
         ["src/bitshuffle.h", "src/bitshuffle_core.h",
          "src/iochain.h", 'src/bshuf_h5filter.h',
          "lz4/lz4.h"]),
-    #extra_compile_args = ['-DH5_BUILT_AS_DYNAMIC_LIB'],
     include_dirs=[HDF5_INC_DIR] + prefix(bithsuffle_dir, ['src/', 'lz4/']),
     export_symbols=['init_plugin'],
     )
@@ -140,11 +140,13 @@ lz4_dir = 'src/HDF5-External-Filter-Plugins/LZ4/src/'
 
 lz4_plugin = Extension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/HDF5-External-Filter-Plugins/LZ4/src/H5Zlz4.c'] + lz4_sources,
+    sources=['src/hdf5_dl.c',
+             'src/HDF5-External-Filter-Plugins/LZ4/src/H5Zlz4.c'] + \
+            lz4_sources,
     depends=lz4_depends,
     include_dirs=[HDF5_INC_DIR] + lz4_include_dirs,
-    export_symbols=[],
     libraries=['Ws2_32'] if sys.platform == 'win32' else [],
+    export_symbols=['init_plugin'],
     )
 
 
