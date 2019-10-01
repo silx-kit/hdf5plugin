@@ -29,14 +29,24 @@ __date__ = "11/07/2018"
 
 from glob import glob
 import os
+import sys
 from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 
 
 # Plugins
 
+class PluginBuildExt(build_ext):
+    """Build command for DLLs that are not Python modules"""
+
+    def get_export_symbols(self, ext):
+        """Overridden to remove PyInit_* export"""
+        return ext.export_symbols
+
+
 # TODO allow to set-up
 HDF5_INC_DIR = '/users/tvincent/src/libhdf5/10.5/include'
-
+HDF5_INC_DIR = 'include'
 
 def prefix(directory, files):
     """Add a directory as prefix to a list of files.
@@ -65,6 +75,7 @@ bithsuffle_plugin = Extension(
          "lz4/lz4.h"]),
     #extra_compile_args = ['-DH5_BUILT_AS_DYNAMIC_LIB'],
     include_dirs=[HDF5_INC_DIR] + prefix(bithsuffle_dir, ['src/', 'lz4/']),
+    export_symbols=['init_plugin'],
     )
 
 
@@ -119,6 +130,7 @@ blosc_plugin = Extension(
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [HDF5_INC_DIR, hdf5_blosc_dir],
     define_macros=define_macros,
+    export_symbols=['init_plugin'],
     )
 
 
@@ -131,6 +143,8 @@ lz4_plugin = Extension(
     sources=['src/HDF5-External-Filter-Plugins/LZ4/src/H5Zlz4.c'] + lz4_sources,
     depends=lz4_depends,
     include_dirs=[HDF5_INC_DIR] + lz4_include_dirs,
+    export_symbols=[],
+    libraries=['Ws2_32'] if sys.platform == 'win32' else [],
     )
 
 
@@ -181,5 +195,6 @@ if __name__ == "__main__":
           ext_modules=extensions,
           install_requires=['h5py'],
           setup_requires=['setuptools'],
+          cmdclass={'build_ext': PluginBuildExt},
           )
 

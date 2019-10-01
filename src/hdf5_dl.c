@@ -1,9 +1,40 @@
-#ifndef _HDF5_DYNAMIC_LOADING_H
-#define _HDF5_DYNAMIC_LOADING_H
+# /*##########################################################################
+#
+# Copyright (c) 2019 European Synchrotron Radiation Facility
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+# ###########################################################################*/
 
 #include "hdf5.h"
-#include <dlfcn.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define DL_OPEN(libname) LoadLibraryExW(libname, NULL, LOAD_WITH_ALTERED_SEARCH_PATH)
+#define DL_SYM(handle, symbol) GetProcAddress(handle, symbol)
+
+#else
+#include <dlfcn.h>
+#define DL_OPEN(libname) dlopen(libname, RTLD_LAZY | RTLD_LOCAL)
+#define DL_SYM(handle, symbol) dlsym(handle, symbol)
+
+#endif /*WIN32*/
 
 /*Function types*/
 /*H5*/
@@ -72,31 +103,31 @@ void init_plugin(const char * libname)
 {
   	void * handle;
     
-    handle = dlopen(libname, RTLD_LAZY | RTLD_LOCAL);
+    handle = DL_OPEN(libname);
 
     if (handle != NULL) {
         /*H5*/
-        DL_H5Functions.H5open = (DL_func_H5open)dlsym(handle, "H5open");
+        DL_H5Functions.H5open = (DL_func_H5open)DL_SYM(handle, "H5open");
         /*H5E*/
-        DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)dlsym(handle, "H5Epush1");
-        DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)dlsym(handle, "H5Epush2");
+        DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)DL_SYM(handle, "H5Epush1");
+        DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)DL_SYM(handle, "H5Epush2");
         /*H5P*/
-        DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)dlsym(handle, "H5Pget_filter_by_id2");
-        DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)dlsym(handle, "H5Pget_chunk");
-        DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)dlsym(handle, "H5Pmodify_filter");
+        DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)DL_SYM(handle, "H5Pget_filter_by_id2");
+        DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)DL_SYM(handle, "H5Pget_chunk");
+        DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)DL_SYM(handle, "H5Pmodify_filter");
         /*H5T*/
-        DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
-        DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
-        DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_super");
-        DL_H5Functions.H5Tclose = (DL_func_H5Tclose)dlsym(handle, "H5Tclose");
+        DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)DL_SYM(handle, "H5Tget_size");
+        DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)DL_SYM(handle, "H5Tget_class");
+        DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)DL_SYM(handle, "H5Tget_super");
+        DL_H5Functions.H5Tclose = (DL_func_H5Tclose)DL_SYM(handle, "H5Tclose");
         /*H5Z*/
-        DL_H5Functions.H5Zregister = (DL_func_H5Zregister)dlsym(handle, "H5Zregister");
+        DL_H5Functions.H5Zregister = (DL_func_H5Zregister)DL_SYM(handle, "H5Zregister");
 
         /*Variables*/
-        H5E_CANTREGISTER_g = *((hid_t *)dlsym(handle, "H5E_CANTREGISTER_g"));
-        H5E_CALLBACK_g = *((hid_t *)dlsym(handle, "H5E_CALLBACK_g"));
-        H5E_PLINE_g = *((hid_t *)dlsym(handle, "H5E_PLINE_g"));
-        H5E_ERR_CLS_g = *((hid_t *)dlsym(handle, "H5E_ERR_CLS_g"));
+        H5E_CANTREGISTER_g = *((hid_t *)DL_SYM(handle, "H5E_CANTREGISTER_g"));
+        H5E_CALLBACK_g = *((hid_t *)DL_SYM(handle, "H5E_CALLBACK_g"));
+        H5E_PLINE_g = *((hid_t *)DL_SYM(handle, "H5E_PLINE_g"));
+        H5E_ERR_CLS_g = *((hid_t *)DL_SYM(handle, "H5E_ERR_CLS_g"));
 
         is_init = true;
     }
@@ -180,4 +211,3 @@ herr_t H5Zregister(const void *cls)
 CALL(0, H5Zregister, cls)
 }
 
-#endif
