@@ -56,6 +56,7 @@ if sys.platform.startswith("win"):
 else:
     compiler = None
 
+compiler = None
 if compiler is not None:
     if ("h5py" in sys.modules) or ("PyTables" in sys.modules):
         raise ImportError("You should import hdf5plugin before importing h5py or PyTables")
@@ -111,27 +112,24 @@ def _init_plugins():
         filename = _glob(os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
         lib = ctypes.CDLL(filename)
 
-        if hasattr(lib, 'init_plugin'):
-            # There is a init_plugin function: initialize DLL
-            lib.init_plugin.restype = None
-            lib.init_plugin(bytes(h5py.h5z.__file__, encoding='utf-8'))
-
-        # Register plugin with h5py's libhdf5
-        # TODO check plugin_type = lib.H5PLget_plugin_type()
-
-        # Get plugin info struct
-        lib.H5PLget_plugin_info.restype = ctypes.c_void_p
-        plugin_info = lib.H5PLget_plugin_info()
-
-        # Register plugin to h5py
-        # TODO h5py.h5z.register(plugin_info)
-        h5zlib = ctypes.CDLL(h5py.h5z.__file__)
-        h5zlib.H5Zregister.argtypes = [ctypes.c_void_p]
-        h5zlib.H5Zregister.restype = ctypes.c_int
-        if h5zlib.H5Zregister(plugin_info) != 0:
-            _logger.error('cannot register plugin: %s', filename)
+        # Use init_plugin function to initialize DLL and register plugin
+        if sys.platform.startswith('win'): # Uses unicode-16
+            lib.init_plugin.argtypes = [ctypes.c_wchar_p]
+            # TODO : rework support of python, this probably only works with h5py wheel
+            libname = os.path.abspath(os.path.join(
+                os.path.dirname(h5py.h5z.__file__),
+                'hdf5.dll'))
         else:
-            yield filename, lib
+            lib.init_plugin.argtypes = [ctypes.c_char_p]
+            libname = bytes(h5py.h5z.__file__, encoding='utf-8')
+
+        lib.init_plugin.restype = ctypes.c_int
+        retval = lib.init_plugin(libname)
+        if retval < 0:
+            _logger.error("Cannot initialize filter %s: %d", name, retval)
+            continue
+
+        yield filename, lib
 
 
 _plugins = dict(_init_plugins())  # Store loaded plugins
