@@ -22,7 +22,7 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
-__authors__ = ["V.A. Sole"]
+__authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "11/07/2018"
 
@@ -182,8 +182,7 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.7",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
-package_data = {'hdf5plugin': ["VS2008/x86/*" ,"VS2008/x64/*",
-                               "VS2015/x86/*", "VS2015/x64/*"]}
+
 
 if __name__ == "__main__":
     setup(name=name,
@@ -192,7 +191,6 @@ if __name__ == "__main__":
           classifiers=classifiers,
           description=description,
           long_description=long_description,
-          package_data=package_data,
           packages=[name],
           ext_modules=extensions,
           install_requires=['h5py'],
