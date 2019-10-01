@@ -44,9 +44,20 @@ class PluginBuildExt(build_ext):
         return ext.export_symbols
 
 
-# TODO allow to set-up
-HDF5_INC_DIR = '/users/tvincent/src/libhdf5/10.5/include'
-HDF5_INC_DIR = 'include'
+class HDF5PluginExtension(Extension):
+    """Extension adding specific things to build a HDF5 plugin"""
+
+    @staticmethod
+    def __extend(kwargs, key, extra_list):
+        kwargs[key] = extra_list + kwargs.get(key, [])
+
+    def __init__(self, name, **kwargs):
+        self.__extend(kwargs, 'sources', ['src/hdf5_dl.c'])
+        self.__extend(kwargs, 'export_symbols', ['init_plugin'])
+        hdf5_inc_dir = os.environ.get('HDF5_INC_DIR', None)
+        if hdf5_inc_dir:
+            self.__extend(kwargs, 'include_dirs', [hdf5_inc_dir])
+        super(HDF5PluginExtension, self).__init__(name, **kwargs)
 
 
 def prefix(directory, files):
@@ -64,9 +75,9 @@ def prefix(directory, files):
 # TODO compile flags + openmp
 bithsuffle_dir = 'src/bitshuffle'
 
-bithsuffle_plugin = Extension(
+bithsuffle_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5bshuf",
-    sources=['src/hdf5_dl.c'] + prefix(bithsuffle_dir,
+    sources=prefix(bithsuffle_dir,
         ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
          "src/bitshuffle.c", "src/bitshuffle_core.c",
          "src/iochain.c", "lz4/lz4.c"]),
@@ -74,8 +85,7 @@ bithsuffle_plugin = Extension(
         ["src/bitshuffle.h", "src/bitshuffle_core.h",
          "src/iochain.h", 'src/bshuf_h5filter.h',
          "lz4/lz4.h"]),
-    include_dirs=[HDF5_INC_DIR] + prefix(bithsuffle_dir, ['src/', 'lz4/']),
-    export_symbols=['init_plugin'],
+    include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
     )
 
 
@@ -122,15 +132,14 @@ include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 define_macros.append(('HAVE_ZSTD', 1))
 
 
-blosc_plugin = Extension(
+blosc_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5blosc",
-    sources=['src/hdf5_dl.c'] + sources + \
+    sources=sources + \
         prefix(hdf5_blosc_dir,['blosc_filter.c', 'blosc_plugin.c']),
     depends=depends + \
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
-    include_dirs=include_dirs + [HDF5_INC_DIR, hdf5_blosc_dir],
+    include_dirs=include_dirs + [hdf5_blosc_dir],
     define_macros=define_macros,
-    export_symbols=['init_plugin'],
     )
 
 
@@ -138,15 +147,13 @@ blosc_plugin = Extension(
 # Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
 lz4_dir = 'src/HDF5-External-Filter-Plugins/LZ4/src/'
 
-lz4_plugin = Extension(
+lz4_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/hdf5_dl.c',
-             'src/HDF5-External-Filter-Plugins/LZ4/src/H5Zlz4.c'] + \
+    sources=['src/HDF5-External-Filter-Plugins/LZ4/src/H5Zlz4.c'] + \
             lz4_sources,
     depends=lz4_depends,
-    include_dirs=[HDF5_INC_DIR] + lz4_include_dirs,
+    include_dirs=lz4_include_dirs,
     libraries=['Ws2_32'] if sys.platform == 'win32' else [],
-    export_symbols=['init_plugin'],
     )
 
 
