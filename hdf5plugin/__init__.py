@@ -88,19 +88,16 @@ def _init_plugins():
         filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
         lib = ctypes.CDLL(filename)
 
-        # Use init_plugin function to initialize DLL and register plugin
-        if sys.platform.startswith('win'): # Uses unicode-16
-            lib.init_plugin.argtypes = [ctypes.c_wchar_p]
-            # TODO : rework support of python, this probably only works with h5py wheel
-            libname = _os.path.abspath(_os.path.join(
-                _os.path.dirname(h5py.h5z.__file__),
-                'hdf5.dll'))
+        if sys.platform.startswith('win'):
+            # Use register_filter function to register filter
+            lib.register_filter.restype = ctypes.c_int
+            retval = lib.register_filter()
         else:
+            # Use init_plugin function to initialize DLL and register plugin
             lib.init_plugin.argtypes = [ctypes.c_char_p]
-            libname = bytes(h5py.h5z.__file__, encoding='utf-8')
+            lib.init_plugin.restype = ctypes.c_int
+            retval = lib.init_plugin(bytes(h5py.h5z.__file__, encoding='utf-8'))
 
-        lib.init_plugin.restype = ctypes.c_int
-        retval = lib.init_plugin(libname)
         if retval < 0:
             _logger.error("Cannot initialize filter %s: %d", name, retval)
             continue
