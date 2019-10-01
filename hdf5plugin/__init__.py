@@ -32,15 +32,25 @@ __date__ = "30/09/2019"
 import ctypes
 from glob import glob as _glob
 import logging
-import os
+import os as _os
 import sys
 
 
 _logger = logging.getLogger(__name__)
 
 
-PLUGINS_PATH = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), 'plugins'))
+# Check _version module to avoid importing from source
+project = _os.path.basename(_os.path.dirname(_os.path.abspath(__file__)))
+
+try:
+    from ._version import __date__ as date  # noqa
+    from ._version import version, version_info, hexversion, strictversion  # noqa
+except ImportError:
+    raise RuntimeError("Do NOT use %s from its sources: build it and use the built version" % project)
+
+
+PLUGINS_PATH = _os.path.abspath(
+        _os.path.join(_os.path.dirname(__file__), 'plugins'))
 """Path where HDF5 filter plugins are stored"""
 
 
@@ -75,15 +85,15 @@ def _init_plugins():
                 continue
 
         # Load DLL
-        filename = _glob(os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
+        filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
         lib = ctypes.CDLL(filename)
 
         # Use init_plugin function to initialize DLL and register plugin
         if sys.platform.startswith('win'): # Uses unicode-16
             lib.init_plugin.argtypes = [ctypes.c_wchar_p]
             # TODO : rework support of python, this probably only works with h5py wheel
-            libname = os.path.abspath(os.path.join(
-                os.path.dirname(h5py.h5z.__file__),
+            libname = _os.path.abspath(_os.path.join(
+                _os.path.dirname(h5py.h5z.__file__),
                 'hdf5.dll'))
         else:
             lib.init_plugin.argtypes = [ctypes.c_char_p]

@@ -31,6 +31,7 @@ from glob import glob
 import os
 import sys
 from setuptools import setup, Extension
+from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
 
 
@@ -164,8 +165,31 @@ extensions=[lz4_plugin,
 
 # setup
 
-version="1.5.0"
-name = "hdf5plugin"
+# ########## #
+# version.py #
+# ########## #
+
+def get_version():
+    """Returns current version number from version.py file"""
+    dirname = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, dirname)
+    import version
+    sys.path = sys.path[1:]
+    return version.strictversion
+
+
+class build_py(_build_py):
+    """
+    Enhanced build_py which copies version.py to <PROJECT>._version.py
+    """
+    def find_package_modules(self, package, package_dir):
+        modules = _build_py.find_package_modules(self, package, package_dir)
+        if package == PROJECT:
+            modules.append((PROJECT, '_version', 'version.py'))
+        return modules
+
+
+PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows,MacOS and linux"
 f = open("README.rst")
@@ -189,19 +213,21 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.7",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
+cmdclass = dict(build_ext=PluginBuildExt,
+                build_py=build_py)
 
 
 if __name__ == "__main__":
-    setup(name=name,
-          version=version,
+    setup(name=PROJECT,
+          version=get_version(),
           author=author,
           classifiers=classifiers,
           description=description,
           long_description=long_description,
-          packages=[name],
+          packages=[PROJECT],
           ext_modules=extensions,
           install_requires=['h5py'],
           setup_requires=['setuptools'],
-          cmdclass={'build_ext': PluginBuildExt},
+          cmdclass=cmdclass,
           )
 
