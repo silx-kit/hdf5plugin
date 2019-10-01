@@ -38,11 +38,21 @@ from setuptools.command.build_ext import build_ext
 # Plugins
 
 class PluginBuildExt(build_ext):
-    """Build command for DLLs that are not Python modules"""
+    """Build command for DLLs that are not Python modules
+
+    This is actually only useful for Windows
+    """
 
     def get_export_symbols(self, ext):
         """Overridden to remove PyInit_* export"""
         return ext.export_symbols
+
+    def get_ext_filename(self, ext_name):
+        """Overridden to use .dll as file extension"""
+        if sys.platform.startswith('win'):
+            return os.path.join(*ext_name.split('.')) + '.dll'
+        else:
+            return super(PluginBuildExt, self).get_ext_filename(ext_name)
 
 
 class HDF5PluginExtension(Extension):
