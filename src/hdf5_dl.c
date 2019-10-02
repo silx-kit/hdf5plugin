@@ -53,6 +53,9 @@ typedef herr_t (*DL_func_H5open)(void);
 typedef herr_t (* DL_func_H5Epush1)(
     const char *file, const char *func, unsigned line,
     H5E_major_t maj, H5E_minor_t min, const char *str);
+typedef herr_t (* DL_func_H5Epush2)(
+    hid_t err_stack, const char *file, const char *func, unsigned line,
+    hid_t cls_id, hid_t maj_id, hid_t min_id, const char *msg, ...);
 /*H5P*/
 typedef herr_t (* DL_func_H5Pget_filter_by_id2)(hid_t plist_id, H5Z_filter_t id,
     unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
@@ -80,6 +83,7 @@ static struct {
     DL_func_H5open H5open;
     /*H5E*/
     DL_func_H5Epush1 H5Epush1;
+    DL_func_H5Epush1 H5Epush2;
     /*H5P*/
     DL_func_H5Pget_filter_by_id2 H5Pget_filter_by_id2;
     DL_func_H5Pget_chunk H5Pget_chunk;
@@ -92,7 +96,7 @@ static struct {
     /*H5T*/
     DL_func_H5Zregister H5Zregister;
 } DL_H5Functions = {
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 
 /*HDF5 variables*/
@@ -130,6 +134,7 @@ int init_filter(libname_t libname)
         DL_H5Functions.H5open = (DL_func_H5open)DL_SYM(handle, "H5open");
         /*H5E*/
         DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)DL_SYM(handle, "H5Epush1");
+        DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)DL_SYM(handle, "H5Epush2");
         /*H5P*/
         DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)DL_SYM(handle, "H5Pget_filter_by_id2");
         DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)DL_SYM(handle, "H5Pget_chunk");
@@ -180,6 +185,12 @@ herr_t H5Epush1(const char *file, const char *func, unsigned line,
     H5E_major_t maj, H5E_minor_t min, const char *str)
 {
 CALL(0, H5Epush1, file, func, line, maj, min, str)
+}
+
+herr_t H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned line,
+    hid_t cls_id, hid_t maj_id, hid_t min_id, const char *msg, ...)
+{
+    return 0;  /*TODO*/
 }
 
 /*H5P*/
