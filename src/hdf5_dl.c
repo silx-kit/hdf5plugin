@@ -29,6 +29,7 @@
  * This is useful on Linux/macOS to avoid linking the plugin with a dedicated
  * HDF5 library.
  */
+#include <stdarg.h>
 #include "hdf5.h"
 #include "H5PLextern.h"
 
@@ -83,7 +84,7 @@ static struct {
     DL_func_H5open H5open;
     /*H5E*/
     DL_func_H5Epush1 H5Epush1;
-    DL_func_H5Epush1 H5Epush2;
+    DL_func_H5Epush2 H5Epush2;
     /*H5P*/
     DL_func_H5Pget_filter_by_id2 H5Pget_filter_by_id2;
     DL_func_H5Pget_chunk H5Pget_chunk;
@@ -188,9 +189,22 @@ CALL(0, H5Epush1, file, func, line, maj, min, str)
 }
 
 herr_t H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned line,
-    hid_t cls_id, hid_t maj_id, hid_t min_id, const char *msg, ...)
+    hid_t cls_id, hid_t maj_id, hid_t min_id, const char *fmt, ...)
 {
-    return 0;  /*TODO*/
+    if(DL_H5Functions.H5Epush2 != NULL) {
+        /* Avoid using variadic: convert fmt+ ... to a message sting */
+        va_list ap;
+        char msg_string[256];  /*Buffer hopefully wide enough*/
+
+        va_start(ap, fmt);
+        vsnprintf(msg_string, sizeof(msg_string), fmt, ap);
+        msg_string[sizeof(msg_string) - 1] = '\0';
+        va_end(ap);
+
+        return DL_H5Functions.H5Epush2(err_stack, file, func, line, cls_id, maj_id, min_id, msg_string);
+    } else {
+        return 0;
+    }
 }
 
 /*H5P*/
