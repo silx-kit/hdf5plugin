@@ -59,7 +59,7 @@ test_script:
     - "%VENV_TEST_DIR%\\Scripts\\activate.bat"
 
     # Install h5py for tests
-    - "pip install --pre numpy h5py"
+    - "pip install --pre h5py"
 
     # Install the generated wheel package to test it
     # Make sure it does not come from cache or pypi
