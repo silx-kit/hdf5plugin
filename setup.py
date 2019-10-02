@@ -74,7 +74,8 @@ class HDF5PluginExtension(Extension):
         else:
             self.__prepend(kwargs, 'sources', ['src/hdf5_dl.c'])
             self.__prepend(kwargs, 'export_symbols', ['init_filter'])
-            self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include/default'])
+            folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
+            self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include/' + folder])
 
         self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include'])
         self.__prepend(kwargs, 'define_macros', [('H5_USE_18_API', None)])
