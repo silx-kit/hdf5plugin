@@ -65,13 +65,15 @@ Dependencies
 License
 -------
 
-The source code of *hdf5plugin* itself is licensed under the MIT license. Use it at your own risk.
+The source code of *hdf5plugin* itself is licensed under the MIT license.
+Use it at your own risk.
+See `LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/LICENSE>`_
 
 The source code of the embedded HDF5 filter plugin libraries is licensed under different open-source licenses.
-
 Please read the different licenses:
 
-* hdf5plugin itself: See `LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/LICENSE>`_
-* bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/bitshuffle/LICENSE>`_
+* hdf5plugin itself: * bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/bitshuffle/LICENSE>`_
 * blosc: See `src/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5-blosc/LICENSES/>`_ and `src/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/c-blosc/LICENSES/>`_
 * lz4: See `src/HDF5-External-Filter-Plugins/LZ4/COPYING  <https://github.com/silx-kit/hdf5plugin/blob/master/src/HDF5-External-Filter-Plugins/LZ4/COPYING>`_
+
+The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `src/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5/COPYING>`_.
