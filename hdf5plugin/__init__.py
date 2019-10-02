@@ -35,6 +35,8 @@ import logging
 import os as _os
 import sys
 
+import h5py
+
 
 _logger = logging.getLogger(__name__)
 
@@ -73,8 +75,6 @@ def _init_filters():
 
     Generator of tuples: (filename, library handle)
     """
-    import h5py
-
     hdf5_version = h5py.h5.get_libversion()
 
     for name, filter_id in FILTERS.items():
