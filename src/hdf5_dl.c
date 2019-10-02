@@ -108,7 +108,7 @@ int init_filter(const char* libname)
     int retval = -1;
   	void * handle;
 
-    handle = dlopen(libname);
+    handle = dlopen(libname, RTLD_LAZY | RTLD_LOCAL);
 
     if (handle != NULL) {
         /*H5*/
