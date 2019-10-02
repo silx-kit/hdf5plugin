@@ -59,25 +59,26 @@ class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
     @staticmethod
-    def __extend(kwargs, key, extra_list):
+    def __prepend(kwargs, key, extra_list):
         kwargs[key] = extra_list + kwargs.get(key, [])
 
     def __init__(self, name, **kwargs):
         if sys.platform.startswith('win'):
-            self.__extend(kwargs, 'sources', ['src/register_win32.c'])
-            self.__extend(kwargs, 'export_symbols', ['register_filter'])
-            self.__extend(kwargs, 'extra_compile_args', ['-DH5_BUILT_AS_DYNAMIC_LIB'])
-            self.__extend(kwargs, 'libraries', ['hdf5'])
+            self.__prepend(kwargs, 'sources', ['src/register_win32.c'])
+            self.__prepend(kwargs, 'export_symbols', ['register_filter'])
+            self.__prepend(kwargs, 'define_macros', [('H5_BUILT_AS_DYNAMIC_LIB', None)])
+            self.__prepend(kwargs, 'libraries', ['hdf5'])
             hdf5_lib_dir = os.environ.get('HDF5_LIB_DIR', None)
             if hdf5_lib_dir:
-                self.__extend(kwargs, 'library_dirs', [hdf5_lib_dir])
+                self.__prepend(kwargs, 'library_dirs', [hdf5_lib_dir])
         else:
-            self.__extend(kwargs, 'sources', ['src/hdf5_dl.c'])
-            self.__extend(kwargs, 'export_symbols', ['init_filter'])
+            self.__prepend(kwargs, 'sources', ['src/hdf5_dl.c'])
+            self.__prepend(kwargs, 'export_symbols', ['init_filter'])
 
         hdf5_inc_dir = os.environ.get('HDF5_INC_DIR', None)
         if hdf5_inc_dir:
-            self.__extend(kwargs, 'include_dirs', [hdf5_inc_dir])
+            self.__prepend(kwargs, 'include_dirs', [hdf5_inc_dir])
+        self.__prepend(kwargs, 'define_macros', [('H5_USE_18_API', None)])
         super(HDF5PluginExtension, self).__init__(name, **kwargs)
 
 
