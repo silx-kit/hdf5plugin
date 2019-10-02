@@ -25,7 +25,7 @@ To install locally, run::
 Documentation
 -------------
 
-To use it, just use ''import hdf5plugin'' and supported compression plugins are available from `h5py <https://www.h5py.org>`_.
+To use it, just use ``import hdf5plugin`` and supported compression plugins are available from `h5py <https://www.h5py.org>`_.
 
 Sample code:
 
@@ -44,6 +44,18 @@ Sample code:
   f = h5py.File('test.h5', 'r')
   data = f['data'][()]
   f.close()
+
+``hdf5plugin`` provides:
+
+* The HDF5 filter ID of embedded plugins:
+
+  - ``hdf5plugin.BLOSC``
+  - ``hdf5plugin.BSHUF``
+  - ``hdf5plugin.LZ4``
+
+* ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
+* ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
+
 
 Dependencies
 ------------
