@@ -14,8 +14,8 @@ environment:
         VENV_TEST_DIR: "venv_test"
 
     matrix:
-        # Python 3.5
-        - PYTHON_DIR: "C:\\Python35-x64"
+        # Python 3.7
+        - PYTHON_DIR: "C:\\Python37-x64"
 
         # Python 2.7
         - PYTHON_DIR: "C:\\Python27-x64"
@@ -37,9 +37,9 @@ build_script:
     - "virtualenv --clear %VENV_BUILD_DIR%"
     - "%VENV_BUILD_DIR%\\Scripts\\activate.bat"
 
-    # Install build dependencies (should I try to install cython?)
-    - "pip install --upgrade wheel"
-    - "pip install --trusted-host www.silx.org --find-links http://www.silx.org/pub/wheelhouse/ --upgrade h5py"
+    # Install build dependencies
+    - "pip install --upgrade setuptools wheel"
+    - "pip install h5py"
 
     # Print Python info
     - "python ci\\info_platform.py"
@@ -59,10 +59,10 @@ test_script:
     - "%VENV_TEST_DIR%\\Scripts\\activate.bat"
 
     # Install h5py for tests
-    - "pip install --trusted-host www.silx.org --find-links http://www.silx.org/pub/wheelhouse/ --upgrade h5py"
+    - "pip install --pre numpy h5py"
 
     # Install the generated wheel package to test it
-    # Make sure silx does not come from cache or pypi
+    # Make sure it does not come from cache or pypi
     # At this point all install_requires dependencies MUST be installed
     # as this is installing only from dist/
     - "pip install --pre --find-links dist/ --no-cache-dir --no-index hdf5plugin"
