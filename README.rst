@@ -7,9 +7,9 @@ Supported platforms are: Linux, Windows, macOS.
 
 The HDF5 plugin sources were obtained from:
 
-* LZ4 plugin: https://github.com/nexusformat/HDF5-External-Filter-Plugins
-* bitshuffle plugin: https://github.com/kiyo-masui/bitshuffle
-* hdf5-blosc plugin and c-blosc: https://github.com/Blosc/hdf5-blosc and https://github.com/Blosc/c-blosc
+* LZ4 plugin (v0.1.0): https://github.com/nexusformat/HDF5-External-Filter-Plugins
+* bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
+* hdf5-blosc plugin (v1.0.0) and c-blosc (v1.17.0): https://github.com/Blosc/hdf5-blosc and https://github.com/Blosc/c-blosc
 
 Installation
 ------------
