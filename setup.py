@@ -52,7 +52,7 @@ class PluginBuildExt(build_ext):
         if sys.platform.startswith('win'):
             return os.path.join(*ext_name.split('.')) + '.dll'
         else:
-            return super(PluginBuildExt, self).get_ext_filename(ext_name)
+            return build_ext.get_ext_filename(self, ext_name)
 
 
 class HDF5PluginExtension(Extension):
@@ -79,7 +79,7 @@ class HDF5PluginExtension(Extension):
 
         self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include'])
         self.__prepend(kwargs, 'define_macros', [('H5_USE_18_API', None)])
-        super(HDF5PluginExtension, self).__init__(name, **kwargs)
+        Extension.__init__(self, name, **kwargs)
 
 
 def prefix(directory, files):
@@ -167,11 +167,9 @@ blosc_plugin = HDF5PluginExtension(
 
 # lz4 plugin
 # Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
-lz4_dir = 'src/HDF5-External-Filter-Plugins/LZ4/src/'
-
 lz4_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/HDF5-External-Filter-Plugins/LZ4/src/H5Zlz4.c'] + \
+    sources=['src/LZ4/H5Zlz4.c'] + \
             lz4_sources,
     depends=lz4_depends,
     include_dirs=lz4_include_dirs,
