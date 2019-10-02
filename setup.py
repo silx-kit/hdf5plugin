@@ -68,16 +68,12 @@ class HDF5PluginExtension(Extension):
             self.__prepend(kwargs, 'export_symbols', ['register_filter'])
             self.__prepend(kwargs, 'define_macros', [('H5_BUILT_AS_DYNAMIC_LIB', None)])
             self.__prepend(kwargs, 'libraries', ['hdf5'])
-            hdf5_lib_dir = os.environ.get('HDF5_LIB_DIR', None)
-            if hdf5_lib_dir:
-                self.__prepend(kwargs, 'library_dirs', [hdf5_lib_dir])
+            self.__prepend(kwargs, 'library_dirs', ['src/hdf5'])
         else:
             self.__prepend(kwargs, 'sources', ['src/hdf5_dl.c'])
             self.__prepend(kwargs, 'export_symbols', ['init_filter'])
 
-        hdf5_inc_dir = os.environ.get('HDF5_INC_DIR', None)
-        if hdf5_inc_dir:
-            self.__prepend(kwargs, 'include_dirs', [hdf5_inc_dir])
+        self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include'])
         self.__prepend(kwargs, 'define_macros', [('H5_USE_18_API', None)])
         super(HDF5PluginExtension, self).__init__(name, **kwargs)
 
