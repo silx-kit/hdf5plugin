@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "11/07/2018"
+__date__ = "03/10/2019"
 
 
 from glob import glob
@@ -51,7 +51,7 @@ else:
             self.root_is_pure = True
             self.plat_name_supplied = True
             self.plat_name = get_platform()
-            self.univeral = sys.platform.startswith('win')
+            self.universal = sys.platform.startswith('win')
             if not self.universal:
                 self.python_tag = 'py' + sys.version_info[0]
 
