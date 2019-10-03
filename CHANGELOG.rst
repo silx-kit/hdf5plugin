@@ -1,3 +1,11 @@
+2.0.0
+-----
+
+- Added compression support for Linux and macOS
+- Added blosc filter
+- Building from source through setup.py
+- No longer use the plugin mechanism via HDF5_PLUGIN_PATH environment variable
+
 1.4.1
 -----
 
