@@ -69,7 +69,11 @@ class HDF5PluginExtension(Extension):
             self.__prepend(kwargs, 'define_macros', [('H5_BUILT_AS_DYNAMIC_LIB', None)])
             self.__prepend(kwargs, 'libraries', ['hdf5'])
             self.__prepend(kwargs, 'library_dirs', ['src/hdf5'])
-            self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include/windows'])
+            if sys.version_info[0] >= 3:
+                inc_dir = 'src/hdf5/include/windows'
+            else:
+                inc_dir = 'src/hdf5/include/windows-2.7'
+            self.__prepend(kwargs, 'include_dirs', [inc_dir])
 
         else:
             self.__prepend(kwargs, 'sources', ['src/hdf5_dl.c'])
