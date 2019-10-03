@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "03/10/2019"
+__date__ = "11/07/2018"
 
 
 from glob import glob
@@ -51,9 +51,9 @@ else:
             self.root_is_pure = True
             self.plat_name_supplied = True
             self.plat_name = get_platform()
-            self.universal = sys.platform.startswith('win')
+            self.univeral = sys.platform.startswith('win')
             if not self.universal:
-                self.python_tag = 'py' + str(sys.version_info[0])
+                self.python_tag = 'py' + sys.version_info[0]
 
 
 # Plugins
@@ -72,6 +72,10 @@ class PluginBuildExt(build_ext):
         """Overridden to use .dll as file extension"""
         if sys.platform.startswith('win'):
             return os.path.join(*ext_name.split('.')) + '.dll'
+        elif sys.platform.startswith('linux'):
+            return os.path.join(*ext_name.split('.')) + '.so'
+        elif sys.platform.startswith('darwin'):
+            return os.path.join(*ext_name.split('.')) + '.dylib'
         else:
             return build_ext.get_ext_filename(self, ext_name)
 
