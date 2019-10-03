@@ -96,13 +96,10 @@ def suite():
 def run_tests():
     """Run test complete test_suite"""
     runner = unittest.TextTestRunner()
-    if not runner.run(suite()).wasSuccessful():
-        print("Test suite failed")
-        return 1
-    else:
-        print("Test suite succeeded")
-        return 0
+    success = runner.run(suite()).wasSuccessful()
+    print("Test suite " + ("succeeded" if success else "failed"))
+    return success
 
 if __name__ == '__main__':
     import sys
-    sys.exit(run_tests())
+    sys.exit(0 if run_tests() else 1)
