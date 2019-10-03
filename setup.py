@@ -133,6 +133,7 @@ bithsuffle_plugin = HDF5PluginExtension(
          "src/iochain.h", 'src/bshuf_h5filter.h',
          "lz4/lz4.h"]),
     include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
+    extra_compile_args=['-O3', '-ffast-math', '-march=native', '-std=c99'],
     )
 
 
