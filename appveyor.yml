@@ -16,11 +16,11 @@ environment:
     matrix:
         # Python 3.7
         - PYTHON_DIR: "C:\\Python37-x64"
-          H5PY_OLDER_VERION: "2.8.0"
+          H5PY_OLDER_VERSION: "2.8.0"
 
         # Python 2.7
         - PYTHON_DIR: "C:\\Python27-x64"
-          H5PY_OLDER_VERION: "2.7.0"
+          H5PY_OLDER_VERSION: "2.7.0"
 
 install:
     # Add Python to PATH
