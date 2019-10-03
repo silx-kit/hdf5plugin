@@ -7,19 +7,27 @@ matrix:
     include:
         - python: 2.7
           os: linux
-          env: BUILD_COMMAND=bdist_wheel
+          env:
+              BUILD_COMMAND=bdist_wheel
+              H5PY_OLDER_VERSION=2.6.0
 
         - python: 3.6
           os: linux
-          env: BUILD_COMMAND=sdist
+          env:
+              BUILD_COMMAND=sdist
+              H5PY_OLDER_VERSION=2.6.0
 
         - python: 3.7
           os: linux
-          env: BUILD_COMMAND=bdist_wheel
+          env:
+              BUILD_COMMAND=bdist_wheel
+              H5PY_OLDER_VERSION=2.8.0
 
         - language: generic
           os: osx
-          env: BUILD_COMMAND=bdist_wheel
+          env:
+              BUILD_COMMAND=bdist_wheel
+              H5PY_OLDER_VERSION=2.6.0
 
 cache:
     apt: true
@@ -69,7 +77,12 @@ script:
     - python ci/info_platform.py
     - pip list
 
-    # Run the tests
+    # Run the tests with latest h5py
+    - python test/test.py
+
+    # Run the tests with oldest available wheel of h5py
+    - pip install --upgrade h5py==$H5PY_OLDER_VERSION
+    - pip list
     - python test/test.py
 
     # Mac OS X specific cleanup
