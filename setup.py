@@ -241,6 +241,7 @@ class build_py(_build_py):
 PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows,MacOS and linux"
+url='https://github.com/silx-kit/hdf5plugin'
 f = open("README.rst")
 long_description=f.read()
 f.close()
@@ -272,6 +273,7 @@ if __name__ == "__main__":
     setup(name=PROJECT,
           version=get_version(),
           author=author,
+          url=url,
           classifiers=classifiers,
           description=description,
           long_description=long_description,
