@@ -62,6 +62,27 @@ Dependencies
 
 * `h5py <https://www.h5py.org>`_
 
+
+Testing
+-------
+
+To run self-contained tests, from Python:
+
+.. code-block:: python
+
+  import hdf5plugin.test
+  hdf5plugin.test.run_tests()
+
+Or, from the command line::
+
+  python -m hdf5plugin.test
+
+To also run tests relying on actual HDF5 files, run from the source directory::
+
+  python test/test.py
+
+This tests the installed version of `hdf5plugin`.
+
 License
 -------
 
