@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2018 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2019 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,219 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
-__authors__ = ["V.A. Sole"]
+__authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "11/07/2018"
 
-from setuptools import setup
 
-version="1.4.1"
-name = "hdf5plugin"
+from glob import glob
+import os
+import sys
+from setuptools import setup, Extension
+from setuptools.command.build_py import build_py as _build_py
+from setuptools.command.build_ext import build_ext
+
+
+# Patch bdist_wheel
+try:
+    from wheel.bdist_wheel import bdist_wheel
+except ImportError:
+    BDistWheel = None
+else:
+    from wheel.pep425tags import get_platform
+
+    class BDistWheel(bdist_wheel):
+        """Override bdist_wheel to handle as pure python package"""
+
+        def finalize_options(self):
+            bdist_wheel.finalize_options(self)
+            self.root_is_pure = True
+            self.plat_name_supplied = True
+            self.plat_name = get_platform()
+            self.univeral = sys.platform.startswith('win')
+            if not self.universal:
+                self.python_tag = 'py' + sys.version_info[0]
+
+
+# Plugins
+
+class PluginBuildExt(build_ext):
+    """Build command for DLLs that are not Python modules
+
+    This is actually only useful for Windows
+    """
+
+    def get_export_symbols(self, ext):
+        """Overridden to remove PyInit_* export"""
+        return ext.export_symbols
+
+    def get_ext_filename(self, ext_name):
+        """Overridden to use .dll as file extension"""
+        if sys.platform.startswith('win'):
+            return os.path.join(*ext_name.split('.')) + '.dll'
+        else:
+            return build_ext.get_ext_filename(self, ext_name)
+
+
+class HDF5PluginExtension(Extension):
+    """Extension adding specific things to build a HDF5 plugin"""
+
+    @staticmethod
+    def __prepend(kwargs, key, extra_list):
+        kwargs[key] = extra_list + kwargs.get(key, [])
+
+    def __init__(self, name, **kwargs):
+        if sys.platform.startswith('win'):
+            self.__prepend(kwargs, 'sources', ['src/register_win32.c'])
+            self.__prepend(kwargs, 'export_symbols', ['register_filter'])
+            self.__prepend(kwargs, 'define_macros', [('H5_BUILT_AS_DYNAMIC_LIB', None)])
+            self.__prepend(kwargs, 'libraries', ['hdf5'])
+            self.__prepend(kwargs, 'library_dirs', ['src/hdf5'])
+            if sys.version_info[0] >= 3:
+                inc_dir = 'src/hdf5/include/windows'
+            else:
+                inc_dir = 'src/hdf5/include/windows-2.7'
+            self.__prepend(kwargs, 'include_dirs', [inc_dir])
+
+        else:
+            self.__prepend(kwargs, 'sources', ['src/hdf5_dl.c'])
+            self.__prepend(kwargs, 'export_symbols', ['init_filter'])
+            folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
+            self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include/' + folder])
+
+        self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include'])
+        self.__prepend(kwargs, 'define_macros', [('H5_USE_18_API', None)])
+        Extension.__init__(self, name, **kwargs)
+
+
+def prefix(directory, files):
+    """Add a directory as prefix to a list of files.
+
+    :param str directory: Directory to add as prefix
+    :param List[str] files: List of relative file path
+    :rtype: List[str]
+    """
+    return ['/'.join((directory, f)) for f in files]
+
+
+# bitshuffle (+lz4) plugin
+# Plugins from https://github.com/kiyo-masui/bitshuffle
+# TODO compile flags + openmp
+bithsuffle_dir = 'src/bitshuffle'
+
+bithsuffle_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5bshuf",
+    sources=prefix(bithsuffle_dir,
+        ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
+         "src/bitshuffle.c", "src/bitshuffle_core.c",
+         "src/iochain.c", "lz4/lz4.c"]),
+    depends=prefix(bithsuffle_dir,
+        ["src/bitshuffle.h", "src/bitshuffle_core.h",
+         "src/iochain.h", 'src/bshuf_h5filter.h',
+         "lz4/lz4.h"]),
+    include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
+    extra_compile_args=['-O3', '-ffast-math', '-march=native', '-std=c99'],
+    )
+
+
+# blosc plugin
+# Plugin from https://github.com/Blosc/hdf5-blosc
+# c-blosc from https://github.com/Blosc/c-blosc
+# TODO compile flags avx2/sse2, snappy
+hdf5_blosc_dir = 'src/hdf5-blosc/src/'
+blosc_dir = 'src/c-blosc/'
+
+# blosc sources
+sources = [f for f in glob(blosc_dir + 'blosc/*.c')
+           if 'avx2' not in f and 'sse2' not in f]
+depends = [f for f in glob(blosc_dir + 'blosc/*.h')
+        if 'avx2' not in f and 'sse2' not in f]
+include_dirs = [blosc_dir, blosc_dir + 'blosc']
+define_macros = []
+
+# compression libs
+# lz4
+lz4_sources = glob(blosc_dir + 'internal-complibs/lz4*/*.c')
+lz4_depends = glob(blosc_dir + 'internal-complibs/lz4*/*.h')
+lz4_include_dirs = glob(blosc_dir + 'internal-complibs/lz4*')
+
+sources += lz4_sources
+depends += lz4_depends
+include_dirs += lz4_include_dirs
+define_macros.append(('HAVE_LZ4', 1))
+
+# snappy
+# TODO
+
+#zlib
+sources += glob(blosc_dir + 'internal-complibs/zlib*/*.c')
+depends += glob(blosc_dir + 'internal-complibs/zlib*/*.h')
+include_dirs += glob(blosc_dir + 'internal-complibs/zlib*')
+define_macros.append(('HAVE_ZLIB', 1))
+
+# zstd
+sources += glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+depends += glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
+include_dirs += glob(blosc_dir + 'internal-complibs/zstd*')
+include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
+define_macros.append(('HAVE_ZSTD', 1))
+
+
+blosc_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5blosc",
+    sources=sources + \
+        prefix(hdf5_blosc_dir,['blosc_filter.c', 'blosc_plugin.c']),
+    depends=depends + \
+        prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
+    include_dirs=include_dirs + [hdf5_blosc_dir],
+    define_macros=define_macros,
+    )
+
+
+# lz4 plugin
+# Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
+lz4_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5lz4",
+    sources=['src/LZ4/H5Zlz4.c'] + \
+            lz4_sources,
+    depends=lz4_depends,
+    include_dirs=lz4_include_dirs,
+    libraries=['Ws2_32'] if sys.platform == 'win32' else [],
+    )
+
+
+extensions=[lz4_plugin,
+            bithsuffle_plugin,
+            blosc_plugin,
+            ]
+
+# setup
+
+# ########## #
+# version.py #
+# ########## #
+
+def get_version():
+    """Returns current version number from version.py file"""
+    dirname = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, dirname)
+    import version
+    sys.path = sys.path[1:]
+    return version.strictversion
+
+
+class build_py(_build_py):
+    """
+    Enhanced build_py which copies version.py to <PROJECT>._version.py
+    """
+    def find_package_modules(self, package, package_dir):
+        modules = _build_py.find_package_modules(self, package, package_dir)
+        if package == PROJECT:
+            modules.append((PROJECT, '_version', 'version.py'))
+        return modules
+
+
+PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows,MacOS and linux"
 f = open("README.rst")
@@ -53,19 +258,23 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.7",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
-package_data = {'hdf5plugin': ["VS2008/x86/*" ,"VS2008/x64/*",
-                               "VS2015/x86/*", "VS2015/x64/*",
-                               "darwin/*",
-                               "manylinux/x86_64/*"]}
+cmdclass = dict(build_ext=PluginBuildExt,
+                build_py=build_py)
+if BDistWheel is not None:
+    cmdclass['bdist_wheel'] = BDistWheel
+
 
 if __name__ == "__main__":
-    setup(name=name,
-          version=version,
+    setup(name=PROJECT,
+          version=get_version(),
           author=author,
           classifiers=classifiers,
           description=description,
           long_description=long_description,
-          package_data=package_data,
-          packages=[name],
+          packages=[PROJECT],
+          ext_modules=extensions,
+          install_requires=['h5py'],
+          setup_requires=['setuptools'],
+          cmdclass=cmdclass,
           )
 
