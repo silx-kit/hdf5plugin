@@ -28,15 +28,11 @@ __date__ = "30/09/2019"
 
 
 import os
-import shutil
-import sys
-import tempfile
 import unittest
-from distutils.version import LooseVersion
 
-import numpy
 import h5py
 import hdf5plugin
+from hdf5plugin.test import suite as hdf5plugin_suite
 
 
 class TestHDF5PluginRead(unittest.TestCase):
@@ -73,74 +69,17 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data[0, 1372, 613] == 922, "Incorrect value")
 
 
-class TestHDF5PluginRW(unittest.TestCase):
-    """Test write/read a HDF5 file with the plugins"""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.tempdir = tempfile.mkdtemp()
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.tempdir)
-
-    def _test(self, filter_name):
-        """Run test for a particular filter
-
-        :param str filter_name: The name of the filter to use
-        """
-        data = numpy.arange(100, dtype='float32')
-        filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
-
-        # Write
-        f = h5py.File(filename, "w")
-        f.create_dataset("data",
-                         data=data,
-                         compression=hdf5plugin.FILTERS[filter_name])
-        f.close()
-
-        # Read
-        f = h5py.File(filename, "r")
-        saved = f['data'][()]
-        plist = f['data'].id.get_create_plist()
-        filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
-        f.close()
-
-        self.assertTrue(numpy.array_equal(saved, data))
-        self.assertEqual(saved.dtype, data.dtype)
-
-        self.assertEqual(len(filters), 1)
-        self.assertEqual(filters[0][0], hdf5plugin.FILTERS[filter_name])
-
-        os.remove(filename)
-
-    def testBitshuffle(self):
-        """Write/read test with bitshuffle filter plugin"""
-        self._test('bshuf')
-
-    def testBlosc(self):
-        """Write/read test with blosc filter plugin"""
-        self._test('blosc')
-
-    def testLZ4(self):
-        """Write/read test with lz4 filter plugin"""
-        self._test('lz4')
-
-
-def getSuite():
+def suite():
     testSuite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRead, TestHDF5PluginRW):
-        testSuite.addTest(
-            unittest.TestLoader().loadTestsFromTestCase(cls))
+    testSuite.addTest(unittest.TestLoader().loadTestsFromTestCase(
+        TestHDF5PluginRead))
+    testSuite.addTest(hdf5plugin_suite())
     return testSuite
 
 
-def test():
-    return unittest.TextTestRunner(verbosity=2).run(getSuite())
-
-
 if __name__ == "__main__":
-    result = test()
+    import sys
+    result = unittest.TextTestRunner(verbosity=2).run(suite())
     if result.wasSuccessful():
         sys.exit(0)
     else:
