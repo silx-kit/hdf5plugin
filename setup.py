@@ -35,6 +35,27 @@ from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
 
 
+# Patch bdist_wheel
+try:
+    from wheel.bdist_wheel import bdist_wheel
+except ImportError:
+    BDistWheel = None
+else:
+    from wheel.pep425tags import get_platform
+
+    class BDistWheel(bdist_wheel):
+        """Override bdist_wheel to handle as pure python package"""
+
+        def finalize_options(self):
+            bdist_wheel.finalize_options(self)
+            self.root_is_pure = True
+            self.plat_name_supplied = True
+            self.plat_name = get_platform()
+            self.univeral = sys.platform.startswith('win')
+            if not self.universal:
+                self.python_tag = 'py' + sys.version_info[0]
+
+
 # Plugins
 
 class PluginBuildExt(build_ext):
@@ -238,6 +259,8 @@ classifiers = ["Development Status :: 4 - Beta",
                ]
 cmdclass = dict(build_ext=PluginBuildExt,
                 build_py=build_py)
+if BDistWheel is not None:
+    cmdclass['bdist_wheel'] = BDistWheel
 
 
 if __name__ == "__main__":
