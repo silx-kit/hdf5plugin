@@ -53,7 +53,7 @@ else:
             self.plat_name = get_platform()
             self.universal = sys.platform.startswith('win')
             if not self.universal:
-                self.python_tag = 'py' + sys.version_info[0]
+                self.python_tag = 'py' + str(sys.version_info[0])
 
 
 # Plugins
