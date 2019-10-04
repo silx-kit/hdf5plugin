@@ -79,6 +79,14 @@ class PluginBuildExt(build_ext):
         else:
             return build_ext.get_ext_filename(self, ext_name)
 
+    def build_extensions(self):
+        """Overridden to select compile args for MSVC and others"""
+        prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
+        for e in self.extensions:
+            e.extra_compile_args = [
+                arg for arg in e.extra_compile_args if arg.startswith(prefix)]
+        build_ext.build_extensions(self)
+
 
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
@@ -126,6 +134,10 @@ def prefix(directory, files):
 # TODO compile flags + openmp
 bithsuffle_dir = 'src/bitshuffle'
 
+# Set compile args for both MSVC and others, list is stripped at build time
+extra_compile_args = ['-O3', '-ffast-math', '-march=native', '-std=c99']
+extra_compile_args += ['/Ox', '/fp:fast']
+
 bithsuffle_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5bshuf",
     sources=prefix(bithsuffle_dir,
@@ -137,7 +149,7 @@ bithsuffle_plugin = HDF5PluginExtension(
          "src/iochain.h", 'src/bshuf_h5filter.h',
          "lz4/lz4.h"]),
     include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
-    extra_compile_args=['-O3', '-ffast-math', '-march=native', '-std=c99'],
+    extra_compile_args=extra_compile_args,
     )
 
 
