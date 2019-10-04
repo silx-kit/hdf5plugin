@@ -26,7 +26,7 @@ environment:
 
         # Miniconda37
         - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
-          EXTRA_PY_PATH: "C:\\Miniconda37-x64;C:\\Miniconda37-x64\\Library\\mingw-w64\\bin;C:\\Miniconda37-x64\\Library\\usr\\bin;C:\\Miniconda37-x64\\Library\\bin;C:\\Miniconda37-x64\\Scripts;C:\\Miniconda37-x64\\bin;C:\\Miniconda37-x64\\condabin"
+          TEST_PY_PATH: "C:\\Miniconda37-x64;C:\\Miniconda37-x64\\Library\\mingw-w64\\bin;C:\\Miniconda37-x64\\Library\\usr\\bin;C:\\Miniconda37-x64\\Library\\bin;C:\\Miniconda37-x64\\Scripts;C:\\Miniconda37-x64\\bin;C:\\Miniconda37-x64\\condabin"
           INSTALL_CMD: "conda install -y"
           H5PY_OLDER_VERSION: "2.8.0"
 
