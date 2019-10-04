@@ -30,6 +30,7 @@ __date__ = "04/10/2019"
 import os
 import unittest
 
+import numpy
 import h5py
 import hdf5plugin
 from hdf5plugin.test import suite as hdf5plugin_suite

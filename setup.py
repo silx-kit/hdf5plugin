@@ -51,7 +51,7 @@ else:
             self.root_is_pure = True
             self.plat_name_supplied = True
             self.plat_name = get_platform()
-            self.universal = sys.platform.startswith('win')
+            self.universal = not sys.platform.startswith('win')
             if not self.universal:
                 self.python_tag = 'py' + str(sys.version_info[0])
 
