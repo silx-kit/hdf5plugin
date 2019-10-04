@@ -43,10 +43,13 @@ class TestHDF5PluginRW(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tempdir)
 
-    def _test(self, filter_name):
+    def _test(self, filter_name, options=None):
         """Run test for a particular filter
 
         :param str filter_name: The name of the filter to use
+        :param Union[None,tuple(int)] options:
+            create_dataset's compression_opts argument
+        :return: The tuple describing the filter
         """
         data = numpy.arange(100, dtype='float32')
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
@@ -55,7 +58,8 @@ class TestHDF5PluginRW(unittest.TestCase):
         f = h5py.File(filename, "w")
         f.create_dataset("data",
                          data=data,
-                         compression=hdf5plugin.FILTERS[filter_name])
+                         compression=hdf5plugin.FILTERS[filter_name],
+                         compression_opts=options)
         f.close()
 
         # Read
@@ -72,18 +76,32 @@ class TestHDF5PluginRW(unittest.TestCase):
         self.assertEqual(filters[0][0], hdf5plugin.FILTERS[filter_name])
 
         os.remove(filename)
+        return filters[0]
 
     def testBitshuffle(self):
         """Write/read test with bitshuffle filter plugin"""
-        self._test('bshuf')
+        self._test('bshuf')  # Default options
+
+        # Specify options
+        filter_ = self._test('bshuf', hdf5plugin.BSHUF_LZ4_OPTS)
+        self.assertEqual(filter_[2][3:], (0, 2))
 
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
-        self._test('blosc')
+        self._test('blosc')  # Default options
+
+        # Specify options
+        filter_ = self._test('blosc', hdf5plugin.blosc_options(
+            level=3, shuffle='bit', compression='lz4'))
+        self.assertEqual(filter_[2][4:], (3, 2, 1))
 
     def testLZ4(self):
         """Write/read test with lz4 filter plugin"""
         self._test('lz4')
+
+        # Specify options
+        filter_ = self._test('lz4', (1024,))
+        self.assertEqual(filter_[2], (1024,))
 
 
 class TestBloscOptions(unittest.TestCase):
