@@ -10,79 +10,56 @@ shallow_clone: true
 environment:
     global:
         WIN_SDK_ROOT: "C:\\Program Files\\Microsoft SDKs\\Windows"
-        VENV_BUILD_DIR: "venv_build"
-        VENV_TEST_DIR: "venv_test"
 
     matrix:
         # Python 3.7
         - PYTHON_DIR: "C:\\Python37-x64"
           H5PY_OLDER_VERSION: "2.8.0"
+          INSTALL_CMD: "python -m pip install --upgrade --pre"
 
         # Python 2.7
         - PYTHON_DIR: "C:\\Python27-x64"
           H5PY_OLDER_VERSION: "2.7.0"
 
+        # Miniconda37
+        - PYTHON_DIR: "C:\\Miniconda37-x64"
+          H5PY_OLDER_VERSION: "2.8.0"
+          INSTALL_CMD: "conda install -y"
+
+
 install:
     # Add Python to PATH
     - "SET PATH=%PYTHON_DIR%;%PYTHON_DIR%\\Scripts;%PATH%"
 
-    # Upgrade distribution modules
-    - "pip install --upgrade setuptools"
-    - "python -m pip install --upgrade pip"
-
-    # Install virtualenv
-    - "pip install virtualenv"
-    - "virtualenv --version"
-
-build_script:
-    # Create build virtualenv
-    - "virtualenv --clear %VENV_BUILD_DIR%"
-    - "%VENV_BUILD_DIR%\\Scripts\\activate.bat"
-
-    # Install build dependencies
-    - "pip install --upgrade setuptools wheel"
-    - "pip install h5py"
+    # Upgrade distribution modules and dependencies
+    - "%INSTALL_CMD% pip setuptools wheel h5py"
 
     # Print Python info
     - "python ci\\info_platform.py"
     - "pip freeze"
 
-    # Build
+
+build_script:
     - "python setup.py bdist_wheel bdist_msi"
     - ps: "ls dist"
 
-    # Leave build virtualenv
-    - "%VENV_BUILD_DIR%\\Scripts\\deactivate.bat"
-    - "rmdir %VENV_BUILD_DIR% /s /q"
 
 test_script:
-    # Create test virtualenv
-    - "virtualenv --clear %VENV_TEST_DIR%"
-    - "%VENV_TEST_DIR%\\Scripts\\activate.bat"
-
-    # Install h5py for tests
-    - "pip install --pre h5py"
-
     # Install the generated wheel package to test it
     # Make sure it does not come from cache or pypi
     # At this point all install_requires dependencies MUST be installed
     # as this is installing only from dist/
     - "pip install --pre --find-links dist/ --no-cache-dir --no-index hdf5plugin"
 
-    # Print Python info
-    - "python ci\\info_platform.py"
-    - "pip list"
-
+    # Test with latest h5py
+    - "pip freeze"
     - "python test\\test.py"
 
-    # Run the tests with oldest available wheel of h5py
-    - "pip install --upgrade h5py==%H5PY_OLDER_VERSION%"
-    - "pip list"
+    # Test with oldest available wheel of h5py
+    - "%INSTALL_CMD% h5py==%H5PY_OLDER_VERSION%"
+    - "pip freeze"
     - "python test\\test.py"
 
-    # Leave test virtualenv
-    - "%VENV_TEST_DIR%\\Scripts\\deactivate.bat"
-    - "rmdir %VENV_TEST_DIR% /s /q"
 
 artifacts:
     # Archive the generated wheel package in the ci.appveyor.com build report.
