@@ -28,7 +28,7 @@ To install locally, run::
 Documentation
 -------------
 
-To use it, just use ``import hdf5plugin`` and supported compression plugins are available from `h5py <https://www.h5py.org>`_.
+To use it, just use ``import hdf5plugin`` and supported compression filters are available from `h5py <https://www.h5py.org>`_.
 
 Sample code:
 
@@ -131,7 +131,7 @@ Example: Dataset compressed with bitshuffle+lz4
       compression=hdf5plugin.BLOSC,
       compression_opts=hdf5plugin.blosc_options(
           shuffle='bit', compression='lz4'))
-      # or compression_opts=(0, 0, 0, 0, 9, 2, 4)
+      # or compression_opts=(0, 0, 0, 0, 9, 2, 1)
   f.close()
 
 lz4
