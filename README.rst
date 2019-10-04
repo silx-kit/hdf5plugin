@@ -59,7 +59,7 @@ Sample code:
 * Compression option helpers (See `Compression options`_):
 
   - ``hdf5plugin.BSHUF_LZ4_OPTS``: bitshuffle filter options for default block size and LZ4 compression.
-  - ``hdf5plugin.blosc_options(level=9, shuffle='byte', compression='blosclz')``: Function to prepare ``compression_opts`` parameter to use with blosc compression.
+  - ``hdf5plugin.blosc_options(level=5, shuffle='byte', compression='blosclz')``: Function to prepare ``compression_opts`` parameter to use with blosc compression.
 
 * ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
 * ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
@@ -102,6 +102,7 @@ compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compression
 - First 4 values are reserved.
 - **compression level**:
   From 0 (no compression) to 9 (maximum compression).
+  Default: 5.
 - **shuffle**: Shuffle filter:
 
   * 0: no shuffle
