@@ -85,7 +85,7 @@ class PluginBuildExt(build_ext):
         for e in self.extensions:
             e.extra_compile_args = [
                 arg for arg in e.extra_compile_args if arg.startswith(prefix)]
-        build_ext.build_extensions()
+        build_ext.build_extensions(self)
 
 
 class HDF5PluginExtension(Extension):
