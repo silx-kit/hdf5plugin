@@ -59,7 +59,7 @@ Sample code:
 * Compression option helpers (See `Compression options`_):
 
   - ``hdf5plugin.BSHUF_LZ4_OPTS``: bitshuffle filter options for default block size and LZ4 compression.
-  - ``hdf5plugin.blosc_options(level=9, shuffle='byte', compressor='blosclz')``: Function to prepare ``compression_opts`` parameter to use with blosc compression.
+  - ``hdf5plugin.blosc_options(level=9, shuffle='byte', compression='blosclz')``: Function to prepare ``compression_opts`` parameter to use with blosc compression.
 
 * ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
 * ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
@@ -97,7 +97,7 @@ Example: Dataset compressed with bitshuffle+LZ4
 blosc
 .....
 
-compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compressor**)
+compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compression**)
 
 - First 4 values are reserved.
 - **compression level**:
@@ -108,7 +108,7 @@ compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compressor*
   * 1: byte shuffle
   * 2: bit shuffle
 
-- **compressor**: The compressor blosc ID:
+- **compression**: The compressor blosc ID:
 
   * 0: blosclz (default)
   * 1: lz4
@@ -129,7 +129,7 @@ Example: Dataset compressed with bitshuffle+lz4
       data=numpy.arange(100),
       compression=hdf5plugin.BLOSC,
       compression_opts=hdf5plugin.blosc_options(
-          shuffle='bit', compressor='lz4'))
+          shuffle='bit', compression='lz4'))
       # or compression_opts=(0, 0, 0, 0, 9, 2, 4)
   f.close()
 

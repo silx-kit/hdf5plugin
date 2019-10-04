@@ -82,7 +82,7 @@ _blosc_shuffle = {
     'bit': 2,
     }
 
-_blosc_compressor = {
+_blosc_compression = {
     'bloscz': 0,
     'lz4': 1,
     'lz4hc': 2,
@@ -92,7 +92,7 @@ _blosc_compressor = {
     }
 
 
-def blosc_options(level=9, shuffle='byte', compressor='blosclz'):
+def blosc_options(level=9, shuffle='byte', compression='blosclz'):
     """Prepare h5py.Group.create_dataset's compression_opts parameter.
 
     :param int level:
@@ -102,7 +102,7 @@ def blosc_options(level=9, shuffle='byte', compressor='blosclz'):
         - `none` or None: no shuffle
         - `byte`: byte-wise shuffle
         - `bit`: bit-wise shuffle.
-    :param str compressor:
+    :param str compression:
         `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
     :returns: compression_opts to provide to h5py.Group.create_dataset
     :rtype: tuple(int)
@@ -110,8 +110,8 @@ def blosc_options(level=9, shuffle='byte', compressor='blosclz'):
     level = int(level)
     assert 0 <= level <= 9
     shuffle = _blosc_shuffle[shuffle]
-    compressor = _blosc_compressor[compressor]
-    return (0, 0, 0, 0, level, shuffle, compressor)
+    compression = _blosc_compression[compression]
+    return (0, 0, 0, 0, level, shuffle, compression)
 
 
 def _init_filters():
