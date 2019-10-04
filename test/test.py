@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "30/09/2019"
+__date__ = "04/10/2019"
 
 
 import os
@@ -37,6 +37,27 @@ from hdf5plugin.test import suite as hdf5plugin_suite
 
 class TestHDF5PluginRead(unittest.TestCase):
     """Test reading existing files with compressed data"""
+
+    def testBlosc(self):
+        """Test reading Blosc compressed data"""
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        # the blosc.h5 is in fact the example.h5 file generated
+        # using the example.c file from the blosc respository.
+        fname = os.path.join(dirname, "blosc.h5")
+        self.assertTrue(os.path.exists(fname),
+                        "Cannot find %s file" % fname)
+        h5 = h5py.File(fname, "r")
+        data = h5["/dset"][:]
+        h5.close()
+        expected_shape = (100, 100, 100)
+        self.assertTrue(data.shape[0] == 100, "Incorrect shape")
+        self.assertTrue(data.shape[1] == 100, "Incorrect shape")
+        self.assertTrue(data.shape[2] == 100, "Incorrect shape")
+
+        target = numpy.arange(numpy.prod(expected_shape),
+                              dtype=numpy.float)
+        target.shape = expected_shape
+        self.assertTrue(numpy.allclose(data, target), "Incorrect readout")
 
     def testLZ4(self):
         """Test reading lz4 compressed data"""
