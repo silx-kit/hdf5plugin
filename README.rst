@@ -62,6 +62,27 @@ Dependencies
 
 * `h5py <https://www.h5py.org>`_
 
+
+Testing
+-------
+
+To run self-contained tests, from Python:
+
+.. code-block:: python
+
+  import hdf5plugin.test
+  hdf5plugin.test.run_tests()
+
+Or, from the command line::
+
+  python -m hdf5plugin.test
+
+To also run tests relying on actual HDF5 files, run from the source directory::
+
+  python test/test.py
+
+This tests the installed version of `hdf5plugin`.
+
 License
 -------
 
@@ -72,7 +93,7 @@ See `LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/LICENSE>`_
 The source code of the embedded HDF5 filter plugin libraries is licensed under different open-source licenses.
 Please read the different licenses:
 
-* hdf5plugin itself: * bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/bitshuffle/LICENSE>`_
+* bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/bitshuffle/LICENSE>`_
 * blosc: See `src/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5-blosc/LICENSES/>`_ and `src/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/c-blosc/LICENSES/>`_
 * lz4: See `src/LZ4/COPYING  <https://github.com/silx-kit/hdf5plugin/blob/master/src/LZ4/COPYING>`_
 

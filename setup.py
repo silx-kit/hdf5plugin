@@ -72,6 +72,10 @@ class PluginBuildExt(build_ext):
         """Overridden to use .dll as file extension"""
         if sys.platform.startswith('win'):
             return os.path.join(*ext_name.split('.')) + '.dll'
+        elif sys.platform.startswith('linux'):
+            return os.path.join(*ext_name.split('.')) + '.so'
+        elif sys.platform.startswith('darwin'):
+            return os.path.join(*ext_name.split('.')) + '.dylib'
         else:
             return build_ext.get_ext_filename(self, ext_name)
 
@@ -237,6 +241,7 @@ class build_py(_build_py):
 PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
 description = "HDF5 Plugins for windows,MacOS and linux"
+url='https://github.com/silx-kit/hdf5plugin'
 f = open("README.rst")
 long_description=f.read()
 f.close()
@@ -268,6 +273,7 @@ if __name__ == "__main__":
     setup(name=PROJECT,
           version=get_version(),
           author=author,
+          url=url,
           classifiers=classifiers,
           description=description,
           long_description=long_description,
