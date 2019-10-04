@@ -67,7 +67,7 @@ Sample code:
 Compression options
 *******************
 
-Compression filters can be configured with the ``compression_opts`` argument of `h5py.Dataset.create_dataset <http://docs.h5py.org/en/stable/high/group.html#Group.create_dataset>`_ method by providing a tuple of integers.
+Compression filters can be configured with the ``compression_opts`` argument of `h5py.Group.create_dataset <http://docs.h5py.org/en/stable/high/group.html#Group.create_dataset>`_ method by providing a tuple of integers.
 
 The meaning of those integers is filter dependent and is described below.
 
