@@ -56,9 +56,47 @@ Sample code:
   - ``hdf5plugin.BSHUF``
   - ``hdf5plugin.LZ4``
 
+* Some pre-defined compression options (See `Compression options`_):
+
+  - ``hdf5plugin.BSHUF_LZ4_OPTS``: bitshuffle filter options for default block size and LZ4 compression.
+
 * ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
 * ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
 
+Compression options
+*******************
+
+Compression filters can be configured with the ``compression_opts`` argument of ``h5py.Dataset.create_dataset`` method.
+
+bitshuffle
+..........
+
+- Option 0: **block size**: Number of elements (not bytes) per block.
+  It MUST be a mulitple of 8.
+  Default: 0 for a block size of about 8 kB.
+- Option 1: **lz4 compression**: 0: disabled (default), 2: enabled.
+
+Example:
+
+.. code-block:: python
+
+  import numpy
+  import h5py
+  import hdf5plugin
+
+  f = h5py.File('test.h5', 'w')
+  f.create_dataset('data', data=numpy.arange(100),
+                   compression=hdf5plugin.BSHUF,
+                   compression_opts=hdf5plugin.BSHUF_LZ4_OPTS)
+  f.close()
+
+
+lz4
+...
+
+- Option 0: **block size**: Number of bytes per block.
+  Default 0 for a block size of 1GB.
+  It MUST be < 1.9 GB.
 
 Dependencies
 ------------

@@ -69,6 +69,11 @@ LZ4 = 32004
 FILTERS = {'blosc': BLOSC, 'bshuf': BSHUF, 'lz4': LZ4}
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
+# Pre-defined compression_opts
+
+BSHUF_LZ4_OPTS = (0, 2)
+"""bitshuffle compression_opts with default block size and lz4 compression enabled"""
+
 
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
