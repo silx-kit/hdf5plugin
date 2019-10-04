@@ -5,6 +5,9 @@ This module provides HDF5 compression filters (namely: blosc, bitshuffle and lz4
 
 Supported platforms are: Linux, Windows, macOS.
 
+Whenever possible, HDF5 compression filter plugins are best installed system-wide or through Anaconda (`blosc-hdf5-plugin <https://anaconda.org/conda-forge/blosc-hdf5-plugin>`_, `hdf5-lz4 <https://anaconda.org/nsls2forge/hdf5-lz4>`_).
+Yet, `hdf5plugin` provides a generic way to enable `h5py` with the provided HDF5 compression filters.
+
 The HDF5 plugin sources were obtained from:
 
 * LZ4 plugin (v0.1.0): https://github.com/nexusformat/HDF5-External-Filter-Plugins
@@ -25,7 +28,7 @@ To install locally, run::
 Documentation
 -------------
 
-To use it, just use ``import hdf5plugin`` and supported compression plugins are available from `h5py <https://www.h5py.org>`_.
+To use it, just use ``import hdf5plugin`` and supported compression filters are available from `h5py <https://www.h5py.org>`_.
 
 Sample code:
 
@@ -53,9 +56,92 @@ Sample code:
   - ``hdf5plugin.BSHUF``
   - ``hdf5plugin.LZ4``
 
+* Compression option helpers (See `Compression options`_):
+
+  - ``hdf5plugin.BSHUF_LZ4_OPTS``: bitshuffle filter options for default block size and LZ4 compression.
+  - ``hdf5plugin.blosc_options(level=5, shuffle='byte', compression='blosclz')``: Function to prepare ``compression_opts`` parameter to use with blosc compression.
+
 * ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
 * ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
 
+Compression options
+*******************
+
+Compression filters can be configured with the ``compression_opts`` argument of `h5py.Group.create_dataset <http://docs.h5py.org/en/stable/high/group.html#Group.create_dataset>`_ method by providing a tuple of integers.
+
+The meaning of those integers is filter dependent and is described below.
+
+bitshuffle
+..........
+
+compression_opts: (**block_size**, **lz4 compression**)
+
+- **block size**: Number of elements (not bytes) per block.
+  It MUST be a mulitple of 8.
+  Default: 0 for a block size of about 8 kB.
+- **lz4 compression**: 0: disabled (default), 2: enabled.
+
+By default the filter uses bitshuffle, but do NOT compress with LZ4.
+
+Example: Dataset compressed with bitshuffle+LZ4
+
+.. code-block:: python
+
+  f = h5py.File('test.h5', 'w')
+  f.create_dataset('bitshuffle_with_lz4',
+                   data=numpy.arange(100),
+                   compression=hdf5plugin.BSHUF,
+                   compression_opts=(0, 2))  # or hdf5plugin.BSHUF_LZ4_OPTS
+  f.close()
+
+blosc
+.....
+
+compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compression**)
+
+- First 4 values are reserved.
+- **compression level**:
+  From 0 (no compression) to 9 (maximum compression).
+  Default: 5.
+- **shuffle**: Shuffle filter:
+
+  * 0: no shuffle
+  * 1: byte shuffle
+  * 2: bit shuffle
+
+- **compression**: The compressor blosc ID:
+
+  * 0: blosclz (default)
+  * 1: lz4
+  * 2: lz4hc
+  * 3: snappy (not available in `hdf5plugin`)
+  * 4: zlib
+  * 5: zstd
+
+By default the filter uses byte shuffle and blosclz.
+
+Example: Dataset compressed with bitshuffle+lz4
+
+.. code-block:: python
+
+  f = h5py.File('test.h5', 'w')
+  f.create_dataset(
+      'data',
+      data=numpy.arange(100),
+      compression=hdf5plugin.BLOSC,
+      compression_opts=hdf5plugin.blosc_options(
+          shuffle='bit', compression='lz4'))
+      # or compression_opts=(0, 0, 0, 0, 9, 2, 1)
+  f.close()
+
+lz4
+...
+
+compression_opts: (**block_size**,)
+
+- **block size**: Number of bytes per block.
+  Default 0 for a block size of 1GB.
+  It MUST be < 1.9 GB.
 
 Dependencies
 ------------
