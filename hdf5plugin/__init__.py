@@ -69,10 +69,49 @@ LZ4 = 32004
 FILTERS = {'blosc': BLOSC, 'bshuf': BSHUF, 'lz4': LZ4}
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
-# Pre-defined compression_opts
+# compression_opts
 
 BSHUF_LZ4_OPTS = (0, 2)
 """bitshuffle compression_opts with default block size and lz4 compression enabled"""
+
+
+_blosc_shuffle = {
+    None: 0,
+    'none': 0,
+    'byte': 1,
+    'bit': 2,
+    }
+
+_blosc_compressor = {
+    'bloscz': 0,
+    'lz4': 1,
+    'lz4hc': 2,
+    # Not built 'snappy': 3,
+    'zlib': 4,
+    'zstd': 5,
+    }
+
+
+def blosc_options(level=9, shuffle='byte', compressor='blosclz'):
+    """Prepare h5py.Group.create_dataset's compression_opts parameter.
+
+    :param int level:
+        Compression level from 0 no compression to 9 maximum compression.
+        Default: 9.
+    :param str shuffle:
+        - `none` or None: no shuffle
+        - `byte`: byte-wise shuffle
+        - `bit`: bit-wise shuffle.
+    :param str compressor:
+        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
+    :returns: compression_opts to provide to h5py.Group.create_dataset
+    :rtype: tuple(int)
+    """
+    level = int(level)
+    assert 0 <= level <= 9
+    shuffle = _blosc_shuffle[shuffle]
+    compressor = _blosc_compressor[compressor]
+    return (0, 0, 0, 0, level, shuffle, compressor)
 
 
 def _init_filters():
