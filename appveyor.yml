@@ -13,27 +13,31 @@ environment:
 
     matrix:
         # Python 3.7
-        - EXTRA_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
+        - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
+          TEST_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
           INSTALL_CMD: "python -m pip install --upgrade --pre"
           H5PY_OLDER_VERSION: "2.8.0"
 
         # Python 2.7
-        - EXTRA_PY_PATH: "C:\\Python27-x64;C:\\Python27-x64\\Scripts"
+        - BUILD_PY_PATH: "C:\\Python27-x64;C:\\Python27-x64\\Scripts"
+          TEST_PY_PATH: "C:\\Python27-x64;C:\\Python27-x64\\Scripts"
           INSTALL_CMD: "python -m pip install --upgrade --pre"
           H5PY_OLDER_VERSION: "2.7.0"
 
         # Miniconda37
-        - EXTRA_PY_PATH: "C:\\Miniconda37-x64;C:\\Miniconda37-x64\\Library\\mingw-w64\\bin;C:\\Miniconda37-x64\\Library\\usr\\bin;C:\\Miniconda37-x64\\Library\\bin;C:\\Miniconda37-x64\\Scripts;C:\\Miniconda37-x64\\bin;C:\\Miniconda37-x64\\condabin"
+        - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
+          TEST_PY_PATH: "C:\\Miniconda37-x64;C:\\Miniconda37-x64\\Library\\mingw-w64\\bin;C:\\Miniconda37-x64\\Library\\usr\\bin;C:\\Miniconda37-x64\\Library\\bin;C:\\Miniconda37-x64\\Scripts;C:\\Miniconda37-x64\\bin;C:\\Miniconda37-x64\\condabin"
           INSTALL_CMD: "conda install -y"
           H5PY_OLDER_VERSION: "2.8.0"
 
 
 install:
-    # Add Python to PATH
-    - "SET PATH=%EXTRA_PY_PATH%;%PATH%"
+    # Add Build Python to PATH
+    - "SET OLD_PATH=%PATH%"
+    - "SET PATH=%BUILD_PY_PATH%;%OLD_PATH%"
 
     # Upgrade distribution modules and dependencies
-    - "%INSTALL_CMD% pip setuptools wheel h5py"
+    - "python -m pip install --upgrade pip setuptools wheel h5py"
 
     # Print Python info
     - "python ci\\info_platform.py"
@@ -46,6 +50,12 @@ build_script:
 
 
 test_script:
+    # Add Test Python to PATH
+    - "SET PATH=%TEST_PY_PATH%;%OLD_PATH%"
+
+    # Install dependencies
+    - "%INSTALL_CMD% h5py"
+
     # Install the generated wheel package to test it
     # Make sure it does not come from cache or pypi
     # At this point all install_requires dependencies MUST be installed
