@@ -83,7 +83,7 @@ _blosc_shuffle = {
     }
 
 _blosc_compression = {
-    'bloscz': 0,
+    'blosclz': 0,
     'lz4': 1,
     'lz4hc': 2,
     # Not built 'snappy': 3,
