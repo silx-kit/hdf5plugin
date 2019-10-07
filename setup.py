@@ -257,6 +257,7 @@ url='https://github.com/silx-kit/hdf5plugin'
 f = open("README.rst")
 long_description=f.read()
 f.close()
+license = "https://github.com/silx-kit/hdf5plugin/blob/master/LICENSE"
 classifiers = ["Development Status :: 4 - Beta",
                "Environment :: Console",
                "Environment :: MacOS X",
@@ -264,6 +265,8 @@ classifiers = ["Development Status :: 4 - Beta",
                "Intended Audience :: Education",
                "Intended Audience :: Science/Research",
                "License :: OSI Approved :: MIT License",
+               "License :: OSI Approved :: BSD License",
+               "License :: OSI Approved :: zlib/libpng License",
                "Natural Language :: English",
                "Operating System :: POSIX :: Linux",
                "Operating System :: MacOS",
@@ -289,6 +292,7 @@ if __name__ == "__main__":
           classifiers=classifiers,
           description=description,
           long_description=long_description,
+          license=license,
           packages=[PROJECT],
           ext_modules=extensions,
           install_requires=['h5py'],
