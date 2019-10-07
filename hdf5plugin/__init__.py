@@ -29,26 +29,26 @@ __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "30/09/2019"
 
-import ctypes
+import ctypes as _ctypes
 from glob import glob as _glob
-import logging
+import logging as _logging
 import os as _os
-import sys
+import sys as _sys
 
-import h5py
+import h5py as _h5py
 
 
-_logger = logging.getLogger(__name__)
+_logger = _logging.getLogger(__name__)
 
 
 # Check _version module to avoid importing from source
-project = _os.path.basename(_os.path.dirname(_os.path.abspath(__file__)))
-
 try:
     from ._version import __date__ as date  # noqa
     from ._version import version, version_info, hexversion, strictversion  # noqa
 except ImportError:
-    raise RuntimeError("Do NOT use %s from its sources: build it and use the built version" % project)
+    raise RuntimeError(
+        "Do NOT use %s from its sources: build it and use the built version" %
+        _os.path.basename(_os.path.dirname(_os.path.abspath(__file__))))
 
 
 PLUGINS_PATH = _os.path.abspath(
@@ -83,7 +83,7 @@ _blosc_shuffle = {
     }
 
 _blosc_compression = {
-    'bloscz': 0,
+    'blosclz': 0,
     'lz4': 1,
     'lz4hc': 2,
     # Not built 'snappy': 3,
@@ -119,31 +119,31 @@ def _init_filters():
 
     Generator of tuples: (filename, library handle)
     """
-    hdf5_version = h5py.h5.get_libversion()
+    hdf5_version = _h5py.h5.get_libversion()
 
     for name, filter_id in FILTERS.items():
         # Check if filter is already loaded (not on buggy HDF5 versions)
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
-            if h5py.h5z.filter_avail(filter_id):
+            if _h5py.h5z.filter_avail(filter_id):
                 _logger.warning("%s filter already loaded, skip it.", name)
                 continue
 
         # Load DLL
         filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
-        lib = ctypes.CDLL(filename)
+        lib = _ctypes.CDLL(filename)
 
-        if sys.platform.startswith('win'):
+        if _sys.platform.startswith('win'):
             # Use register_filter function to register filter
-            lib.register_filter.restype = ctypes.c_int
+            lib.register_filter.restype = _ctypes.c_int
             retval = lib.register_filter()
         else:
             # Use init_filter function to initialize DLL and register filter
-            lib.init_filter.argtypes = [ctypes.c_char_p]
-            lib.init_filter.restype = ctypes.c_int
-            if sys.version_info[0] >= 3:
-                libname = bytes(h5py.h5z.__file__, encoding='utf-8')
+            lib.init_filter.argtypes = [_ctypes.c_char_p]
+            lib.init_filter.restype = _ctypes.c_int
+            if _sys.version_info[0] >= 3:
+                libname = bytes(_h5py.h5z.__file__, encoding='utf-8')
             else:
-                libname = h5py.h5z.__file__
+                libname = _h5py.h5z.__file__
             retval = lib.init_filter(libname)
 
         if retval < 0:
