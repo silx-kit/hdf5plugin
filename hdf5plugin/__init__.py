@@ -71,10 +71,6 @@ FILTERS = {'blosc': BLOSC, 'bshuf': BSHUF, 'lz4': LZ4}
 
 # compression_opts
 
-BSHUF_LZ4_OPTS = (0, 2)
-"""bitshuffle compression_opts with default block size and lz4 compression enabled"""
-
-
 _blosc_shuffle = {
     None: 0,
     'none': 0,
