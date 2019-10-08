@@ -43,7 +43,7 @@ class TestHDF5PluginRW(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tempdir)
 
-    def _test(self, filter_name, options=None):
+    def _test(self, filter_name, **options):
         """Run test for a particular filter
 
         :param str filter_name: The name of the filter to use
@@ -54,12 +54,15 @@ class TestHDF5PluginRW(unittest.TestCase):
         data = numpy.arange(100, dtype='float32')
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
+        args = {"blosc": hdf5plugin.blosc_options,
+                "bshuf": hdf5plugin.bshuf_options,
+                "lz4": hdf5plugin.lz4_options}[filter_name](**options)
+
         # Write
         f = h5py.File(filename, "w")
         f.create_dataset("data",
                          data=data,
-                         compression=hdf5plugin.FILTERS[filter_name],
-                         compression_opts=options)
+                         **args)
         f.close()
 
         # Read
@@ -83,16 +86,15 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('bshuf')  # Default options
 
         # Specify options
-        filter_ = self._test('bshuf', hdf5plugin.BSHUF_LZ4_OPTS)
-        self.assertEqual(filter_[2][3:], (0, 2))
+        filter_ = self._test('bshuf', nelems=0, lz4=False)
+        self.assertEqual(filter_[2][3:], (0, 0))
 
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
         self._test('blosc')  # Default options
 
         # Specify options
-        filter_ = self._test('blosc', hdf5plugin.blosc_options(
-            level=3, shuffle='bit', compression='lz4'))
+        filter_ = self._test('blosc', level=3, shuffle='bit', compression='lz4')
         self.assertEqual(filter_[2][4:], (3, 2, 1))
 
     def testLZ4(self):
@@ -100,7 +102,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('lz4')
 
         # Specify options
-        filter_ = self._test('lz4', (1024,))
+        filter_ = self._test('lz4', nbytes=1024)
         self.assertEqual(filter_[2], (1024,))
 
 
@@ -109,8 +111,8 @@ class TestBloscOptions(unittest.TestCase):
 
     def test(self):
         """blosc_options test"""
-        result = hdf5plugin.blosc_options(
-            level=3, shuffle='byte', compression='lz4')
+        result = hdf5plugin.blosc_options(level=3,
+                shuffle='byte', compression='lz4')["compression_opts"]
         self.assertEqual(result, (0, 0, 0, 0, 3, 1, 1))
 
 
