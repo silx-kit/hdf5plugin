@@ -92,7 +92,7 @@ _blosc_compression = {
     }
 
 
-def blosc_options(level=9, shuffle='byte', compression='blosclz'):
+def _blosc_options(level=9, shuffle='byte', compression='blosclz'):
     """Prepare h5py.Group.create_dataset's compression_opts parameter.
 
     :param int level:
@@ -112,6 +112,52 @@ def blosc_options(level=9, shuffle='byte', compression='blosclz'):
     shuffle = _blosc_shuffle[shuffle]
     compression = _blosc_compression[compression]
     return (0, 0, 0, 0, level, shuffle, compression)
+
+
+def _bshuf_options(nelems=0, lz4=True):
+    """Prepare h5py.Group.create_dataset's compression_opts parameter.
+
+    :param int nelems:
+        The number of elements per block.
+        Default: 0 (for about 8kB per block).
+    :param bool lz4:
+        Default: True
+    :returns: compression_opts to provide to h5py.Group.create_dataset
+    :rtype: tuple(int)
+    """
+    nelems = int(nelems)
+    assert nelems % 8 == 0
+
+    lz4_enabled = 2 if lz4 else 0
+
+    return (nelems, lz4_enabled)
+
+
+def _lz4_options(nbytes=0):
+    """Prepare h5py.Group.create_dataset's compression_opts parameter.
+
+    :param int nelems:
+        The number of bytes per block.
+        Default: 0 (for 1GB per block).
+    :returns: compression_opts to provide to h5py.Group.create_dataset
+    :rtype: tuple(int)
+    """
+    nbytes = int(nbytes)
+    assert 0 <= nbytes <= 0x7E000000
+    return (nbytes,)
+
+
+def compression_opts(name, **kwargs):
+    assert name in ('blosc', BLOSC, 'bshuf', BSHUF, 'lz4', LZ4)
+    if name in ('blosc', BLOSC):
+        return {'compression': BLOSC,
+                'compression_opts': _blosc_options(**kwargs)}
+    elif name in ('bshuf', BSHUF):
+        return {'compression': BSHUF,
+                'compression_opts': _bshuf_options(**kwargs)}
+    elif name in ("lz4", LZ4):
+        return {'compression': LZ4,
+                'compression_opts': _lz4_options(**kwargs)}
 
 
 def _init_filters():
