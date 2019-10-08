@@ -89,7 +89,7 @@ _blosc_compression = {
 
 
 def blosc_options(level=9, shuffle='byte', compression='blosclz'):
-    """Prepare h5py.Group.create_dataset's compression_opts parameter.
+    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
 
     :param int level:
         Compression level from 0 no compression to 9 maximum compression.
@@ -100,8 +100,8 @@ def blosc_options(level=9, shuffle='byte', compression='blosclz'):
         - `bit`: bit-wise shuffle.
     :param str compression:
         `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
-    :returns: compression_opts to provide to h5py.Group.create_dataset
-    :rtype: tuple(int)
+    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
+    :rtype: dict
     """
     level = int(level)
     assert 0 <= level <= 9
@@ -112,15 +112,16 @@ def blosc_options(level=9, shuffle='byte', compression='blosclz'):
 
 
 def bshuf_options(nelems=0, lz4=True):
-    """Prepare h5py.Group.create_dataset's compression_opts parameter.
+    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
 
     :param int nelems:
         The number of elements per block.
         Default: 0 (for about 8kB per block).
     :param bool lz4:
+        Whether to use LZ4 compression or not as part of the filter.
         Default: True
-    :returns: compression_opts to provide to h5py.Group.create_dataset
-    :rtype: tuple(int)
+    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
+    :rtype: dict
     """
     nelems = int(nelems)
     assert nelems % 8 == 0
@@ -131,13 +132,13 @@ def bshuf_options(nelems=0, lz4=True):
             'compression': BSHUF}
 
 def lz4_options(nbytes=0):
-    """Prepare h5py.Group.create_dataset's compression_opts parameter.
+    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
 
     :param int nelems:
         The number of bytes per block.
         Default: 0 (for 1GB per block).
-    :returns: compression_opts to provide to h5py.Group.create_dataset
-    :rtype: tuple(int)
+    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
+    :rtype: dict
     """
     nbytes = int(nbytes)
     assert 0 <= nbytes <= 0x7E000000
