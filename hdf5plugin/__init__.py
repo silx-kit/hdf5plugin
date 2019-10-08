@@ -88,7 +88,7 @@ _blosc_compression = {
     }
 
 
-def _blosc_options(level=9, shuffle='byte', compression='blosclz'):
+def blosc_options(level=9, shuffle='byte', compression='blosclz'):
     """Prepare h5py.Group.create_dataset's compression_opts parameter.
 
     :param int level:
@@ -107,10 +107,11 @@ def _blosc_options(level=9, shuffle='byte', compression='blosclz'):
     assert 0 <= level <= 9
     shuffle = _blosc_shuffle[shuffle]
     compression = _blosc_compression[compression]
-    return (0, 0, 0, 0, level, shuffle, compression)
+    return {'compression_opts': (0, 0, 0, 0, level, shuffle, compression),
+            'compression': BLOSC}
 
 
-def _bshuf_options(nelems=0, lz4=True):
+def bshuf_options(nelems=0, lz4=True):
     """Prepare h5py.Group.create_dataset's compression_opts parameter.
 
     :param int nelems:
@@ -126,10 +127,10 @@ def _bshuf_options(nelems=0, lz4=True):
 
     lz4_enabled = 2 if lz4 else 0
 
-    return (nelems, lz4_enabled)
+    return {'compression_opts': (nelems, lz4_enabled),
+            'compression': BSHUF}
 
-
-def _lz4_options(nbytes=0):
+def lz4_options(nbytes=0):
     """Prepare h5py.Group.create_dataset's compression_opts parameter.
 
     :param int nelems:
@@ -140,54 +141,8 @@ def _lz4_options(nbytes=0):
     """
     nbytes = int(nbytes)
     assert 0 <= nbytes <= 0x7E000000
-    return (nbytes,)
-
-
-def compression_opts(name, **kwargs):
-    """Prepare h5py.Group.create_dataset's compression_opts parameter.
-
-    :param string name
-        The name of the hdf5 filter to use
-        - 'blosc' or hdf5plugin.BLOSC for the Blosc filter
-        - 'bshuf' or hdf5plugin.BSHUF for the Bitshuffle filter
-        - 'lz4' or hdf5plugin.LZ4 for the LZ4 filter
-
-    Blosc takes as parameters:
-    :param int level:
-        Compression level from 0 no compression to 9 maximum compression.
-        Default: 9.
-    :param str shuffle:
-        - `none` or None: no shuffle
-        - `byte`: byte-wise shuffle
-        - `bit`: bit-wise shuffle.
-    :param str compression:
-        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
-
-    Bitshuffle takes as parameters:
-    :param int nelems:
-        The number of elements per block.
-        Default: 0 (for about 8kB per block).
-    :param bool lz4:
-        Default: True
-
-    LZ4 takes as parameters:
-    :param int nelems:
-        The number of bytes per block.
-        Default: 0 (for 1GB per block).
-
-    :returns: compression_opts to provide to h5py.Group.create_dataset
-    :rtype: tuple(int)
-    """
-    assert name in ('blosc', BLOSC, 'bshuf', BSHUF, 'lz4', LZ4)
-    if name in ('blosc', BLOSC):
-        return {'compression': BLOSC,
-                'compression_opts': _blosc_options(**kwargs)}
-    elif name in ('bshuf', BSHUF):
-        return {'compression': BSHUF,
-                'compression_opts': _bshuf_options(**kwargs)}
-    elif name in ("lz4", LZ4):
-        return {'compression': LZ4,
-                'compression_opts': _lz4_options(**kwargs)}
+    return {'compression_opts': (nbytes,),
+            'compression': LZ4}
 
 
 def _init_filters():

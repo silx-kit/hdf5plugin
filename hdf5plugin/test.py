@@ -54,11 +54,15 @@ class TestHDF5PluginRW(unittest.TestCase):
         data = numpy.arange(100, dtype='float32')
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
+        args = {"blosc": hdf5plugin.blosc_options,
+                "bshuf": hdf5plugin.bshuf_options,
+                "lz4": hdf5plugin.lz4_options}[filter_name](**options)
+
         # Write
         f = h5py.File(filename, "w")
         f.create_dataset("data",
                          data=data,
-                         **hdf5plugin.compression_opts(filter_name, **options))
+                         **args)
         f.close()
 
         # Read
@@ -107,8 +111,8 @@ class TestBloscOptions(unittest.TestCase):
 
     def test(self):
         """blosc_options test"""
-        result = hdf5plugin.compression_opts('blosc',
-            level=3, shuffle='byte', compression='lz4')["compression_opts"]
+        result = hdf5plugin.blosc_options(level=3,
+                shuffle='byte', compression='lz4')["compression_opts"]
         self.assertEqual(result, (0, 0, 0, 0, 3, 1, 1))
 
 
