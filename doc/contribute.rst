@@ -42,3 +42,5 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
   - The `hdf5plugin.<FILTER_NAME>` filter ID "CONSTANT".
   - The `hdf5plugin.<filter_name>_options` compression helper function.
 
+* Update `doc/compression_opts.rst` to document the format of `compression_opts` expected by the filter.
+
