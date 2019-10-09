@@ -16,7 +16,7 @@ compression_opts: (**block_size**, **lz4 compression**)
   Default: 0 for a block size of about 8 kB.
 - **lz4 compression**: 0: disabled (default), 2: enabled.
 
-By default the filter uses bitshuffle, but do NOT compress with LZ4.
+By default the filter uses bitshuffle, but does NOT compress with LZ4.
 
 blosc
 .....
