@@ -9,7 +9,7 @@ Guidelines to add a compression filter
 
 This briefly describes the steps to add a HDF5 compression filter to the zoo.
 
-* Add the source of the HDF5 filter and compression algorithm code in a subdirectory in `src/[filter]`.
+* Add the source of the HDF5 filter and compression algorithm code in a subdirectory in ``src/[filter]``.
   Best is to use ``git subtree`` else copy the files there (including the license file).
   A released version of the filter + compression libraru should be used.
 
@@ -23,7 +23,7 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 * Add a "CONSTANT" in ``hdf5plugins/__init__.py`` named with the ``FILTER_NAME`` which value is the HDF5 filter ID
   (See `HDF5 registered filters <https://portal.hdfgroup.org/display/support/Registered+Filters>`_).
 
-* Add a ``"<filter_name>": <FILTER_ID_CONSTANT>`` entry in `hdf5plugin.FILTERS`.
+* Add a ``"<filter_name>": <FILTER_ID_CONSTANT>`` entry in ``hdf5plugin.FILTERS``.
   You must use the same `filter_name` as in the extension in ``setup.py`` (without the ``libh5`` prefix) .
   The names in ``FILTERS`` are used to find the available filter libraries.
 
