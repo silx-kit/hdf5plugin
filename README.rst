@@ -52,72 +52,85 @@ Sample code:
 
 * The HDF5 filter ID of embedded plugins:
 
-  - ``hdf5plugin.BLOSC``
-  - ``hdf5plugin.BSHUF``
-  - ``hdf5plugin.LZ4``
+  - ``BLOSC``
+  - ``BSHUF``
+  - ``LZ4``
 
-* Compression option helper:
+* Compression option helper functions to prepare arguments to provide to ``h5py.Group.create_dataset``:
 
-  - ``hdf5plugin.blosc_options(level=5, shuffle='byte', compression='blosclz')``: Function to prepare ``compression_opts`` parameter to use with blosc compression.
-  hdf5
+  - `bitshuffle_options(nelems=0, lz4=True)`_
+  - `blosc_options(level=9, shuffle='byte', compression='blosclz')`_
+  - `lz4_options(nbytes=0)`_
 
-* ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
-* ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
+* ``FILTERS``: A dictionary mapping provided filters to their ID
+* ``PLUGINS_PATH``: The directory where the provided filters library are stored.
 
 
-bitshuffle_options
-******************
-This function takes the variable arguments below to create the compression options to feed into ``create_dataset`` for using the bitshuffle filter . It return a dict that can be passed as kwargs.
+bitshuffle_options(nelems=0, lz4=True)
+**************************************
+
+This function takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the bitshuffle filter:
 
 * **nelems** the number of elements per block, needs to be divisible by eight (default is 0, about 8kB per block)
 * **lz4** if True the elements get compressed using lz4 (default is True)
-	
+
+It returns a dict that can be passed as keyword arguments.
+
+Sample code:
+
 .. code-block:: python
-	f = h5py.File('test.h5', 'w')
-	f.create_dataset('bitshuffle_with_lz4',
-	data=numpy.arange(100), **hdf5plugin.bshuf_options(nelems = 0, lz4=True))
-	
-	f.close()
-	
-	
-blosc
-******
-This function takes the variable arguments below to create the compression options to feed into ``create_dataset`` for using the blosc filter . It return a dict that can be passed as kwargs.
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('bitshuffle_with_lz4', data=numpy.arange(100),
+	    **hdf5plugin.bshuf_options(nelems=0, lz4=True))
+        f.close()
+
+
+blosc_options(level=9, shuffle='byte', compression='blosclz')
+*************************************************************
+
+This function takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the blosc filter:
 
 * **level** the compression level, from 0 to 9 (default is 9)
 * **shuffle** the shuffling mode, either 'none', 'bit' or 'byte' (default is 'byte')
-* **compression** the compressor blosc ID, one of
-  * blosclz (default)
-  * lz4
-  * lz4hc
-  * zlib
-  * zstd
-	
-.. code-block:: python
-	f = h5py.File('test.h5', 'w')
-	f.create_dataset('bitshuffle_with_lz4',
-	data=numpy.arange(100), **hdf5plugin.blosc_options(level=9, shuffle='byte', compression='blosclz'))
-	
-	f.close()
+* **compression** the compressor blosc ID, one of:
 
+  * 'blosclz' (default)
+  * 'lz4'
+  * 'lz4hc'
+  * 'zlib'
+  * 'zstd'
 
-lz4
-***
-This function takes the number of bytes per block to create the compression options to feed into ``create_dataset`` for using the lz4 filter . It return a dict that can be passed as kwargs.
+It returns a dict that can be passed as keyword arguments.
 
-* **nbytes** number of bytes per block needs to be in the range of 0 < nbytes < 2113929216(1,9GB). The default value is 0.
+Sample code:
 
 .. code-block:: python
-	f = h5py.File('test.h5', 'w')
-	f.create_dataset('bitshuffle_with_lz4',
-	data=numpy.arange(100), **hdf5plugin.lz4_options(nbytes=0)) 
-	
-	f.close()
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('blosc_byte_shuffle_blosclz', data=numpy.arange(100),
+            **hdf5plugin.blosc_options(level=9, shuffle='byte', compression='blosclz'))
+        f.close()
 
 
+lz4_options(nbytes=0)
+*********************
 
+This function takes the number of bytes per block as argument and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the lz4 filter:
 
+* **nbytes** number of bytes per block needs to be in the range of 0 < nbytes < 2113929216 (1,9GB).
+  The default value is 0 (for 1GB).
 
+It returns a dict that can be passed as keyword arguments.
+
+Sample code:
+
+.. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('lz4', data=numpy.arange(100),
+            **hdf5plugin.lz4_options(nbytes=0)) 
+        f.close()
 
 Dependencies
 ------------
