@@ -54,9 +54,9 @@ class TestHDF5PluginRW(unittest.TestCase):
         data = numpy.arange(100, dtype=dtype)
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
-        args = {"blosc": hdf5plugin.blosc_options,
-                "bshuf": hdf5plugin.bshuf_options,
-                "lz4": hdf5plugin.lz4_options}[filter_name](**options)
+        args = {"blosc": hdf5plugin.Blosc,
+                "bshuf": hdf5plugin.Bitshuffle,
+                "lz4": hdf5plugin.LZ4}[filter_name](**options)
 
         # Write
         f = h5py.File(filename, "w")
@@ -82,12 +82,6 @@ class TestHDF5PluginRW(unittest.TestCase):
         return filters[0]
 
     def testBitshuffle(self):
-        for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
-            for x in range(1,3):
-                bshuf = BSHUF(dtype, nelems * x, lz4 = False)
-                self.assertEqual((1024*x, 0), (self.filter_id, self.filter_options))
-                bshuf = BSHUF(dtype, nelems * x, lz4 = True )
-                self.assertEqual((1024*x, 2), (self.filter_id, self.filter_options))
         """Write/read test with bitshuffle filter plugin"""
         self._test('bshuf')  # Default options
 
@@ -102,16 +96,6 @@ class TestHDF5PluginRW(unittest.TestCase):
 
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
-        shuffle1 = ['none', 'byte', 'bit']
-        compress1 = ['blosclz', 'lz4', 'lz4hc','snappy', 'zlib', 'zstd']
-        for i in range(0,10):
-            #for shuffle_id, shuffle in enumerate(['none', 'byte', 'bit']):
-            for j in range(len(shuffle)):
-                #for compress_id, compress in enumerate(['blosclz', 'lz4', 'lz4hc','snappy', 'zlib', 'zstd']):
-                for k in range(0,6):
-                    if not k == 3:
-                        blosc = Blosc(i,shuffle1[j],compress1[k])
-                        self.assertEqual((i, j, k), self.filter_options)        
         self._test('blosc')  # Default options
 
         shuffle = ['none', 'byte', 'bit']
@@ -127,9 +111,6 @@ class TestHDF5PluginRW(unittest.TestCase):
                         self.assertEqual(filter_[2][4:], (i, j, k))
 
     def testLZ4(self):
-        lz4 = LZ4(nbytes=1024,)
-        self.assertEqual(lz4.filter_options, (1024,))
-
         """Write/read test with lz4 filter plugin"""
         self._test('lz4')
 
