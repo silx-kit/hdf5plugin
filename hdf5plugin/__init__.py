@@ -34,7 +34,10 @@ from glob import glob as _glob
 import logging as _logging
 import os as _os
 import sys as _sys
-
+if _sys.version_info[0] >= 3:
+    from collections.abc import Mapping as _Mapping
+else :
+    from collections import Mapping as _Mapping
 import h5py as _h5py
 
 
@@ -57,16 +60,16 @@ PLUGINS_PATH = _os.path.abspath(
 
 
 # IDs of provided filters
-BLOSC = 32001
+BLOSC_ID = 32001
 """Blosc filter ID"""
 
-BSHUF = 32008
+BSHUF_ID = 32008
 """Bitshuffle filter ID"""
 
-LZ4 = 32004
-"""LZ4 filter ID"""
+LZ4_ID = 32004
+"""LZ4_ID filter ID"""
 
-FILTERS = {'blosc': BLOSC, 'bshuf': BSHUF, 'lz4': LZ4}
+FILTERS = {'blosc': BLOSC_ID, 'bshuf': BSHUF_ID, 'lz4': LZ4_ID}
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
 # compression_opts
@@ -87,9 +90,38 @@ _blosc_compression = {
     'zstd': 5,
     }
 
+try:
+    _FilterRefClass = _h5py.filters.FilterRefBase
+except AttributeError:
+    class _FilterRefClass(_Mapping):
+     """Base class for referring to an HDF5 and describing its options
 
-def blosc_options(level=9, shuffle='byte', compression='blosclz'):
-    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
+     Your subclass must define filter_id, and may define a filter_options tuple.
+     """
+     filter_id = None
+     filter_options = ()
+
+     # Mapping interface supports using instances as **kwargs for compatibility
+     # with older versions of h5py
+     @property
+     def _kwargs(self):
+         return {
+             'compression': self.filter_id,
+             'compression_opts': self.filter_options
+         }
+
+     def __len__(self):
+         return len(self._kwargs)
+
+     def __iter__(self):
+         return iter(self._kwargs)
+
+     def __getitem__(self, item):
+         return self._kwargs[item]
+
+
+class Blosc(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
 
     :param int level:
         Compression level from 0 no compression to 9 maximum compression.
@@ -100,50 +132,50 @@ def blosc_options(level=9, shuffle='byte', compression='blosclz'):
         - `bit`: bit-wise shuffle.
     :param str compression:
         `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
-    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
-    :rtype: dict
     """
-    level = int(level)
-    assert 0 <= level <= 9
-    shuffle = _blosc_shuffle[shuffle]
-    compression = _blosc_compression[compression]
-    return {'compression_opts': (0, 0, 0, 0, level, shuffle, compression),
-            'compression': BLOSC}
+    filter_id = BLOSC_ID
+
+    def __init__ (self, level=9, shuffle='byte', compression='blosclz'):
+        level = int(level)
+        assert 0 <= level <= 9
+        shuffle = _blosc_shuffle[shuffle]
+        compression = _blosc_compression[compression]
+        self.filter_options = (0, 0, 0, 0, level, shuffle, compression)
 
 
-def bshuf_options(nelems=0, lz4=True):
-    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
+class Bitshuffle(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
 
     :param int nelems:
         The number of elements per block.
         Default: 0 (for about 8kB per block).
     :param bool lz4:
-        Whether to use LZ4 compression or not as part of the filter.
+        Whether to use LZ4_ID compression or not as part of the filter.
         Default: True
-    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
-    :rtype: dict
     """
-    nelems = int(nelems)
-    assert nelems % 8 == 0
+    filter_id = BSHUF_ID
 
-    lz4_enabled = 2 if lz4 else 0
+    def __init__(self, nelems=0, lz4=True):
+        nelems = int(nelems)
+        assert nelems % 8 == 0
 
-    return {'compression_opts': (nelems, lz4_enabled),
-            'compression': BSHUF}
+        lz4_enabled = 2 if lz4 else 0
+        self.filter_options = (nelems, lz4_enabled)
 
-def lz4_options(nbytes=0):
-    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
+
+class LZ4(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
 
     :param int nelems:
         The number of bytes per block.
         Default: 0 (for 1GB per block).
-    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
-    :rtype: dict
     """
-    nbytes = int(nbytes)
-    assert 0 <= nbytes <= 0x7E000000
-    return {'compression_opts': (nbytes,),
-            'compression': LZ4}
+    filter_id = LZ4_ID
+
+    def __init__(self, nbytes = 0):
+        nbytes = int(nbytes)
+        assert 0 <= nbytes <= 0x7E000000
+        self.filter_options = (nbytes,)
 
 
 def _init_filters():
