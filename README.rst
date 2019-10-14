@@ -56,25 +56,25 @@ Sample code:
   - ``BSHUF``
   - ``LZ4``
 
-* Compression option helper functions to prepare arguments to provide to ``h5py.Group.create_dataset``:
+* Compression option helper classes to prepare arguments to provide to ``h5py.Group.create_dataset``:
 
-  - `bitshuffle_options(nelems=0, lz4=True)`_
-  - `blosc_options(level=9, shuffle='byte', compression='blosclz')`_
-  - `lz4_options(nbytes=0)`_
+  - `Bitshuffle(nelems=0, lz4=True)`_
+  - `Blosc(level=9, shuffle='byte', compression='blosclz')`_
+  - `LZ4(nbytes=0)`_
 
 * ``FILTERS``: A dictionary mapping provided filters to their ID
 * ``PLUGINS_PATH``: The directory where the provided filters library are stored.
 
 
-bitshuffle_options(nelems=0, lz4=True)
+Bitshuffle(nelems=0, lz4=True)
 **************************************
 
-This function takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the bitshuffle filter:
+This class takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the bitshuffle filter:
 
 * **nelems** the number of elements per block, needs to be divisible by eight (default is 0, about 8kB per block)
 * **lz4** if True the elements get compressed using lz4 (default is True)
 
-It returns a dict that can be passed as keyword arguments.
+It stores a dict that can be passed as keyword arguments.
 
 Sample code:
 
@@ -82,14 +82,14 @@ Sample code:
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('bitshuffle_with_lz4', data=numpy.arange(100),
-	    **hdf5plugin.bshuf_options(nelems=0, lz4=True))
+	      BSHUF(nelems=0, lz4=True))
         f.close()
 
 
-blosc_options(level=9, shuffle='byte', compression='blosclz')
+Blosc(level=9, shuffle='byte', compression='blosclz')
 *************************************************************
 
-This function takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the blosc filter:
+This class takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the blosc filter:
 
 * **level** the compression level, from 0 to 9 (default is 9)
 * **shuffle** the shuffling mode, either 'none', 'bit' or 'byte' (default is 'byte')
@@ -101,7 +101,7 @@ This function takes the following arguments and returns the compression options 
   * 'zlib'
   * 'zstd'
 
-It returns a dict that can be passed as keyword arguments.
+It stores a dict that can be passed as keyword arguments.
 
 Sample code:
 
@@ -109,19 +109,19 @@ Sample code:
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('blosc_byte_shuffle_blosclz', data=numpy.arange(100),
-            **hdf5plugin.blosc_options(level=9, shuffle='byte', compression='blosclz'))
+            Blosc(level=9, shuffle='byte', compression='blosclz'))
         f.close()
 
 
-lz4_options(nbytes=0)
+LZ4(nbytes=0)
 *********************
 
-This function takes the number of bytes per block as argument and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the lz4 filter:
+This class takes the number of bytes per block as argument and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the lz4 filter:
 
 * **nbytes** number of bytes per block needs to be in the range of 0 < nbytes < 2113929216 (1,9GB).
   The default value is 0 (for 1GB).
 
-It returns a dict that can be passed as keyword arguments.
+It stores a dict that can be passed as keyword arguments.
 
 Sample code:
 
@@ -129,7 +129,7 @@ Sample code:
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('lz4', data=numpy.arange(100),
-            **hdf5plugin.lz4_options(nbytes=0)) 
+            LZ4(nbytes=0))
         f.close()
 
 Dependencies
