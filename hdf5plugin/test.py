@@ -119,19 +119,9 @@ class TestHDF5PluginRW(unittest.TestCase):
         self.assertEqual(filter_[2], (1024,))
 
 
-class TestBloscOptions(unittest.TestCase):
-    """Test the blosc_options helper"""
-
-    def test(self):
-        """blosc_options test"""
-        result = hdf5plugin.blosc_options(level=3,
-                shuffle='byte', compression='lz4')["compression_opts"]
-        self.assertEqual(result, (0, 0, 0, 0, 3, 1, 1))
-
-
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW, TestBloscOptions):
+    for cls in (TestHDF5PluginRW,):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 

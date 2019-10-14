@@ -82,7 +82,7 @@ Sample code:
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('bitshuffle_with_lz4', data=numpy.arange(100),
-	      BSHUF(nelems=0, lz4=True))
+	      hdf5plugin.BSHUF(nelems=0, lz4=True))
         f.close()
 
 
@@ -109,7 +109,7 @@ Sample code:
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('blosc_byte_shuffle_blosclz', data=numpy.arange(100),
-            Blosc(level=9, shuffle='byte', compression='blosclz'))
+            hdf5plugin.Blosc(level=9, shuffle='byte', compression='blosclz'))
         f.close()
 
 
@@ -129,7 +129,7 @@ Sample code:
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('lz4', data=numpy.arange(100),
-            LZ4(nbytes=0))
+            hdf5plugin.LZ4(nbytes=0))
         f.close()
 
 Dependencies

@@ -29,13 +29,15 @@ __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "30/09/2019"
 
-from collections.abc import Mapping
 import ctypes as _ctypes
 from glob import glob as _glob
 import logging as _logging
 import os as _os
 import sys as _sys
-
+if _sys.version_info[0] >= 3:
+    from collections.abc import Mapping as _Mapping
+else :
+    from collections import Mapping as _Mapping
 import h5py as _h5py
 
 
@@ -89,9 +91,9 @@ _blosc_compression = {
     }
 
 try:
-    _FilterRefClass = h5py.filters.FilterRefBase
+    _FilterRefClass = _h5py.filters.FilterRefBase
 except AttributeError:
-    class _FilterRefClass(Mapping):
+    class _FilterRefClass(_Mapping):
      """Base class for referring to an HDF5 and describing its options
 
      Your subclass must define filter_id, and may define a filter_options tuple.
@@ -118,7 +120,7 @@ except AttributeError:
          return self._kwargs[item]
 
 
-class Blosc(_FilterRefBase):
+class Blosc(_FilterRefClass):
     """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
 
     :param int level:
@@ -141,7 +143,7 @@ class Blosc(_FilterRefBase):
         compression = _blosc_compression[compression]
         self.filter_options = (0, 0, 0, 0, level, shuffle, compression)
 
-class Bitshuffle(_FilterRefBase):
+class Bitshuffle(_FilterRefClass):
     """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
 
     :param int nelems:
@@ -162,7 +164,7 @@ class Bitshuffle(_FilterRefBase):
         self.filter_options = (nelems, lz4_enabled)
 
 
-class LZ4(_FilterRefBase):
+class LZ4(_FilterRefClass):
     """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
 
     :param int nelems:
