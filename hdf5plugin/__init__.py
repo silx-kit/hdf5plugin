@@ -121,7 +121,7 @@ except AttributeError:
 
 
 class Blosc(_FilterRefClass):
-    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
 
     :param int level:
         Compression level from 0 no compression to 9 maximum compression.
@@ -132,10 +132,9 @@ class Blosc(_FilterRefClass):
         - `bit`: bit-wise shuffle.
     :param str compression:
         `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
-    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
-    :rtype: dict
     """
     filter_id = BLOSC_ID
+
     def __init__ (self, level=9, shuffle='byte', compression='blosclz'):
         level = int(level)
         assert 0 <= level <= 9
@@ -143,8 +142,9 @@ class Blosc(_FilterRefClass):
         compression = _blosc_compression[compression]
         self.filter_options = (0, 0, 0, 0, level, shuffle, compression)
 
+
 class Bitshuffle(_FilterRefClass):
-    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
 
     :param int nelems:
         The number of elements per block.
@@ -152,10 +152,9 @@ class Bitshuffle(_FilterRefClass):
     :param bool lz4:
         Whether to use LZ4_ID compression or not as part of the filter.
         Default: True
-    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
-    :rtype: dict
     """
     filter_id = BSHUF_ID
+
     def __init__(self, nelems=0, lz4=True):
         nelems = int(nelems)
         assert nelems % 8 == 0
@@ -165,19 +164,19 @@ class Bitshuffle(_FilterRefClass):
 
 
 class LZ4(_FilterRefClass):
-    """Prepare h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
 
     :param int nelems:
         The number of bytes per block.
         Default: 0 (for 1GB per block).
-    :returns: compression and compression_opts arguments for h5py.Group.create_dataset
-    :rtype: dict
     """
     filter_id = LZ4_ID
+
     def __init__(self, nbytes = 0):
         nbytes = int(nbytes)
         assert 0 <= nbytes <= 0x7E000000
         self.filter_options = (nbytes,)
+
 
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
