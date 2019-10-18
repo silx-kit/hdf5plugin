@@ -3,6 +3,9 @@
 
 - Added compression support for Linux and macOS
 - Added blosc filter
+- Added helper class (Blosc, Bitshuffle and LZ4) to ease providing compression arguments to h5py
+- Added tests
+- Updated documentation
 - Building from source through setup.py
 - No longer use the plugin mechanism via HDF5_PLUGIN_PATH environment variable
 
