@@ -36,7 +36,7 @@ import os as _os
 import sys as _sys
 if _sys.version_info[0] >= 3:
     from collections.abc import Mapping as _Mapping
-else :
+else:
     from collections import Mapping as _Mapping
 import h5py as _h5py
 
@@ -79,7 +79,7 @@ _blosc_shuffle = {
     'none': 0,
     'byte': 1,
     'bit': 2,
-    }
+}
 
 _blosc_compression = {
     'blosclz': 0,
@@ -88,7 +88,7 @@ _blosc_compression = {
     # Not built 'snappy': 3,
     'zlib': 4,
     'zstd': 5,
-    }
+ }
 
 try:
     _FilterRefClass = _h5py.filters.FilterRefBase
@@ -135,7 +135,7 @@ class Blosc(_FilterRefClass):
     """
     filter_id = BLOSC_ID
 
-    def __init__ (self, level=9, shuffle='byte', compression='blosclz'):
+    def __init__(self, level=9, shuffle='byte', compression='blosclz'):
         level = int(level)
         assert 0 <= level <= 9
         shuffle = _blosc_shuffle[shuffle]
