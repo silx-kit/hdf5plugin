@@ -60,9 +60,7 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         # Write
         f = h5py.File(filename, "w")
-        f.create_dataset("data",
-                         data=data,
-                         **args)
+        f.create_dataset("data", data=data, **args)
         f.close()
 
         # Read
@@ -86,9 +84,9 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('bshuf')  # Default options
 
         # Specify options
-        #numpy.int8, int16, int32, int64
+        # numpy.int8, int16, int32, int64
         for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
-            for x in range(1,3):
+            for x in range(1, 3):
                 filter_ = self._test('bshuf', dtype, nelems=1024*x, lz4=False)
                 self.assertEqual(filter_[2][3:], (1024*x, 0))
                 filter_ = self._test('bshuf', dtype, nelems=1024*x, lz4=True)
@@ -99,16 +97,20 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('blosc')  # Default options
 
         shuffle = ['none', 'byte', 'bit']
-        compress = ['blosclz', 'lz4', 'lz4hc','snappy', 'zlib', 'zstd']
+        compress = ['blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd']
         # Specify options
-        for i in range(0,10):
-            #for shuffle_id, shuffle in enumerate(['none', 'byte', 'bit']):
-            for j in range(len(shuffle)):
-                #for compress_id, compress in enumerate(['blosclz', 'lz4', 'lz4hc','snappy', 'zlib', 'zstd']):
-                for k in range(0,6):
-                    if not k == 3:
-                        filter_ = self._test('blosc', level=i, shuffle=shuffle[j], compression=compress[k])
-                        self.assertEqual(filter_[2][4:], (i, j, k))
+        for level in range(10):
+            for shuffle_index in range(len(shuffle)):
+                for compression_index in range(6):
+                    if not compression_index == 3:
+                        filter_ = self._test(
+                            'blosc',
+                            level=level,
+                            shuffle=shuffle[shuffle_index],
+                            compression=compress[compression_index])
+                        self.assertEqual(
+                            filter_[2][4:],
+                            (level, shuffle_index, compression_index))
 
     def testLZ4(self):
         """Write/read test with lz4 filter plugin"""
@@ -132,6 +134,7 @@ def run_tests():
     success = runner.run(suite()).wasSuccessful()
     print("Test suite " + ("succeeded" if success else "failed"))
     return success
+
 
 if __name__ == '__main__':
     import sys
