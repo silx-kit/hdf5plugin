@@ -94,30 +94,30 @@ try:
     _FilterRefClass = _h5py.filters.FilterRefBase
 except AttributeError:
     class _FilterRefClass(_Mapping):
-     """Base class for referring to an HDF5 and describing its options
+        """Base class for referring to an HDF5 and describing its options
 
-     Your subclass must define filter_id, and may define a filter_options tuple.
-     """
-     filter_id = None
-     filter_options = ()
+        Your subclass must define filter_id, and may define a filter_options tuple.
+        """
+        filter_id = None
+        filter_options = ()
 
-     # Mapping interface supports using instances as **kwargs for compatibility
-     # with older versions of h5py
-     @property
-     def _kwargs(self):
-         return {
-             'compression': self.filter_id,
-             'compression_opts': self.filter_options
-         }
+        # Mapping interface supports using instances as **kwargs for compatibility
+        # with older versions of h5py
+        @property
+        def _kwargs(self):
+            return {
+                'compression': self.filter_id,
+                'compression_opts': self.filter_options
+            }
 
-     def __len__(self):
-         return len(self._kwargs)
+        def __len__(self):
+            return len(self._kwargs)
 
-     def __iter__(self):
-         return iter(self._kwargs)
+        def __iter__(self):
+            return iter(self._kwargs)
 
-     def __getitem__(self, item):
-         return self._kwargs[item]
+        def __getitem__(self, item):
+            return self._kwargs[item]
 
 
 class Blosc(_FilterRefClass):
@@ -172,7 +172,7 @@ class LZ4(_FilterRefClass):
     """
     filter_id = LZ4_ID
 
-    def __init__(self, nbytes = 0):
+    def __init__(self, nbytes=0):
         nbytes = int(nbytes)
         assert 0 <= nbytes <= 0x7E000000
         self.filter_options = (nbytes,)
