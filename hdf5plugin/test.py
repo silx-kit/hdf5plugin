@@ -97,7 +97,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('blosc')  # Default options
 
         shuffle = ['none', 'byte', 'bit']
-        compress = ['blosclz', 'lz4', 'lz4hc','snappy', 'zlib', 'zstd']
+        compress = ['blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd']
         # Specify options
         for level in range(10):
             for shuffle_index in range(len(shuffle)):
