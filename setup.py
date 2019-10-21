@@ -33,6 +33,7 @@ import sys
 from setuptools import setup, Extension
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
+from distutils.command.build import build
 
 
 # Patch bdist_wheel
@@ -58,8 +59,19 @@ else:
 
 # Plugins
 
+class Build(build):
+    """Build command with extra options used by PluginBuildExt"""
+
+    user_options = [('hdf5=', None, "Custom path to HDF5 (as in h5py)")]
+    user_options.extend(build.user_options)
+
+    def initialize_options(self):
+        build.initialize_options(self)
+        self.hdf5 = None
+
+
 class PluginBuildExt(build_ext):
-    """Build command for DLLs that are not Python modules
+    """Build extension command for DLLs that are not Python modules
 
     This is actually only useful for Windows
     """
@@ -80,43 +92,62 @@ class PluginBuildExt(build_ext):
             return build_ext.get_ext_filename(self, ext_name)
 
     def build_extensions(self):
-        """Overridden to select compile args for MSVC and others"""
+        """Overridden to tune extensions.
+
+        - select compile args for MSVC and others
+        - Set hdf5 directory
+        """
+        hdf5_dir = self.distribution.get_command_obj("build").hdf5
+
         prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
+
         for e in self.extensions:
+            if isinstance(e, HDF5PluginExtension):
+                e.set_hdf5_dir(hdf5_dir)
+
             e.extra_compile_args = [
                 arg for arg in e.extra_compile_args if arg.startswith(prefix)]
+
         build_ext.build_extensions(self)
 
 
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    @staticmethod
-    def __prepend(kwargs, key, extra_list):
-        kwargs[key] = extra_list + kwargs.get(key, [])
-
     def __init__(self, name, **kwargs):
+        Extension.__init__(self, name, **kwargs)
         if sys.platform.startswith('win'):
-            self.__prepend(kwargs, 'sources', ['src/register_win32.c'])
-            self.__prepend(kwargs, 'export_symbols', ['register_filter'])
-            self.__prepend(kwargs, 'define_macros', [('H5_BUILT_AS_DYNAMIC_LIB', None)])
-            self.__prepend(kwargs, 'libraries', ['hdf5'])
-            self.__prepend(kwargs, 'library_dirs', ['src/hdf5'])
-            if sys.version_info[0] >= 3:
-                inc_dir = 'src/hdf5/include/windows'
-            else:
-                inc_dir = 'src/hdf5/include/windows-2.7'
-            self.__prepend(kwargs, 'include_dirs', [inc_dir])
+            self.sources.append('src/register_win32.c')
+            self.export_symbols.append('register_filter')
+            self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
+            self.libraries.append('hdf5')
 
         else:
-            self.__prepend(kwargs, 'sources', ['src/hdf5_dl.c'])
-            self.__prepend(kwargs, 'export_symbols', ['init_filter'])
-            folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
-            self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include/' + folder])
+            self.sources.append('src/hdf5_dl.c')
+            self.export_symbols.append('init_filter')
 
-        self.__prepend(kwargs, 'include_dirs', ['src/hdf5/include'])
-        self.__prepend(kwargs, 'define_macros', [('H5_USE_18_API', None)])
-        Extension.__init__(self, name, **kwargs)
+        self.define_macros.append(('H5_USE_18_API', None))
+
+    def set_hdf5_dir(self, hdf5_dir=None):
+        """Set the HDF5 installation directory to use to build the plugins.
+
+        It should contains an "include" subfolder containing the HDF5 headers,
+        and on Windows a "lib" subfolder containing the hdf5.lib file.
+
+        :param Union[str,None] hdf5_dir:
+        """
+        if hdf5_dir is None:
+            hdf5_dir = 'src/hdf5'
+            # Add folder containing H5pubconf.h
+            if sys.platform.startswith('win'):
+                folder = 'windows' if sys.version_info[0] >= 3 else 'windows-2.7'
+            else:
+                folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
+            self.include_dirs.insert(0, hdf5_dir + '/include/' + folder)
+
+        if sys.platform.startswith('win'):
+            self.library_dirs.insert(0, hdf5_dir + '/lib')
+        self.include_dirs.insert(0, hdf5_dir + '/include')
 
 
 def prefix(directory, files):
@@ -278,7 +309,8 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.7",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
-cmdclass = dict(build_ext=PluginBuildExt,
+cmdclass = dict(build=Build,
+                build_ext=PluginBuildExt,
                 build_py=build_py)
 if BDistWheel is not None:
     cmdclass['bdist_wheel'] = BDistWheel
