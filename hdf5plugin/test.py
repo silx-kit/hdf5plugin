@@ -96,21 +96,20 @@ class TestHDF5PluginRW(unittest.TestCase):
         """Write/read test with blosc filter plugin"""
         self._test('blosc')  # Default options
 
-        shuffle = ['none', 'byte', 'bit']
-        compress = ['blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd']
         # Specify options
-        for level in range(10):
-            for shuffle_index in range(len(shuffle)):
-                for compression_index in range(6):
-                    if not compression_index == 3:
-                        filter_ = self._test(
-                            'blosc',
-                            level=level,
-                            shuffle=shuffle[shuffle_index],
-                            compression=compress[compression_index])
-                        self.assertEqual(
-                            filter_[2][4:],
-                            (level, shuffle_index, compression_index))
+        shuffles = (hdf5plugin.Blosc.NOSHUFFLE,
+                    hdf5plugin.Blosc.SHUFFLE,
+                    hdf5plugin.Blosc.BITSHUFFLE)
+        compress = 'blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd'
+        for clevel in range(10):
+            for shuffle in shuffles:
+                for compression_id, cname in enumerate(compress):
+                    if cname == 'snappy':
+                        continue  # Not provided
+                    filter_ = self._test(
+                        'blosc', cname=cname, clevel=clevel, shuffle=shuffle)
+                    self.assertEqual(
+                        filter_[2][4:], (clevel, shuffle, compression_id))
 
     def testLZ4(self):
         """Write/read test with lz4 filter plugin"""

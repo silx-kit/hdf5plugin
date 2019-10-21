@@ -72,23 +72,6 @@ LZ4_ID = 32004
 FILTERS = {'blosc': BLOSC_ID, 'bshuf': BSHUF_ID, 'lz4': LZ4_ID}
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
-# compression_opts
-
-_blosc_shuffle = {
-    None: 0,
-    'none': 0,
-    'byte': 1,
-    'bit': 2,
-}
-
-_blosc_compression = {
-    'blosclz': 0,
-    'lz4': 1,
-    'lz4hc': 2,
-    # Not built 'snappy': 3,
-    'zlib': 4,
-    'zstd': 5,
- }
 
 try:
     _FilterRefClass = _h5py.filters.FilterRefBase
@@ -126,24 +109,43 @@ except AttributeError:
 class Blosc(_FilterRefClass):
     """h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
 
-    :param int level:
+    :param str cname:
+        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
+    :param int clevel:
         Compression level from 0 no compression to 9 maximum compression.
         Default: 9.
-    :param str shuffle:
-        - `none` or None: no shuffle
-        - `byte`: byte-wise shuffle
-        - `bit`: bit-wise shuffle.
-    :param str compression:
-        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
+    :param int shuffle: One of:
+        - Blosc.NOSHUFFLE (0): No shuffle
+        - Blosc.SHUFFLE (1): byte-wise shuffle (default)
+        - Blosc.BITSHUFFLE (2): bit-wise shuffle
     """
+
+    NOSHUFFLE = 0
+    """Flag to disable data shuffle pre-compression filter"""
+
+    SHUFFLE = 1
+    """Flag to enable byte-wise shuffle pre-compression filter"""
+
+    BITSHUFFLE = 2
+    """Flag to enable bit-wise shuffle pre-compression filter"""
+
     filter_id = BLOSC_ID
 
-    def __init__(self, level=9, shuffle='byte', compression='blosclz'):
-        level = int(level)
-        assert 0 <= level <= 9
-        shuffle = _blosc_shuffle[shuffle]
-        compression = _blosc_compression[compression]
-        self.filter_options = (0, 0, 0, 0, level, shuffle, compression)
+    __COMPRESSIONS = {
+        'blosclz': 0,
+        'lz4': 1,
+        'lz4hc': 2,
+        # Not built 'snappy': 3,
+        'zlib': 4,
+        'zstd': 5,
+    }
+
+    def __init__(self, cname='blosclz', clevel=9, shuffle=SHUFFLE):
+        compression = self.__COMPRESSIONS[cname]
+        clevel = int(clevel)
+        assert 0 <= clevel <= 9
+        assert shuffle in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE)
+        self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
 
 
 class Bitshuffle(_FilterRefClass):
