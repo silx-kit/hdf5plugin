@@ -110,6 +110,9 @@ except AttributeError:
                 'compression_opts': self.filter_options
             }
 
+        def __hash__(self):
+            return hash((self.filter_id, self.filter_options))
+
         def __len__(self):
             return len(self._kwargs)
 
