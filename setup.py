@@ -143,7 +143,7 @@ class HDF5PluginExtension(Extension):
                 folder = 'windows' if sys.version_info[0] >= 3 else 'windows-2.7'
             else:
                 folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
-            self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include' folder))
+            self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include', folder))
 
         if sys.platform.startswith('win'):
             self.library_dirs.insert(0, os.path.join(hdf5_dir, 'lib'))
