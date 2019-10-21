@@ -110,10 +110,10 @@ class Blosc(_FilterRefClass):
     """h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
 
     :param str cname:
-        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
+        `blosclz`, `lz4` (default), `lz4hc`, `zlib`, `zstd`
     :param int clevel:
         Compression level from 0 no compression to 9 maximum compression.
-        Default: 9.
+        Default: 5.
     :param int shuffle: One of:
         - Blosc.NOSHUFFLE (0): No shuffle
         - Blosc.SHUFFLE (1): byte-wise shuffle (default)
@@ -140,7 +140,7 @@ class Blosc(_FilterRefClass):
         'zstd': 5,
     }
 
-    def __init__(self, cname='blosclz', clevel=9, shuffle=SHUFFLE):
+    def __init__(self, cname='lz4', clevel=5, shuffle=SHUFFLE):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
         assert 0 <= clevel <= 9

@@ -60,7 +60,7 @@ Sample code:
 * Compression option helper classes to prepare arguments to provide to ``h5py.Group.create_dataset``:
 
   - `Bitshuffle(nelems=0, lz4=True)`_
-  - `Blosc(cname='blosclz', clevel=9, shuffle=SHUFFLE)`_
+  - `Blosc(cname='lz4', clevel=5, shuffle=SHUFFLE)`_
   - `LZ4(nbytes=0)`_
 
 * ``FILTERS``: A dictionary mapping provided filters to their ID
@@ -87,20 +87,20 @@ Sample code:
         f.close()
 
 
-Blosc(cname='blosclz', clevel=9, shuffle=SHUFFLE)
-*************************************************
+Blosc(cname='lz4', clevel=5, shuffle=SHUFFLE)
+*********************************************
 
 This class takes the following arguments and returns the compression options to feed into ``h5py.Group.create_dataset`` for using the blosc filter:
 
 * **cname** the compression algorithm, one of:
 
-  * 'blosclz' (default)
-  * 'lz4'
+  * 'blosclz'
+  * 'lz4' (default)
   * 'lz4hc'
   * 'zlib'
   * 'zstd'
 
-* **clevel** the compression level, from 0 to 9 (default is 9)
+* **clevel** the compression level, from 0 to 9 (default is 5)
 * **shuffle** the shuffling mode, in:
 
   * `Blosc.NOSHUFFLE` (0): No shuffle
