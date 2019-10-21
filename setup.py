@@ -117,13 +117,13 @@ class HDF5PluginExtension(Extension):
     def __init__(self, name, **kwargs):
         Extension.__init__(self, name, **kwargs)
         if sys.platform.startswith('win'):
-            self.sources.append('src/register_win32.c')
+            self.sources.append(os.path.join('src', 'register_win32.c'))
             self.export_symbols.append('register_filter')
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
 
         else:
-            self.sources.append('src/hdf5_dl.c')
+            self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
@@ -137,17 +137,17 @@ class HDF5PluginExtension(Extension):
         :param Union[str,None] hdf5_dir:
         """
         if hdf5_dir is None:
-            hdf5_dir = 'src/hdf5'
+            hdf5_dir = os.path.join('src', 'hdf5')
             # Add folder containing H5pubconf.h
             if sys.platform.startswith('win'):
                 folder = 'windows' if sys.version_info[0] >= 3 else 'windows-2.7'
             else:
                 folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
-            self.include_dirs.insert(0, hdf5_dir + '/include/' + folder)
+            self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include' folder))
 
         if sys.platform.startswith('win'):
-            self.library_dirs.insert(0, hdf5_dir + '/lib')
-        self.include_dirs.insert(0, hdf5_dir + '/include')
+            self.library_dirs.insert(0, os.path.join(hdf5_dir, 'lib'))
+        self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include'))
 
 
 def prefix(directory, files):
