@@ -48,13 +48,14 @@ else:
         """Override bdist_wheel to handle as pure python package"""
 
         def finalize_options(self):
-            bdist_wheel.finalize_options(self)
-            self.root_is_pure = True
-            self.plat_name_supplied = True
             self.plat_name = get_platform()
-            self.universal = not sys.platform.startswith('win')
-            if not self.universal:
-                self.python_tag = 'py' + str(sys.version_info[0])
+            if not sys.platform.startswith('win'):
+                self.python_tag = "py2.py3"
+            bdist_wheel.finalize_options(self)
+
+        def get_tag(self):
+            """Override the python and abi tag generation"""
+            return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
 
 
 # Plugins
