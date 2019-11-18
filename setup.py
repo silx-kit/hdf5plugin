@@ -63,12 +63,18 @@ else:
 class Build(build):
     """Build command with extra options used by PluginBuildExt"""
 
-    user_options = [('hdf5=', None, "Custom path to HDF5 (as in h5py)")]
+    user_options = [
+        ('hdf5=', None, "Custom path to HDF5 (as in h5py)"),
+        ('openmp=', None, "Whether to compile with OpenMP or not."
+         "Default: False on macOS, True otherwise")]
     user_options.extend(build.user_options)
+
+    boolean_options = build.boolean_options + ['openmp']
 
     def initialize_options(self):
         build.initialize_options(self)
         self.hdf5 = None
+        self.openmp = not sys.platform.startswith('darwin')
 
 
 class PluginBuildExt(build_ext):
@@ -98,16 +104,25 @@ class PluginBuildExt(build_ext):
         - select compile args for MSVC and others
         - Set hdf5 directory
         """
-        hdf5_dir = self.distribution.get_command_obj("build").hdf5
+        build_cmd = self.distribution.get_command_obj("build")
 
         prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
 
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
-                e.set_hdf5_dir(hdf5_dir)
+                e.set_hdf5_dir(build_cmd.hdf5)
 
+            # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
                 arg for arg in e.extra_compile_args if arg.startswith(prefix)]
+            e.extra_link_args = [
+                arg for arg in e.extra_link_args if arg.startswith(prefix)]
+
+            if not build_cmd.openmp:  # Remove OpenMP flags
+                e.extra_compile_args = [
+                    arg for arg in e.extra_compile_args if not arg.endswith('openmp')]
+                e.extra_link_args = [
+                    arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
         build_ext.build_extensions(self)
 
@@ -163,12 +178,12 @@ def prefix(directory, files):
 
 # bitshuffle (+lz4) plugin
 # Plugins from https://github.com/kiyo-masui/bitshuffle
-# TODO compile flags + openmp
 bithsuffle_dir = 'src/bitshuffle'
 
 # Set compile args for both MSVC and others, list is stripped at build time
-extra_compile_args = ['-O3', '-ffast-math', '-march=native', '-std=c99']
-extra_compile_args += ['/Ox', '/fp:fast']
+extra_compile_args = ['-O3', '-ffast-math', '-march=native', '-std=c99', '-fopenmp']
+extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+extra_link_args = ['-fopenmp', '/openmp']
 
 bithsuffle_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5bshuf",
@@ -182,6 +197,7 @@ bithsuffle_plugin = HDF5PluginExtension(
          "lz4/lz4.h"]),
     include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
     extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args,
     )
 
 
