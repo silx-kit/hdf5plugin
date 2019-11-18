@@ -18,13 +18,15 @@ The HDF5 plugin sources were obtained from:
 Installation
 ------------
 
-To install, just run::
+To install, run::
 
-     pip install hdf5plugin
+     pip install hdf5plugin [--user]
 
-To install locally, run::
+To install from source and recompile the HDF5 plugins, run::
 
-     pip install hdf5plugin --user
+     pip install hdf5plugin --no-binary hdf5plugin [--user]
+
+This can acheive better performances by enabling OpenMP for the bitshuffle plugin.
 
 Documentation
 -------------
