@@ -66,7 +66,7 @@ class Build(build):
     user_options = [
         ('hdf5=', None, "Custom path to HDF5 (as in h5py)"),
         ('openmp=', None, "Whether to compile with OpenMP or not."
-         "Default: False on macOS, True otherwise")]
+         "Default: False on Windows with Python 2.7 and macOS, True otherwise")]
     user_options.extend(build.user_options)
 
     boolean_options = build.boolean_options + ['openmp']
@@ -74,7 +74,8 @@ class Build(build):
     def initialize_options(self):
         build.initialize_options(self)
         self.hdf5 = None
-        self.openmp = not sys.platform.startswith('darwin')
+        self.openmp = not sys.platform.startswith('darwin') and (
+            not sys.platform.startswith('win') or sys.version_info[0] >= 3)
 
 
 class PluginBuildExt(build_ext):
