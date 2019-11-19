@@ -6,8 +6,9 @@ This module provides HDF5 compression filters (namely: blosc, bitshuffle and lz4
 * Supported operating systems: Linux, Windows, macOS.
 * Supported versions of Python: 2.7 and >= 3.4
 
-`hdf5plugin` provides a generic way to enable the use of the provided HDF5 compression filters with `h5py`.
-HDF5 compression filters can be also be installed either system-wide on Linux or through Anaconda (`blosc-hdf5-plugin <https://anaconda.org/conda-forge/blosc-hdf5-plugin>`_, `hdf5-lz4 <https://anaconda.org/nsls2forge/hdf5-lz4>`_)
+`hdf5plugin` provides a generic way to enable the use of the provided HDF5 compression filters with `h5py` that can be installed via `pip` or `conda`.
+
+Alternatives to install HDF5 compression filters are: system-wide installation on Linux or other conda packages: `blosc-hdf5-plugin <https://anaconda.org/conda-forge/blosc-hdf5-plugin>`_, `hdf5-lz4 <https://anaconda.org/nsls2forge/hdf5-lz4>`_.
 
 The HDF5 plugin sources were obtained from:
 
@@ -21,6 +22,10 @@ Installation
 To install, run::
 
      pip install hdf5plugin [--user]
+     
+or, with conda (https://anaconda.org/conda-forge/hdf5plugin)::
+
+    conda install -c conda-forge hdf5plugin
 
 To install from source and recompile the HDF5 plugins, run::
 
