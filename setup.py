@@ -142,7 +142,7 @@ class PluginBuildExt(build_ext):
 
         if build_cmd.sse2:
             if compiler_type == 'msvc':
-                with_sse2 = sys.version_info[:2] >= (3, 5)
+                with_sse2 = sys.version_info[0] >= 3
             else:
                 with_sse2 = self.__check_compile_args('-msse2')
         else:
