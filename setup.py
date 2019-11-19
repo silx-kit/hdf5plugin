@@ -175,7 +175,7 @@ class PluginBuildExt(build_ext):
 
                 # Enable SSE2/AVX2 if used and add corresponding resources
                 if with_sse2:
-                    e.extra_compile_args += ['-msse2', '/arch:SSE2']
+                    e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
                     e.sources += e.sse2_sources
                     e.define_macros += e.sse2_define_macros
 
