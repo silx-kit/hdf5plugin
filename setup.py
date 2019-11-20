@@ -94,9 +94,9 @@ class Build(build):
          "Default: False on Windows with Python 2.7 and macOS, True otherwise"),
         ('native=', None, "Whether to compile for the building machine or for generic support (For unix compilers only)."
          "Default: True (i.e., specific to CPU used for build)"),
-        ('sse2=', None, "Whether or not to compile blosc with SSE2 support if available."
+        ('sse2=', None, "Whether or not to compile with SSE2 support if available."
          "Default: True"),
-        ('avx2=', None, "Whether or not to compile blosc with AVX2 support if available."
+        ('avx2=', None, "Whether or not to compile with AVX2 support if available."
          "Default: True")]
     user_options.extend(build.user_options)
 
@@ -109,7 +109,7 @@ class Build(build):
             not sys.platform.startswith('win') or sys.version_info[0] >= 3)
         self.native = True
         self.sse2 = True
-        self.avx2 = True
+        self.avx2 = False
 
 
 class PluginBuildExt(build_ext):
@@ -252,8 +252,8 @@ class HDF5PluginExtension(Extension):
 
         self.define_macros.append(('H5_USE_18_API', None))
 
-        self.sse2 = sse2
-        self.avx2 = avx2
+        self.sse2 = sse2 if sse2 is not None else {}
+        self.avx2 = avx2 if avx2 is not None else {}
 
     def set_hdf5_dir(self, hdf5_dir=None):
         """Set the HDF5 installation directory to use to build the plugins.
