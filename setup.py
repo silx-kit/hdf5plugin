@@ -161,7 +161,7 @@ class PluginBuildExt(build_ext):
         else:
             with_avx2 = False
 
-        with_openmp = build_cmd.openmp and self.__check_compile_args(
+        with_openmp = bool(build_cmd.openmp) and self.__check_compile_args(
             '/openmp' if compiler_type == 'msvc' else '-fopenmp')
 
         if build_cmd.native:
@@ -169,7 +169,7 @@ class PluginBuildExt(build_ext):
             with_sse2 = with_sse2 and is_cpu_sse2
             with_avx2 = with_avx2 and is_cpu_avx2
 
-        logger.info('Building with native option: %r', build_cmd.native)
+        logger.info('Building with native option: %r', bool(build_cmd.native))
         logger.info("Building extensions with SSE2: %r", with_sse2)
         logger.info("Building extensions with AVX2: %r", with_avx2)
         logger.info("Building extensions with OpenMP: %r", with_openmp)
