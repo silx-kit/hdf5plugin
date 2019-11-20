@@ -109,7 +109,7 @@ class Build(build):
             not sys.platform.startswith('win') or sys.version_info[0] >= 3)
         self.native = True
         self.sse2 = True
-        self.avx2 = False
+        self.avx2 = True
 
 
 class PluginBuildExt(build_ext):
