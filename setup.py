@@ -97,10 +97,13 @@ class Build(build):
         ('sse2=', None, "Whether or not to compile with SSE2 support if available."
          "Default: True"),
         ('avx2=', None, "Whether or not to compile with AVX2 support if available."
-         "Default: True")]
+         "Default: True"),
+        ('cpp11=', None, "Whether or not to compile C++11 code if available."
+         "Default: True"),
+        ]
     user_options.extend(build.user_options)
 
-    boolean_options = build.boolean_options + ['openmp', 'native', 'sse2', 'avx2']
+    boolean_options = build.boolean_options + ['openmp', 'native', 'sse2', 'avx2', 'cpp11']
 
     def initialize_options(self):
         build.initialize_options(self)
@@ -110,6 +113,7 @@ class Build(build):
         self.native = True
         self.sse2 = True
         self.avx2 = True
+        self.cpp11 = True
 
 
 class PluginBuildExt(build_ext):
@@ -145,11 +149,19 @@ class PluginBuildExt(build_ext):
 
         # Check availability of compile flags
 
+        if build_cmd.cpp11:
+            if compiler_type == 'msvc':
+                with_cpp11 = sys.version_info[:2] >= (3, 5)
+            else:
+                with_cpp11 = self.__check_compile_flag('-std=c++11', extension='.cpp')
+        else:
+            with_cpp11 = False
+
         if build_cmd.sse2:
             if compiler_type == 'msvc':
                 with_sse2 = sys.version_info[0] >= 3
             else:
-                with_sse2 = self.__check_compile_args('-msse2')
+                with_sse2 = self.__check_compile_flag('-msse2')
         else:
             with_sse2 = False
 
@@ -157,11 +169,11 @@ class PluginBuildExt(build_ext):
             if compiler_type == 'msvc':
                 with_avx2 = sys.version_info[:2] >= (3, 5)
             else:
-                with_avx2 = self.__check_compile_args('-mavx2')
+                with_avx2 = self.__check_compile_flag('-mavx2')
         else:
             with_avx2 = False
 
-        with_openmp = bool(build_cmd.openmp) and self.__check_compile_args(
+        with_openmp = bool(build_cmd.openmp) and self.__check_compile_flag(
             '/openmp' if compiler_type == 'msvc' else '-fopenmp')
 
         if build_cmd.native:
@@ -169,6 +181,7 @@ class PluginBuildExt(build_ext):
             with_sse2 = with_sse2 and is_cpu_sse2
             with_avx2 = with_avx2 and is_cpu_avx2
 
+        logger.info("Building with C++11: %r", with_cpp11)
         logger.info('Building with native option: %r', bool(build_cmd.native))
         logger.info("Building extensions with SSE2: %r", with_sse2)
         logger.info("Building extensions with AVX2: %r", with_avx2)
@@ -179,6 +192,11 @@ class PluginBuildExt(build_ext):
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
                 e.set_hdf5_dir(build_cmd.hdf5)
+
+                if with_cpp11:
+                    for name, value in e.cpp11.items():
+                        attribute = getattr(e, name)
+                        attribute += value
 
                 # Enable SSE2/AVX2 if available and add corresponding resources
                 if with_sse2:
@@ -210,10 +228,11 @@ class PluginBuildExt(build_ext):
 
         build_ext.build_extensions(self)
 
-    def __check_compile_args(self, *args):
+    def __check_compile_flag(self, flag, extension='.c'):
         """Try to compile an empty file to check for compiler args
 
-        :param List[str] args: List of arguments to pass to compiler
+        :param str flag: Flag argument to pass to compiler
+        :param str extension: Source file extension (default: '.c')
         :returns: Whether or not compilation was successful
         :rtype: bool
         """
@@ -222,12 +241,12 @@ class PluginBuildExt(build_ext):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Create empty source file
-            tmp_file = os.path.join(tmp_dir, 'source.c')
+            tmp_file = os.path.join(tmp_dir, 'source' + extension)
             with open(tmp_file, 'w') as f:
-                f.write('/*empty source file*/\n')
+                f.write('int main (int argc, char **argv) { return 0; }\n')
 
             try:
-                self.compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=list(args))
+                self.compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=[flag])
             except CompileError:
                 return False
             else:
@@ -237,7 +256,7 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, sse2=None, avx2=None, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, cpp11=None, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
         if sys.platform.startswith('win'):
@@ -254,6 +273,7 @@ class HDF5PluginExtension(Extension):
 
         self.sse2 = sse2 if sse2 is not None else {}
         self.avx2 = avx2 if avx2 is not None else {}
+        self.cpp11 = cpp11 if cpp11 is not None else {}
 
     def set_hdf5_dir(self, hdf5_dir=None):
         """Set the HDF5 installation directory to use to build the plugins.
@@ -315,7 +335,6 @@ bithsuffle_plugin = HDF5PluginExtension(
 # blosc plugin
 # Plugin from https://github.com/Blosc/hdf5-blosc
 # c-blosc from https://github.com/Blosc/c-blosc
-# TODO snappy
 hdf5_blosc_dir = 'src/hdf5-blosc/src/'
 blosc_dir = 'src/c-blosc/'
 
@@ -326,11 +345,15 @@ depends = [f for f in glob(blosc_dir + 'blosc/*.h')]
 include_dirs = [blosc_dir, blosc_dir + 'blosc']
 define_macros = []
 
-sse2_sources = [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f]
-sse2_define_macros = [('SHUFFLE_SSE2_ENABLED', 1)]
+sse2_kwargs = {
+    'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f],
+    'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
+    }
 
-avx2_sources = [f for f in glob(blosc_dir + 'blosc/*.c') if 'avx2' in f]
-avx2_define_macros = [('SHUFFLE_AVX2_ENABLED', 1)]
+avx2_kwargs = {
+    'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'avx2' in f],
+    'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)],
+    }
 
 # compression libs
 # lz4
@@ -344,7 +367,12 @@ include_dirs += lz4_include_dirs
 define_macros.append(('HAVE_LZ4', 1))
 
 # snappy
-# TODO
+cpp11_kwargs = {
+    'sources': glob(blosc_dir + 'internal-complibs/snappy*/*.cc'),
+    'include_dirs': glob(blosc_dir + 'internal-complibs/snappy*'),
+    'extra_compile_args': ['-std=c++11', '-lstdc++'],  # TODO Windows
+    'define_macros': [('HAVE_SNAPPY', 1)],
+    }
 
 #zlib
 sources += glob(blosc_dir + 'internal-complibs/zlib*/*.c')
@@ -368,8 +396,9 @@ blosc_plugin = HDF5PluginExtension(
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
     define_macros=define_macros,
-    sse2={'sources': sse2_sources, 'define_macros': sse2_define_macros},
-    avx2={'sources': avx2_sources, 'define_macros': avx2_define_macros},
+    sse2=sse2_kwargs,
+    avx2=avx2_kwargs,
+    cpp11=cpp11_kwargs,
     )
 
 
