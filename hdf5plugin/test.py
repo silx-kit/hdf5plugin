@@ -104,8 +104,6 @@ class TestHDF5PluginRW(unittest.TestCase):
         for clevel in range(10):
             for shuffle in shuffles:
                 for compression_id, cname in enumerate(compress):
-                    if cname == 'snappy':
-                        continue  # Not provided
                     filter_ = self._test(
                         'blosc', cname=cname, clevel=clevel, shuffle=shuffle)
                     self.assertEqual(
