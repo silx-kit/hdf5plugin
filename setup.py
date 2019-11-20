@@ -92,7 +92,7 @@ class Build(build):
         ('hdf5=', None, "Custom path to HDF5 (as in h5py)"),
         ('openmp=', None, "Whether or not to compile with OpenMP."
          "Default: False on Windows with Python 2.7 and macOS, True otherwise"),
-        ('native=', None, "Whether to compile for compiling machine or for generic support (For unix compilers only)."
+        ('native=', None, "Whether to compile for the building machine or for generic support (For unix compilers only)."
          "Default: True (i.e., specific to CPU used for build)"),
         ('sse2=', None, "Whether or not to compile blosc with SSE2 support if available."
          "Default: True"),
@@ -161,13 +161,8 @@ class PluginBuildExt(build_ext):
         else:
             with_avx2 = False
 
-        if build_cmd.openmp:
-            if compiler_type == 'msvc':
-                with_openmp = self.__check_compile_args('/openmp')
-            else:
-                with_openmp = self.__check_compile_args('-fopenmp')
-        else:
-            with_openmp = False
+        with_openmp = build_cmd.openmp and self.__check_compile_args(
+            '/openmp' if compiler_type == 'msvc' else '-fopenmp')
 
         if build_cmd.native:
             is_cpu_sse2, is_cpu_avx2 = get_cpu_sse2_avx2()
@@ -186,13 +181,13 @@ class PluginBuildExt(build_ext):
                 e.set_hdf5_dir(build_cmd.hdf5)
 
                 # Enable SSE2/AVX2 if available and add corresponding resources
-                if with_sse2 and e.sse2:
+                if with_sse2:
                     e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
                     for name, value in e.sse2.items():
                         attribute = getattr(e, name)
                         attribute += value
 
-                if with_avx2 and e.avx2:
+                if with_avx2:
                     e.extra_compile_args += ['-mavx2', '/arch:AVX2']
                     for name, value in e.avx2.items():
                         attribute = getattr(e, name)
