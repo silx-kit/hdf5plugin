@@ -26,7 +26,7 @@ To install from source and recompile the HDF5 plugins, run::
 
      pip install hdf5plugin --no-binary hdf5plugin [--user]
 
-Installing from source can achieve better performances by enabling SSE2, AVX2 and OpenMP if available.
+Installing from source can achieve better performances by enabling AVX2 and OpenMP if available.
 
 Documentation
 -------------
