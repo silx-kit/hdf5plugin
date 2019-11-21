@@ -463,7 +463,7 @@ if __name__ == "__main__":
           packages=[PROJECT],
           ext_modules=extensions,
           install_requires=['h5py'],
-          setup_requires=['setuptools', 'py-cpuinfo'],
+          setup_requires=['setuptools'],
           cmdclass=cmdclass,
           )
 
