@@ -1,10 +1,14 @@
-include README.rst
-include MANIFEST.in
-include setup.py
-include setup.cfg
 include .travis.yml
 include appveyor.yml
+include CHANGELOG.rst
+include cpuinfo.py
+include LICENSE
+include MANIFEST.in
+include README.rst
+include setup.py
+include version.py
 recursive-include ci *.py *.sh
+recursive-include doc *
 recursive-include hdf5plugin *.py
-recursive-include test *.py *.h5
 recursive-include src *
+recursive-include test *.py *.h5

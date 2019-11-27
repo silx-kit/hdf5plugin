@@ -28,12 +28,18 @@ __date__ = "03/10/2019"
 
 
 from glob import glob
+import logging
 import os
 import sys
+import tempfile
 from setuptools import setup, Extension
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
 from distutils.command.build import build
+from distutils.errors import CompileError
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # Patch bdist_wheel
@@ -58,6 +64,25 @@ else:
             return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
 
 
+def get_cpu_sse2_avx2():
+    """Returns whether SSE2 and AVX2 are available on the current CPU
+
+    :returns: (is SSE2 available, is AVX2 available)
+    :rtype: List(bool)
+    """
+    try:
+        import cpuinfo
+    except ImportError as e:
+        raise e
+    except Exception:  # cpuinfo raises Exception for unsupported architectures
+        logger.warn(
+            "CPU info detection does not support this architecture: SSE2 and AVX2 disabled")
+        return False, False
+    else:
+        cpu_flags = cpuinfo.get_cpu_info()['flags']
+        return 'sse2' in cpu_flags, 'avx2' in cpu_flags
+
+
 # Plugins
 
 class Build(build):
@@ -65,17 +90,26 @@ class Build(build):
 
     user_options = [
         ('hdf5=', None, "Custom path to HDF5 (as in h5py)"),
-        ('openmp=', None, "Whether to compile with OpenMP or not."
-         "Default: False on Windows with Python 2.7 and macOS, True otherwise")]
+        ('openmp=', None, "Whether or not to compile with OpenMP."
+         "Default: False on Windows with Python 2.7 and macOS, True otherwise"),
+        ('native=', None, "Whether to compile for the building machine or for generic support (For unix compilers only)."
+         "Default: True (i.e., specific to CPU used for build)"),
+        ('sse2=', None, "Whether or not to compile with SSE2 support if available."
+         "Default: True"),
+        ('avx2=', None, "Whether or not to compile with AVX2 support if available."
+         "Default: True")]
     user_options.extend(build.user_options)
 
-    boolean_options = build.boolean_options + ['openmp']
+    boolean_options = build.boolean_options + ['openmp', 'native', 'sse2', 'avx2']
 
     def initialize_options(self):
         build.initialize_options(self)
         self.hdf5 = None
         self.openmp = not sys.platform.startswith('darwin') and (
             not sys.platform.startswith('win') or sys.version_info[0] >= 3)
+        self.native = True
+        self.sse2 = True
+        self.avx2 = True
 
 
 class PluginBuildExt(build_ext):
@@ -102,16 +136,71 @@ class PluginBuildExt(build_ext):
     def build_extensions(self):
         """Overridden to tune extensions.
 
+        - check for OpenMP, SSE2, AVX2 availability
         - select compile args for MSVC and others
         - Set hdf5 directory
         """
         build_cmd = self.distribution.get_command_obj("build")
+        compiler_type = self.compiler.compiler_type
 
-        prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
+        # Check availability of compile flags
+
+        if build_cmd.sse2:
+            if compiler_type == 'msvc':
+                with_sse2 = sys.version_info[0] >= 3
+            else:
+                with_sse2 = self.__check_compile_args('-msse2')
+        else:
+            with_sse2 = False
+
+        if build_cmd.avx2:
+            if compiler_type == 'msvc':
+                with_avx2 = sys.version_info[:2] >= (3, 5)
+            else:
+                with_avx2 = self.__check_compile_args('-mavx2')
+        else:
+            with_avx2 = False
+
+        with_openmp = bool(build_cmd.openmp) and self.__check_compile_args(
+            '/openmp' if compiler_type == 'msvc' else '-fopenmp')
+
+        if build_cmd.native:
+            is_cpu_sse2, is_cpu_avx2 = get_cpu_sse2_avx2()
+            with_sse2 = with_sse2 and is_cpu_sse2
+            with_avx2 = with_avx2 and is_cpu_avx2
+
+        logger.info('Building with native option: %r', bool(build_cmd.native))
+        logger.info("Building extensions with SSE2: %r", with_sse2)
+        logger.info("Building extensions with AVX2: %r", with_avx2)
+        logger.info("Building extensions with OpenMP: %r", with_openmp)
+
+        prefix = '/' if compiler_type == 'msvc' else '-'
 
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
                 e.set_hdf5_dir(build_cmd.hdf5)
+
+                # Enable SSE2/AVX2 if available and add corresponding resources
+                if with_sse2:
+                    e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
+                    for name, value in e.sse2.items():
+                        attribute = getattr(e, name)
+                        attribute += value
+
+                if with_avx2:
+                    e.extra_compile_args += ['-mavx2', '/arch:AVX2']
+                    for name, value in e.avx2.items():
+                        attribute = getattr(e, name)
+                        attribute += value
+
+            if not with_openmp:  # Remove OpenMP flags
+                e.extra_compile_args = [
+                    arg for arg in e.extra_compile_args if not arg.endswith('openmp')]
+                e.extra_link_args = [
+                    arg for arg in e.extra_link_args if not arg.endswith('openmp')]
+
+            if build_cmd.native:  # Add -march=native
+                e.extra_compile_args += ['-march=native']
 
             # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
@@ -119,20 +208,38 @@ class PluginBuildExt(build_ext):
             e.extra_link_args = [
                 arg for arg in e.extra_link_args if arg.startswith(prefix)]
 
-            if not build_cmd.openmp:  # Remove OpenMP flags
-                e.extra_compile_args = [
-                    arg for arg in e.extra_compile_args if not arg.endswith('openmp')]
-                e.extra_link_args = [
-                    arg for arg in e.extra_link_args if not arg.endswith('openmp')]
-
         build_ext.build_extensions(self)
+
+    def __check_compile_args(self, *args):
+        """Try to compile an empty file to check for compiler args
+
+        :param List[str] args: List of arguments to pass to compiler
+        :returns: Whether or not compilation was successful
+        :rtype: bool
+        """
+        if sys.version_info[0] < 3:
+            return False  # Not implemented for Python 2.7
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Create empty source file
+            tmp_file = os.path.join(tmp_dir, 'source.c')
+            with open(tmp_file, 'w') as f:
+                f.write('/*empty source file*/\n')
+
+            try:
+                self.compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=list(args))
+            except CompileError:
+                return False
+            else:
+                return True
 
 
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, **kwargs):
         Extension.__init__(self, name, **kwargs)
+
         if sys.platform.startswith('win'):
             self.sources.append(os.path.join('src', 'register_win32.c'))
             self.export_symbols.append('register_filter')
@@ -144,6 +251,9 @@ class HDF5PluginExtension(Extension):
             self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
+
+        self.sse2 = sse2 if sse2 is not None else {}
+        self.avx2 = avx2 if avx2 is not None else {}
 
     def set_hdf5_dir(self, hdf5_dir=None):
         """Set the HDF5 installation directory to use to build the plugins.
@@ -182,7 +292,7 @@ def prefix(directory, files):
 bithsuffle_dir = 'src/bitshuffle'
 
 # Set compile args for both MSVC and others, list is stripped at build time
-extra_compile_args = ['-O3', '-ffast-math', '-march=native', '-std=c99', '-fopenmp']
+extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
 extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
 extra_link_args = ['-fopenmp', '/openmp']
 
@@ -205,17 +315,22 @@ bithsuffle_plugin = HDF5PluginExtension(
 # blosc plugin
 # Plugin from https://github.com/Blosc/hdf5-blosc
 # c-blosc from https://github.com/Blosc/c-blosc
-# TODO compile flags avx2/sse2, snappy
+# TODO snappy
 hdf5_blosc_dir = 'src/hdf5-blosc/src/'
 blosc_dir = 'src/c-blosc/'
 
 # blosc sources
 sources = [f for f in glob(blosc_dir + 'blosc/*.c')
            if 'avx2' not in f and 'sse2' not in f]
-depends = [f for f in glob(blosc_dir + 'blosc/*.h')
-        if 'avx2' not in f and 'sse2' not in f]
+depends = [f for f in glob(blosc_dir + 'blosc/*.h')]
 include_dirs = [blosc_dir, blosc_dir + 'blosc']
 define_macros = []
+
+sse2_sources = [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f]
+sse2_define_macros = [('SHUFFLE_SSE2_ENABLED', 1)]
+
+avx2_sources = [f for f in glob(blosc_dir + 'blosc/*.c') if 'avx2' in f]
+avx2_define_macros = [('SHUFFLE_AVX2_ENABLED', 1)]
 
 # compression libs
 # lz4
@@ -253,6 +368,8 @@ blosc_plugin = HDF5PluginExtension(
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
     define_macros=define_macros,
+    sse2={'sources': sse2_sources, 'define_macros': sse2_define_macros},
+    avx2={'sources': avx2_sources, 'define_macros': avx2_define_macros},
     )
 
 
@@ -264,7 +381,7 @@ lz4_plugin = HDF5PluginExtension(
             lz4_sources,
     depends=lz4_depends,
     include_dirs=lz4_include_dirs,
-    libraries=['Ws2_32'] if sys.platform == 'win32' else [],
+    libraries=['Ws2_32'] if sys.platform.startswith('win') else [],
     )
 
 

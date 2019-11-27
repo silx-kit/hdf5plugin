@@ -31,7 +31,7 @@ To install from source and recompile the HDF5 plugins, run::
 
      pip install hdf5plugin --no-binary hdf5plugin [--user]
 
-This can acheive better performances by enabling OpenMP for the bitshuffle plugin.
+Installing from source can achieve better performances by enabling AVX2 and OpenMP if available.
 
 Documentation
 -------------
