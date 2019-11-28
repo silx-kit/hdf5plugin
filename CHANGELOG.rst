@@ -1,5 +1,5 @@
-Unreleased
-----------
+2.1.0
+-----
 
 - Added `--openmp=[False|True]` build option to compile bitshuffle filter with OpenMP. (PR #51)
 - Added `--sse2=[True|False]` build option to compile blosc and bitshuffle filters with SSE2 instructions if available. (PR #52)
@@ -27,7 +27,7 @@ Unreleased
 1.4.0
 -----
 
-Manylinux support
+- Manylinux support
 
 1.3.1
 -----
