@@ -370,7 +370,7 @@ define_macros.append(('HAVE_LZ4', 1))
 cpp11_kwargs = {
     'sources': glob(blosc_dir + 'internal-complibs/snappy*/*.cc'),
     'include_dirs': glob(blosc_dir + 'internal-complibs/snappy*'),
-    'extra_compile_args': ['-std=c++11', '-lstdc++'],  # TODO Windows
+    'extra_compile_args': ['-std=c++11', '-lstdc++'],
     'define_macros': [('HAVE_SNAPPY', 1)],
     }
 
