@@ -1,3 +1,13 @@
+Unreleased
+----------
+
+- Added `--openmp=[False|True]` build option to compile bitshuffle filter with OpenMP. (PR #51)
+- Added `--sse2=[True|False]` build option to compile blosc and bitshuffle filters with SSE2 instructions if available. (PR #52)
+- Added `--avx2=[True|False]` build option to compile blosc and bitshuffle filters with AVX2 instructions if available. (PR #52)
+- Added `--native=[True|False]` build option to compile filters for native CPU architecture. This enables SSE2/AVX2 support for the bitshuffle filter if available. (PR #52)
+- Added snappy compression to the blosc filter if C++11 is available (`--cpp11=[True|False]` build option). (PR #54)
+- Improved wheel generation by using root_is_pure=True setting. (PR #49)
+
 2.0.0
 -----
 

@@ -111,6 +111,7 @@ class Blosc(_FilterRefClass):
 
     :param str cname:
         `blosclz`, `lz4` (default), `lz4hc`, `zlib`, `zstd`
+        Optional: `snappy`, depending on compilation (requires C++11).
     :param int clevel:
         Compression level from 0 no compression to 9 maximum compression.
         Default: 5.
@@ -135,7 +136,7 @@ class Blosc(_FilterRefClass):
         'blosclz': 0,
         'lz4': 1,
         'lz4hc': 2,
-        # Not built 'snappy': 3,
+        'snappy': 3,
         'zlib': 4,
         'zstd': 5,
     }

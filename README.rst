@@ -48,7 +48,7 @@ Sample code:
 
   # Compression
   f = h5py.File('test.h5', 'w')
-  f.create_dataset('data', data=numpy.arange(100), compression=hdf5plugin.LZ4_ID)
+  f.create_dataset('data', data=numpy.arange(100), **hdf5plugin.LZ4())
   f.close()
 
   # Decompression
@@ -58,17 +58,17 @@ Sample code:
 
 ``hdf5plugin`` provides:
 
-* The HDF5 filter ID of embedded plugins:
-
-  - ``BLOSC_ID``
-  - ``BSHUF_ID``
-  - ``LZ4_ID``
-
 * Compression option helper classes to prepare arguments to provide to ``h5py.Group.create_dataset``:
 
   - `Bitshuffle(nelems=0, lz4=True)`_
   - `Blosc(cname='lz4', clevel=5, shuffle=SHUFFLE)`_
   - `LZ4(nbytes=0)`_
+
+* The HDF5 filter ID of embedded plugins:
+
+  - ``BLOSC_ID``
+  - ``BSHUF_ID``
+  - ``LZ4_ID``
 
 * ``FILTERS``: A dictionary mapping provided filters to their ID
 * ``PLUGINS_PATH``: The directory where the provided filters library are stored.
@@ -104,6 +104,7 @@ This class takes the following arguments and returns the compression options to 
   * 'blosclz'
   * 'lz4' (default)
   * 'lz4hc'
+  * 'snappy' (optional, requires C++11)
   * 'zlib'
   * 'zstd'
 
