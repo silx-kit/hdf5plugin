@@ -439,6 +439,7 @@ snappy_lib = ('snappy', {
 
 cpp11_kwargs = {
     'include_dirs': glob(blosc_dir + 'internal-complibs/snappy*'),
+    'extra_link_args': ['-lstdc++'],
     'define_macros': [('HAVE_SNAPPY', 1)],
     }
 
