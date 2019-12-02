@@ -35,8 +35,10 @@ import tempfile
 from setuptools import setup, Extension
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build_ext import build_ext
+from setuptools.command.build_clib import build_clib
 from distutils.command.build import build
-from distutils.errors import CompileError
+from distutils import ccompiler, errors, sysconfig
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -116,11 +118,123 @@ class Build(build):
         self.cpp11 = True
 
 
-class PluginBuildExt(build_ext):
-    """Build extension command for DLLs that are not Python modules
+class BuildOptionsCommandMixIn(object):
+    """MixIn class for build command to check build options"""
 
-    This is actually only useful for Windows
-    """
+    _options = {}
+    """Store build option states once for all"""
+
+    def select_compiler_flags(self, flags):
+        """Removes compiler arguments that are not for the current one.
+
+        :param List[str] flags: All compiler arguments
+        :return: List of arguments for the current compiler
+        :rtype: List[str]
+        """
+        prefix = '/' if self.__get_compiler().compiler_type == 'msvc' else '-'
+        return [flag for flag in flags if flag.startswith(prefix)]
+
+    def has_option(self, option):
+        """Returns whether a build option is in use or not.
+
+        It checks if option is enabled and available.
+
+        :param str option: Name of the option to get
+        :rtype: bool
+        """
+        if not self._options:
+            self.__init_options()
+        return self._options[option]
+
+    def __get_compiler(self):
+        """Returns a compiler object (creating one if needed)
+
+        :rtype: distutils.ccompiler.CCompiler
+        """
+        compiler = self.compiler
+        if not isinstance(compiler, ccompiler.CCompiler):
+            compiler = ccompiler.new_compiler(compiler=compiler, force=True)
+            sysconfig.customize_compiler(compiler)
+        return compiler
+
+    def __init_options(self):
+        """Initialize the options"""
+        self._options = {
+            'cpp11': False,
+            'sse2': False,
+            'avx2': False,
+            'openmp': False,
+            'native': False,
+            }
+
+        build_cmd = self.distribution.get_command_obj("build")
+        compiler_type = self.__get_compiler().compiler_type
+
+        # Check availability of compile flags
+
+        if build_cmd.cpp11:
+            if compiler_type == 'msvc':
+                self._options['cpp11'] = sys.version_info[:2] >= (3, 5)
+            else:
+                self._options['cpp11'] = self.__check_compile_flag(
+                    '-std=c++11', extension='.cc')
+
+        if build_cmd.sse2:
+            if compiler_type == 'msvc':
+                self._options['sse2'] = sys.version_info[0] >= 3
+            else:
+                self._options['sse2'] = self.__check_compile_flag('-msse2')
+
+        if build_cmd.avx2:
+            if compiler_type == 'msvc':
+                self._options['avx2'] = sys.version_info[:2] >= (3, 5)
+            else:
+                self._options['avx2'] = self.__check_compile_flag('-mavx2')
+
+        if build_cmd.openmp:
+            self._options['openmp'] = self.__check_compile_flag(
+                self.get_compiler_flag_prefix() + 'openmp')
+
+        if build_cmd.native:
+            self._options['native'] = True
+            is_cpu_sse2, is_cpu_avx2 = get_cpu_sse2_avx2()
+            self._options['sse2'] = self._options['sse2'] and is_cpu_sse2
+            self._options['avx2'] = self._options['avx2'] and is_cpu_avx2
+
+        logger.info("Building with C++11: %r", self._options['cpp11'])
+        logger.info('Building with native option: %r', self._options['native'])
+        logger.info("Building with SSE2: %r", self._options['sse2'])
+        logger.info("Building with AVX2: %r", self._options['avx2'])
+        logger.info("Building with OpenMP: %r", self._options['openmp'])
+
+    def __check_compile_flag(self, flag, extension='.c'):
+        """Try to compile an empty file to check for compiler args
+
+        :param str flag: Flag argument to pass to compiler
+        :param str extension: Source file extension (default: '.c')
+        :returns: Whether or not compilation was successful
+        :rtype: bool
+        """
+        if sys.version_info[0] < 3:
+            return False  # Not implemented for Python 2.7
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Create empty source file
+            tmp_file = os.path.join(tmp_dir, 'source' + extension)
+            with open(tmp_file, 'w') as f:
+                f.write('int main (int argc, char **argv) { return 0; }\n')
+
+            compiler = self.__get_compiler()
+            try:
+                compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=[flag])
+            except errors.CompileError:
+                return False
+            else:
+                return True
+
+
+class PluginBuildExt(build_ext, BuildOptionsCommandMixIn):
+    """Build extension command for DLLs that are not Python modules"""
 
     def get_export_symbols(self, ext):
         """Overridden to remove PyInit_* export"""
@@ -144,113 +258,57 @@ class PluginBuildExt(build_ext):
         - select compile args for MSVC and others
         - Set hdf5 directory
         """
-        build_cmd = self.distribution.get_command_obj("build")
-        compiler_type = self.compiler.compiler_type
-
-        # Check availability of compile flags
-
-        if build_cmd.cpp11:
-            if compiler_type == 'msvc':
-                with_cpp11 = sys.version_info[:2] >= (3, 5)
-            else:
-                with_cpp11 = self.__check_compile_flag('-std=c++11', extension='.cpp')
-        else:
-            with_cpp11 = False
-
-        if build_cmd.sse2:
-            if compiler_type == 'msvc':
-                with_sse2 = sys.version_info[0] >= 3
-            else:
-                with_sse2 = self.__check_compile_flag('-msse2')
-        else:
-            with_sse2 = False
-
-        if build_cmd.avx2:
-            if compiler_type == 'msvc':
-                with_avx2 = sys.version_info[:2] >= (3, 5)
-            else:
-                with_avx2 = self.__check_compile_flag('-mavx2')
-        else:
-            with_avx2 = False
-
-        with_openmp = bool(build_cmd.openmp) and self.__check_compile_flag(
-            '/openmp' if compiler_type == 'msvc' else '-fopenmp')
-
-        if build_cmd.native:
-            is_cpu_sse2, is_cpu_avx2 = get_cpu_sse2_avx2()
-            with_sse2 = with_sse2 and is_cpu_sse2
-            with_avx2 = with_avx2 and is_cpu_avx2
-
-        logger.info("Building with C++11: %r", with_cpp11)
-        logger.info('Building with native option: %r', bool(build_cmd.native))
-        logger.info("Building extensions with SSE2: %r", with_sse2)
-        logger.info("Building extensions with AVX2: %r", with_avx2)
-        logger.info("Building extensions with OpenMP: %r", with_openmp)
-
-        prefix = '/' if compiler_type == 'msvc' else '-'
-
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
+                build_cmd = self.distribution.get_command_obj("build")
                 e.set_hdf5_dir(build_cmd.hdf5)
 
-                if with_cpp11:
+                if self.has_option('cpp11'):
                     for name, value in e.cpp11.items():
                         attribute = getattr(e, name)
                         attribute += value
 
                 # Enable SSE2/AVX2 if available and add corresponding resources
-                if with_sse2:
+                if self.has_option('sse2'):
                     e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
                     for name, value in e.sse2.items():
                         attribute = getattr(e, name)
                         attribute += value
 
-                if with_avx2:
+                if self.has_option('avx2'):
                     e.extra_compile_args += ['-mavx2', '/arch:AVX2']
                     for name, value in e.avx2.items():
                         attribute = getattr(e, name)
                         attribute += value
 
-            if not with_openmp:  # Remove OpenMP flags
+            if not self.has_option('openmp'):  # Remove OpenMP flags
                 e.extra_compile_args = [
                     arg for arg in e.extra_compile_args if not arg.endswith('openmp')]
                 e.extra_link_args = [
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
-            if build_cmd.native:  # Add -march=native
+            if self.has_option('native'):  # Add -march=native
                 e.extra_compile_args += ['-march=native']
 
             # Remove flags that do not correspond to compiler
-            e.extra_compile_args = [
-                arg for arg in e.extra_compile_args if arg.startswith(prefix)]
-            e.extra_link_args = [
-                arg for arg in e.extra_link_args if arg.startswith(prefix)]
+            e.extra_compile_args = self.select_compiler_flags(e.extra_compile_args)
+            e.extra_link_args = self.select_compiler_flags(e.extra_link_args)
 
         build_ext.build_extensions(self)
 
-    def __check_compile_flag(self, flag, extension='.c'):
-        """Try to compile an empty file to check for compiler args
 
-        :param str flag: Flag argument to pass to compiler
-        :param str extension: Source file extension (default: '.c')
-        :returns: Whether or not compilation was successful
-        :rtype: bool
-        """
-        if sys.version_info[0] < 3:
-            return False  # Not implemented for Python 2.7
+class BuildCpp11Lib(build_clib, BuildOptionsCommandMixIn):
+    """Build C++11 static libraries only if available.
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            # Create empty source file
-            tmp_file = os.path.join(tmp_dir, 'source' + extension)
-            with open(tmp_file, 'w') as f:
-                f.write('int main (int argc, char **argv) { return 0; }\n')
+    This is used for the snappy library.
+    """
 
-            try:
-                self.compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=[flag])
-            except CompileError:
-                return False
-            else:
-                return True
+    def check_library_list(self, libraries):
+        # Filter out C++11 libraries if cpp11 option is False
+        with_cpp = self.has_option('cpp11')
+        libraries = [(name, info) for name, info in libraries
+            if with_cpp or '-std=c++11' not in info.get('cflags', [])]
+        build_clib.check_library_list(self, libraries)
 
 
 class HDF5PluginExtension(Extension):
@@ -367,10 +425,13 @@ include_dirs += lz4_include_dirs
 define_macros.append(('HAVE_LZ4', 1))
 
 # snappy
-cpp11_kwargs = {
+snappy_lib = ('snappy', {
     'sources': glob(blosc_dir + 'internal-complibs/snappy*/*.cc'),
     'include_dirs': glob(blosc_dir + 'internal-complibs/snappy*'),
-    'extra_compile_args': ['-std=c++11', '-lstdc++'],
+    'cflags': ['-std=c++11']})
+
+cpp11_kwargs = {
+    'include_dirs': glob(blosc_dir + 'internal-complibs/snappy*'),
     'define_macros': [('HAVE_SNAPPY', 1)],
     }
 
@@ -414,10 +475,12 @@ lz4_plugin = HDF5PluginExtension(
     )
 
 
-extensions=[lz4_plugin,
-            bithsuffle_plugin,
-            blosc_plugin,
-            ]
+libraries = [snappy_lib]
+
+extensions = [lz4_plugin,
+              bithsuffle_plugin,
+              blosc_plugin,
+              ]
 
 # setup
 
@@ -471,9 +534,11 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.5",
                "Programming Language :: Python :: 3.6",
                "Programming Language :: Python :: 3.7",
+               "Programming Language :: Python :: 3.8",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
 cmdclass = dict(build=Build,
+                build_clib=BuildCpp11Lib,
                 build_ext=PluginBuildExt,
                 build_py=build_py)
 if BDistWheel is not None:
@@ -494,5 +559,6 @@ if __name__ == "__main__":
           install_requires=['h5py'],
           setup_requires=['setuptools'],
           cmdclass=cmdclass,
+          libraries=libraries,
           )
 
