@@ -124,6 +124,13 @@ class BuildOptionsCommandMixIn(object):
     _options = {}
     """Store build option states once for all"""
 
+    def get_compiler_flag_prefix(self):
+        """Returns compiler flags prefix character ('-' or '/')
+
+        :rtype: str
+        """
+        return '/' if self.__get_compiler().compiler_type == 'msvc' else '-'
+
     def select_compiler_flags(self, flags):
         """Removes compiler arguments that are not for the current one.
 
@@ -131,7 +138,7 @@ class BuildOptionsCommandMixIn(object):
         :return: List of arguments for the current compiler
         :rtype: List[str]
         """
-        prefix = '/' if self.__get_compiler().compiler_type == 'msvc' else '-'
+        prefix = self.get_compiler_flag_prefix()
         return [flag for flag in flags if flag.startswith(prefix)]
 
     def has_option(self, option):
