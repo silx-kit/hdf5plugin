@@ -225,9 +225,11 @@ class PluginBuildExt(build_ext):
         - select compile args for MSVC and others
         - Set hdf5 directory
         """
+        build_cmd = self.distribution.get_command_obj("build")
+        prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
+
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
-                build_cmd = self.distribution.get_command_obj("build")
                 e.set_hdf5_dir(build_cmd.hdf5)
 
                 if build_cmd.cpp11:
@@ -258,7 +260,6 @@ class PluginBuildExt(build_ext):
                 e.extra_compile_args += ['-march=native']
 
             # Remove flags that do not correspond to compiler
-            prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
             e.extra_compile_args = [flag for flag in e.extra_compile_args
                                     if flag.startswith(prefix)]
             e.extra_link_args = [flag for flag in e.extra_link_args
