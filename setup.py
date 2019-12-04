@@ -260,10 +260,10 @@ class PluginBuildExt(build_ext):
                 e.extra_compile_args += ['-march=native']
 
             # Remove flags that do not correspond to compiler
-            e.extra_compile_args = [flag for flag in e.extra_compile_args
-                                    if flag.startswith(prefix)]
-            e.extra_link_args = [flag for flag in e.extra_link_args
-                                 if flag.startswith(prefix)]
+            e.extra_compile_args = [
+                arg for arg in e.extra_compile_args if arg.startswith(prefix)]
+            e.extra_link_args = [
+                arg for arg in e.extra_link_args if arg.startswith(prefix)]
 
         build_ext.build_extensions(self)
 
