@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "03/10/2019"
+__date__ = "11/12/2019"
 
 
 from glob import glob
@@ -32,6 +32,7 @@ import logging
 import os
 import sys
 import tempfile
+import platform
 from setuptools import setup, Extension
 from setuptools.command.build_py import build_py
 from setuptools.command.build_ext import build_ext
@@ -80,7 +81,7 @@ def get_cpu_sse2_avx2():
             "CPU info detection does not support this architecture: SSE2 and AVX2 disabled")
         return False, False
     else:
-        cpu_flags = cpuinfo.get_cpu_info()['flags']
+        cpu_flags = cpuinfo.get_cpu_info().get('flags', [])
         return 'sse2' in cpu_flags, 'avx2' in cpu_flags
 
 
@@ -257,7 +258,10 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
             if build_cmd.native:  # Add -march=native
-                e.extra_compile_args += ['-march=native']
+                if platform.machine() in ["ppc64le"]:
+                    e.extra_compile_args += ['-mcpu=native']
+                else:
+                    e.extra_compile_args += ['-march=native']
 
             # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
