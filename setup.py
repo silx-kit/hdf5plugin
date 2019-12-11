@@ -258,10 +258,10 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
             if build_cmd.native:  # Add -march=native
-                if platform.machine() in ["ppc64le"]:
-                    e.extra_compile_args += ['-mcpu=native']
-                else:
+                if platform.machine() in ["i386", "i686", "amd64", "x86_64"]:
                     e.extra_compile_args += ['-march=native']
+                else:
+                    e.extra_compile_args += ['-mcpu=native']
 
             # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
