@@ -1,3 +1,9 @@
+2.1.1
+-----
+
+- Fixed `--native` build option on platform other than x86_64 (PR #62)
+- Fixed build of the snappy C++11 library for blosc on macOS (PR #60)
+
 2.1.0
 -----
 
