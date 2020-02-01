@@ -176,7 +176,7 @@ class Build(build):
                 logger.warning("AVX2 disabled: not available")
 
         if self.openmp:
-            prefix = '/' if compiler.compiler_type == 'msvc' else '-'
+            prefix = '/' if compiler.compiler_type == 'msvc' else '-f'
             self.openmp = check_compile_flag(compiler, prefix + 'openmp')
             if not self.openmp:
                 logger.warning("OpenMP disabled: not available")
