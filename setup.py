@@ -56,7 +56,12 @@ else:
         """Override bdist_wheel to handle as pure python package"""
 
         def finalize_options(self):
-            self.plat_name = get_platform()
+            try:
+                self.plat_name = get_platform()
+            except:
+                # something changed between wheel v0.33.1 and v0.34.2 
+                from distutils.util import get_platform
+                self.plat_name = get_platform()
             if not sys.platform.startswith('win'):
                 self.python_tag = "py2.py3"
             bdist_wheel.finalize_options(self)
