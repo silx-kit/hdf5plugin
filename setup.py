@@ -50,13 +50,18 @@ try:
 except ImportError:
     BDistWheel = None
 else:
+    from pkg_resources import parse_version
+    import wheel
     from wheel.pep425tags import get_platform
 
     class BDistWheel(bdist_wheel):
         """Override bdist_wheel to handle as pure python package"""
 
         def finalize_options(self):
-            self.plat_name = get_platform()
+            if parse_version(wheel.__version__) >= parse_version('0.34.0'):
+                self.plat_name = get_platform(self.bdist_dir)
+            else:
+                self.plat_name = get_platform()
             if not sys.platform.startswith('win'):
                 self.python_tag = "py2.py3"
             bdist_wheel.finalize_options(self)
@@ -176,7 +181,7 @@ class Build(build):
                 logger.warning("AVX2 disabled: not available")
 
         if self.openmp:
-            prefix = '/' if compiler.compiler_type == 'msvc' else '-'
+            prefix = '/' if compiler.compiler_type == 'msvc' else '-f'
             self.openmp = check_compile_flag(compiler, prefix + 'openmp')
             if not self.openmp:
                 logger.warning("OpenMP disabled: not available")
