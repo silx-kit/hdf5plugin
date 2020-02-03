@@ -50,17 +50,17 @@ try:
 except ImportError:
     BDistWheel = None
 else:
+    from pkg_resources import parse_version
+    import wheel
     from wheel.pep425tags import get_platform
 
     class BDistWheel(bdist_wheel):
         """Override bdist_wheel to handle as pure python package"""
 
         def finalize_options(self):
-            try:
-                self.plat_name = get_platform()
-            except:
-                # something changed between wheel v0.33.1 and v0.34.2 
-                from distutils.util import get_platform
+            if parse_version(wheel.__version__) >= parse_version('0.34.0'):
+                self.plat_name = get_platform(self.bdist_dir)
+            else:
                 self.plat_name = get_platform()
             if not sys.platform.startswith('win'):
                 self.python_tag = "py2.py3"
