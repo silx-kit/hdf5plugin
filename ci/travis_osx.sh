@@ -31,6 +31,11 @@ if [ "$TRAVIS_OS_NAME" != "osx" ]; then
     }
 
 else
+    echo "Installing miniconda"
+    curl -o miniconda_installer.sh "https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
+    bash miniconda_installer.sh -b -p miniconda
+    export PATH="`pwd`/miniconda/bin":$PATH
+
     function travis_osx_install_begin {
         echo Mac OS X install begin: Install pip and setup build venv
         set -x  # echo on
