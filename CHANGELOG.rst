@@ -1,3 +1,10 @@
+2.1.2
+-----
+
+- Fixed OpenMP compilation flag (PR #64)
+- Fixed support of `wheel` package version >= 0.34 (PR #64)
+- Continuous Integration: Run tests with python3 on macOS rather than python2. (PR #66)
+
 2.1.1
 -----
 
