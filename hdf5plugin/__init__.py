@@ -27,7 +27,7 @@ under windows, MacOS and linux."""
 
 __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "21/04/2020"
+__date__ = "24/04/2020"
 
 import ctypes as _ctypes
 from glob import glob as _glob
