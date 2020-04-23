@@ -56,7 +56,9 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         args = {"blosc": hdf5plugin.Blosc,
                 "bshuf": hdf5plugin.Bitshuffle,
-                "lz4": hdf5plugin.LZ4}[filter_name](**options)
+                "lz4": hdf5plugin.LZ4,
+                "fcidecomp": hdf5plugin.FciDecomp,
+                }[filter_name](**options)
 
         # Write
         f = h5py.File(filename, "w")
@@ -116,6 +118,10 @@ class TestHDF5PluginRW(unittest.TestCase):
         # Specify options
         filter_ = self._test('lz4', nbytes=1024)
         self.assertEqual(filter_[2], (1024,))
+
+    def testLZ4(self):
+        """Write/read test with lz4 filter plugin"""
+        self._test('fcidecomp')
 
 
 def suite():
