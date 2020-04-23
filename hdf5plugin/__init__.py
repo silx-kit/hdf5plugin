@@ -212,7 +212,12 @@ def _init_filters():
                 continue
 
         # Load DLL
-        filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
+        filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))
+        if len(filename):
+            filename = filename[0]
+        else:
+            _logger.error("Cannot initialize filter %s: %d. File not found", name)
+            continue
         lib = _ctypes.CDLL(filename)
 
         if _sys.platform.startswith('win'):
