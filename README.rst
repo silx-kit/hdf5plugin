@@ -15,6 +15,7 @@ The HDF5 plugin sources were obtained from:
 * LZ4 plugin (v0.1.0): https://github.com/nexusformat/HDF5-External-Filter-Plugins
 * bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
 * hdf5-blosc plugin (v1.0.0) and c-blosc (v1.17.0): https://github.com/Blosc/hdf5-blosc and https://github.com/Blosc/c-blosc
+* FICDECOMP plugin (v1.0.1) and CharLS (branch 1.x-master SHA1 ID:25160a42fb62e71e4b0ce081f5cb3f8bb73938b5): ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_L1c_Compressed-Datasets_and_Decompression-Plugin_April2017/Decompression_Plugin/ and https://github.com/team-charls/charls.git 
 
 Installation
 ------------
@@ -146,6 +147,24 @@ Sample code:
             **hdf5plugin.LZ4(nbytes=0))
         f.close()
 
+
+FciDecomp()
+***********
+
+This class returns the compression options to feed into ``h5py.Group.create_dataset`` for using the FciDecomp filter:
+
+It can be passed as keyword arguments.
+
+Sample code:
+
+.. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('fcidecomp', data=numpy.arange(100),
+            **hdf5plugin.FciDecomp())
+        f.close()
+
+
 Dependencies
 ------------
 
@@ -185,5 +204,6 @@ Please read the different licenses:
 * bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/bitshuffle/LICENSE>`_
 * blosc: See `src/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5-blosc/LICENSES/>`_ and `src/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/c-blosc/LICENSES/>`_
 * lz4: See `src/LZ4/COPYING  <https://github.com/silx-kit/hdf5plugin/blob/master/src/LZ4/COPYING>`_
+* FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/fcidecomp/LICENSE.txt>`_ and `src/charls/src/License.txt  <https://github.com/silx-kit/hdf5plugin/blob/master/src/charls/License.txt>`_
 
 The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `src/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5/COPYING>`_.

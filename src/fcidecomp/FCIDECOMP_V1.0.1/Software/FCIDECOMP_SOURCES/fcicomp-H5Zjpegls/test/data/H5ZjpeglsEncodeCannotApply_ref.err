@@ -1,0 +1,11 @@
+ERROR: Invalid HDF5 data type. Data type must be integers to be able to apply JPEG-LS filter.
+ERROR: Invalid number of bytes per sample. Data must be on one or two bytes per samples to be able to apply JPEG-LS filter.
+ERROR: Invalid number of bytes per sample. Data must be on one or two bytes per samples to be able to apply JPEG-LS filter.
+ERROR: Invalid number of bytes per sample. Data must be on one or two bytes per samples to be able to apply JPEG-LS filter.
+ERROR: Invalid number of components. Data must have between 1 and 4 color components to be able to apply JPEG-LS filter.
+ERROR: Invalid number of components. Data must have between 1 and 4 color components to be able to apply JPEG-LS filter.
+ERROR: Invalid number of dimensions. Data must have 2 (or 3 dimensions in the case of color images) to be able to apply JPEG-LS filter.
+ERROR: Invalid number of dimensions. Data must have 2 (or 3 dimensions in the case of color images) to be able to apply JPEG-LS filter.
+ERROR: Invalid number of parameters in the HDF5 JPEG-LS filter.
+ERROR: Invalid dimensions. Too few pixels or dimensions too large to be able to apply JPEG-LS filter.
+ERROR: Invalid dimensions. Too few pixels or dimensions too large to be able to apply JPEG-LS filter.

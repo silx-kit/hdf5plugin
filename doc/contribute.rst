@@ -27,6 +27,8 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
   You must use the same `filter_name` as in the extension in ``setup.py`` (without the ``libh5`` prefix) .
   The names in ``FILTERS`` are used to find the available filter libraries.
 
+* In case of import errors related to HDF5-related undefined symbols, add eventual missing functions under ``src/hdf5_dl.c``.
+
 * Add a compression options helper function named ``<filter_name>_options`` in ``hdf5plugins/__init__.py`` which should return a dictionary containing the values for the ``compression`` and ``compression_opts`` arguments of ``h5py.Group.create_dataset``.
   This is intended to ease the usage of ``compression_opts``.
 

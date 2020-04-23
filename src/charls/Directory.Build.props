@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!-- Build to a folder outside the source folders, making it easier to clean. -->
+    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <OutDir Condition="'$(Platform)'=='Win32'">$(SolutionDir)bin\$(Configuration)\x86\</OutDir>
+
+    <!-- C++ temp files can be redirected. -->
+    <IntDir>$(SolutionDir)intermediate\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+
+    <!-- The C runtime is provided by the OS on the Windows platform (Universal C Runtime (CRT))
+         MSBuild v15 requires an explicit SDK version number, MSBuild 16 can use "latest". -->
+    <WindowsTargetPlatformVersion Condition="'$(MSBuildVersion)' &lt; '16.0'">10.0.17763.0</WindowsTargetPlatformVersion>
+
+    <!-- Default character set is Unicode (UTF16), defines _UNICODE and UNICODE. -->
+    <CharacterSet>Unicode</CharacterSet>
+
+    <!-- Vcpkg should threat the checked build as a debug build. -->
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'Checked'">Debug</VcpkgConfiguration>    
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- To ensure high quality C++ code use Warning level 4 and treat warnings as errors to ensure warnings are fixed promptly. -->
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+
+      <!-- Enable some more level 4 warnings that are disabled by default but are usefull. -->
+      <AdditionalOptions>/w44296 /w44548 /w44555 /w44777 /w44917 %(AdditionalOptions)</AdditionalOptions>
+
+      <!-- Use all cores to speed up the compilation (MS recommended best practice). -->
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+
+      <!-- Don't use precompiled header as code needs to be multi platform compatible. -->
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

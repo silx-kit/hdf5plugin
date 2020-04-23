@@ -56,10 +56,15 @@ typedef herr_t (* DL_func_H5Pmodify_filter)(
     hid_t plist_id, H5Z_filter_t filter,
     unsigned int flags, size_t cd_nelmts,
     const unsigned int cd_values[/*cd_nelmts*/]);
+/*H5S*/
+typedef int (* DL_func_H5Sget_simple_extent_ndims)(hid_t space_id);
+typedef htri_t (* DL_func_H5Sis_simple)(hid_t space_id);
+
 /*H5T*/
 typedef size_t (* DL_func_H5Tget_size)(
     hid_t type_id);
 typedef H5T_class_t (* DL_func_H5Tget_class)(hid_t type_id);
+typedef H5T_order_t (* DL_func_H5Tget_order)(hid_t type_id);
 typedef hid_t (* DL_func_H5Tget_super)(hid_t type);
 typedef herr_t (* DL_func_H5Tclose)(hid_t type_id);
 /*H5Z*/
@@ -77,9 +82,13 @@ static struct {
     DL_func_H5Pget_filter_by_id2 H5Pget_filter_by_id2;
     DL_func_H5Pget_chunk H5Pget_chunk;
     DL_func_H5Pmodify_filter H5Pmodify_filter;
+    /*H5S*/
+    DL_func_H5Sget_simple_extent_ndims H5Sget_simple_extent_ndims;
+    DL_func_H5Sis_simple H5Sis_simple;
     /*H5T*/
     DL_func_H5Tget_size H5Tget_size;
     DL_func_H5Tget_class H5Tget_class;
+    DL_func_H5Tget_order H5Tget_order;
     DL_func_H5Tget_super H5Tget_super;
     DL_func_H5Tclose H5Tclose;
     /*H5T*/
@@ -120,9 +129,14 @@ int init_filter(const char* libname)
         DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)dlsym(handle, "H5Pget_filter_by_id2");
         DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)dlsym(handle, "H5Pget_chunk");
         DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)dlsym(handle, "H5Pmodify_filter");
+        /*H5S*/
+        DL_H5Functions.H5Sget_simple_extent_ndims = (DL_func_H5Sget_simple_extent_ndims) \
+                                        dlsym(handle, "H5Sget_simple_extent_ndims");
+        DL_H5Functions.H5Sis_simple = (DL_func_H5Sis_simple) dlsym(handle, "H5Sis_simple");
         /*H5T*/
         DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
         DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
+        DL_H5Functions.H5Tget_order = (DL_func_H5Tget_order)dlsym(handle, "H5Tget_order");
         DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_super");
         DL_H5Functions.H5Tclose = (DL_func_H5Tclose)dlsym(handle, "H5Tclose");
         /*H5Z*/
@@ -205,6 +219,16 @@ herr_t H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter,
 {
 CALL(0, H5Pmodify_filter, plist_id, filter, flags, cd_nelmts, cd_values)
 }
+/*H5S*/
+int H5Sget_simple_extent_ndims(hid_t space_id)
+{
+CALL(0, H5Sget_simple_extent_ndims, space_id)
+}
+
+htri_t H5Sis_simple(hid_t space_id)
+{
+CALL(0, H5Sis_simple, space_id)
+}
 
 /*H5T*/
 size_t H5Tget_size(hid_t type_id)
@@ -217,6 +241,10 @@ H5T_class_t H5Tget_class(hid_t type_id)
 CALL(H5T_NO_CLASS, H5Tget_class, type_id)
 }
 
+H5T_order_t H5Tget_order(hid_t type_id)
+{
+CALL(0, H5Tget_order, type_id);
+}
 
 hid_t H5Tget_super(hid_t type)
 {

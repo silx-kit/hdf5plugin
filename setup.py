@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2019 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "11/12/2019"
+__date__ = "21/04/2020"
 
 
 from glob import glob
@@ -202,6 +202,11 @@ class Build(build):
             (name, info) for name, info in self.distribution.libraries
             if self.cpp11 or '-std=c++11' not in info.get('cflags', [])]
 
+        # Filter out C++11-only extensions if cpp11 option is False
+        self.distribution.ext_modules = [
+            ext for ext in self.distribution.ext_modules
+            if self.cpp11 or not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
+
 
 class PluginBuildExt(build_ext):
     """Build extension command for DLLs that are not Python modules
@@ -280,7 +285,7 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, sse2=None, avx2=None, cpp11=None, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
         if sys.platform.startswith('win'):
@@ -298,6 +303,7 @@ class HDF5PluginExtension(Extension):
         self.sse2 = sse2 if sse2 is not None else {}
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
+        self.cpp11_required = cpp11_required
 
     def set_hdf5_dir(self, hdf5_dir=None):
         """Set the HDF5 installation directory to use to build the plugins.
@@ -442,11 +448,61 @@ lz4_plugin = HDF5PluginExtension(
     )
 
 
-libraries = [snappy_lib]
+# FCIDECOMP
+fcidecomp_dir = 'src/fcidecomp/FCIDECOMP_V1.0.1/Software/FCIDECOMP_SOURCES'
+extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
+extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+extra_link_args = ['-fopenmp', '/openmp']
+fcidecomp_additional_dirs = ["fcicomp-common",
+                             "fcicomp-H5Zjpegls",
+                             "fcicomp-jpegls",
+                             ]
+sources = []
+depends = []
+include_dirs = []
+for item in fcidecomp_additional_dirs:
+    sources += glob(fcidecomp_dir + "/" + item + "/src/*.c")
+    depends += glob(fcidecomp_dir + "/" + item + "/include/*.h")
+    include_dirs += [fcidecomp_dir + "/" + item + "/include",
+                     "src/charls/src"]
+    #include_dirs += ["src/hdf5"]
+cpp11_kwargs = {
+    'extra_link_args': ['-lstdc++'],
+    }
+fcidecomp_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5fcidecomp",
+    sources=sources,
+    depends=depends,
+    include_dirs=include_dirs,
+    extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args,
+    # export_symbols=['init_filter'],
+    cpp11=cpp11_kwargs,
+    cpp11_required=True,
+    define_macros=[('CHARLS_STATIC', 1)],
+    )
+
+# CharLS
+charls_dir = "src/charls/src"
+charls_sources = glob(charls_dir + '/*.cpp')
+charls_include_dirs = [charls_dir]
+charls_lib = ('charls', {
+    'sources': charls_sources,
+    'include_dirs': charls_include_dirs,
+    'cflags': ['-std=c++11']})
+
+cpp11_kwargs = {
+    'include_dirs': glob('charls_dir/src'),
+    'extra_link_args': ['-lstdc++'],
+    }
+
+
+libraries = [snappy_lib, charls_lib]
 
 extensions = [lz4_plugin,
               bithsuffle_plugin,
               blosc_plugin,
+              fcidecomp_plugin,
               ]
 
 # setup
@@ -527,4 +583,3 @@ if __name__ == "__main__":
           cmdclass=cmdclass,
           libraries=libraries,
           )
-

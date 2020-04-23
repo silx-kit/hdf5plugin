@@ -1,0 +1,32 @@
+# $Id$
+# =============================================================
+# 
+# PROJECT  : FCI_COMPRESSION 
+# 
+# AUTHOR   : THALES Services
+# 
+# Copyright 2015 EUMETSAT
+# 
+# =============================================================
+# HISTORY :
+# 
+# VERSION:1.0.1:NCR:FCICOMP-8:09/03/2016:Add the copyright notice in the header
+#
+# END-HISTORY
+# =============================================================
+
+# - Config file for the FCICOMP_JPEGLS package
+# It defines the following variables
+#  FCICOMP_JPEGLS_INCLUDE_DIR  - include directories for fcicomp_jpegls
+#  FCICOMP_JPEGLS_LIBRARIES    - libraries to link against
+ 
+
+# The following line is for used by configure_package_config_file()
+@PACKAGE_INIT@
+
+SET (FCICOMP_JPEGLS_VERSION "@FCICOMP_JPEGLS_VERSION@")
+
+INCLUDE ("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME_LOWER@-targets.cmake")
+
+SET_AND_CHECK (FCICOMP_JPEGLS_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
+SET (FCICOMP_JPEGLS_LIBRARIES "fcicomp::@TARGET_LIBRARY_NAME@")

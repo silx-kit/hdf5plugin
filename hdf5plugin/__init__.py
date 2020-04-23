@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2019 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ under windows, MacOS and linux."""
 
 __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "30/09/2019"
+__date__ = "24/04/2020"
 
 import ctypes as _ctypes
 from glob import glob as _glob
@@ -69,7 +69,14 @@ BSHUF_ID = 32008
 LZ4_ID = 32004
 """LZ4_ID filter ID"""
 
-FILTERS = {'blosc': BLOSC_ID, 'bshuf': BSHUF_ID, 'lz4': LZ4_ID}
+FCIDECOMP_ID = 32018
+"""FCIDECOMP filter ID"""
+
+FILTERS = {'blosc': BLOSC_ID,
+           'bshuf': BSHUF_ID,
+           'lz4': LZ4_ID,
+           'fcidecomp': FCIDECOMP_ID,
+           }
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
 
@@ -184,6 +191,12 @@ class LZ4(_FilterRefClass):
         self.filter_options = (nbytes,)
 
 
+class FciDecomp(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """
+    filter_id = FCIDECOMP_ID
+
+
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
 
@@ -199,7 +212,12 @@ def _init_filters():
                 continue
 
         # Load DLL
-        filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))[0]
+        filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))
+        if len(filename):
+            filename = filename[0]
+        else:
+            _logger.error("Cannot initialize filter %s: %d. File not found", name)
+            continue
         lib = _ctypes.CDLL(filename)
 
         if _sys.platform.startswith('win'):
