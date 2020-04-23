@@ -28,6 +28,8 @@
 #include "fcicomp_options.h"
 #include "fcicomp_errors.h"
 
+#define H5Z_FILTER_JPEGLS 32018
+
 /** Registers the JPEG-LS coding filter. */
 const H5Z_class2_t H5Z_JPEGLS[1] = { {
 H5Z_CLASS_T_VERS, /**< H5Z_class_t version */
