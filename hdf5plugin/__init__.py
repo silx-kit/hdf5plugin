@@ -191,6 +191,12 @@ class LZ4(_FilterRefClass):
         self.filter_options = (nbytes,)
 
 
+class FciDecomp(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """
+    filter_id = FCIDECOMP_ID
+
+
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
 

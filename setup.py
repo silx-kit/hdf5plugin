@@ -202,6 +202,11 @@ class Build(build):
             (name, info) for name, info in self.distribution.libraries
             if self.cpp11 or '-std=c++11' not in info.get('cflags', [])]
 
+        # Filter out C++11-only extensions if cpp11 option is False
+        self.distribution.ext_modules = [
+            ext for ext in self.distribution.ext_modules
+            if self.cpp11 or not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
+
 
 class PluginBuildExt(build_ext):
     """Build extension command for DLLs that are not Python modules
@@ -280,7 +285,7 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, sse2=None, avx2=None, cpp11=None, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
         if sys.platform.startswith('win'):
@@ -298,6 +303,7 @@ class HDF5PluginExtension(Extension):
         self.sse2 = sse2 if sse2 is not None else {}
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
+        self.cpp11_required = cpp11_required
 
     def set_hdf5_dir(self, hdf5_dir=None):
         """Set the HDF5 installation directory to use to build the plugins.
@@ -472,6 +478,7 @@ fcidecomp_plugin = HDF5PluginExtension(
     extra_link_args=extra_link_args,
     # export_symbols=['init_filter'],
     cpp11=cpp11_kwargs,
+    cpp11_required=True,
     define_macros=[('CHARLS_STATIC', 1)],
     )
 

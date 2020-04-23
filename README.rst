@@ -147,6 +147,24 @@ Sample code:
             **hdf5plugin.LZ4(nbytes=0))
         f.close()
 
+
+FciDecomp()
+***********
+
+This class returns the compression options to feed into ``h5py.Group.create_dataset`` for using the FciDecomp filter:
+
+It can be passed as keyword arguments.
+
+Sample code:
+
+.. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('fcidecomp', data=numpy.arange(100),
+            **hdf5plugin.FciDecomp())
+        f.close()
+
+
 Dependencies
 ------------
 
