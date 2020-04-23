@@ -119,8 +119,8 @@ class TestHDF5PluginRW(unittest.TestCase):
         filter_ = self._test('lz4', nbytes=1024)
         self.assertEqual(filter_[2], (1024,))
 
-    def testLZ4(self):
-        """Write/read test with lz4 filter plugin"""
+    def testFciDecomp(self):
+        """Write/read test with fcidecomp filter plugin"""
         self._test('fcidecomp')
 
 
