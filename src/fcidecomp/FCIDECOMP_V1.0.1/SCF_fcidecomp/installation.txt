@@ -1,0 +1,10 @@
+$Id: installation.txt 794 2016-03-09 09:23:45Z delaunay $
+                   ###########################################
+                   #                                         #
+                   #         INSTALLATION PROCEDURE          #
+                   #                                         #
+                   ###########################################
+
+Copyright 2015 EUMETSAT
+
+See the Software Installation Guide: EUM-COM-SIG-14-121-TS
