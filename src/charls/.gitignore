@@ -1,0 +1,22 @@
+# GIT ignore file for CharLS
+
+obj/
+bin/
+Win32/
+x64/
+.vscode/
+.vs/
+[Dd]ebug/
+[Rr]elease/
+[Cc]hecked/
+build/
+
+# Ignore files created by Visual Studio
+*.suo
+*.user
+*.ipch
+*.opensdf
+*.sdf
+*.opendb
+*.VC.db
+*.aps
