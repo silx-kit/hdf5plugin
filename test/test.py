@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2019 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "04/10/2019"
+__date__ = "21/04/2020"
 
 
 import os
@@ -90,6 +90,22 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.shape[2] == 2070, "Incorrect shape")
         self.assertTrue(data[0, 1372, 613] == 922, "Incorrect value")
 
+    def testFicdecomp(self):
+        """Test reading FICDECOMP compressed data"""
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        fname = os.path.join(dirname, "ficdecomp.h5")
+        self.assertTrue(os.path.exists(fname),
+                        "Cannot find %s file" % fname)
+        h5 = h5py.File(fname, "r")
+        data = h5["effective_radiance"][:]
+        h5.close()
+        expected_shape = (60, 30)
+        expected_data = numpy.arange(1800).astype(numpy.int16).reshape(60, 30)
+        self.assertTrue(data.shape[0] == 60, "Incorrect shape")
+        self.assertTrue(data.shape[1] == 30, "Incorrect shape")
+        self.assertTrue(data.dtype == expected_data.dtype, "Incorrect type")
+        self.assertTrue(numpy.alltrue(data == expected_data),
+                                      "Incorrect values read")
 
 def suite():
     testSuite = unittest.TestSuite()
