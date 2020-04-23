@@ -90,6 +90,8 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.shape[2] == 2070, "Incorrect shape")
         self.assertTrue(data[0, 1372, 613] == 922, "Incorrect value")
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.FCIDECOMP_ID),
+                         "FCIDECOMP filter not available")
     def testFicdecomp(self):
         """Test reading FICDECOMP compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))
