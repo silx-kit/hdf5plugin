@@ -1,0 +1,2 @@
+fcicomp-jpegls/test/data/jpeglsDecompressSegFault_ref.err
+fcicomp-jpegls/test/src/jpegls_decompress_segfault.c
