@@ -1,2 +1,0 @@
-fcicomp-jpegls/readme.txt
-fcicomp-jpegls/README.txt

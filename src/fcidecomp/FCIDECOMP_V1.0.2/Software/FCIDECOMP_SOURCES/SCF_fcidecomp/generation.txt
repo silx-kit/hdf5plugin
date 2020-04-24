@@ -1,0 +1,39 @@
+$Id: generation.txt 840 2017-09-07 09:07:16Z delaunay $
+
+                   ###########################################
+                   #                                         #
+                   #         BUILD PROCEDURE                 #
+                   #                                         #
+                   ###########################################
+
+Copyright 2015 EUMETSAT
+
+1-Prerequisites
+---------------
+Check the SCF.txt file.
+FCIDECOMP source code delivery is required (check version in SCF/SCF.txt)
+
+
+2-Build in development
+----------------------
+
+Install the FCI compression/decompression software
+$ ./build.sh release
+
+
+3- Build with an official delivery :
+-------------------------------
+
+# Make a generation folder
+ENVGEN=<absolute folder>
+mkdir -p $ENVGEN
+tar zxvf FCIDECOMP_FCIDECOMP_SOURCES-<version>-<release>.tar.gz -C $ENVGEN
+tar zxvf FCIDECOMP_FCIDECOMP_COTS-<version>-<release>.tar.gz -C $ENVGEN
+
+# Set environment variables
+export FCICOMP_COTS_ROOT=$ENVGEN/FCIDECOMP_COTS
+
+# Build Product
+cd $ENVGEN/FCIDECOMP_SOURCES/
+./build.sh release
+

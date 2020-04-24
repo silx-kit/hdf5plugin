@@ -1,0 +1,172 @@
+                   ###########################################
+                   #                                         #
+                   #       SOURCE CONFIGURATION FILE         #
+                   #                                         #
+                   ###########################################
+
+0- Identification
+-----------------
+$Id: SCF.txt 844 2017-09-11 09:17:48Z delaunay $
+
+Copyright 2015 EUMETSAT
+
+Author : THALES Services
+Date   : 2017-09-11
+
+This file contains the complete description of the configuration of the component. 
+The SCF is constituted by the present file and the following files :
+ - generation.txt   : build procedure
+ - installation.txt : installation procedure
+ - all-files.txt    : list of all source files delivered
+ - mod-files.txt    : list of modified files 
+ - add-files.txt    : list of added files 
+ - del-files.txt    : list of deleted files 
+
+The project FCIDECOMP, is comprised of one archive (cf 4.1), described by a unique SCF in the sources.
+
+1- Description of the component
+-------------------------------
+
+IDENTIFICATION OF THE COMPONENT
+-------------------------------
+Component name          : FCIDECOMP 
+Criticity               : Normal
+Confidentiality         : NC
+Contract manager        : THALES SERVICES
+Function                : FCIDECOMP is the JPEG-LS decompression system for MTG FCI L1c datasets in NetCDF-4 files. 
+
+IDENTIFICATION OF THE VERSION
+-----------------------------
+Date version          : 2017-09-11
+Version               : V1.0.2
+Reference version     : V1.0.1
+Type of delivery      : Major version 
+
+
+2- Applicable reference
+-------------------------
+[FCP]       176200-PCO-14-5489-A_1  Financial and Contractual Proposal
+
+[ITT]       ITT No.: 14/208775 13 June 2014   
+            EUMETSAT Invitation To Tender (ITT) No. 14/208775 
+            MTG Ground Segment – Lossless Compression for the Operational Dissemination of Level 1 Datasets
+            
+[SOW]       EUM/MTG/SOW/14/746987, Issue v2B, 11 June 2014
+            Statement of Work 
+            MTG Ground Segment – Lossless Compression for Operational FCI Level 1 Datasets Dissemination
+            
+[STC]       EUM/COS/STC/14/756646, Issue v1, 7 May 2014
+            Special Tender Conditions
+            MTG Ground Segment - Lossless Compression for Operational FCI Level 1 Datasets Dissemination
+            
+[IDPFRD]    EUM/MTG/SPE/11/0686 
+            MTG Instrument Data Processing Facility (IDPF) - Requirements Document
+            
+[FCIL1FS]   EUM/MTG/SPE/10/0447 v3k Draft 19 November 2014
+            FCI Level 0 and 1 Format Specification
+            
+[GFS]       EUM/MTG/SPE/11/0252 
+            MTG Generic Format Specification
+
+
+3- Resources required (or used) to develop/generate/use
+--------------------------------------------------------
+Component   Version      DEV/GEN/EXP   License
+-----------------------------------------------
+CMake       2.8.12          O/O/N       BSD
+zlib        1.2.8           O/O/O       zlib
+HDF5        1.8.14          O/O/O       BSD-style
+NetCDF      4.3.2           O/O/O       MIT-style
+CharLS      1.0             O/O/O       BSD-style
+
+
+4- Detailed instructions 
+------------------------
+
+4.1- Reception of the delivery 
+-------------------------------
+
+The delivery of FCIDECOMP is composed of a folder FCIDECOMP_V1.0.2 containing the following elements :
+   SCF : Folder of the SCF
+   Software : Folder composed of the file :
+      fcidecomp_sources-V1.0.2.tar.gz : archive containing the folder FCIDECOMP_SOURCES
+
+
+The tar command used to make those archives is in version : tar (GNU tar) 1.26
+
+The 2 archives must be decompressed with the following commands :
+   gtar xvzf fcidecomp_sources-V1.0.2.tar.gz
+   A folder FCIDECOMP_SOURCES is created containing the source code.
+   
+      
+4.2- Generation environment
+---------------------------
+
+  Linux x86_64
+  ------------
+    System : CentOS 6.3
+    Compiler : gcc (GCC) 4.4.6 20120305 
+
+
+5- Generation - Install - Delivery of the binaries
+--------------------------------------------------
+
+   Build procedure is detailed in generation.txt file.
+   
+   Installation procedure is detailed in installation.txt file.
+
+
+6- Modifications compared to the previous version
+--------------------------------------------------------------
+
+Key modifications
+-----------------
+   Consideration of tickets lists below
+
+List of corrected NCR
+---------------------
+Key|Title
+FCICOMP-13|Edit the H5Zjpegls filter ID
+FCICOMP-12|Manipulation of signal handlers creates conflict with the Java virtual machines during the integration of the compression sw 
+FCICOMP-11|Unnecessary cmake files in the decompression side package
+FCICOMP-7|Build and install of the extended netCDF lib should be in two steps
+FCICOMP-6|Version of libnetcdf.so modified extended netCDF is not in line with the version of the COTS libnetcdf.so
+
+
+
+List of CHR taken into account
+-----------------------------
+
+
+
+List of WVR accepted
+--------------------
+
+
+
+7- Composition
+--------------
+
+Files delivered
+---------------
+See all-files.txt
+
+
+Added files 
+-----------
+See add-files.txt
+
+
+Modified files
+--------------
+See mod-files.txt
+
+
+Deleted files 
+-------------
+See del-files.txt
+
+
+
+
+End of the SCF.
