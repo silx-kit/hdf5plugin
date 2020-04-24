@@ -449,7 +449,7 @@ lz4_plugin = HDF5PluginExtension(
 
 
 # FCIDECOMP
-fcidecomp_dir = 'src/fcidecomp/FCIDECOMP_V1.0.1/Software/FCIDECOMP_SOURCES'
+fcidecomp_dir = 'src/fcidecomp/FCIDECOMP_V1.0.2/Software/FCIDECOMP_SOURCES'
 extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
 extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
 extra_link_args = ['-fopenmp', '/openmp']
