@@ -1,3 +1,8 @@
+2.2
+---
+
+- Added FCIDECOMP filter (PR #68, #71)
+
 2.1.2
 -----
 
