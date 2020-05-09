@@ -1,0 +1,46 @@
+--- h5repack_parse.c	2014-10-13 13:33:26.000000000 +0200
++++ h5repack_parse_fixed.c	2014-12-03 10:57:21.910457000 +0100
+@@ -258,7 +258,7 @@
+ 					l=-1; /* filter number index check */
+ 					p=-1; /* CD_VAL count check */
+ 					r=-1; /* CD_VAL check */
+-					for ( m=0,q=0,u=i+1; u<len; u++,m++,q++)
++					for ( m=0,q=0,u=i+1; u<len; u++,m++)
+ 					{
+ 						if (str[u]==',')
+ 						{
+@@ -274,22 +274,20 @@
+ 								p=0;
+ 							}
+ 							else
++							{
++							        filt->cd_values[j++]=atoi(stype);
+ 								r=0;
++                                                        }
+ 							q=0;
+-							u++;  /* skip ',' */
+-						}
+-						c = str[u];
+-						if (!isdigit(c) && l==-1)
+-						{
+-							if (obj_list) HDfree(obj_list);
+-							error_msg("filter number parameter is not a digit in <%s>\n",str);
+-							HDexit(EXIT_FAILURE);
+-						}
+-						stype[q]=c;
+-						if (l==0 && p==0)
+-						{
+-							if (r==0)
+-								filt->cd_values[j++]=atoi(stype);
++						} else {
++						        c = str[u];
++						        if (!isdigit(c) && l==-1)
++						        {
++							        if (obj_list) HDfree(obj_list);
++							        error_msg("filter number parameter is not a digit in <%s>\n",str);
++							        HDexit(EXIT_FAILURE);
++						        }
++						        stype[q++]=c;
+ 						}
+ 
+ 					}  /* u */

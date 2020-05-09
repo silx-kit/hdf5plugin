@@ -1,0 +1,38 @@
+language: C
+
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y gfortran
+  - pwd
+  - ls
+  - pushd /tmp
+  - wget http://computation.llnl.gov/projects/floating-point-compression/download/zfp-0.5.5.tar.gz
+  - tar -xzf zfp-0.5.5.tar.gz
+  - pushd zfp-0.5.5
+  - make DEFS=-DBIT_STREAM_WORD_TYPE=uint8
+  - popd
+  - wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.14/src/hdf5-1.8.14.tar.gz
+  - tar -xzf hdf5-1.8.14.tar.gz
+  - pushd hdf5-1.8.14
+  - patch ./tools/h5repack/h5repack_parse.c /home/travis/build/LLNL/H5Z-ZFP/test/h5repack_parse.patch
+  - ./configure --prefix=`pwd`/my_install --enable-production --enable-fortran --enable-fortran2003 --enable-silent-rules
+  - make -j4 install 1>/dev/null 2>&1
+  - popd
+  - popd
+
+install: true
+
+script:
+  - make FCFLAGS="-O0 -fPIC --coverage -fprofile-arcs -ftest-coverage" \
+         CFLAGS="-O0 -fPIC --coverage" \
+         LDFLAGS="--coverage -lm" \
+         FC=gfortran CC=gcc \
+         ZFP_HOME=/tmp/zfp-0.5.5 \
+         HDF5_HOME=/tmp/hdf5-1.8.14/my_install check
+  - pushd src; gcov -a H5Zzfp_lib H5Zzfp_plugin H5Zzfp_props; popd
+  - pushd test; gcov -a test_read_lib test_write_lib test_write_plugin; popd
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
