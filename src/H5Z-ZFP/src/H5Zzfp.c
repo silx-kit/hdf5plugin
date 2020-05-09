@@ -179,12 +179,13 @@ H5Z_zfp_can_apply(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
         if (dims[i] <= 1) continue;
         ndims_used++;
     }
-
+#if ZFP_VERSION_NO < 0x0053
     if (ndims_used == 0 || ndims_used > max_ndims)
         H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
-#if ZFP_VERSION_NO < 0x0053
             "chunk must have only 1...3 non-unity dimensions");
 #else
+    if (ndims_used == 0 || ndims_used > max_ndims)
+        H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
             "chunk must have only 1...4 non-unity dimensions");
 #endif
 
@@ -273,10 +274,11 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
 #if ZFP_VERSION_NO >= 0x0054
         case 4: dummy_field = Z zfp_field_4d(0, zt, dims_used[3], dims_used[2], dims_used[1], dims_used[0]); break;
 #endif
-        default: H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
 #if ZFP_VERSION_NO < 0x0053
+        default: H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
                      "chunks may have only 1...3 non-unity dims");
 #else
+        default: H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
                      "chunks may have only 1...4 non-unity dims");
 #endif
     }

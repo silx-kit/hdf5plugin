@@ -54,14 +54,14 @@ static herr_t H5Pset_zfp(hid_t plist, int mode, ...)
         }
         case H5Z_ZFP_MODE_PRECISION:
         {
-            ctrls_p->details.prec = va_arg(ap, uint);
+            ctrls_p->details.prec = va_arg(ap, unsigned int);
             break;
         }
         case H5Z_ZFP_MODE_EXPERT:
         {
-            ctrls_p->details.expert.minbits = va_arg(ap, uint);
-            ctrls_p->details.expert.maxbits = va_arg(ap, uint);
-            ctrls_p->details.expert.maxprec = va_arg(ap, uint);
+            ctrls_p->details.expert.minbits = va_arg(ap, unsigned int);
+            ctrls_p->details.expert.maxbits = va_arg(ap, unsigned int);
+            ctrls_p->details.expert.maxprec = va_arg(ap, unsigned int);
             ctrls_p->details.expert.minexp  = va_arg(ap, int);
             break;
         }
