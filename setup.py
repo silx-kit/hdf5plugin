@@ -521,6 +521,7 @@ zfp_include_dirs = [os.path.join(zfp_dir, 'include')]
 zfp_lib = ('zfp', {
     'sources': zfp_sources,
     'include_dirs': zfp_include_dirs,
+    'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
     })
 
 libraries = [snappy_lib, charls_lib, zfp_lib]
