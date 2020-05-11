@@ -58,6 +58,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                 "bshuf": hdf5plugin.Bitshuffle,
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
+                "zfp": hdf5plugin.Zfp,
                 }[filter_name](**options)
 
         # Write
@@ -125,6 +126,9 @@ class TestHDF5PluginRW(unittest.TestCase):
         """Write/read test with fcidecomp filter plugin"""
         self._test('fcidecomp')
 
+    def testZfp(self):
+        """Write/read test with zfp filter plugin"""
+        self._test('zfp')
 
 def suite():
     test_suite = unittest.TestSuite()
