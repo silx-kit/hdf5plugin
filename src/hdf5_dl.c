@@ -34,7 +34,6 @@
 #include "hdf5.h"
 #include "H5PLextern.h"
 
-
 /*Function types*/
 /*H5*/
 typedef herr_t (*DL_func_H5open)(void);
@@ -46,21 +45,45 @@ typedef herr_t (* DL_func_H5Epush2)(
     hid_t err_stack, const char *file, const char *func, unsigned line,
     hid_t cls_id, hid_t maj_id, hid_t min_id, const char *msg, ...);
 /*H5P*/
+typedef htri_t (* DL_func_H5Pexist)(hid_t plist_id, const char *name);
+typedef herr_t (* DL_func_H5Pget)(hid_t plist_id, const char *name, void * value);
 typedef herr_t (* DL_func_H5Pget_filter_by_id2)(hid_t plist_id, H5Z_filter_t id,
     unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
     unsigned cd_values[]/*out*/, size_t namelen, char name[]/*out*/,
     unsigned *filter_config/*out*/);
+typedef H5Z_filter_t (* DL_func_H5Pget_filter2)(hid_t plist_id, unsigned filter,
+    unsigned int *flags/*out*/,
+    size_t *cd_nelmts/*out*/,
+    unsigned cd_values[]/*out*/,
+    size_t namelen, char name[],
+    unsigned *filter_config /*out*/);
 typedef int (* DL_func_H5Pget_chunk)(
 	hid_t plist_id, int max_ndims, hsize_t dim[]/*out*/);
+typedef int (* DL_func_H5Pget_nfilters)(hid_t plist_id);
+typedef herr_t (* DL_func_H5Pinsert2)(hid_t plist_id, const char *name, size_t size,
+    void *value, H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
+    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
+    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close);
+typedef htri_t (* DL_func_H5Pisa_class)(hid_t plist_id, hid_t pclass_id);
 typedef herr_t (* DL_func_H5Pmodify_filter)(
     hid_t plist_id, H5Z_filter_t filter,
     unsigned int flags, size_t cd_nelmts,
     const unsigned int cd_values[/*cd_nelmts*/]);
+typedef herr_t (* DL_func_H5Premove_filter)(hid_t plist_id, H5Z_filter_t filter);
+typedef herr_t (* DL_func_H5Pset)(hid_t plist_id, const char *name, const void *value);
+typedef herr_t (* DL_func_H5Pset_filter)(hid_t plist_id, H5Z_filter_t filter,
+    unsigned int flags, size_t cd_nelmts,
+    const unsigned int c_values[]);
 /*H5S*/
+typedef int (* DL_func_H5Sget_simple_extent_dims)(hid_t space_id, hsize_t dims[],
+    hsize_t maxdims[]);
 typedef int (* DL_func_H5Sget_simple_extent_ndims)(hid_t space_id);
 typedef htri_t (* DL_func_H5Sis_simple)(hid_t space_id);
 
 /*H5T*/
+typedef herr_t (* DL_func_H5Tconvert)(hid_t src_id, hid_t dst_id, size_t nelmts,
+    void *buf, void *background, hid_t plist_id);
+typedef hid_t (* DL_func_H5Tget_native_type)(hid_t type_id, H5T_direction_t direction);
 typedef size_t (* DL_func_H5Tget_size)(
     hid_t type_id);
 typedef H5T_class_t (* DL_func_H5Tget_class)(hid_t type_id);
@@ -79,13 +102,25 @@ static struct {
     DL_func_H5Epush1 H5Epush1;
     DL_func_H5Epush2 H5Epush2;
     /*H5P*/
+    DL_func_H5Pexist H5Pexist;
+    DL_func_H5Pget H5Pget;
+    DL_func_H5Pget_filter2 H5Pget_filter2;
+    DL_func_H5Pget_nfilters H5Pget_nfilters;
     DL_func_H5Pget_filter_by_id2 H5Pget_filter_by_id2;
     DL_func_H5Pget_chunk H5Pget_chunk;
+    DL_func_H5Pinsert2 H5Pinsert2;
+    DL_func_H5Pisa_class H5Pisa_class;
     DL_func_H5Pmodify_filter H5Pmodify_filter;
+    DL_func_H5Premove_filter H5Premove_filter;
+    DL_func_H5Pset H5Pset;
+    DL_func_H5Pset_filter H5Pset_filter;
     /*H5S*/
+    DL_func_H5Sget_simple_extent_dims H5Sget_simple_extent_dims;
     DL_func_H5Sget_simple_extent_ndims H5Sget_simple_extent_ndims;
     DL_func_H5Sis_simple H5Sis_simple;
     /*H5T*/
+    DL_func_H5Tconvert H5Tconvert;
+    DL_func_H5Tget_native_type H5Tget_native_type;
     DL_func_H5Tget_size H5Tget_size;
     DL_func_H5Tget_class H5Tget_class;
     DL_func_H5Tget_order H5Tget_order;
@@ -94,7 +129,9 @@ static struct {
     /*H5T*/
     DL_func_H5Zregister H5Zregister;
 } DL_H5Functions = {
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL};
 
 
 /*HDF5 variables*/
@@ -151,14 +188,27 @@ int init_filter(const char* libname)
         DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)dlsym(handle, "H5Epush1");
         DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)dlsym(handle, "H5Epush2");
         /*H5P*/
+        DL_H5Functions.H5Pexist = (DL_func_H5Pexist)dlsym(handle, "H5Pexist");
+        DL_H5Functions.H5Pget = (DL_func_H5Pget)dlsym(handle, "H5Pget");
+        DL_H5Functions.H5Pget_filter2 = (DL_func_H5Pget_filter2)dlsym(handle, "H5Pget_filter2");
         DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)dlsym(handle, "H5Pget_filter_by_id2");
         DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)dlsym(handle, "H5Pget_chunk");
+        DL_H5Functions.H5Pget_nfilters = (DL_func_H5Pget_nfilters)dlsym(handle, "H5Pget_nfilters");
+        DL_H5Functions.H5Pinsert2 = (DL_func_H5Pinsert2)dlsym(handle, "H5Pinsert2");
+        DL_H5Functions.H5Pisa_class = (DL_func_H5Pisa_class)dlsym(handle, "H5Pisa_class");
         DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)dlsym(handle, "H5Pmodify_filter");
+        DL_H5Functions.H5Premove_filter = (DL_func_H5Premove_filter)dlsym(handle, "H5Premove_filter");
+        DL_H5Functions.H5Pset = (DL_func_H5Pset)dlsym(handle, "H5Pset");
+        DL_H5Functions.H5Pset_filter = (DL_func_H5Pset_filter)dlsym(handle, "H5Pset_filter");
         /*H5S*/
+        DL_H5Functions.H5Sget_simple_extent_dims = (DL_func_H5Sget_simple_extent_dims) \
+                                        dlsym(handle, "H5Sget_simple_extent_dims");
         DL_H5Functions.H5Sget_simple_extent_ndims = (DL_func_H5Sget_simple_extent_ndims) \
                                         dlsym(handle, "H5Sget_simple_extent_ndims");
         DL_H5Functions.H5Sis_simple = (DL_func_H5Sis_simple) dlsym(handle, "H5Sis_simple");
         /*H5T*/
+        DL_H5Functions.H5Tconvert = (DL_func_H5Tconvert)dlsym(handle, "H5Tconvert");
+        DL_H5Functions.H5Tget_native_type = (DL_func_H5Tget_native_type)dlsym(handle, "H5Tget_native_type");
         DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
         DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
         DL_H5Functions.H5Tget_order = (DL_func_H5Tget_order)dlsym(handle, "H5Tget_order");
@@ -244,6 +294,16 @@ herr_t H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned li
 }
 
 /*H5P*/
+htri_t H5Pexist(hid_t plist_id, const char *name)
+{
+CALL(0, H5Pexist, plist_id, name)
+}
+
+herr_t H5Pget(hid_t plist_id, const char *name, void * value)
+{
+CALL(0, H5Pget, plist_id, name, value)
+}
+
 herr_t H5Pget_filter_by_id2(hid_t plist_id, H5Z_filter_t id,
     unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
     unsigned cd_values[]/*out*/, size_t namelen, char name[]/*out*/,
@@ -252,9 +312,37 @@ herr_t H5Pget_filter_by_id2(hid_t plist_id, H5Z_filter_t id,
 CALL(0, H5Pget_filter_by_id2, plist_id, id, flags, cd_nelmts, cd_values, namelen, name, filter_config)
 }
 
+H5Z_filter_t H5Pget_filter2(hid_t plist_id, unsigned filter,
+    unsigned int *flags/*out*/,
+    size_t *cd_nelmts/*out*/,
+    unsigned cd_values[]/*out*/,
+    size_t namelen, char name[],
+    unsigned *filter_config /*out*/)
+{
+CALL(0, H5Pget_filter2, plist_id, filter, flags, cd_nelmts, cd_values, namelen, name, filter_config)
+}
+
 int H5Pget_chunk(hid_t plist_id, int max_ndims, hsize_t dim[]/*out*/)
 {
 CALL(0, H5Pget_chunk, plist_id, max_ndims, dim)
+}
+
+int H5Pget_nfilters(hid_t plist_id)
+{
+CALL(0, H5Pget_nfilters, plist_id)
+}
+
+herr_t H5Pinsert2(hid_t plist_id, const char *name, size_t size,
+    void *value, H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
+    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
+    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close)
+{
+CALL(0, H5Pinsert2, plist_id, name, size, value, prp_set, prp_get, prp_delete, prp_copy, prp_cmp, prp_close)
+}
+
+htri_t H5Pisa_class(hid_t plist_id, hid_t pclass_id)
+{
+CALL(0, H5Pisa_class, plist_id, pclass_id)
 }
 
 herr_t H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter,
@@ -263,7 +351,31 @@ herr_t H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter,
 {
 CALL(0, H5Pmodify_filter, plist_id, filter, flags, cd_nelmts, cd_values)
 }
+
+herr_t H5Premove_filter(hid_t plist_id, H5Z_filter_t filter)
+{
+CALL(0, H5Premove_filter, plist_id, filter)
+}
+
+herr_t H5Pset(hid_t plist_id, const char *name, const void *value)
+{
+CALL(0, H5Pset, plist_id, name, value)
+}
+
+herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter,
+    unsigned int flags, size_t cd_nelmts,
+    const unsigned int c_values[])
+{
+CALL(0, H5Pset_filter, plist_id, filter, flags, cd_nelmts, c_values)
+}
+
 /*H5S*/
+int H5Sget_simple_extent_dims(hid_t space_id, hsize_t dims[],
+    hsize_t maxdims[])
+{
+CALL(0, H5Sget_simple_extent_dims, space_id, dims, maxdims)
+}
+
 int H5Sget_simple_extent_ndims(hid_t space_id)
 {
 CALL(0, H5Sget_simple_extent_ndims, space_id)
@@ -275,6 +387,18 @@ CALL(0, H5Sis_simple, space_id)
 }
 
 /*H5T*/
+herr_t H5Tconvert(hid_t src_id, hid_t dst_id, size_t nelmts,
+    void *buf, void *background, hid_t plist_id)
+{
+
+CALL(0, H5Tconvert, src_id, dst_id, nelmts, buf, background, plist_id)
+}
+
+hid_t H5Tget_native_type(hid_t type_id, H5T_direction_t direction)
+{
+CALL(0, H5Tget_native_type, type_id, direction)
+}
+
 size_t H5Tget_size(hid_t type_id)
 {
 CALL(0, H5Tget_size, type_id)
@@ -287,7 +411,7 @@ CALL(H5T_NO_CLASS, H5Tget_class, type_id)
 
 H5T_order_t H5Tget_order(hid_t type_id)
 {
-CALL(0, H5Tget_order, type_id);
+CALL(0, H5Tget_order, type_id)
 }
 
 hid_t H5Tget_super(hid_t type)
