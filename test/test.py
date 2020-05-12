@@ -108,13 +108,12 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.dtype == expected_data.dtype, "Incorrect type")
         self.assertTrue(numpy.alltrue(data == expected_data),
                                       "Incorrect values read")
-        
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
-                         "ZFP filter not available")
+
     def testZfp(self):
         """Test reading ZFP compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))
-        for fname in ["zfp_050.h5", "zfp_052.h5", "zfp_054.h5"]: 
+        for fname in ["zfp_050.h5", "zfp_052.h5", "zfp_054.h5"]:
+            fname = os.path.join(dirname, fname)
             self.assertTrue(os.path.exists(fname),
                             "Cannot find %s file" % fname)
             h5 = h5py.File(fname, "r")
