@@ -43,7 +43,7 @@ class TestHDF5PluginRW(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tempdir)
 
-    def _test(self, filter_name, dtype=numpy.int32, **options):
+    def _test(self, filter_name, dtype=numpy.int32, lossless=True, **options):
         """Run test for a particular filter
 
         :param str filter_name: The name of the filter to use
@@ -73,10 +73,10 @@ class TestHDF5PluginRW(unittest.TestCase):
         filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
         f.close()
         
-        if filter_name in ['zfp']:
-            self.assertTrue(numpy.allclose(saved, data))
-        else:
+        if lossless:
             self.assertTrue(numpy.array_equal(saved, data))
+        else:
+            self.assertTrue(numpy.allclose(saved, data))
         self.assertEqual(saved.dtype, data.dtype)
 
         self.assertEqual(len(filters), 1)
@@ -133,8 +133,20 @@ class TestHDF5PluginRW(unittest.TestCase):
                          "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
-        self._test('zfp', dtype=numpy.float32)
-        self._test('zfp', dtype=numpy.float64)
+        tests = [
+            {'lossless': False},  # Default config
+            {'lossless': False, 'rate': 10.0},  # Fixed-rate
+            {'lossless': False, 'precision': 10},  # Fixed-precision
+            {'lossless': False, 'accuracy': 1e-8},  # Fixed-accuracy
+            {'lossless': True, 'reversible': True},  # Reversible
+            # Expert: with default parameters
+            {'lossless': False, 'minbits': 1, 'maxbits': 16657, 'maxprec': 64, 'minexp': -1074},
+            ]
+        for kwargs in tests:
+            for dtype in (numpy.float32, numpy.float64):
+                self._test('zfp', dtype=dtype, **kwargs)
+
+        self._test('zfp', dtype=numpy.int32, reversible=True)
 
 def suite():
     test_suite = unittest.TestSuite()
