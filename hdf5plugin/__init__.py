@@ -268,7 +268,7 @@ class Zfp(_FilterRefClass):
         else:
            _logger.info("ZFP default used")
         
-        _logger.info("filter options = %s" % (self.filter_options))
+        _logger.info("filter options = %s" % (self.filter_options,))
 
 
 class FciDecomp(_FilterRefClass):
