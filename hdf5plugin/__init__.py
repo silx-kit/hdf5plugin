@@ -27,12 +27,13 @@ under windows, MacOS and linux."""
 
 __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "24/04/2020"
+__date__ = "12/05/2020"
 
 import ctypes as _ctypes
 from glob import glob as _glob
 import logging as _logging
 import os as _os
+import struct as _struct
 import sys as _sys
 if _sys.version_info[0] >= 3:
     from collections.abc import Mapping as _Mapping
@@ -197,8 +198,78 @@ class LZ4(_FilterRefClass):
 
 class Zfp(_FilterRefClass):
     """h5py.Group.create_dataset's compression and compression_opts arguments for using ZFP filter.
+
+    This filter provides different modes:
+
+    - **Fixed-rate** mode: To use, set the `rate` argument.
+       For details, see https://zfp.readthedocs.io/en/latest/modes.html#fixed-rate-mode.
+    - **Fixed-precision** mode: To use, set the `precision` argument.
+      For details, see https://zfp.readthedocs.io/en/latest/modes.html#fixed-precision-mode.
+    - **Fixed-accuracy** mode: To use, set the `accuracy` argument
+      For details, see https://zfp.readthedocs.io/en/latest/modes.html#fixed-accuracy-mode.
+    - **Reversible** (i.e., lossless) mode: To use, set the `reversible` argument to True
+      For details, see https://zfp.readthedocs.io/en/latest/modes.html#reversible-mode.
+    - **Expert** mode: To use, set the `minbits`, `maxbits`, `maxprec` and ``minexp` arguments.
+      For details, see https://zfp.readthedocs.io/en/latest/modes.html#expert-mode.
+
+    :param float rate:
+        Use fixed-rate mode and set the number of compressed bits per value.
+    :param float precision:
+        Use fixed-precision mode and set the number of uncompressed bits per value.
+    :param float accuracy:
+        Use fixed-accuracy mode and set the absolute error tolerance.
+    :param bool reversible:
+        If True, it uses the reversible (i.e., lossless) mode.
+    :param int minbits: Minimum number of compressed bits used to represent a block.
+    :param int maxbits: Maximum number of bits used to represent a block.
+    :param int maxprec: Maximum number of bit planes encoded.
+        It controls the relative error.
+    :param int minexp: Smallest absolute bit plane number encoded.
+        It controls the absolute error.
     """
     filter_id = ZFP_ID
+
+    def __init__(self,
+                 rate=None,
+                 precision=None,
+                 accuracy=None,
+                 reversible=False,
+                 minbits=None,
+                 maxbits=None,
+                 maxprec=None,
+                 minexp=None):
+        if rate is not None:
+            rateHigh, rateLow = _struct.unpack('II', _struct.pack('d', float(rate)))
+            self.filter_options = 1, 0, rateHigh, rateLow, 0, 0
+            _logger.info("ZFP mode 1 used. H5Z_ZFP_MODE_RATE")
+
+        elif precision is not None:
+            self.filter_options = 2, 0, int(precision), 0, 0, 0
+            _logger.info("ZFP mode 2 used. H5Z_ZFP_MODE_PRECISION")
+
+        elif accuracy is not None:
+            accuracyHigh, accuracyLow = _struct.unpack(
+                'II', _struct.pack('d', float(accuracy)))
+            self.filter_options = 3, 0, accuracyHigh, accuracyLow, 0, 0
+            _logger.info("ZFP mode 3 used. H5Z_ZFP_MODE_ACCURACY")
+
+        elif reversible:
+            self.filter_options = 5, 0, 0, 0, 0, 0
+            _logger.info("ZFP mode 5 used. H5Z_ZFP_MODE_REVERSIBLE")
+
+        elif minbits is not None:
+            minbits = int(minbits)
+            maxbits = int(maxbits)
+            maxprec = int(maxprec)
+            minexp = _struct.unpack('I', _struct.pack('i', int(minexp)))[0]
+            self.filter_options = 4, 0, minbits, maxbits, maxprec, minexp
+            _logger.info("ZFP mode 4 used. H5Z_ZFP_MODE_EXPERT")
+        
+        else:
+           _logger.info("ZFP default used")
+        
+        _logger.info("filter options = %s" % (self.filter_options,))
+
 
 class FciDecomp(_FilterRefClass):
     """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.

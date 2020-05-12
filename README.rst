@@ -182,6 +182,49 @@ Sample code:
             **hdf5plugin.Zfp())
         f.close()
 
+The zfp filter compression mode is defined by the provided arguments.
+The following compression modes are supported:
+
+- **Fixed-rate** mode:
+  For details, see `zfp fixed-rate mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-rate-mode>`_.
+
+  .. code-block:: python
+
+        f.create_dataset('zfp_fixed_rate', data=numpy.random.random(100),
+            **hdf5plugin.Zfp(rate=10.0))
+
+- **Fixed-precision** mode:
+  For details, see `zfp fixed-precision mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-precision-mode>`_.
+
+  .. code-block:: python
+
+        f.create_dataset('zfp_fixed_precision', data=numpy.random.random(100),
+            **hdf5plugin.Zfp(precision=10))
+
+- **Fixed-accuracy** mode:
+  For details, see `zfp fixed-accuracy mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-accuracy-mode>`_.
+
+  .. code-block:: python
+
+        f.create_dataset('zfp_fixed_accuracy', data=numpy.random.random(100),
+            **hdf5plugin.Zfp(accuracy=0.001))
+
+- **Reversible** (i.e., lossless) mode:
+  For details, see `zfp reversible mode <https://zfp.readthedocs.io/en/latest/modes.html#reversible-mode>`_.
+
+  .. code-block:: python
+
+        f.create_dataset('zfp_reversible', data=numpy.random.random(100),
+            **hdf5plugin.Zfp(reversible=True))
+
+- **Expert** mode:
+  For details, see `zfp expert mode <https://zfp.readthedocs.io/en/latest/modes.html#expert-mode>`_.
+
+  .. code-block:: python
+
+        f.create_dataset('zfp_expert', data=numpy.random.random(100),
+            **hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1074))
+
 Dependencies
 ------------
 
