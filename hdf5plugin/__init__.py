@@ -241,17 +241,21 @@ class Zfp(_FilterRefClass):
         if rate is not None:
             rateHigh, rateLow = _struct.unpack('II', _struct.pack('d', float(rate)))
             self.filter_options = 1, 0, rateHigh, rateLow, 0, 0
+            _logger.info("ZFP mode 1 used. H5Z_ZFP_MODE_RATE")
 
         elif precision is not None:
             self.filter_options = 2, 0, int(precision), 0, 0, 0
+            _logger.info("ZFP mode 2 used. H5Z_ZFP_MODE_PRECISION")
 
         elif accuracy is not None:
             accuracyHigh, accuracyLow = _struct.unpack(
                 'II', _struct.pack('d', float(accuracy)))
             self.filter_options = 3, 0, accuracyHigh, accuracyLow, 0, 0
+            _logger.info("ZFP mode 3 used. H5Z_ZFP_MODE_ACCURACY")
 
         elif reversible:
             self.filter_options = 5, 0, 0, 0, 0, 0
+            _logger.info("ZFP mode 5 used. H5Z_ZFP_MODE_REVERSIBLE")
 
         elif minbits is not None:
             minbits = int(minbits)
@@ -259,6 +263,12 @@ class Zfp(_FilterRefClass):
             maxprec = int(maxprec)
             minexp = _struct.unpack('I', _struct.pack('i', int(minexp)))[0]
             self.filter_options = 4, 0, minbits, maxbits, maxprec, minexp
+            _logger.info("ZFP mode 4 used. H5Z_ZFP_MODE_EXPERT")
+        
+        else:
+           _logger.info("ZFP default used")
+        
+        _logger.info("filter options = %s" % (self.filter_options))
 
 
 class FciDecomp(_FilterRefClass):
