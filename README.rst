@@ -1,7 +1,7 @@
 hdf5plugin
 ==========
 
-This module provides HDF5 compression filters (namely: blosc, bitshuffle and lz4) and registers them to the HDF5 library used by `h5py <https://www.h5py.org>`_.
+This module provides HDF5 compression filters (namely: blosc, bitshuffle, lz4, FCIDECOMP, ZFP) and registers them to the HDF5 library used by `h5py <https://www.h5py.org>`_.
 
 * Supported operating systems: Linux, Windows, macOS.
 * Supported versions of Python: 2.7 and >= 3.4
@@ -15,7 +15,7 @@ The HDF5 plugin sources were obtained from:
 * LZ4 plugin (v0.1.0): https://github.com/nexusformat/HDF5-External-Filter-Plugins
 * bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
 * hdf5-blosc plugin (v1.0.0) and c-blosc (v1.17.0): https://github.com/Blosc/hdf5-blosc and https://github.com/Blosc/c-blosc
-* FICDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID:25160a42fb62e71e4b0ce081f5cb3f8bb73938b5): ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2/ and https://github.com/team-charls/charls.git 
+* FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID:25160a42fb62e71e4b0ce081f5cb3f8bb73938b5): ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2/ and https://github.com/team-charls/charls.git 
 * HDF5-ZFP plugin (v1.0.1) and zfp (v0.5.5): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
 
 Installation
