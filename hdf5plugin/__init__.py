@@ -63,11 +63,14 @@ PLUGINS_PATH = _os.path.abspath(
 BLOSC_ID = 32001
 """Blosc filter ID"""
 
+LZ4_ID = 32004
+"""LZ4_ID filter ID"""
+
 BSHUF_ID = 32008
 """Bitshuffle filter ID"""
 
-LZ4_ID = 32004
-"""LZ4_ID filter ID"""
+ZFP_ID = 32013
+"""ZFP filter ID"""
 
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
@@ -75,6 +78,7 @@ FCIDECOMP_ID = 32018
 FILTERS = {'blosc': BLOSC_ID,
            'bshuf': BSHUF_ID,
            'lz4': LZ4_ID,
+           'zfp': ZFP_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
 """Mapping of filter name to HDF5 filter ID for available filters"""
@@ -190,6 +194,11 @@ class LZ4(_FilterRefClass):
         assert 0 <= nbytes <= 0x7E000000
         self.filter_options = (nbytes,)
 
+
+class Zfp(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using ZFP filter.
+    """
+    filter_id = ZFP_ID
 
 class FciDecomp(_FilterRefClass):
     """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.

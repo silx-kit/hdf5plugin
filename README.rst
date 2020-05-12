@@ -16,6 +16,7 @@ The HDF5 plugin sources were obtained from:
 * bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
 * hdf5-blosc plugin (v1.0.0) and c-blosc (v1.17.0): https://github.com/Blosc/hdf5-blosc and https://github.com/Blosc/c-blosc
 * FICDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID:25160a42fb62e71e4b0ce081f5cb3f8bb73938b5): ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2/ and https://github.com/team-charls/charls.git 
+* HDF5-ZFP plugin (v1.0.1) and zfp (v0.5.5): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
 
 Installation
 ------------
@@ -63,17 +64,21 @@ Sample code:
 
   - `Bitshuffle(nelems=0, lz4=True)`_
   - `Blosc(cname='lz4', clevel=5, shuffle=SHUFFLE)`_
+  - `FciDecomp()`_
   - `LZ4(nbytes=0)`_
+  - `Zfp()`_
+
 
 * The HDF5 filter ID of embedded plugins:
 
   - ``BLOSC_ID``
   - ``BSHUF_ID``
+  - ``FCIDECOMP_ID``
   - ``LZ4_ID``
+  - ``ZFP_ID``
 
 * ``FILTERS``: A dictionary mapping provided filters to their ID
 * ``PLUGINS_PATH``: The directory where the provided filters library are stored.
-
 
 Bitshuffle(nelems=0, lz4=True)
 ******************************
@@ -93,7 +98,6 @@ Sample code:
         f.create_dataset('bitshuffle_with_lz4', data=numpy.arange(100),
 	      **hdf5plugin.Bitshuffle(nelems=0, lz4=True))
         f.close()
-
 
 Blosc(cname='lz4', clevel=5, shuffle=SHUFFLE)
 *********************************************
@@ -127,6 +131,21 @@ Sample code:
             **hdf5plugin.Blosc(cname='blosclz', clevel=9, shuffle=hdf5plugin.Blosc.SHUFFLE))
         f.close()
 
+FciDecomp()
+***********
+
+This class returns the compression options to feed into ``h5py.Group.create_dataset`` for using the FciDecomp filter:
+
+It can be passed as keyword arguments.
+
+Sample code:
+
+.. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('fcidecomp', data=numpy.arange(100),
+            **hdf5plugin.FciDecomp())
+        f.close()
 
 LZ4(nbytes=0)
 *************
@@ -147,11 +166,10 @@ Sample code:
             **hdf5plugin.LZ4(nbytes=0))
         f.close()
 
+Zfp()
+*****
 
-FciDecomp()
-***********
-
-This class returns the compression options to feed into ``h5py.Group.create_dataset`` for using the FciDecomp filter:
+This class returns the compression options to feed into ``h5py.Group.create_dataset`` for using the zfp filter:
 
 It can be passed as keyword arguments.
 
@@ -160,16 +178,14 @@ Sample code:
 .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
-        f.create_dataset('fcidecomp', data=numpy.arange(100),
-            **hdf5plugin.FciDecomp())
+        f.create_dataset('zfp', data=numpy.random.random(100),
+            **hdf5plugin.Zfp())
         f.close()
-
 
 Dependencies
 ------------
 
 * `h5py <https://www.h5py.org>`_
-
 
 Testing
 -------
@@ -205,5 +221,6 @@ Please read the different licenses:
 * blosc: See `src/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5-blosc/LICENSES/>`_ and `src/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/master/src/c-blosc/LICENSES/>`_
 * lz4: See `src/LZ4/COPYING  <https://github.com/silx-kit/hdf5plugin/blob/master/src/LZ4/COPYING>`_
 * FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/fcidecomp/LICENSE.txt>`_ and `src/charls/src/License.txt  <https://github.com/silx-kit/hdf5plugin/blob/master/src/charls/License.txt>`_
+* zfp: See `src/H5Z-ZFP/LICENSE`_ and `src/zfp/LICENSE`_
 
 The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `src/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5/COPYING>`_.

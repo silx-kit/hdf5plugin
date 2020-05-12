@@ -27,7 +27,7 @@ matrix:
           os: osx
           env:
               BUILD_COMMAND=bdist_wheel
-              H5PY_OLDER_VERSION=2.6.0
+              H5PY_OLDER_VERSION=2.8.0
 
 cache:
     apt: true
@@ -35,7 +35,6 @@ cache:
 install:
     # Mac OS X specific bootstrap
     - source ./ci/travis_osx.sh
-    - travis_osx_install_begin
 
     # Upgrade distribution modules
     - pip install --upgrade setuptools
@@ -53,13 +52,7 @@ install:
     - python setup.py $BUILD_COMMAND
     - ls dist
 
-    # Mac OS X specific cleanup
-    - travis_osx_install_end
-
 script:
-    # Mac OS X specific bootstrap
-    - travis_osx_run_begin
-
     # Upgrade distribution modules
     - pip install --upgrade setuptools
     - python -m pip install --upgrade pip
@@ -84,6 +77,3 @@ script:
     - pip install --upgrade h5py==$H5PY_OLDER_VERSION
     - pip list
     - python test/test.py
-
-    # Mac OS X specific cleanup
-    - travis_osx_run_end

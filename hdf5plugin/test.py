@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2019 European Synchrotron Radiation Facility
+# Copyright (c) 2019-2020 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,6 +58,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                 "bshuf": hdf5plugin.Bitshuffle,
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
+                "zfp": hdf5plugin.Zfp,
                 }[filter_name](**options)
 
         # Write
@@ -71,8 +72,11 @@ class TestHDF5PluginRW(unittest.TestCase):
         plist = f['data'].id.get_create_plist()
         filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
         f.close()
-
-        self.assertTrue(numpy.array_equal(saved, data))
+        
+        if filter_name in ['zfp']:
+            self.assertTrue(numpy.allclose(saved, data))
+        else:
+            self.assertTrue(numpy.array_equal(saved, data))
         self.assertEqual(saved.dtype, data.dtype)
 
         self.assertEqual(len(filters), 1)
@@ -125,6 +129,12 @@ class TestHDF5PluginRW(unittest.TestCase):
         """Write/read test with fcidecomp filter plugin"""
         self._test('fcidecomp')
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
+                         "ZFP filter not available")
+    def testZfp(self):
+        """Write/read test with zfp filter plugin"""
+        self._test('zfp', dtype=numpy.float32)
+        self._test('zfp', dtype=numpy.float64)
 
 def suite():
     test_suite = unittest.TestSuite()

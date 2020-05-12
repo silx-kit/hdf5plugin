@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "21/04/2020"
+__date__ = "12/05/2020"
 
 
 from glob import glob
@@ -496,6 +496,33 @@ cpp11_kwargs = {
     'extra_link_args': ['-lstdc++'],
     }
 
+# H5Z-ZFP
+h5zfp_dir = 'src/H5Z-ZFP/src'
+extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
+extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+extra_link_args = ['-fopenmp', '/openmp']
+
+sources = glob(h5zfp_dir + "/" + "*.c")
+depends = glob(h5zfp_dir + "/" + "*.h")
+include_dirs = [h5zfp_dir + "/src", "src/zfp/include"]
+h5zfp_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5zfp",
+    sources=sources,
+    depends=depends,
+    include_dirs=include_dirs,
+    extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args,
+    )
+
+# zfp
+zfp_dir = os.path.join("src", "zfp")
+zfp_sources = glob(os.path.join(zfp_dir, 'src', '*.c'))
+zfp_include_dirs = [os.path.join(zfp_dir, 'include')]
+zfp_lib = ('zfp', {
+    'sources': zfp_sources,
+    'include_dirs': zfp_include_dirs,
+    'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
+    })
 
 libraries = [snappy_lib, charls_lib]
 
@@ -504,6 +531,13 @@ extensions = [lz4_plugin,
               blosc_plugin,
               fcidecomp_plugin,
               ]
+
+if sys.platform.startswith("win32") and (sys.version_info < (3,)):
+    logger.warn(
+            "ZFP not supported in this platform: Windows and Python 2")
+else:
+    libraries += [zfp_lib]
+    extensions += [h5zfp_plugin]
 
 # setup
 

@@ -1,85 +1,27 @@
-#!/bin/bash
 # Script for travis-CI Mac OS X specific setup.
-#
-# It provides 4 functions:
-# - travis_osx_install_begin: Install pip and setup a virtualenv for the build
-# - travis_osx_install_end: Deactivate the build virtualenv
-# - travis_osx_run_begin: Setup a virtualenv for the tests
-# - travis_osx_run_end: Deactivate test virtualenv
-#
-# On Linux, those functions do nothing.
+# source this script with PYTHON_VERSION env variable set
 
-# Directory where to create build virtualenv
-VENV_BUILD_DIR=./venv_build
-
-# Directory qhere to create test virtualenv
-VENV_TEST_DIR=./venv_test
+if [ "$TRAVIS_OS_NAME" == "osx" ]; then
 
 
-if [ "$TRAVIS_OS_NAME" != "osx" ]; then
-    function travis_osx_install_begin {
-        echo NoOp
-    }
-    function travis_osx_install_end {
-        echo NoOp
-    }
-    function travis_osx_run_begin {
-        echo NoOp
-    }
-    function travis_osx_run_end {
-        echo NoOp
-    }
-
-else
-    echo "Installing miniconda"
-    curl -o miniconda_installer.sh "https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
+if [ "$PYTHON_VERSION" == "2" ];
+then
+    curl -o miniconda_installer.sh "https://repo.continuum.io/miniconda/Miniconda2-latest-MacOSX-x86_64.sh"
     bash miniconda_installer.sh -b -p miniconda
     export PATH="`pwd`/miniconda/bin":$PATH
 
-    function travis_osx_install_begin {
-        echo Mac OS X install begin: Install pip and setup build venv
-        set -x  # echo on
-        export PATH=${PATH}:/Users/travis/Library/Python/2.7/bin
-        curl -O https://bootstrap.pypa.io/get-pip.py
-        python get-pip.py --user
-
-        pip install virtualenv --user
-        virtualenv --version
-
-        virtualenv --clear $VENV_BUILD_DIR
-
-        set +x  # echo off
-        echo "Activate virtualenv $VENV_BUILD_DIR"
-        source $VENV_BUILD_DIR/bin/activate
-    }
-
-    function travis_osx_install_end {
-        echo Mac OS X install end: Deactivate and delete virtualenv
-        echo deactivate
-        deactivate
-        set -x  # echo on
-        rm -rf $VENV_BUILD_DIR
-        set +x  # echo off
-    }
-
-
-    function travis_osx_run_begin {
-        echo Mac OS X run begin: Setup test venv
-
-        set -x  # echo on
-        virtualenv --clear $VENV_TEST_DIR
-        set +x  # echo off
-        echo "Activate virtualenv $VENV_TEST_DIR"
-        source $VENV_TEST_DIR/bin/activate
-    }
-
-    function travis_osx_run_end {
-        echo Mac OS X run end: Deactivate and delete virtualenv
-        echo deactivate
-        deactivate
-        set -x  # echo on
-        rm -rf $VENV_TEST_DIR
-        set +x  # echo off
-    }
+else
+# Use brew for python3
+#    VENV_DIR=./venv
+#    brew upgrade python@3
+#    PYTHON_EXE=`brew list python@3 | grep "bin/python3$" | head -n 1`
+#    # Create virtual env
+#    $PYTHON_EXE -m venv $VENV_DIR
+#    source $VENV_DIR/bin/activate
+# Alternative python installation using miniconda
+    curl -o miniconda_installer.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
+    bash miniconda_installer.sh -b -p miniconda
+    export PATH="`pwd`/miniconda/bin":$PATH
+fi
 
 fi
