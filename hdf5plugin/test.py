@@ -129,6 +129,8 @@ class TestHDF5PluginRW(unittest.TestCase):
         """Write/read test with fcidecomp filter plugin"""
         self._test('fcidecomp')
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
+                         "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
         self._test('zfp', dtype=numpy.float32)
