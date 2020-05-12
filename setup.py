@@ -532,7 +532,7 @@ extensions = [lz4_plugin,
               fcidecomp_plugin,
               ]
 
-if sys.platform.startswith("win32") and (sys.version_info < (3,):
+if sys.platform.startswith("win32") and (sys.version_info < (3,)):
     logger.warn(
             "ZFP not supported in this platform: Windows and Python 2")
 else:
