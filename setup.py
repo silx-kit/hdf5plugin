@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "21/04/2020"
+__date__ = "12/05/2020"
 
 
 from glob import glob
@@ -524,14 +524,20 @@ zfp_lib = ('zfp', {
     'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
     })
 
-libraries = [snappy_lib, charls_lib, zfp_lib]
+libraries = [snappy_lib, charls_lib]
 
 extensions = [lz4_plugin,
               bithsuffle_plugin,
               blosc_plugin,
               fcidecomp_plugin,
-              h5zfp_plugin,
               ]
+
+if sys.platform.startswith("win32") and (sys.version_info < (3,):
+    logger.warn(
+            "ZFP not supported in this platform: Windows and Python 2")
+else:
+    libraries += [zfp_lib]
+    extensions += [h5zfp_plugin]
 
 # setup
 
