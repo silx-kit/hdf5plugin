@@ -27,7 +27,7 @@ matrix:
           os: osx
           env:
               BUILD_COMMAND=bdist_wheel
-              H5PY_OLDER_VERSION=2.6.0
+              H5PY_OLDER_VERSION=2.8.0
 
 cache:
     apt: true
