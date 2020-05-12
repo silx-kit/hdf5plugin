@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "21/04/2020"
+__date__ = "12/05/2020"
 
 
 import os
@@ -109,6 +109,8 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(numpy.alltrue(data == expected_data),
                                       "Incorrect values read")
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
+                         "ZFP filter not available")
     def testZfp(self):
         """Test reading ZFP compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))
