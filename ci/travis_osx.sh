@@ -39,9 +39,9 @@ else
     function travis_osx_install_begin {
         echo Mac OS X install begin: Install pip and setup build venv
         set -x  # echo on
-        export PATH=${PATH}:/Users/travis/Library/Python/2.7/bin
+        #export PATH=${PATH}:/Users/travis/Library/Python/2.7/bin
         curl -O https://bootstrap.pypa.io/get-pip.py
-        python get-pip.py --user
+        #python get-pip.py --user
 
         pip install virtualenv --user
         virtualenv --version
