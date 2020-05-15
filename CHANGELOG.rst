@@ -1,3 +1,9 @@
+2.3
+---
+
+- Added ZFP filter (PR #74, #77)
+- Updated README (PR #77)
+
 2.2
 ---
 
