@@ -296,7 +296,7 @@ def _init_filters():
         if len(filename):
             filename = filename[0]
         else:
-            _logger.error("Cannot initialize filter %s: %d. File not found", name)
+            _logger.error("Cannot initialize filter %s: File not found", name)
             continue
         lib = _ctypes.CDLL(filename)
 
