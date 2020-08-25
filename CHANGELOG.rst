@@ -1,3 +1,11 @@
+2.3.1
+-----
+
+- Fixed support of wheel package version >= 0.35 (PR #82)
+- Fixed typo in error log (PR #81)
+- Continuous integration: Added check of package description (PR #80)
+- Fixed handling of version info (PR #84)
+
 2.3
 ---
 
