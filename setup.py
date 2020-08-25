@@ -52,7 +52,7 @@ except ImportError:
 else:
     from pkg_resources import parse_version
     import wheel
-    from wheel.pep425tags import get_platform
+    from wheel.bdist_wheel import get_platform
 
     class BDistWheel(bdist_wheel):
         """Override bdist_wheel to handle as pure python package"""
