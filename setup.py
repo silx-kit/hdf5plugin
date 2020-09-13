@@ -448,29 +448,25 @@ lz4_plugin = HDF5PluginExtension(
     )
 
 # jpegHDF5 plugin
-# jpeg 6b source fromhttps://sourceforge.net/projects/libjpeg/files/libjpeg/6b/
 jpeghdf5_sources = ['src/jpegHDF5/src/jpeg_h5filter.c',
                     'src/jpegHDF5/src/jpeg_h5plugin.c']
 jpeghdf5_include_dirs =['src/jpegHDF5/src']
 jpeghdf5_depends = ['src/jpegHDF5/src/jpeg_h5filter.h']
 jpeghdf5_libraries = ['Ws2_32'] if sys.platform.startswith('win') else []
 
-LIBJPEG_LIB_DIR = r"C:\GIT\REFERENCE\libjpeg-turbo\build"
-LIBJPEG_INCLUDE_DIR = r"C:\GIT\REFERENCE\libjpeg-turbo"
+LIBJPEG_LIB_DIR = r"C:\libjpeg-turbo64\lib"
+LIBJPEG_INCLUDE_DIR = r"C:\libjpeg-turbo64\include"
 libjpeg_sources = []
 libjpeg_depends = []
 libjpeg_include_dirs = [LIBJPEG_INCLUDE_DIR]
-if sys.platform.startswith("win"):
-    libjpeg_libraries = [os.path.join(LIBJPEG_LIB_DIR, "jpeg")]
-else:
-    libjpeg_libraries = [os.path.join(LIBJPEG_LIB_DIR, "libjpeg")]
-
+libjpeg_libraries = ["turbojpeg-static"]
 jpeghdf5_plugin = HDF5PluginExtension(
-    "hdf5plugin.plugins.libjpegHDF5",
+    "hdf5plugin.plugins.libh5jpeghdf5",
     sources=jpeghdf5_sources + libjpeg_sources,
     depends=jpeghdf5_depends + libjpeg_depends,
     include_dirs=jpeghdf5_include_dirs + libjpeg_include_dirs,
     libraries=jpeghdf5_libraries + libjpeg_libraries,
+    extra_link_args=["/LIBPATH:%s" % LIBJPEG_LIB_DIR]
     )
 
 
