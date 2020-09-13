@@ -1,0 +1,7 @@
+# This script can be useful to define the locations of the JPEG and HDF5 libraries
+# On our system the system libraries for hdf5 and jpeg in /usr/lib64 are too old, so we use the ones in anaconda3 instead
+pushd build
+rm -rf *
+cmake .. -DJPEG_LIBRARY=/home/epics/anaconda3/lib/libjpeg.so -DHDF5_LIBRARIES=/home/epics/anaconda3/lib/libhdf5.so
+make
+popd
