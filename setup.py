@@ -447,6 +447,32 @@ lz4_plugin = HDF5PluginExtension(
     libraries=['Ws2_32'] if sys.platform.startswith('win') else [],
     )
 
+# jpegHDF5 plugin
+# jpeg 6b source fromhttps://sourceforge.net/projects/libjpeg/files/libjpeg/6b/
+jpeghdf5_sources = ['src/jpegHDF5/src/jpeg_h5filter.c',
+                    'src/jpegHDF5/src/jpeg_h5plugin.c']
+jpeghdf5_include_dirs =['src/jpegHDF5/src']
+jpeghdf5_depends = ['src/jpegHDF5/src/jpeg_h5filter.h']
+jpeghdf5_libraries = ['Ws2_32'] if sys.platform.startswith('win') else []
+
+LIBJPEG_LIB_DIR = r"C:\GIT\REFERENCE\libjpeg-turbo\build"
+LIBJPEG_INCLUDE_DIR = r"C:\GIT\REFERENCE\libjpeg-turbo"
+libjpeg_sources = []
+libjpeg_depends = []
+libjpeg_include_dirs = [LIBJPEG_INCLUDE_DIR]
+if sys.platform.startswith("win"):
+    libjpeg_libraries = [os.path.join(LIBJPEG_LIB_DIR, "jpeg")]
+else:
+    libjpeg_libraries = [os.path.join(LIBJPEG_LIB_DIR, "libjpeg")]
+
+jpeghdf5_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libjpegHDF5",
+    sources=jpeghdf5_sources + libjpeg_sources,
+    depends=jpeghdf5_depends + libjpeg_depends,
+    include_dirs=jpeghdf5_include_dirs + libjpeg_include_dirs,
+    libraries=jpeghdf5_libraries + libjpeg_libraries,
+    )
+
 
 # FCIDECOMP
 fcidecomp_dir = 'src/fcidecomp/FCIDECOMP_V1.0.2/Software/FCIDECOMP_SOURCES'
@@ -530,6 +556,7 @@ extensions = [lz4_plugin,
               bithsuffle_plugin,
               blosc_plugin,
               fcidecomp_plugin,
+              jpeghdf5_plugin,
               ]
 
 if sys.platform.startswith("win32") and (sys.version_info < (3,)):

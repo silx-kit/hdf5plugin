@@ -76,11 +76,15 @@ ZFP_ID = 32013
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
+JPEGHDF5_ID = 32019
+"""JPEGHDF5 filter ID"""
+
 FILTERS = {'blosc': BLOSC_ID,
            'bshuf': BSHUF_ID,
            'lz4': LZ4_ID,
            'zfp': ZFP_ID,
            'fcidecomp': FCIDECOMP_ID,
+           'jpeghdf5': JPEGHDF5_ID,
            }
 """Mapping of filter name to HDF5 filter ID for available filters"""
 
@@ -276,6 +280,10 @@ class FciDecomp(_FilterRefClass):
     """
     filter_id = FCIDECOMP_ID
 
+class JpegHDF5(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """
+    filter_id = JPEGHDF5_ID
 
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
