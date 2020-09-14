@@ -280,10 +280,39 @@ class FciDecomp(_FilterRefClass):
     """
     filter_id = FCIDECOMP_ID
 
+
 class JpegHDF5(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using JPEG filter.
+
+    JPEG filter restrictions:
+
+    - Only uint8 data is supported.
+    - Array shape MUST be 2D monochromatic (nrows, ncolumns) or 3D RGB (nrows, ncolumns, 3).
+    - Chunking must be set to the size of the entire image.
+
+    For details, see: https://github.com/CARS-UChicago/jpegHDF5
+
+    :param List[int] shape: Shape of the image to compress (nrows, ncolumns)
+    :param int quality: JPEG quality factor in [1, 100]. Default: 100
+    :param int mode: Either:
+      - JpegHDF5.MONO (0): Monochromatic data (default)
+      - JpegHDF5.RGB (1): RGB data
     """
+
+    MONO = 0
+    """Mode flag for compressing monochromatic data"""
+
+    RGB = 1
+    """Mode flag for compressing RGB data"""
+
     filter_id = JPEGHDF5_ID
+
+    def __init__(self, shape, quality=100, mode=MONO):
+        assert mode in (self.MONO, self.RGB)
+        assert 1 <= quality <= 100
+        # See https://github.com/CARS-UChicago/jpegHDF5#using-the-jpeg-filter-in-your-application
+        self.filter_options = quality, shape[1], shape[0], mode
+
 
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
