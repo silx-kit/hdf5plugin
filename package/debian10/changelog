@@ -1,0 +1,5 @@
+hdf5plugin (2.3.1-1) unstable; urgency=low
+
+  * source package automatically created by stdeb 0.9.0
+
+ -- Thomas Vincent <thomas.vincent@esrf.fr>  Wed, 16 Sep 2020 13:45:10 +0200
