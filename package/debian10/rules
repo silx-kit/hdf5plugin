@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python3 --buildsystem=python_distutils
+
+override_dh_auto_clean:
+	python3 setup.py clean -a
+	find . -name \*.pyc -exec rm {} \;
+
+override_dh_auto_build:
+	python3 setup.py build --force --native=False --sse2=True --avx2=False --openmp=True --cpp11=True
+
+override_dh_auto_install:
+	python3 setup.py build --force --native=False --sse2=True --avx2=False --openmp=True --cpp11=True install --force --root=debian/python3-hdf5plugin --no-compile -O0 --install-layout=deb --prefix=/usr
+
+override_dh_auto_test:
+	dh_auto_test -- -s custom --test-args="env PYTHONPATH={build_dir} {interpreter} -m hdf5plugin.test"
+	dh_auto_test -- -s custom --test-args="env PYTHONPATH={build_dir} {interpreter} test/test.py"
+
