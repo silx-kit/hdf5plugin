@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import glob
 import os
 from os import path
+import platform
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_
 from setuptools.command.develop import develop as develop_
@@ -25,8 +26,10 @@ VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
     VERSION = VERSION + ".dev%d" % VERSION_DEV
 
-
-COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
+if platform.machine() == "ppc64le":
+    COMPILE_FLAGS = ['-O3', '-ffast-math', '-mcpu=native', '-std=c99', "-DNO_WARN_X86_INTRINSICS"]
+else:
+    COMPILE_FLAGS= ['-O3', '-ffast-math', '-march=native', '-std=c99']
 # Cython breaks strict aliasing rules.
 COMPILE_FLAGS += ['-fno-strict-aliasing']
 COMPILE_FLAGS += ['-fPIC']
