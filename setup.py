@@ -78,6 +78,8 @@ def get_cpu_sse2_avx2():
     :returns: (is SSE2 available, is AVX2 available)
     :rtype: List(bool)
     """
+    if platform.machine() == "ppc64le":
+        return True, False
     try:
         import cpuinfo
     except ImportError as e:
@@ -345,6 +347,8 @@ bithsuffle_dir = 'src/bitshuffle'
 # Set compile args for both MSVC and others, list is stripped at build time
 extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
 extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+if platform.machine() == "ppc64le":
+    extra_compile_args += ["-DNO_WARN_X86_INTRINSICS"]
 extra_link_args = ['-fopenmp', '/openmp']
 
 bithsuffle_plugin = HDF5PluginExtension(
