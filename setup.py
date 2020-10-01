@@ -78,6 +78,8 @@ def get_cpu_sse2_avx2():
     :returns: (is SSE2 available, is AVX2 available)
     :rtype: List(bool)
     """
+    if platform.machine() == "ppc64le":
+        return True, False
     try:
         import cpuinfo
     except ImportError as e:
@@ -168,6 +170,8 @@ class Build(build):
         if self.sse2:
             if compiler.compiler_type == 'msvc':
                 self.sse2 = sys.version_info[0] >= 3
+            elif platform.machine() == 'ppc64le':
+                self.sse2 = True
             else:
                 self.sse2 = check_compile_flag(compiler, '-msse2')
             if not self.sse2:
@@ -176,6 +180,8 @@ class Build(build):
         if self.avx2:
             if compiler.compiler_type == 'msvc':
                 self.avx2 = sys.version_info[:2] >= (3, 5)
+            elif platform.machine() == 'ppc64le':
+                self.avx2 = False
             else:
                 self.avx2 = check_compile_flag(compiler, '-mavx2')
             if not self.avx2:
@@ -251,7 +257,11 @@ class PluginBuildExt(build_ext):
 
                 # Enable SSE2/AVX2 if available and add corresponding resources
                 if build_cmd.sse2:
-                    e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
+                    if platform.machine() == 'ppc64le':
+                        # Power9 way of enabling SSE2 support
+                        e.extra_compile_args += ['-DNO_WARN_X86_INTRINSICS']
+                    else:
+                        e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
                     for name, value in e.sse2.items():
                         attribute = getattr(e, name)
                         attribute += value
@@ -345,6 +355,11 @@ bithsuffle_dir = 'src/bitshuffle'
 # Set compile args for both MSVC and others, list is stripped at build time
 extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
 extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+if platform.machine() == "ppc64le":
+    # Required on ppc64le
+    sse2_options = {'extra_compile_args': ['-DUSESSE2'] }
+else:
+    sse2_options = {}
 extra_link_args = ['-fopenmp', '/openmp']
 
 bithsuffle_plugin = HDF5PluginExtension(
@@ -360,6 +375,7 @@ bithsuffle_plugin = HDF5PluginExtension(
     include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
+    sse2=sse2_options,
     )
 
 
@@ -376,10 +392,14 @@ depends = [f for f in glob(blosc_dir + 'blosc/*.h')]
 include_dirs = [blosc_dir, blosc_dir + 'blosc']
 define_macros = []
 
-sse2_kwargs = {
-    'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f],
-    'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
-    }
+if platform.machine() == 'ppc64le':
+    # SSE2 support in blosc uses x86 assembly code in shuffle
+    sse2_kwargs = {}
+else:
+    sse2_kwargs = {
+        'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f],
+        'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
+        }
 
 avx2_kwargs = {
     'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'avx2' in f],
