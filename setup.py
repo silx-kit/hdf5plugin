@@ -392,10 +392,14 @@ depends = [f for f in glob(blosc_dir + 'blosc/*.h')]
 include_dirs = [blosc_dir, blosc_dir + 'blosc']
 define_macros = []
 
-sse2_kwargs = {
-    'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f],
-    'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
-    }
+if platform.machine() == 'ppc64le':
+    # SSE2 support in blosc uses x86 assembly code in shuffle
+    sse2_kwargs = {}
+else:
+    sse2_kwargs = {
+        'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'sse2' in f],
+        'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
+        }
 
 avx2_kwargs = {
     'sources': [f for f in glob(blosc_dir + 'blosc/*.c') if 'avx2' in f],
