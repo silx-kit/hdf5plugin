@@ -1,3 +1,10 @@
+2.3.2b0
+-------
+
+- Enabled SIMD on power9 for bitshuffle filter (PR #90)
+- Added debian/ubuntu packaging support (PR #87)
+- Updated CHANGELOG and version (PR #91)
+
 2.3.1
 -----
 
