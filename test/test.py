@@ -56,7 +56,7 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.shape[2] == 100, "Incorrect shape")
 
         target = numpy.arange(numpy.prod(expected_shape),
-                              dtype=numpy.float)
+                              dtype=numpy.float64)
         target.shape = expected_shape
         self.assertTrue(numpy.allclose(data, target), "Incorrect readout")
 

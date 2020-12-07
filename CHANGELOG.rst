@@ -4,6 +4,7 @@
 - Enabled SIMD on power9 for bitshuffle filter (PR #90)
 - Added debian/ubuntu packaging support (PR #87)
 - Updated CHANGELOG and version (PR #91)
+- Fixed `numpy` 1.20 deprecation warning (PR #97)
 
 2.3.1
 -----
