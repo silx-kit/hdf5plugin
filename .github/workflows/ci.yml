@@ -26,22 +26,25 @@ jobs:
             os: ubuntu-latest
             python-version: 3.6
             BUILD_COMMAND: sdist
-            H5PY_OLDER_VERSION=2.6.0
-          - name-suffix: "sdist-h5py 2.8.0"
+            H5PY_OLDER_VERSION: 2.6.0
+
+          - name-suffix: "sdist-h5py_2.8.0"
             os: ubuntu-latest
             python-version: 3.7
             BUILD_COMMAND: sdist
-            H5PY_OLDER_VERSION=2.8.0
-          - name-suffix: "sdist-h5py 2.10.0"
+            H5PY_OLDER_VERSION: 2.8.0
+
+          - name-suffix: "sdist-h5py_2.10.0"
             os: ubuntu-latest
             python-version: 3.8
             BUILD_COMMAND: sdist
-            H5PY_VERSION=2.10.0
-          - name-suffix: "bdist_wheel-h5py 2.10.0"
+            H5PY_VERSION: 2.10.0
+
+          - name-suffix: "bdist_wheel-h5py_2.10.0"
             os: macos-latest
             python-version: 3.8
             BUILD_COMMAND: bdist_wheel
-            H5PY_VERSION=2.10.0
+            H5PY_VERSION: 2.10.0
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
