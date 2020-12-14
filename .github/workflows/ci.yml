@@ -1,0 +1,101 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    name: "Python ${{ matrix.python-version }} on ${{ matrix.os }} ${{ matrix.name-suffix }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name-suffix: "(Minimum Versions)"
+            os: ubuntu-latest
+            python-version: 3.6
+            BUILD_COMMAND: sdist
+            H5PY_OLDER_VERSION=2.6.0
+          - name-suffix: "sdist-h5py 2.8.0"
+            os: ubuntu-latest
+            python-version: 3.7
+            BUILD_COMMAND: sdist
+            H5PY_OLDER_VERSION=2.8.0
+          - name-suffix: "sdist-h5py 2.10.0"
+            os: ubuntu-latest
+            python-version: 3.8
+            BUILD_COMMAND: sdist
+            H5PY_VERSION=2.10.0
+          - name-suffix: "bdist_wheel-h5py 2.10.0"
+            os: macos-latest
+            python-version: 3.8
+            BUILD_COMMAND: bdist_wheel
+            H5PY_VERSION=2.10.0
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # Runs a single command using the runners shell
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Display the python version
+      - name: Display Python version
+        run:
+          python -c "import sys; print(sys.version)"
+
+      - name: Upgrade distribution modules
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade setuptools
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Install build dependencies
+        run: |
+          pip install --upgrade wheel
+          pip install --upgrade numpy
+
+      - name: Install h5py for tests
+        run: |
+          pip install --pre h5py
+
+      - name: Generate source package or wheel
+        run: |
+          python setup.py ${{ matrix.BUILD_COMMAND }}
+          ls dist
+
+      - name: Install from source package
+        run:
+          pip install --pre --find-links dist/ --no-cache-dir --no-index hdf5plugin
+
+      - name: Print python info
+        run: |
+           python ./ci/info_platform.py
+           pip list
+
+      - name: Run the tests with latest h5py
+        run:
+          python test/test.py
+
+      - name: Run the tests with oldest available wheel of h5py
+        run: |
+          pip install --upgrade h5py==${{ matrix.H5PY_OLDER_VERSION }}
+          pip list
+          python test/test.py
