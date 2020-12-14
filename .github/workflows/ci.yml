@@ -20,6 +20,8 @@ jobs:
     name: "Python ${{ matrix.python-version }} on ${{ matrix.os }} ${{ matrix.name-suffix }}"
     runs-on: ${{ matrix.os }}
     strategy:
+      # do not cancel tests after first fail
+      fail-fast: false
       matrix:
         include:
           - name-suffix: "(Minimum Versions)"
