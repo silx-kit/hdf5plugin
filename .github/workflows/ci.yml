@@ -42,11 +42,11 @@ jobs:
             BUILD_COMMAND: sdist
             H5PY_OLDER_VERSION: 2.9.0
 
-          - name-suffix: "bdist_wheel-h5py_2.9.0"
+          - name-suffix: "bdist_wheel-h5py_2.10.0"
             os: macos-latest
             python-version: 3.8
             BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 2.9.0
+            H5PY_OLDER_VERSION: 2.10.0
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
