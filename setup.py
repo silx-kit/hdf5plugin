@@ -127,7 +127,7 @@ class Build(build):
     user_options = [
         ('hdf5=', None, "Custom path to HDF5 (as in h5py)"),
         ('openmp=', None, "Whether or not to compile with OpenMP."
-         "Default: False on Windows with Python 2.7 and macOS, True otherwise"),
+         "Default: False on macOS, True otherwise"),
         ('native=', None, "Whether to compile for the building machine or for generic support (For unix compilers only)."
          "Default: True (i.e., specific to CPU used for build)"),
         ('sse2=', None, "Whether or not to compile with SSE2 support if available."
@@ -670,7 +670,6 @@ classifiers = ["Development Status :: 4 - Beta",
                "Operating System :: POSIX :: Linux",
                "Operating System :: MacOS",
                "Operating System :: Microsoft :: Windows",
-               "Programming Language :: Python :: 2.7",
                "Programming Language :: Python :: 3.4",
                "Programming Language :: Python :: 3.5",
                "Programming Language :: Python :: 3.6",
