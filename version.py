@@ -49,11 +49,10 @@ Thus 2.1.0a3 is hexversion 0x020100a3.
 
 """
 
-from __future__ import absolute_import, print_function, division
 __authors__ = ["Jérôme Kieffer"]
 __license__ = "MIT"
 __copyright__ = "European Synchrotron Radiation Facility, Grenoble, France"
-__date__ = "28/02/2018"
+__date__ = "15/12/2020"
 __status__ = "production"
 __docformat__ = 'restructuredtext'
 __all__ = ["date", "version_info", "strictversion", "hexversion", "debianversion",
@@ -72,7 +71,7 @@ PRERELEASE_NORMALIZED_NAME = {"dev": "a",
 
 MAJOR = 2
 MINOR = 3
-MICRO = 2
+MICRO = 3
 RELEV = "dev"  # <16
 SERIAL = 0  # <16
 
@@ -85,9 +84,10 @@ version_info = _version_info(MAJOR, MINOR, MICRO, RELEV, SERIAL)
 
 strictversion = version = debianversion = "%d.%d.%d" % version_info[:3]
 if version_info.releaselevel != "final":
-    version += "-%s%s" % version_info[-2:]
-    debianversion += "~adev%i" % version_info[-1] if RELEV == "dev" else "~%s%i" % version_info[-2:]
-    strictversion += PRERELEASE_NORMALIZED_NAME[version_info[3]] + str(version_info[-1])
+    _prerelease = PRERELEASE_NORMALIZED_NAME[version_info[3]]
+    version += "-%s%s" % (_prerelease, version_info[-1])
+    debianversion += "~adev%i" % version_info[-1] if RELEV == "dev" else "~%s%i" % (_prerelease, version_info[-1])
+    strictversion += _prerelease + str(version_info[-1])
 
 
 def calc_hexversion(major=0, minor=0, micro=0, releaselevel="dev", serial=0):
@@ -114,7 +114,6 @@ def calc_hexversion(major=0, minor=0, micro=0, releaselevel="dev", serial=0):
 
 
 hexversion = calc_hexversion(*version_info)
-
 
 if __name__ == "__main__":
     print(version)
