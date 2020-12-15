@@ -272,6 +272,12 @@ class Zfp(_FilterRefClass):
         _logger.info("filter options = %s" % (self.filter_options,))
 
 
+class Zstd(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """
+    filter_id = ZSTD_ID
+
+
 class FciDecomp(_FilterRefClass):
     """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
     """
