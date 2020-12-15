@@ -35,10 +35,7 @@ import logging as _logging
 import os as _os
 import struct as _struct
 import sys as _sys
-if _sys.version_info[0] >= 3:
-    from collections.abc import Mapping as _Mapping
-else:
-    from collections import Mapping as _Mapping
+from collections.abc import Mapping as _Mapping
 import h5py as _h5py
 
 
