@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "12/05/2020"
+__date__ = "15/12/2020"
 
 
 from glob import glob
@@ -449,6 +449,22 @@ blosc_plugin = HDF5PluginExtension(
     cpp11=cpp11_kwargs,
     )
 
+# HDF5Plugin-Zstandard
+zstandard_dir = os.path.join("src", "HDF5Plugin-Zstandard")
+zstandard_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
+zstandard_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
+zstandard_sources = [os.path.join(zstandard_dir, 'zstd_h5plugin.c')]
+zstandard_sources += glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+zstandard_depends = [os.path.join(zstandard_dir, 'zstd_h5plugin.h')]
+zstandard_depends += glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
+zstandard_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5zstd",
+    sources=zstandard_sources,
+    depends=zstandard_depends,
+    include_dirs=zstandard_include_dirs,
+    define_macros=define_macros,
+    )
+
 
 # lz4 plugin
 # Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
@@ -545,7 +561,9 @@ extensions = [lz4_plugin,
               blosc_plugin,
               fcidecomp_plugin,
               h5zfp_plugin,
+              zstandard_plugin,
               ]
+
 
 # setup
 
