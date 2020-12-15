@@ -63,8 +63,6 @@ else:
                 self.plat_name = get_platform(self.bdist_dir)
             else:
                 self.plat_name = get_platform()
-            if not sys.platform.startswith('win'):
-                self.python_tag = "py2.py3"
             bdist_wheel.finalize_options(self)
 
         def get_tag(self):
@@ -104,9 +102,6 @@ def check_compile_flag(compiler, flag, extension='.c'):
     :returns: Whether or not compilation was successful
     :rtype: bool
     """
-    if sys.version_info[0] < 3:
-        return False  # Not implemented for Python 2.7
-
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Create empty source file
         tmp_file = os.path.join(tmp_dir, 'source' + extension)
@@ -144,8 +139,7 @@ class Build(build):
     def initialize_options(self):
         build.initialize_options(self)
         self.hdf5 = None
-        self.openmp = not sys.platform.startswith('darwin') and (
-            not sys.platform.startswith('win') or sys.version_info[0] >= 3)
+        self.openmp = not sys.platform.startswith('darwin')
         self.native = True
         self.sse2 = True
         self.avx2 = True
@@ -168,9 +162,8 @@ class Build(build):
                 logger.warning("C++11 disabled: not available")
 
         if self.sse2:
-            if compiler.compiler_type == 'msvc':
-                self.sse2 = sys.version_info[0] >= 3
-            elif platform.machine() == 'ppc64le':
+            if (compiler.compiler_type == 'msvc' or
+                    platform.machine() == 'ppc64le'):
                 self.sse2 = True
             else:
                 self.sse2 = check_compile_flag(compiler, '-msse2')
@@ -328,7 +321,7 @@ class HDF5PluginExtension(Extension):
             hdf5_dir = os.path.join('src', 'hdf5')
             # Add folder containing H5pubconf.h
             if sys.platform.startswith('win'):
-                folder = 'windows' if sys.version_info[0] >= 3 else 'windows-2.7'
+                folder = 'windows'
             else:
                 folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
             self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include', folder))
@@ -545,20 +538,14 @@ zfp_lib = ('zfp', {
     'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
     })
 
-libraries = [snappy_lib, charls_lib]
+libraries = [snappy_lib, charls_lib, zfp_lib]
 
 extensions = [lz4_plugin,
               bithsuffle_plugin,
               blosc_plugin,
               fcidecomp_plugin,
+              h5zfp_plugin,
               ]
-
-if sys.platform.startswith("win32") and (sys.version_info < (3,)):
-    logger.warn(
-            "ZFP not supported in this platform: Windows and Python 2")
-else:
-    libraries += [zfp_lib]
-    extensions += [h5zfp_plugin]
 
 # setup
 
