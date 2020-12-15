@@ -1,10 +1,14 @@
-2.3.2b0
--------
+2.3.2
+-----
+
+This is the last version of `hdf5plugin` supporting Python 2.7.
 
 - Enabled SIMD on power9 for bitshuffle filter (PR #90)
+- Added github actions continous intergration (PR #99)
 - Added debian/ubuntu packaging support (PR #87)
-- Updated CHANGELOG and version (PR #91)
+- Fixed compilation under macos10.15 with Python 3.8 (PR #102)
 - Fixed `numpy` 1.20 deprecation warning (PR #97)
+- Updated CHANGELOG and version (PR #91, #103)
 
 2.3.1
 -----
