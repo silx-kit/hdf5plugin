@@ -1,7 +1,7 @@
 hdf5plugin
 ==========
 
-This module provides HDF5 compression filters (namely: blosc, bitshuffle, lz4, FCIDECOMP, ZFP) and registers them to the HDF5 library used by `h5py <https://www.h5py.org>`_.
+This module provides HDF5 compression filters (namely: blosc, bitshuffle, lz4, FCIDECOMP, ZFP, zstd) and registers them to the HDF5 library used by `h5py <https://www.h5py.org>`_.
 
 * Supported operating systems: Linux, Windows, macOS.
 * Supported versions of Python: >= 3.4
@@ -17,6 +17,7 @@ The HDF5 plugin sources were obtained from:
 * hdf5-blosc plugin (v1.0.0) and c-blosc (v1.17.0): https://github.com/Blosc/hdf5-blosc and https://github.com/Blosc/c-blosc
 * FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID:25160a42fb62e71e4b0ce081f5cb3f8bb73938b5): ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2/ and https://github.com/team-charls/charls.git 
 * HDF5-ZFP plugin (v1.0.1) and zfp (v0.5.5): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
+* HDF5Plugin-Zstandard (commit d5afdb5) and zstd (v1.4.5): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/v1.20.1/internal-complibs/zstd-1.4.5
 
 Installation
 ------------
@@ -76,6 +77,7 @@ Sample code:
   - ``FCIDECOMP_ID``
   - ``LZ4_ID``
   - ``ZFP_ID``
+  - ``ZSTD_ID``
 
 * ``FILTERS``: A dictionary mapping provided filters to their ID
 * ``PLUGINS_PATH``: The directory where the provided filters library are stored.
@@ -225,6 +227,23 @@ The following compression modes are supported:
         f.create_dataset('zfp_expert', data=numpy.random.random(100),
             **hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1074))
 
+Zstd()
+******
+
+This class returns the compression options to feed into ``h5py.Group.create_dataset`` for using the Zstd filter:
+
+It can be passed as keyword arguments.
+
+Sample code:
+
+.. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('zstd', data=numpy.arange(100),
+            **hdf5plugin.Zstd())
+        f.close()
+
+
 Dependencies
 ------------
 
@@ -265,5 +284,6 @@ Please read the different licenses:
 * lz4: See `src/LZ4/COPYING  <https://github.com/silx-kit/hdf5plugin/blob/master/src/LZ4/COPYING>`_
 * FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/fcidecomp/LICENSE.txt>`_ and `src/charls/src/License.txt  <https://github.com/silx-kit/hdf5plugin/blob/master/src/charls/License.txt>`_
 * zfp: See `src/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/H5Z-ZFP/LICENSE>`_ and `src/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/master/src/zfp/LICENSE>`_
+* zstd: See `src/HDF5Plugin-Zstandard/LICENSE`
 
 The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `src/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/master/src/hdf5/COPYING>`_.
