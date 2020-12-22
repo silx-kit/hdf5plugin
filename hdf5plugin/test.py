@@ -59,6 +59,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
                 "zfp": hdf5plugin.Zfp,
+                "zstd": hdf5plugin.Zstd,
                 }[filter_name](**options)
 
         # Write
@@ -148,6 +149,11 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         self._test('zfp', dtype=numpy.int32, reversible=True)
 
+    def testZstd(self):
+        """Write/read test with Zstd filter plugin"""
+        self._test('zstd')
+
+
 def suite():
     test_suite = unittest.TestSuite()
     for cls in (TestHDF5PluginRW,):
@@ -155,9 +161,9 @@ def suite():
     return test_suite
 
 
-def run_tests():
+def run_tests(*args, **kwargs):
     """Run test complete test_suite"""
-    runner = unittest.TextTestRunner()
+    runner = unittest.TextTestRunner(*args, **kwargs)
     success = runner.run(suite()).wasSuccessful()
     print("Test suite " + ("succeeded" if success else "failed"))
     return success

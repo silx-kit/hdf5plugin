@@ -27,7 +27,7 @@ under windows, MacOS and linux."""
 
 __authors__ = ["V.A. Sole", "H. Payno", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "12/05/2020"
+__date__ = "15/05/2020"
 
 import ctypes as _ctypes
 from glob import glob as _glob
@@ -70,6 +70,9 @@ BSHUF_ID = 32008
 ZFP_ID = 32013
 """ZFP filter ID"""
 
+ZSTD_ID = 32015
+"""Zstandard filter ID"""
+
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
@@ -77,6 +80,7 @@ FILTERS = {'blosc': BLOSC_ID,
            'bshuf': BSHUF_ID,
            'lz4': LZ4_ID,
            'zfp': ZFP_ID,
+           'zstd': ZSTD_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
 """Mapping of filter name to HDF5 filter ID for available filters"""
@@ -266,6 +270,12 @@ class Zfp(_FilterRefClass):
            _logger.info("ZFP default used")
         
         _logger.info("filter options = %s" % (self.filter_options,))
+
+
+class Zstd(_FilterRefClass):
+    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """
+    filter_id = ZSTD_ID
 
 
 class FciDecomp(_FilterRefClass):
