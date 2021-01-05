@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2021 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -436,6 +436,7 @@ include_dirs += glob(blosc_dir + 'internal-complibs/zstd*')
 include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 define_macros.append(('HAVE_ZSTD', 1))
 
+extra_compile_args = ['-std=c99']  # Needed to build manylinux1 wheels
 
 blosc_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5blosc",
@@ -445,6 +446,7 @@ blosc_plugin = HDF5PluginExtension(
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
     define_macros=define_macros,
+    extra_compile_args=extra_compile_args,
     sse2=sse2_kwargs,
     avx2=avx2_kwargs,
     cpp11=cpp11_kwargs,
