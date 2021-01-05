@@ -436,7 +436,7 @@ include_dirs += glob(blosc_dir + 'internal-complibs/zstd*')
 include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 define_macros.append(('HAVE_ZSTD', 1))
 
-extra_compile_args = ['-std=c99']  # Needed to build manylinux1 wheels
+extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
 
 blosc_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5blosc",
