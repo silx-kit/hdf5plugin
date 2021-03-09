@@ -154,9 +154,20 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('zstd')
 
 
+class TestConfig(unittest.TestCase):
+    def testConfig(self):
+        """Test hdf5plugin.config availability"""
+        config = hdf5plugin.config
+        self.assertIsInstance(config.openmp, bool)
+        self.assertIsInstance(config.native, bool)
+        self.assertIsInstance(config.sse2, bool)
+        self.assertIsInstance(config.avx2, bool)
+        self.assertIsInstance(config.cpp11, bool)
+
+
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW,):
+    for cls in (TestHDF5PluginRW, TestConfig):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 
