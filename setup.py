@@ -34,7 +34,6 @@ import sys
 import tempfile
 import platform
 from setuptools import setup, Extension
-from setuptools.command.build_py import build_py
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
 from distutils.command.build import build
@@ -619,22 +618,14 @@ extensions = [lz4_plugin,
 
 def get_version():
     """Returns current version number from version.py file"""
-    dirname = os.path.dirname(os.path.abspath(__file__))
+    dirname = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'src',
+        'hdf5plugin')
     sys.path.insert(0, dirname)
-    import version
+    import _version
     sys.path = sys.path[1:]
-    return version.strictversion
-
-
-class BuildPy(build_py):
-    """
-    Enhanced build_py which copies version.py to <PROJECT>._version.py
-    """
-    def find_package_modules(self, package, package_dir):
-        modules = build_py.find_package_modules(self, package, package_dir)
-        if package == PROJECT:
-            modules.append((PROJECT, '_version', 'version.py'))
-        return modules
+    return _version.strictversion
 
 
 ################################################################################
@@ -730,7 +721,6 @@ classifiers = ["Development Status :: 4 - Beta",
                ]
 cmdclass = dict(build=Build,
                 build_ext=PluginBuildExt,
-                build_py=BuildPy,
                 debian_src=sdist_debian)
 if BDistWheel is not None:
     cmdclass['bdist_wheel'] = BDistWheel
