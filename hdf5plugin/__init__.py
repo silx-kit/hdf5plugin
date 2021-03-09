@@ -36,6 +36,7 @@ import os as _os
 import struct as _struct
 import sys as _sys
 from collections.abc import Mapping as _Mapping
+from collections import namedtuple as _namedtuple
 import h5py as _h5py
 
 
@@ -51,6 +52,9 @@ except ImportError:
         "Do NOT use %s from its sources: build it and use the built version" %
         _os.path.basename(_os.path.dirname(_os.path.abspath(__file__))))
 
+# Give access to build-time config
+from ._config import config
+config = _namedtuple('HDF5PluginBuildOptions', tuple(config.keys()))(**config)
 
 PLUGINS_PATH = _os.path.abspath(
         _os.path.join(_os.path.dirname(__file__), 'plugins'))
