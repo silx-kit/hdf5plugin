@@ -10,7 +10,6 @@ include setup.py
 include version.py
 recursive-include ci *.py
 recursive-include doc *
-recursive-include hdf5plugin *.py
 recursive-include src *
 recursive-include test *.py *.h5
 recursive-include package *

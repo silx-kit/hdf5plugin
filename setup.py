@@ -746,6 +746,7 @@ if __name__ == "__main__":
           long_description=long_description,
           license=license,
           packages=[PROJECT],
+          package_dir={'': 'src'},
           ext_modules=extensions,
           install_requires=['h5py'],
           setup_requires=['setuptools'],
