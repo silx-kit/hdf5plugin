@@ -36,6 +36,7 @@ import os as _os
 import struct as _struct
 import sys as _sys
 from collections.abc import Mapping as _Mapping
+from collections import namedtuple as _namedtuple
 import h5py as _h5py
 
 
@@ -51,6 +52,9 @@ except ImportError:
         "Do NOT use %s from its sources: build it and use the built version" %
         _os.path.basename(_os.path.dirname(_os.path.abspath(__file__))))
 
+# Give access to build-time config
+from ._config import config
+config = _namedtuple('HDF5PluginBuildOptions', tuple(config.keys()))(**config)
 
 PLUGINS_PATH = _os.path.abspath(
         _os.path.join(_os.path.dirname(__file__), 'plugins'))
@@ -283,6 +287,13 @@ class FciDecomp(_FilterRefClass):
     """
     filter_id = FCIDECOMP_ID
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not config.cpp11:
+            _logger.error(
+                "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
+                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler.")
+
 
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
@@ -292,6 +303,11 @@ def _init_filters():
     hdf5_version = _h5py.h5.get_libversion()
 
     for name, filter_id in FILTERS.items():
+        # Skip "optional" filters if not built
+        if name == 'fcidecomp' and not config.cpp11:
+            _logger.info("%s filter not available in this build of hdf5plugin.", name)
+            continue
+
         # Check if filter is already loaded (not on buggy HDF5 versions)
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
             if _h5py.h5z.filter_avail(filter_id):

@@ -207,6 +207,40 @@ class Build(build):
             ext for ext in self.distribution.ext_modules
             if self.cpp11 or not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
 
+        # Generate config file content
+        build_config = {
+            'openmp': bool(self.openmp),
+            'native': bool(self.native),
+            'sse2': bool(self.sse2),
+            'avx2': bool(self.avx2),
+            'cpp11': bool(self.cpp11),
+        }
+        self.__config_str = 'config = ' + str(build_config) + '\n'
+        self.__config_file = os.path.join(
+            self.build_lib, PROJECT, '_config.py')
+
+    def run(self):
+        super().run()
+
+        # Save config to file
+        with open(self.__config_file, 'w') as f:
+            f.write(self.__config_str)
+
+    def has_config_changed(self):
+        """Check if configuration file has changed"""
+        try:
+            with open(self.__config_file, 'r') as f:
+                if f.read() == self.__config_str:
+                    logger.info("Build configuration didn't changed")
+                    return False  # Configuration is the same
+        except:
+            pass
+        logger.info('Build configuration has changed')
+        return True
+
+    # Add clean to sub-commands
+    sub_commands = [('clean', has_config_changed)] + build.sub_commands
+
 
 class PluginBuildExt(build_ext):
     """Build extension command for DLLs that are not Python modules
