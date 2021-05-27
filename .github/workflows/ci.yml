@@ -104,3 +104,18 @@ jobs:
           pip install --upgrade h5py==${{ matrix.H5PY_OLDER_VERSION }}
           pip list
           python test/test.py
+
+  build_wheels_macos:
+    name: Build ARM64 wheels on macos-10.15
+    runs-on: macos-10.15
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build wheels
+        uses: joerick/cibuildwheel@v1.11.0
+        env:
+          CIBW_BUILD: cp39-macosx_*
+          CIBW_ARCHS_MACOS: arm64
+          HDF5PLUGIN_SSE2: False
+          HDF5PLUGIN_AVX2: False
+          HDF5PLUGIN_NATIVE: False

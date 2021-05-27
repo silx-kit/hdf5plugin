@@ -76,6 +76,8 @@ def get_cpu_sse2_avx2():
     :returns: (is SSE2 available, is AVX2 available)
     :rtype: List(bool)
     """
+    if platform.machine() == "arm64":
+        return False, False
     if platform.machine() == "ppc64le":
         return True, False
     try:
@@ -138,12 +140,15 @@ class Build(build):
 
     def initialize_options(self):
         build.initialize_options(self)
-        self.hdf5 = None
-        self.openmp = not sys.platform.startswith('darwin')
-        self.native = True
-        self.sse2 = True
-        self.avx2 = True
-        self.cpp11 = True
+        self.hdf5 = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
+        self.openmp = os.environ.get(
+            "HDF5PLUGIN_OPENMP",
+            "False" if sys.platform.startswith('darwin') else "True"
+        ) == "True"
+        self.native = os.environ.get("HDF5PLUGIN_NATIVE", "True") == "True"
+        self.sse2 = os.environ.get("HDF5PLUGIN_SSE2", "True") == "True"
+        self.avx2 = os.environ.get("HDF5PLUGIN_AVX2", "True") == "True"
+        self.cpp11 = os.environ.get("HDF5PLUGIN_CPP11", "True") == "True"
 
     def finalize_options(self):
         build.finalize_options(self)
@@ -162,7 +167,9 @@ class Build(build):
                 logger.warning("C++11 disabled: not available")
 
         if self.sse2:
-            if (compiler.compiler_type == 'msvc' or
+            if platform.machine() == 'arm64':
+                self.sse2 = False
+            elif (compiler.compiler_type == 'msvc' or
                     platform.machine() == 'ppc64le'):
                 self.sse2 = True
             else:
@@ -171,7 +178,9 @@ class Build(build):
                 logger.warning("SSE2 disabled: not available")
 
         if self.avx2:
-            if compiler.compiler_type == 'msvc':
+            if platform.machine() == 'arm64':
+                self.avx2 = False
+            elif compiler.compiler_type == 'msvc':
                 self.avx2 = sys.version_info[:2] >= (3, 5)
             elif platform.machine() == 'ppc64le':
                 self.avx2 = False
