@@ -140,12 +140,15 @@ class Build(build):
 
     def initialize_options(self):
         build.initialize_options(self)
-        self.hdf5 = None
-        self.openmp = not sys.platform.startswith('darwin')
-        self.native = True
-        self.sse2 = True
-        self.avx2 = True
-        self.cpp11 = True
+        self.hdf5 = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
+        self.openmp = os.environ.get(
+            "HDF5PLUGIN_OPENMP",
+            "False" if sys.platform.startswith('darwin') else "True"
+        ) == "True"
+        self.native = os.environ.get("HDF5PLUGIN_NATIVE", "True") == "True"
+        self.sse2 = os.environ.get("HDF5PLUGIN_SSE2", "True") == "True"
+        self.avx2 = os.environ.get("HDF5PLUGIN_AVX2", "True") == "True"
+        self.cpp11 = os.environ.get("HDF5PLUGIN_CPP11", "True") == "True"
 
     def finalize_options(self):
         build.finalize_options(self)
