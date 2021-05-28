@@ -1,3 +1,18 @@
+3.0.0
+-----
+
+This version of `hdf5plugin` requires Python3 and supports arm64 architecture.
+
+- Stopped Python2.7 support (PR #104, #105)
+- Added support of arm64 architecture (PR #116)
+- Added `Zstd` filter to the supported plugin list (PR #106)
+- Added `hdf5plugin.config` to retrieve build options at runtime (PR #113)
+- Added support of build configuration through environment variables (PR #116)
+- Fixed `FciDecomp` error message when built without c++11 (PR #113)
+- Updated blosc compile flags (`-std-c99`) to build for manylinux1 (PR #109)
+- Updated c-blosc to v1.20.1 (PR #101)
+- Updated: continuous integration (PR #104, #111), project structure (PR #114), changelog (PR #117)
+
 2.3.2
 -----
 
