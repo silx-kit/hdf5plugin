@@ -612,20 +612,17 @@ extensions = [lz4_plugin,
 
 # setup
 
-# ########## #
-# version.py #
-# ########## #
-
-def get_version():
-    """Returns current version number from version.py file"""
+def get_version(debian=False):
+    """Returns current version number from _version.py file"""
     dirname = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'src',
-        'hdf5plugin')
+        os.path.dirname(os.path.abspath(__file__)), "src", PROJECT)
     sys.path.insert(0, dirname)
+    dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True  # Avoid creating __pycache__/_version.pyc
     import _version
     sys.path = sys.path[1:]
-    return _version.strictversion
+    sys.dont_write_bytecode = dont_write_bytecode
+    return _version.debianversion if debian else _version.strictversion
 
 
 ################################################################################
@@ -646,8 +643,7 @@ class sdist_debian(sdist):
 
     @staticmethod
     def get_debian_name():
-        import version
-        name = "%s_%s" % (PROJECT, version.debianversion)
+        name = "%s_%s" % (PROJECT, get_version(debian=True))
         return name
 
     def prune_file_list(self):
@@ -693,6 +689,7 @@ class sdist_debian(sdist):
 
 PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
+author_email = "silx@esrf.fr"
 description = "HDF5 Plugins for windows,MacOS and linux"
 url='https://github.com/silx-kit/hdf5plugin'
 f = open("README.rst")
@@ -730,6 +727,7 @@ if __name__ == "__main__":
     setup(name=PROJECT,
           version=get_version(),
           author=author,
+          author_email=author_email,
           url=url,
           classifiers=classifiers,
           description=description,

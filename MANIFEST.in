@@ -12,3 +12,4 @@ recursive-include doc *
 recursive-include src *
 recursive-include test *.py *.h5
 recursive-include package *
+global-exclude *__pycache__/*
