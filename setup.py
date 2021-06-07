@@ -689,6 +689,7 @@ class sdist_debian(sdist):
 
 PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
+author_email = "silx@esrf.fr"
 description = "HDF5 Plugins for windows,MacOS and linux"
 url='https://github.com/silx-kit/hdf5plugin'
 f = open("README.rst")
@@ -726,6 +727,7 @@ if __name__ == "__main__":
     setup(name=PROJECT,
           version=get_version(),
           author=author,
+          author_email=author_email,
           url=url,
           classifiers=classifiers,
           description=description,
