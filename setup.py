@@ -617,8 +617,11 @@ def get_version(debian=False):
     dirname = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "src", PROJECT)
     sys.path.insert(0, dirname)
+    dont_write_bytecode = sys.dont_write_bytecode
+    #sys.dont_write_bytecode = True  # Avoid creating __pycache__/_version.pyc
     import _version
     sys.path = sys.path[1:]
+    sys.dont_write_bytecode = dont_write_bytecode
     return _version.debianversion if debian else _version.strictversion
 
 
