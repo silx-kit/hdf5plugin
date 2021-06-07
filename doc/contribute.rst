@@ -20,7 +20,7 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 * Update ``setup.py`` to build the filter dynamic library by adding an extension using the ``HDF5PluginExtension`` class (a subclass of ``setuptools.Extension``) which adds extra files and compile options to enable dynamic loading of the filter.
   The name of the extension should be ``hdf5plugin.plugins.libh5<filter_name>``.
 
-* Add a "CONSTANT" in ``hdf5plugins/__init__.py`` named with the ``FILTER_NAME`` which value is the HDF5 filter ID
+* Add a "CONSTANT" in ``src/hdf5plugin/__init__.py`` named with the ``FILTER_NAME`` which value is the HDF5 filter ID
   (See `HDF5 registered filters <https://portal.hdfgroup.org/display/support/Registered+Filters>`_).
 
 * Add a ``"<filter_name>": <FILTER_ID_CONSTANT>`` entry in ``hdf5plugin.FILTERS``.
@@ -35,7 +35,7 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 * Add tests:
 
   - In ``test/test.py`` for testing reading a compressed file that was produced with another software.
-  - In ``hdf5plugin/test.py`` for tests that writes data using the compression filter and the compression options helper function and reads back the data.
+  - In ``src/hdf5plugin/test.py`` for tests that writes data using the compression filter and the compression options helper function and reads back the data.
 
 * Update the ``README.rst`` file to document:
 
