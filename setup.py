@@ -690,7 +690,7 @@ class sdist_debian(sdist):
 PROJECT = 'hdf5plugin'
 author = "ESRF - Data Analysis Unit"
 author_email = "silx@esrf.fr"
-description = "HDF5 Plugins for windows,MacOS and linux"
+description = "HDF5 Plugins for Windows, MacOS, and Linux"
 url='https://github.com/silx-kit/hdf5plugin'
 f = open("README.rst")
 long_description=f.read()
@@ -714,6 +714,7 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.6",
                "Programming Language :: Python :: 3.7",
                "Programming Language :: Python :: 3.8",
+               "Programming Language :: Python :: 3.9",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
 cmdclass = dict(build=Build,

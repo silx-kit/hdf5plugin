@@ -2,7 +2,7 @@
 
 name: CI
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
@@ -42,11 +42,23 @@ jobs:
             BUILD_COMMAND: sdist
             H5PY_OLDER_VERSION: 2.9.0
 
+          - name-suffix: "sdist-h5py_3.0.0"
+            os: ubuntu-latest
+            python-version: 3.9
+            BUILD_COMMAND: sdist
+            H5PY_OLDER_VERSION: 3.0.0
+
           - name-suffix: "bdist_wheel-h5py_2.10.0"
             os: macos-latest
             python-version: 3.8
             BUILD_COMMAND: bdist_wheel
             H5PY_OLDER_VERSION: 2.10.0
+
+          - name-suffix: "bdist_wheel-h5py_3.0.0"
+            os: macos-latest
+            python-version: 3.9
+            BUILD_COMMAND: bdist_wheel
+            H5PY_OLDER_VERSION: 3.0.0
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
