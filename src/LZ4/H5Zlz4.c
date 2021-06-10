@@ -174,7 +174,8 @@ static size_t H5Z_filter_lz4(unsigned int flags, size_t cd_nelmts,
                 blockSize = nbytes - origWritten;
 
 #if LZ4_VERSION_NUMBER > 10300
-            compBlockSize = LZ4_compress_default(rpos, roBuf+4,blockSize,nBlocks*4); /// reserve space for compBlockSize
+            //compBlockSize = LZ4_compress_default(rpos, roBuf+4,blockSize,nBlocks*4); /// reserve space for compBlockSize
+            compBlockSize = LZ4_compress(rpos, roBuf+4, blockSize); /// reserve space for compBlockSize
 #else
             compBlockSize = LZ4_compress(rpos, roBuf+4, blockSize); /// reserve space for compBlockSize
 #endif
