@@ -76,7 +76,7 @@ def get_cpu_sse2_avx2():
     :returns: (is SSE2 available, is AVX2 available)
     :rtype: List(bool)
     """
-    if platform.machine() == "arm64":
+    if platform.machine() in ["arm64", "mips64"]:
         return False, False
     if platform.machine() == "ppc64le":
         return True, False
@@ -320,7 +320,7 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
             if build_cmd.native:  # Add -march=native
-                if platform.machine() in ["i386", "i686", "amd64", "x86_64"]:
+                if platform.machine() in ["i386", "i686", "amd64", "x86_64", "mips64"]:
                     e.extra_compile_args += ['-march=native']
                 else:
                     e.extra_compile_args += ['-mcpu=native']
