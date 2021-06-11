@@ -85,7 +85,7 @@ def get_cpu_sse2_avx2():
     except ImportError as e:
         raise e
     except Exception:  # cpuinfo raises Exception for unsupported architectures
-        logger.warn(
+        logger.warning(
             "CPU info detection does not support this architecture: SSE2 and AVX2 disabled")
         return False, False
     else:
