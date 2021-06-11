@@ -36,6 +36,7 @@ import platform
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
+from setuptools.command.build_py import build_py
 from distutils.command.build import build
 from distutils import ccompiler, errors, sysconfig
 
@@ -84,7 +85,7 @@ def get_cpu_sse2_avx2():
     except ImportError as e:
         raise e
     except Exception:  # cpuinfo raises Exception for unsupported architectures
-        logger.warn(
+        logger.warning(
             "CPU info detection does not support this architecture: SSE2 and AVX2 disabled")
         return False, False
     else:
@@ -223,22 +224,15 @@ class Build(build):
             'avx2': bool(self.avx2),
             'cpp11': bool(self.cpp11),
         }
-        self.__config_str = 'config = ' + str(build_config) + '\n'
-        self.__config_file = os.path.join(
+        self.hdf5plugin_config_str = 'config = ' + str(build_config) + '\n'
+        self.hdf5plugin_config_file = os.path.join(
             self.build_lib, PROJECT, '_config.py')
-
-    def run(self):
-        super().run()
-
-        # Save config to file
-        with open(self.__config_file, 'w') as f:
-            f.write(self.__config_str)
 
     def has_config_changed(self):
         """Check if configuration file has changed"""
         try:
-            with open(self.__config_file, 'r') as f:
-                if f.read() == self.__config_str:
+            with open(self.hdf5plugin_config_file, 'r') as f:
+                if f.read() == self.hdf5plugin_config_str:
                     logger.info("Build configuration didn't changed")
                     return False  # Configuration is the same
         except:
@@ -248,6 +242,18 @@ class Build(build):
 
     # Add clean to sub-commands
     sub_commands = [('clean', has_config_changed)] + build.sub_commands
+
+
+class BuildPy(build_py):
+    """build_py command also writing hdf5plugin._config"""
+    def run(self):
+        super().run()
+
+        build_cmd = self.distribution.get_command_obj("build")
+
+        # Save config to file
+        with open(build_cmd.hdf5plugin_config_file, 'w') as f:
+            f.write(build_cmd.hdf5plugin_config_str)
 
 
 class PluginBuildExt(build_ext):
@@ -724,6 +730,7 @@ classifiers = ["Development Status :: 4 - Beta",
                ]
 cmdclass = dict(build=Build,
                 build_ext=PluginBuildExt,
+                build_py=BuildPy,
                 debian_src=sdist_debian)
 if BDistWheel is not None:
     cmdclass['bdist_wheel'] = BDistWheel
@@ -746,4 +753,5 @@ if __name__ == "__main__":
           setup_requires=['setuptools'],
           cmdclass=cmdclass,
           libraries=libraries,
+          zip_safe=False,
           )
