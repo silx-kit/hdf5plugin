@@ -748,4 +748,5 @@ if __name__ == "__main__":
           setup_requires=['setuptools'],
           cmdclass=cmdclass,
           libraries=libraries,
+          zip_safe=False,
           )
