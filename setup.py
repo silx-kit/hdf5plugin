@@ -515,10 +515,9 @@ zstandard_plugin = HDF5PluginExtension(
 # Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
 lz4_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/LZ4/H5Zlz4.c'] + \
-            lz4_sources,
-    depends=lz4_depends,
-    include_dirs=lz4_include_dirs,
+    sources=['src/LZ4/H5Zlz4.c', 'src/lz4-r122/lz4.c'],
+    depends=['src/lz4-r122/lz4.h'],
+    include_dirs=['src/lz4-r122'],
     libraries=['Ws2_32'] if sys.platform.startswith('win') else [],
     )
 
