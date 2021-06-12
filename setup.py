@@ -742,6 +742,7 @@ if __name__ == "__main__":
           author=author,
           author_email=author_email,
           url=url,
+          python_requires='>=3.4',
           classifiers=classifiers,
           description=description,
           long_description=long_description,
