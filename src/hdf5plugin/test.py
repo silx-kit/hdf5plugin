@@ -56,7 +56,7 @@ class TestHDF5PluginRW(unittest.TestCase):
             create_dataset's compression_opts argument
         :return: The tuple describing the filter
         """
-        data = numpy.arange(100, dtype=dtype)
+        data = numpy.ones((1000,), dtype=dtype).reshape(100, 10)
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
         args = {"blosc": hdf5plugin.Blosc,
