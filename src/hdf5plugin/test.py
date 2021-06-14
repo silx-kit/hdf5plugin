@@ -73,17 +73,19 @@ class TestHDF5PluginRW(unittest.TestCase):
         f.close()
 
         # Read
-        f = h5py.File(filename, "r")
-        saved = f['data'][()]
-        plist = f['data'].id.get_create_plist()
-        filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
-        chunk = f['data'].id.read_direct_chunk((0,) * data.ndim)
-        f.close()
+        with h5py.File(filename, "r") as f:
+            saved = f['data'][()]
+            plist = f['data'].id.get_create_plist()
+            filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
 
-        if compressed:  # Check if chunk is actually compressed
-            self.assertLess(len(chunk[1]), data.nbytes)
-        else:
-            self.assertEqual(len(chunk[1]), data.nbytes)
+            if h5py.version.version_tuple >= (2, 10):  # Need read_direct_chunk
+                # Read chunk raw (compressed) data
+                chunk = f['data'].id.read_direct_chunk((0,) * data.ndim)[1]
+
+                if compressed:  # Check if chunk is actually compressed
+                    self.assertLess(len(chunk), data.nbytes)
+                else:
+                    self.assertEqual(len(chunk), data.nbytes)
 
         if lossless:
             self.assertTrue(numpy.array_equal(saved, data))
