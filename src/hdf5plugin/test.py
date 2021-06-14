@@ -43,7 +43,12 @@ class TestHDF5PluginRW(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tempdir)
 
-    def _test(self, filter_name, dtype=numpy.int32, lossless=True, **options):
+    def _test(self,
+              filter_name,
+              dtype=numpy.int32,
+              lossless=True,
+              compressed=True,
+              **options):
         """Run test for a particular filter
 
         :param str filter_name: The name of the filter to use
@@ -64,7 +69,7 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         # Write
         f = h5py.File(filename, "w")
-        f.create_dataset("data", data=data, **args)
+        f.create_dataset("data", data=data, chunks=data.shape, **args)
         f.close()
 
         # Read
@@ -72,8 +77,14 @@ class TestHDF5PluginRW(unittest.TestCase):
         saved = f['data'][()]
         plist = f['data'].id.get_create_plist()
         filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
+        chunk = f['data'].id.read_direct_chunk((0,) * data.ndim)
         f.close()
-        
+
+        if compressed:  # Check if chunk is actually compressed
+            self.assertLess(len(chunk[1]), data.nbytes)
+        else:
+            self.assertEqual(len(chunk[1]), data.nbytes)
+
         if lossless:
             self.assertTrue(numpy.array_equal(saved, data))
         else:
