@@ -102,13 +102,12 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('bshuf')  # Default options
 
         # Specify options
-        # numpy.int8, int16, int32, int64
-        for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
-            for x in range(1, 3):
-                filter_ = self._test('bshuf', dtype, nelems=1024*x, lz4=False)
-                self.assertEqual(filter_[2][3:], (1024*x, 0))
-                filter_ = self._test('bshuf', dtype, nelems=1024*x, lz4=True)
-                self.assertEqual(filter_[2][3:], (1024*x, 2))
+        for lz4 in (False, True):
+            for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
+                for nelems in (1024, 2048):
+                    with self.subTest(lz4=lz4, dtype=dtype, nelems=nelems):
+                        filter_ = self._test('bshuf', dtype, nelems=nelems, lz4=lz4)
+                        self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
 
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
@@ -119,13 +118,19 @@ class TestHDF5PluginRW(unittest.TestCase):
                     hdf5plugin.Blosc.SHUFFLE,
                     hdf5plugin.Blosc.BITSHUFFLE)
         compress = 'blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd'
-        for clevel in range(10):
+        for compression_id, cname in enumerate(compress):
             for shuffle in shuffles:
-                for compression_id, cname in enumerate(compress):
-                    filter_ = self._test(
-                        'blosc', cname=cname, clevel=clevel, shuffle=shuffle)
-                    self.assertEqual(
-                        filter_[2][4:], (clevel, shuffle, compression_id))
+                for clevel in range(10):
+                    with self.subTest(compression=cname,
+                                      shuffle=shuffle,
+                                      clevel=clevel):
+                        filter_ = self._test(
+                            'blosc',
+                            cname=cname,
+                            clevel=clevel,
+                            shuffle=shuffle)
+                        self.assertEqual(
+                            filter_[2][4:], (clevel, shuffle, compression_id))
 
     def testLZ4(self):
         """Write/read test with lz4 filter plugin"""
@@ -154,9 +159,10 @@ class TestHDF5PluginRW(unittest.TestCase):
             # Expert: with default parameters
             {'lossless': False, 'minbits': 1, 'maxbits': 16657, 'maxprec': 64, 'minexp': -1074},
             ]
-        for kwargs in tests:
+        for options in tests:
             for dtype in (numpy.float32, numpy.float64):
-                self._test('zfp', dtype=dtype, **kwargs)
+                with self.subTest(options=options, dtype=dtype):
+                    self._test('zfp', dtype=dtype, **options)
 
         self._test('zfp', dtype=numpy.int32, reversible=True)
 
