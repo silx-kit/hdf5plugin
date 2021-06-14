@@ -106,7 +106,7 @@ class TestHDF5PluginRW(unittest.TestCase):
             for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
                 for nelems in (1024, 2048):
                     with self.subTest(lz4=lz4, dtype=dtype, nelems=nelems):
-                        filter_ = self._test('bshuf', dtype, nelems=nelems, lz4=lz4)
+                        filter_ = self._test('bshuf', dtype, compressed=lz4, nelems=nelems, lz4=lz4)
                         self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
 
     def testBlosc(self):
@@ -126,6 +126,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                                       clevel=clevel):
                         filter_ = self._test(
                             'blosc',
+                            compressed=clevel!=0,  # No compression for clevel=0
                             cname=cname,
                             clevel=clevel,
                             shuffle=shuffle)
