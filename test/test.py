@@ -92,10 +92,10 @@ class TestHDF5PluginRead(unittest.TestCase):
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.FCIDECOMP_ID),
                          "FCIDECOMP filter not available")
-    def testFicdecomp(self):
-        """Test reading FICDECOMP compressed data"""
+    def testFcidecomp(self):
+        """Test reading FCIDECOMP compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))
-        fname = os.path.join(dirname, "ficdecomp.h5")
+        fname = os.path.join(dirname, "fcidecomp.h5")
         self.assertTrue(os.path.exists(fname),
                         "Cannot find %s file" % fname)
         h5 = h5py.File(fname, "r")
