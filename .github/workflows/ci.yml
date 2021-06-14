@@ -29,6 +29,7 @@ jobs:
             python-version: 3.6
             BUILD_COMMAND: sdist
             H5PY_OLDER_VERSION: 2.6.0
+            NUMPY_OLDER_VERSION: 1.11.3
 
           - name-suffix: "bdist_wheel-h5py_2.8.0"
             os: ubuntu-latest
@@ -113,6 +114,9 @@ jobs:
 
       - name: Run the tests with oldest available wheel of h5py
         run: |
+          if [ -n "${{ matrix.NUMPY_OLDER_VERSION }}" ]; then
+              pip install --upgrade numpy==${{ matrix.NUMPY_OLDER_VERSION }};
+          fi
           pip install --upgrade h5py==${{ matrix.H5PY_OLDER_VERSION }}
           pip list
           python test/test.py
