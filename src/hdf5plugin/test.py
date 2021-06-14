@@ -145,7 +145,10 @@ class TestHDF5PluginRW(unittest.TestCase):
                          "FCIDECOMP filter not available")
     def testFciDecomp(self):
         """Write/read test with fcidecomp filter plugin"""
-        self._test('fcidecomp')
+        # Test with supported datatypes
+        for dtype in (numpy.uint8, numpy.uint16, numpy.int8, numpy.int16):
+            with self.subTest(dtype=dtype):
+                self._test('fcidecomp', dtype=dtype)
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
                          "ZFP filter not available")
