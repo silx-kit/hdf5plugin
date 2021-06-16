@@ -372,7 +372,7 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
             if build_cmd.native:  # Add -march=native/-mcpu=native
-                if build_cmd.native_comile_arg is None:
+                if build_cmd.native_compile_arg is None:
                     logger.error("Unsupported native=True build option")
                 else:
                     e.extra_compile_args += [build_cmd.native_compile_arg]
