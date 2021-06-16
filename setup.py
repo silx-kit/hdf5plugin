@@ -247,6 +247,11 @@ class Build(build):
     def finalize_options(self):
         build.finalize_options(self)
 
+        if self.avx2 and not self.sse2:
+            logger.error(
+                "avx2=True is not compatible with sse2=False: set avx2=False")
+            self.avx2 = False
+
         if self.native and self.native_compile_arg is None:
             logger.error(
                 "native=True is not supported on this platform: set to False")
