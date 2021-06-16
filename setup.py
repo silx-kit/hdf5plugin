@@ -32,6 +32,7 @@ import logging
 import os
 import sys
 import tempfile
+from typing import NamedTuple, Optional, Tuple
 import platform
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -70,30 +71,7 @@ else:
             return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
 
 
-def get_cpu_sse2_avx2():
-    """Returns whether SSE2 and AVX2 are available on the current CPU
-
-    :returns: (is SSE2 available, is AVX2 available)
-    :rtype: List(bool)
-    """
-    if platform.machine() in ["arm64", "mips64"]:
-        return False, False
-    if platform.machine() == "ppc64le":
-        return True, False
-    try:
-        import cpuinfo
-    except ImportError as e:
-        raise e
-    except Exception:  # cpuinfo raises Exception for unsupported architectures
-        logger.warning(
-            "CPU info detection does not support this architecture: SSE2 and AVX2 disabled")
-        return False, False
-    else:
-        cpu_flags = cpuinfo.get_cpu_info().get('flags', [])
-        return 'sse2' in cpu_flags, 'avx2' in cpu_flags
-
-
-# Plugins
+# Probe default build options
 
 def check_compile_flag(compiler, flag, extension='.c'):
     """Try to compile an empty file to check for compiler args
@@ -118,21 +96,123 @@ def check_compile_flag(compiler, flag, extension='.c'):
             return True
 
 
+def _is_sse2_avx2_available(compiler) -> Tuple[bool, bool]:
+    """Returns whether SSE2 and AVX2 are available on the current (x86) CPU
+
+    :param distutils.ccompiler.CCompiler compiler: CCompiler to probe
+    :returns: (is SSE2 available, is AVX2 available)
+    """
+    try:
+        import cpuinfo
+    except ImportError as e:
+        raise e
+    except Exception:  # cpuinfo raises Exception for unsupported architectures
+        logger.warning("Cannot probe SSE2/AVX2 availability")
+        return False, False
+
+    # Check availability on the host
+    cpu_flags = cpuinfo.get_cpu_info().get('flags', [])
+    sse2_flag = 'sse2' in cpu_flags
+    avx2_flag = 'avx2' in cpu_flags
+
+    # Check availability in compiler
+    if compiler.compiler_type == 'msvc':
+        # MS Visual Studio: SSE2 supported; AVX2 since python3.5
+        return sse2_flag, avx2_flag and sys.version_info[:2] >= (3, 5)
+
+    return (sse2_flag and check_compile_flag(compiler, '-msse2'),
+            avx2_flag and check_compile_flag(compiler, '-mavx2'))
+
+
+class DefaultBuildConfig(NamedTuple):
+    """Describes which build options are available for an architecture"""
+    cpp11: bool = False
+    sse2: bool = False
+    avx2: bool = False
+    openmp: bool = False
+    native_compile_arg: Optional[str] = None
+
+
+def get_default_options(compiler) -> DefaultBuildConfig:
+    """Returns options for current platform and given compiler.
+
+    This is guessing what is available and disabling all for unknown platforms.
+    """
+    machine = platform.machine()
+
+    # Probe C++11
+    if compiler.compiler_type == 'msvc':
+        cpp11 = sys.version_info[:2] >= (3, 5)
+    else:
+        cpp11 = check_compile_flag(compiler, '-std=c++11', extension='.cc')
+
+    # Probe OpenMP
+    if sys.platform.startswith('darwin'):
+        has_openmp = False
+    else:
+        prefix = '/' if compiler.compiler_type == 'msvc' else '-f'
+        has_openmp = check_compile_flag(compiler, prefix + 'openmp')
+
+    if machine in ("i386", "i686", "amd64", "x86_64"):  # x86 architecture
+        sse2, avx2 = _is_sse2_avx2_available(compiler)
+        return DefaultBuildConfig(
+            cpp11=cpp11,
+            sse2=sse2,
+            avx2=avx2,
+            openmp=has_openmp,
+            native_compile_arg="-march=native",
+        )
+    if machine == "arm64":
+        return DefaultBuildConfig(
+            cpp11=cpp11,
+            sse2=False,
+            avx2=False,
+            openmp=has_openmp,
+            native_compile_arg="-mcpu=native",
+        )
+    if machine == "mips64":
+        return DefaultBuildConfig(
+            cpp11=cpp11,
+            sse2=False,
+            avx2=False,
+            openmp=has_openmp,
+            native_compile_arg="-march=native",
+        )
+    if machine == "ppc64le":
+        return DefaultBuildConfig(
+            cpp11=cpp11,
+            sse2=True,  # SSE2 support through -DNO_WARN_X86_INTRINSICS
+            avx2=False,
+            openmp=has_openmp,
+            native_compile_arg="-mcpu=native",
+        )
+    return DefaultBuildConfig(cpp11=cpp11)  # Default with all options disabled
+
+
+# Plugins
+
 class Build(build):
     """Build command with extra options used by PluginBuildExt"""
 
     user_options = [
-        ('hdf5=', None, "Custom path to HDF5 (as in h5py)"),
-        ('openmp=', None, "Whether or not to compile with OpenMP."
-         "Default: False on macOS, True otherwise"),
-        ('native=', None, "Whether to compile for the building machine or for generic support (For unix compilers only)."
-         "Default: True (i.e., specific to CPU used for build)"),
-        ('sse2=', None, "Whether or not to compile with SSE2 support if available."
-         "Default: True"),
-        ('avx2=', None, "Whether or not to compile with AVX2 support if available."
-         "Default: True"),
+        ('hdf5=', None, "Custom path to HDF5 (as in h5py). "
+         "Default: HDF5PLUGIN_HDF5_DIR environment variable if set."),
+        ('openmp=', None, "Whether or not to compile with OpenMP. "
+         "Default: HDF5PLUGIN_OPENMP env. var. if set, else "
+         "True if probed (always False on macOS)."),
+        ('native=', None, "True to compile specifically for the host, "
+         "False for generic support (For unix compilers only). "
+         "Default: HDF5PLUGIN_NATIVE env. var. if set, else "
+         "True on supported architectures, False otherwise"),
+        ('sse2=', None, "Whether or not to compile with SSE2 support. "
+         "Default: HDF5PLUGIN_SSE2 env. var. if set, else "
+         "True on ppc64le and when probed on x86, False otherwise"),
+        ('avx2=', None, "Whether or not to compile with AVX2 support."
+         "Default: HDF5PLUGIN_AVX2 env. var. if set, else "
+         "True on x86 when probed, False otherwise"),
         ('cpp11=', None, "Whether or not to compile C++11 code if available."
-         "Default: True"),
+         "Default: HDF5PLUGIN_CPP11 env. var. if set, else "
+         "True if probed."),
         ]
     user_options.extend(build.user_options)
 
@@ -140,65 +220,37 @@ class Build(build):
 
     def initialize_options(self):
         build.initialize_options(self)
+
+        # Get default options for current computer
+        logger.info("Probe build options default values")
+        compiler = ccompiler.new_compiler(compiler=self.compiler, force=True)
+        sysconfig.customize_compiler(compiler)
+        config = get_default_options(compiler)
+
+        # Store native option for later use
+        self.native_compile_arg = config.native_compile_arg
+
+        # Init options
         self.hdf5 = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
         self.openmp = os.environ.get(
-            "HDF5PLUGIN_OPENMP",
-            "False" if sys.platform.startswith('darwin') else "True"
-        ) == "True"
-        self.native = os.environ.get("HDF5PLUGIN_NATIVE", "True") == "True"
-        self.sse2 = os.environ.get("HDF5PLUGIN_SSE2", "True") == "True"
-        self.avx2 = os.environ.get("HDF5PLUGIN_AVX2", "True") == "True"
-        self.cpp11 = os.environ.get("HDF5PLUGIN_CPP11", "True") == "True"
+            "HDF5PLUGIN_OPENMP", str(config.openmp)) == "True"
+        self.native = os.environ.get(
+            "HDF5PLUGIN_NATIVE",
+            "False" if config.native_compile_arg is None else "True") == "True"
+        self.sse2 = os.environ.get(
+            "HDF5PLUGIN_SSE2", str(config.sse2)) == "True"
+        self.avx2 = os.environ.get(
+            "HDF5PLUGIN_AVX2", str(config.avx2)) == "True"
+        self.cpp11 = os.environ.get(
+            "HDF5PLUGIN_CPP11", str(config.cpp11)) == "True"
 
     def finalize_options(self):
         build.finalize_options(self)
 
-        # Check that build options are available
-        compiler = ccompiler.new_compiler(compiler=self.compiler, force=True)
-        sysconfig.customize_compiler(compiler)
-
-        if self.cpp11:
-            if compiler.compiler_type == 'msvc':
-                self.cpp11 = sys.version_info[:2] >= (3, 5)
-            else:
-                self.cpp1 = check_compile_flag(
-                    compiler, '-std=c++11', extension='.cc')
-            if not self.cpp11:
-                logger.warning("C++11 disabled: not available")
-
-        if self.sse2:
-            if platform.machine() == 'arm64':
-                self.sse2 = False
-            elif (compiler.compiler_type == 'msvc' or
-                    platform.machine() == 'ppc64le'):
-                self.sse2 = True
-            else:
-                self.sse2 = check_compile_flag(compiler, '-msse2')
-            if not self.sse2:
-                logger.warning("SSE2 disabled: not available")
-
-        if self.avx2:
-            if platform.machine() == 'arm64':
-                self.avx2 = False
-            elif compiler.compiler_type == 'msvc':
-                self.avx2 = sys.version_info[:2] >= (3, 5)
-            elif platform.machine() == 'ppc64le':
-                self.avx2 = False
-            else:
-                self.avx2 = check_compile_flag(compiler, '-mavx2')
-            if not self.avx2:
-                logger.warning("AVX2 disabled: not available")
-
-        if self.openmp:
-            prefix = '/' if compiler.compiler_type == 'msvc' else '-f'
-            self.openmp = check_compile_flag(compiler, prefix + 'openmp')
-            if not self.openmp:
-                logger.warning("OpenMP disabled: not available")
-
-        if self.native:
-            is_cpu_sse2, is_cpu_avx2 = get_cpu_sse2_avx2()
-            self.sse2 = self.sse2 and is_cpu_sse2
-            self.avx2 = self.avx2 and is_cpu_avx2
+        if self.native and self.native_compile_arg is None:
+            logger.error(
+                "native=True is not supported on this platform: set to False")
+            self.native = False
 
         logger.info("Building with C++11: %r", bool(self.cpp11))
         logger.info('Building with native option: %r', bool(self.native))
@@ -319,11 +371,11 @@ class PluginBuildExt(build_ext):
                 e.extra_link_args = [
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
-            if build_cmd.native:  # Add -march=native
-                if platform.machine() in ["i386", "i686", "amd64", "x86_64", "mips64"]:
-                    e.extra_compile_args += ['-march=native']
+            if build_cmd.native:  # Add -march=native/-mcpu=native
+                if build_cmd.native_comile_arg is None:
+                    logger.error("Unsupported native=True build option")
                 else:
-                    e.extra_compile_args += ['-mcpu=native']
+                    e.extra_compile_args += [build_cmd.native_compile_arg]
 
             # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
