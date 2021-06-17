@@ -238,6 +238,8 @@ class Build(build):
         except:
             pass
         logger.info('Build configuration has changed')
+        clean_cmd = self.distribution.get_command_obj('clean')
+        clean_cmd.all = True
         return True
 
     # Add clean to sub-commands
