@@ -30,6 +30,7 @@ __date__ = "15/12/2020"
 from glob import glob
 import logging
 import os
+import re
 import sys
 import tempfile
 from typing import NamedTuple, Optional, Tuple
@@ -153,7 +154,9 @@ def get_default_options(compiler) -> DefaultBuildConfig:
         prefix = '/' if compiler.compiler_type == 'msvc' else '-f'
         has_openmp = check_compile_flag(compiler, prefix + 'openmp')
 
-    if machine in ("i386", "i686", "amd64", "x86_64"):  # x86 architecture
+    # x86 architecture (use same check as cpuinfo)
+    if (re.match(r'^i\d86$|^x86$|^x86_32$|^i86pc$|^ia32$|^ia-32$|^bepc$', machine) or
+            re.match(r'^x64$|^x86_64$|^x86_64t$|^i686-64$|^amd64$|^ia64$|^ia-64$', machine)):
         sse2, avx2 = _is_sse2_avx2_available(compiler)
         return DefaultBuildConfig(
             cpp11=cpp11,
