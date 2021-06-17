@@ -138,7 +138,7 @@ def get_default_options(compiler) -> DefaultBuildConfig:
 
     This is guessing what is available and disabling all for unknown platforms.
     """
-    machine = platform.machine()
+    machine = platform.machine().lower()
 
     # Probe C++11
     if compiler.compiler_type == 'msvc':
