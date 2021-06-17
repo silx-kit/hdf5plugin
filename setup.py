@@ -33,7 +33,7 @@ import os
 import re
 import sys
 import tempfile
-from typing import NamedTuple, Optional, Tuple
+from typing import NamedTuple
 import platform
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -97,7 +97,7 @@ def check_compile_flag(compiler, flag, extension='.c'):
             return True
 
 
-def _is_sse2_avx2_available(compiler) -> Tuple[bool, bool]:
+def _is_sse2_avx2_available(compiler):
     """Returns whether SSE2 and AVX2 are available on the current (x86) CPU
 
     :param distutils.ccompiler.CCompiler compiler: CCompiler to probe
