@@ -33,7 +33,7 @@ import os
 import re
 import sys
 import tempfile
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 import platform
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -135,9 +135,9 @@ class DefaultBuildConfig(NamedTuple):
     sse2: bool = False
     avx2: bool = False
     openmp: bool = False
-    native_compile_args = []
-    sse2_compile_args = []
-    avx2_compile_args = []
+    native_compile_args: Tuple[str, ...] = ()
+    sse2_compile_args: Tuple[str, ...] = ()
+    avx2_compile_args: Tuple[str, ...] = ()
 
     native = property(lambda self: len(self.native_compile_args) > 0,
                       doc="True if native compile option is available")
@@ -268,7 +268,7 @@ class Build(build):
                 "avx2=True is not compatible with sse2=False: set avx2=False")
             self.avx2 = False
 
-        if self.native and self.native_compile_arg is None:
+        if self.native and self.hdf5plugin_config.native_compile_args is None:
             logger.error(
                 "native=True is not supported on this platform: set to False")
             self.native = False
@@ -372,13 +372,13 @@ class PluginBuildExt(build_ext):
 
                 # Enable SSE2/AVX2 if set and add corresponding resources
                 if build_cmd.sse2:
-                    e.extra_compile_args += build_config.sse2_compile_args
+                    e.extra_compile_args.extend(build_config.sse2_compile_args)
                     for name, value in e.sse2.items():
                         attribute = getattr(e, name)
                         attribute += value
 
                 if build_cmd.avx2:
-                    e.extra_compile_args += build_config.avx2_compile_args
+                    e.extra_compile_args.extend(build_config.avx2_compile_args)
                     for name, value in e.avx2.items():
                         attribute = getattr(e, name)
                         attribute += value
@@ -390,7 +390,7 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
             if build_cmd.native:  # Add -march=native/-mcpu=native
-                e.extra_compile_args += build_config.native_compile_args
+                e.extra_compile_args.extend(build_config.native_compile_args)
 
             # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
