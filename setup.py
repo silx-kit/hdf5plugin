@@ -126,12 +126,21 @@ def _is_sse2_avx2_available(compiler) -> Tuple[bool, bool]:
 
 
 class DefaultBuildConfig(NamedTuple):
-    """Describes which build options are available for an architecture"""
+    """Describes current host build options.
+
+    It provides default build options value suited for current host
+    and compile flags to use.
+    """
     cpp11: bool = False
     sse2: bool = False
     avx2: bool = False
     openmp: bool = False
-    native_compile_arg: Optional[str] = None
+    native_compile_args = []
+    sse2_compile_args = []
+    avx2_compile_args = []
+
+    native = property(lambda self: len(self.native_compile_args) > 0,
+                      doc="True if native compile option is available")
 
 
 def get_default_options(compiler) -> DefaultBuildConfig:
@@ -163,7 +172,9 @@ def get_default_options(compiler) -> DefaultBuildConfig:
             sse2=sse2,
             avx2=avx2,
             openmp=has_openmp,
-            native_compile_arg="-march=native",
+            native_compile_args=["-march=native"],
+            sse2_compile_args=['-msse2'],  # /arch:SSE2 is on by default
+            avx2_compile_args=['-mavx2', '/arch:AVX2'],
         )
     if machine == "arm64":
         return DefaultBuildConfig(
@@ -171,7 +182,7 @@ def get_default_options(compiler) -> DefaultBuildConfig:
             sse2=False,
             avx2=False,
             openmp=has_openmp,
-            native_compile_arg="-mcpu=native",
+            native_compile_args=["-mcpu=native"],
         )
     if machine == "mips64":
         return DefaultBuildConfig(
@@ -179,15 +190,17 @@ def get_default_options(compiler) -> DefaultBuildConfig:
             sse2=False,
             avx2=False,
             openmp=has_openmp,
-            native_compile_arg="-march=native",
+            native_compile_args=["-march=native"],
         )
     if machine == "ppc64le":
         return DefaultBuildConfig(
             cpp11=cpp11,
-            sse2=True,  # SSE2 support through -DNO_WARN_X86_INTRINSICS
+            sse2=True,
             avx2=False,
             openmp=has_openmp,
-            native_compile_arg="-mcpu=native",
+            native_compile_args=["-mcpu=native"],
+            # Power9 way of enabling SSE2 support
+            sse2_compile_args=['-DNO_WARN_X86_INTRINSICS'],
         )
     return DefaultBuildConfig(cpp11=cpp11)  # Default with all options disabled
 
@@ -210,7 +223,8 @@ class Build(build):
         ('sse2=', None, "Whether or not to compile with SSE2 support. "
          "Default: HDF5PLUGIN_SSE2 env. var. if set, else "
          "True on ppc64le and when probed on x86, False otherwise"),
-        ('avx2=', None, "Whether or not to compile with AVX2 support."
+        ('avx2=', None, "Whether or not to compile with AVX2 support. "
+         "avx2=True requires sse2=True. "
          "Default: HDF5PLUGIN_AVX2 env. var. if set, else "
          "True on x86 when probed, False otherwise"),
         ('cpp11=', None, "Whether or not to compile C++11 code if available."
@@ -228,24 +242,20 @@ class Build(build):
         logger.info("Probe build options default values")
         compiler = ccompiler.new_compiler(compiler=self.compiler, force=True)
         sysconfig.customize_compiler(compiler)
-        config = get_default_options(compiler)
-
-        # Store native option for later use
-        self.native_compile_arg = config.native_compile_arg
+        self.hdf5plugin_config = get_default_options(compiler)
 
         # Init options
         self.hdf5 = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
         self.openmp = os.environ.get(
-            "HDF5PLUGIN_OPENMP", str(config.openmp)) == "True"
+            "HDF5PLUGIN_OPENMP", str(self.hdf5plugin_config.openmp)) == "True"
         self.native = os.environ.get(
-            "HDF5PLUGIN_NATIVE",
-            "False" if config.native_compile_arg is None else "True") == "True"
+            "HDF5PLUGIN_NATIVE", str(self.hdf5plugin_config.native)) == "True"
         self.sse2 = os.environ.get(
-            "HDF5PLUGIN_SSE2", str(config.sse2)) == "True"
+            "HDF5PLUGIN_SSE2", str(self.hdf5plugin_config.sse2)) == "True"
         self.avx2 = os.environ.get(
-            "HDF5PLUGIN_AVX2", str(config.avx2)) == "True"
+            "HDF5PLUGIN_AVX2", str(self.hdf5plugin_config.avx2)) == "True"
         self.cpp11 = os.environ.get(
-            "HDF5PLUGIN_CPP11", str(config.cpp11)) == "True"
+            "HDF5PLUGIN_CPP11", str(self.hdf5plugin_config.cpp11)) == "True"
 
     def finalize_options(self):
         build.finalize_options(self)
@@ -345,6 +355,7 @@ class PluginBuildExt(build_ext):
         - Set hdf5 directory
         """
         build_cmd = self.distribution.get_command_obj("build")
+        build_config = build_cmd.hdf5plugin_config
         prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
 
         for e in self.extensions:
@@ -356,19 +367,15 @@ class PluginBuildExt(build_ext):
                         attribute = getattr(e, name)
                         attribute += value
 
-                # Enable SSE2/AVX2 if available and add corresponding resources
+                # Enable SSE2/AVX2 if set and add corresponding resources
                 if build_cmd.sse2:
-                    if platform.machine() == 'ppc64le':
-                        # Power9 way of enabling SSE2 support
-                        e.extra_compile_args += ['-DNO_WARN_X86_INTRINSICS']
-                    else:
-                        e.extra_compile_args += ['-msse2'] # /arch:SSE2 is on by default
+                    e.extra_compile_args += build_config.sse2_compile_args
                     for name, value in e.sse2.items():
                         attribute = getattr(e, name)
                         attribute += value
 
                 if build_cmd.avx2:
-                    e.extra_compile_args += ['-mavx2', '/arch:AVX2']
+                    e.extra_compile_args += build_config.avx2_compile_args
                     for name, value in e.avx2.items():
                         attribute = getattr(e, name)
                         attribute += value
@@ -380,10 +387,7 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if not arg.endswith('openmp')]
 
             if build_cmd.native:  # Add -march=native/-mcpu=native
-                if build_cmd.native_compile_arg is None:
-                    logger.error("Unsupported native=True build option")
-                else:
-                    e.extra_compile_args += [build_cmd.native_compile_arg]
+                e.extra_compile_args += build_config.native_compile_args
 
             # Remove flags that do not correspond to compiler
             e.extra_compile_args = [
