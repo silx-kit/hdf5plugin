@@ -143,10 +143,13 @@ class DefaultBuildConfig(NamedTuple):
                       doc="True if native compile option is available")
 
 
-def get_default_options(compiler) -> DefaultBuildConfig:
-    """Returns options for current platform and given compiler.
+def get_build_config(compiler) -> DefaultBuildConfig:
+    """Returns default options and compile flags for current platform and given compiler.
 
-    This is guessing what is available and disabling all for unknown platforms.
+    This is guessing what is available and disabling all options for unknown platforms.
+
+    For differences in native build option across architectures, see
+    https://gcc.gnu.org/onlinedocs/gcc/Submodel-Options.html#Submodel-Options
     """
     machine = platform.machine().lower()
 
@@ -242,7 +245,7 @@ class Build(build):
         logger.info("Probe build options default values")
         compiler = ccompiler.new_compiler(compiler=self.compiler, force=True)
         sysconfig.customize_compiler(compiler)
-        self.hdf5plugin_config = get_default_options(compiler)
+        self.hdf5plugin_config = get_build_config(compiler)
 
         # Init options
         self.hdf5 = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
