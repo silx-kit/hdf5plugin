@@ -148,6 +148,17 @@ class HostConfig:
             'x86*': ('-mavx2', '/arch:AVX2'),
         }.get(machine, ())  # Default no flags
 
+    def get_shared_lib_extension(self) -> str:
+        """Returns shared library file extension"""
+        if sys.platform.startswith('win'):
+            return '.dll'
+        elif sys.platform.startswith('linux'):
+            return '.so'
+        elif sys.platform.startswith('darwin'):
+            return '.dylib'
+        else:  # Return same value as used by build_ext.get_ext_filename
+            return sysconfig.get_config_var('EXT_SUFFIX')
+
     def has_cpp11(self) -> bool:
         """Check C++11 availability on host"""
         if self.__compiler.compiler_type == 'msvc':
@@ -206,6 +217,7 @@ class BuildConfig:
         self.__config_file = str(config_file)
 
         host_config = HostConfig(compiler)
+        self.__filter_file_extension = host_config.get_shared_lib_extension()
 
         # Build option priority order: 1. command line, 2. env. var., 3. probed values
         if hdf5_dir is None:
@@ -251,6 +263,7 @@ class BuildConfig:
         self.__compile_args = tuple(compile_args)
 
     hdf5_dir = property(lambda self: self.__hdf5_dir)
+    filter_file_extension = property(lambda self: self.__filter_file_extension)
     use_cpp11 = property(lambda self: self.__use_cpp11)
     use_sse2 = property(lambda self: self.__use_sse2)
     use_avx2 = property(lambda self: self.__use_avx2)
@@ -265,6 +278,7 @@ class BuildConfig:
             'sse2': self.use_sse2,
             'avx2': self.use_avx2,
             'cpp11': self.use_cpp11,
+            'filter_file_extension': self.filter_file_extension,
         }
         return 'config = ' + str(build_config) + '\n'
 
@@ -382,14 +396,8 @@ class PluginBuildExt(build_ext):
 
     def get_ext_filename(self, ext_name):
         """Overridden to use .dll as file extension"""
-        if sys.platform.startswith('win'):
-            return os.path.join(*ext_name.split('.')) + '.dll'
-        elif sys.platform.startswith('linux'):
-            return os.path.join(*ext_name.split('.')) + '.so'
-        elif sys.platform.startswith('darwin'):
-            return os.path.join(*ext_name.split('.')) + '.dylib'
-        else:
-            return build_ext.get_ext_filename(self, ext_name)
+        config = self.distribution.get_command_obj("build").hdf5plugin_config
+        return os.path.join(*ext_name.split('.')) + config.filter_file_extension
 
     def build_extensions(self):
         """Overridden to tune extensions.
