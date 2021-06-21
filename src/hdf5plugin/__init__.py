@@ -325,11 +325,8 @@ def _init_filters():
             # Use init_filter function to initialize DLL and register filter
             lib.init_filter.argtypes = [_ctypes.c_char_p]
             lib.init_filter.restype = _ctypes.c_int
-            if _sys.version_info[0] >= 3:
-                libname = bytes(_h5py.h5z.__file__, encoding='utf-8')
-            else:
-                libname = _h5py.h5z.__file__
-            retval = lib.init_filter(libname)
+            retval = lib.init_filter(
+                bytes(_h5py.h5z.__file__, encoding='utf-8'))
 
         if retval < 0:
             _logger.error("Cannot initialize filter %s: %d", name, retval)
