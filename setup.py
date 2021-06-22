@@ -30,7 +30,6 @@ __date__ = "15/12/2020"
 from glob import glob
 import logging
 import os
-import re
 import sys
 import tempfile
 import platform
@@ -41,9 +40,16 @@ from setuptools.command.build_py import build_py
 from distutils.command.build import build
 from distutils import ccompiler, errors, sysconfig
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+try:
+    import cpuinfo
+except ImportError as e:
+    raise e
+except Exception:  # cpuinfo raises Exception for unsupported architectures
+    logger.warning("Architecture is not supported by cpuinfo")
+    cpuinfo = None
 
 
 # Patch bdist_wheel
@@ -98,11 +104,7 @@ def check_compile_flag(compiler, flag, extension='.c'):
 
 def has_cpu_flag(flag: str) -> bool:
     """Is given flag available on the current (x86) CPU"""
-    try:
-        import cpuinfo
-    except ImportError as e:
-        raise e
-    except Exception:  # cpuinfo raises Exception for unsupported architectures
+    if cpuinfo is None:
         logger.warning("Cannot get CPU flags")
         return False
     return flag in cpuinfo.get_cpu_info().get('flags', [])
@@ -114,12 +116,8 @@ def get_architecture() -> str:
     Based on cpuinfo and platform.machine()
     """
     machine = platform.machine().lower()
-    try:
-        import cpuinfo
-    except ImportError as e:
-        raise e
-    except Exception:  # cpuinfo raises Exception for unsupported architectures
-        logger.warning("Cannot get CPU flags")
+    if cpuinfo is None:
+        logger.warning("Cannot get architecture")
         return None, machine
     return cpuinfo._parse_arch(machine)[0], machine
 
