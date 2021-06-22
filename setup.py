@@ -33,7 +33,6 @@ import os
 import re
 import sys
 import tempfile
-from typing import Optional
 import platform
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -216,12 +215,12 @@ class BuildConfig:
             self,
             config_file: str,
             compiler=None,
-            hdf5_dir: Optional[str]=None,
-            use_cpp11: Optional[bool]=None,
-            use_sse2: Optional[bool]=None,
-            use_avx2: Optional[bool]=None,
-            use_openmp: Optional[bool]=None,
-            use_native: Optional[bool]=None,
+            hdf5_dir=None,
+            use_cpp11=None,
+            use_sse2=None,
+            use_avx2=None,
+            use_openmp=None,
+            use_native=None,
         ):
 
         self.__config_file = str(config_file)
