@@ -66,10 +66,13 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
   - In ``test/test.py`` for testing reading a compressed file that was produced with another software.
   - In ``src/hdf5plugin/test.py`` for tests that writes data using the compression filter and the compression options helper function and reads back the data.
 
-* Update the ``README.rst`` file to document:
+* Update the ``information.rst`` file to document:
 
   - The version of the HDF5 filter that is embedded in ``hdf5plugin``.
   - The license of the filter (by adding a link to the license file).
+
+* Update the ``usage.rst`` file to document:
+
   - The ``hdf5plugin.<FILTER_NAME>`` filter ID "CONSTANT".
   - The ``hdf5plugin.<filter_name>_options`` compression helper function.
 
