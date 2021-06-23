@@ -37,6 +37,7 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
 from setuptools.command.build_py import build_py
+from setuptools.command.build_clib import build_clib
 from distutils.command.build import build
 from distutils import ccompiler, errors, sysconfig
 
@@ -380,6 +381,28 @@ class BuildPy(build_py):
         super().run()
         build_cmd = self.distribution.get_command_obj("build")
         build_cmd.hdf5plugin_config.save_config()
+
+
+class BuildCLib(build_clib):
+    """build_clib command adding/patching compile args"""
+    def build_libraries(self, libraries):
+        updated_libraries = []
+        for (lib_name, build_info) in libraries:
+            cflags = list(build_info.get('cflags', []))
+
+            # Add flags from build config
+            config = self.distribution.get_command_obj("build").hdf5plugin_config
+            cflags.extend(config.compile_args)
+
+            # Remove flags that do not correspond to compiler
+            prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
+            cflags = [flag for flag in cflags if flag.startswith(prefix)]
+
+            build_info['cflags'] = cflags
+
+            updated_libraries.append((lib_name, build_info))
+
+        super().build_libraries(updated_libraries)
 
 
 class PluginBuildExt(build_ext):
@@ -834,10 +857,12 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.9",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
-cmdclass = dict(build=Build,
-                build_ext=PluginBuildExt,
-                build_py=BuildPy,
-                debian_src=sdist_debian)
+cmdclass = dict(
+    build=Build,
+    build_clib=BuildCLib,
+    build_ext=PluginBuildExt,
+    build_py=BuildPy,
+    debian_src=sdist_debian)
 if BDistWheel is not None:
     cmdclass['bdist_wheel'] = BDistWheel
 
