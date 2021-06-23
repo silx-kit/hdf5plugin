@@ -8,9 +8,9 @@ Pre-built packages
 Pre-built binaries of `hdf5plugin` are available from:
 
 - `pypi <https://pypi.org/project/hdf5plugin>`_, to install run:
-  `pip install hdf5plugin [--user]`
+  ``pip install hdf5plugin [--user]``
 - `conda-forge <https://anaconda.org/conda-forge/hdf5plugin>`_, to install run:
-  `conda install -c conda-forge hdf5plugin`
+  ``conda install -c conda-forge hdf5plugin``
 
 To maximize compatibility, those binaries are built without optimization options (such as `AVX2`_ and `OpenMP`_).
 `Installation from source`_ can achieve better performances than pre-built binaries.
@@ -45,7 +45,7 @@ Available options
      - Custom path to HDF5 (as in h5py).
    * - ``HDF5PLUGIN_HDF5_DIR``
      - ``--openmp``
-     - Whether or not to compile with OpenMP.
+     - Whether or not to compile with `OpenMP`_.
        Default: True if probed (always False on macOS).
    * - ``HDF5PLUGIN_NATIVE``
      - ``--native``
@@ -53,11 +53,11 @@ Available options
        Default: True on supported architectures, False otherwise
    * - ``HDF5PLUGIN_SSE2``
      - ``--sse2``
-     - Whether or not to compile with SSE2 support.
+     - Whether or not to compile with `SSE2`_ support.
        Default: True on ppc64le and when probed on x86, False otherwise
    * - ``HDF5PLUGIN_AVX2``
      - ``--avx2``
-     - Whether or not to compile with AVX2 support. avx2=True requires sse2=True.
+     - Whether or not to compile with `AVX2`_ support. avx2=True requires sse2=True.
        Default: True on x86 when probed, False otherwise
    * - ``HDF5PLUGIN_CPP11``
      - ``--cpp11``
