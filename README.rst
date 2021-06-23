@@ -36,7 +36,7 @@ To install from source and recompile the HDF5 plugins, run::
 
 Installing from source can achieve better performances by enabling AVX2 and OpenMP if available.
 
-For more details, see the `installation documentation<doc/install.rst>`_.
+For more details, see the `installation documentation <doc/install.rst>`_.
 
 Documentation
 -------------
