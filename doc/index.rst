@@ -1,5 +1,5 @@
-hdf5plugin |version|
-====================
+hdf5plugin
+==========
 
 *hdf5plugin* provides HDF5 compression filters (namely: blosc, bitshuffle, lz4, FCIDECOMP, ZFP, zstd) and makes them usable from `h5py <https://www.h5py.org>`_.
 

@@ -18,10 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'hdf5plugin'
-from hdf5plugin import strictversion, version, __date__ as _date
-release = strictversion
-year = _date.split("/")[-1]
-copyright = u'2016-%s, Data analysis unit, European Synchrotron Radiation Facility, Grenoble' % year
+copyright = u'2016-2021, Data analysis unit, European Synchrotron Radiation Facility, Grenoble'
 author = 'ESRF - Data Analysis Unit'
 
 # -- General configuration ---------------------------------------------------
