@@ -31,7 +31,7 @@ How-to use
 
 To use it, just use ``import hdf5plugin`` and supported compression filters are available from `h5py <https://www.h5py.org>`_.
 
-For details, see `Usage documentation <doc/usage.rst>`_
+For details, see `Usage documentation <doc/usage.rst>`_.
 
 License
 -------
@@ -39,4 +39,4 @@ License
 The source code of *hdf5plugin* itself is licensed under the `MIT license <LICENSE>`_.
 
 Embedded HDF5 compression filters are licensed under different open-source licenses:
-see the `license documentation <doc/license.txt>`_.
+see the `license documentation <doc/information.rst#license>`_.
