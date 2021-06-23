@@ -24,6 +24,15 @@ To also run tests relying on actual HDF5 files, run from the source directory::
 
 This tests the installed version of `hdf5plugin`.
 
+Building documentation
+======================
+
+Documentation relies on `Sphinx <https://www.sphinx-doc.org>`_.
+
+To build documentation, run from the project root directory::
+
+   sphinx-build -b html doc/ build/html
+
 Guidelines to add a compression filter
 ======================================
 
