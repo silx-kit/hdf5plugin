@@ -1,7 +1,7 @@
 hdf5plugin |version|
 ====================
 
-*hdf5plugin* provides HDF5 compression filters (namely: blosc, bitshuffle, lz4, FCIDECOMP, ZFP, zstd) and registers them to the HDF5 library used by `h5py <https://www.h5py.org>`_.
+*hdf5plugin* provides HDF5 compression filters (namely: blosc, bitshuffle, lz4, FCIDECOMP, ZFP, zstd) and makes them usable from `h5py <https://www.h5py.org>`_.
 
 * Supported operating systems: Linux, Windows, macOS.
 * Supported versions of Python: >= 3.4
