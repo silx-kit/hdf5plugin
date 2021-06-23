@@ -390,13 +390,11 @@ class BuildCLib(build_clib):
         for (lib_name, build_info) in libraries:
             cflags = list(build_info.get('cflags', []))
 
-            # Add flags from build config
+            # Add flags from build config that corresponds to the compiler
             config = self.distribution.get_command_obj("build").hdf5plugin_config
-            cflags.extend(config.compile_args)
-
-            # Remove flags that do not correspond to compiler
             prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
-            cflags = [flag for flag in cflags if flag.startswith(prefix)]
+            cflags.extend(
+                [f for f in config.compile_args if f.startswith(prefix)])
 
             build_info['cflags'] = cflags
 
