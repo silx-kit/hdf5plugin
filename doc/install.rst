@@ -38,7 +38,7 @@ Available options
    :header-rows: 1
 
    * - Environment variable
-     - Command line option
+     - ``python setup.py build`` option
      - Description
    * - ``HDF5PLUGIN_HDF5_DIR``
      - ``--hdf5``
