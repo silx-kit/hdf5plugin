@@ -1,8 +1,28 @@
-==============
- Contributing
-==============
+============
+ Contribute
+============
 
 This project follows the standard open-source project github workflow, which is described in other projects like `matplotlib <https://matplotlib.org/devel/contributing.html#contributing-code>`_ or `scikit-image <https://scikit-image.org/docs/dev/contribute.html>`_.
+
+Testing
+=======
+
+To run self-contained tests, from Python:
+
+.. code-block:: python
+
+  import hdf5plugin.test
+  hdf5plugin.test.run_tests()
+
+Or, from the command line::
+
+  python -m hdf5plugin.test
+
+To also run tests relying on actual HDF5 files, run from the source directory::
+
+  python test/test.py
+
+This tests the installed version of `hdf5plugin`.
 
 Guidelines to add a compression filter
 ======================================
@@ -46,3 +66,7 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 
 * Update ``doc/compression_opts.rst`` to document the format of ``compression_opts`` expected by the filter.
 
+Low-level compression filter arguments
+======================================
+
+See :doc:`compression_opts`.
