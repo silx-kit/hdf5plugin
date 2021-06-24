@@ -17,7 +17,11 @@ Alternatives to install HDF5 compression filters are: system-wide installation o
    compression_opts.rst
    contribute.rst
    information.rst
+   install.rst
    usage.rst
+
+:doc:`install`
+    How-to install *hdf5plugin*
 
 :doc:`usage`
     How-to use *hdf5plugin*
