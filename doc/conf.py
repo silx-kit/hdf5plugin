@@ -32,6 +32,7 @@ author = 'ESRF - Data Analysis Unit'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autodoc',
 ]
 
 if not on_rtd:
