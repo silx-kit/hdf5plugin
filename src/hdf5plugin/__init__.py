@@ -117,14 +117,57 @@ except AttributeError:
             return self._kwargs[item]
 
 
+class Bitshuffle(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using bitshuffle filter.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'bitshuffle_with_lz4',
+            data=numpy.arange(100),
+            **hdf5plugin.Bitshuffle(nelems=0, lz4=True))
+        f.close()
+
+    :param int nelems:
+        The number of elements per block.
+        It needs to be divisible by eight (default is 0, about 8kB per block)
+        Default: 0 (for about 8kB per block).
+    :param bool lz4:
+        Whether to use lz4 compression or not as part of the filter.
+        Default: True
+    """
+    filter_id = BSHUF_ID
+
+    def __init__(self, nelems=0, lz4=True):
+        nelems = int(nelems)
+        assert nelems % 8 == 0
+
+        lz4_enabled = 2 if lz4 else 0
+        self.filter_options = (nelems, lz4_enabled)
+
+
 class Blosc(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using blosc filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using blosc filter.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'blosc_byte_shuffle_blosclz',
+            data=numpy.arange(100),
+            **hdf5plugin.Blosc(cname='blosclz', clevel=9, shuffle=hdf5plugin.Blosc.SHUFFLE))
+        f.close()
 
     :param str cname:
         `blosclz`, `lz4` (default), `lz4hc`, `zlib`, `zstd`
         Optional: `snappy`, depending on compilation (requires C++11).
     :param int clevel:
-        Compression level from 0 no compression to 9 maximum compression.
+        Compression level from 0 (no compression) to 9 (maximum compression).
         Default: 5.
     :param int shuffle: One of:
         - Blosc.NOSHUFFLE (0): No shuffle
@@ -160,31 +203,45 @@ class Blosc(_FilterRefClass):
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
 
 
-class Bitshuffle(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using bitshuffle filter.
+class FciDecomp(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
-    :param int nelems:
-        The number of elements per block.
-        Default: 0 (for about 8kB per block).
-    :param bool lz4:
-        Whether to use LZ4_ID compression or not as part of the filter.
-        Default: True
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'fcidecomp',
+            data=numpy.arange(100),
+            **hdf5plugin.FciDecomp())
+        f.close()
     """
-    filter_id = BSHUF_ID
+    filter_id = FCIDECOMP_ID
 
-    def __init__(self, nelems=0, lz4=True):
-        nelems = int(nelems)
-        assert nelems % 8 == 0
-
-        lz4_enabled = 2 if lz4 else 0
-        self.filter_options = (nelems, lz4_enabled)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not config.cpp11:
+            _logger.error(
+                "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
+                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler.")
 
 
 class LZ4(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using lz4 filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using lz4 filter.
 
-    :param int nelems:
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset('lz4', data=numpy.arange(100),
+            **hdf5plugin.LZ4(nbytes=0))
+        f.close()
+
+    :param int nbytes:
         The number of bytes per block.
+        It needs to be in the range of 0 < nbytes < 2113929216 (1,9GB).
         Default: 0 (for 1GB per block).
     """
     filter_id = LZ4_ID
@@ -196,20 +253,70 @@ class LZ4(_FilterRefClass):
 
 
 class Zfp(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using ZFP filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using ZFP filter.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'zfp',
+            data=numpy.random.random(100),
+            **hdf5plugin.Zfp())
+        f.close()
 
     This filter provides different modes:
 
-    - **Fixed-rate** mode: To use, set the `rate` argument.
-       For details, see https://zfp.readthedocs.io/en/latest/modes.html#fixed-rate-mode.
-    - **Fixed-precision** mode: To use, set the `precision` argument.
-      For details, see https://zfp.readthedocs.io/en/latest/modes.html#fixed-precision-mode.
-    - **Fixed-accuracy** mode: To use, set the `accuracy` argument
-      For details, see https://zfp.readthedocs.io/en/latest/modes.html#fixed-accuracy-mode.
-    - **Reversible** (i.e., lossless) mode: To use, set the `reversible` argument to True
-      For details, see https://zfp.readthedocs.io/en/latest/modes.html#reversible-mode.
-    - **Expert** mode: To use, set the `minbits`, `maxbits`, `maxprec` and ``minexp` arguments.
-      For details, see https://zfp.readthedocs.io/en/latest/modes.html#expert-mode.
+    - **Fixed-rate** mode: To use, set the ``rate`` argument.
+      For details, see `zfp fixed-rate mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-rate-mode>`_.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'zfp_fixed_rate',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(rate=10.0))
+
+    - **Fixed-precision** mode: To use, set the ``precision`` argument.
+      For details, see `zfp fixed-precision mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-precision-mode>`_.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'zfp_fixed_precision',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(precision=10))
+
+    - **Fixed-accuracy** mode: To use, set the ``accuracy`` argument
+      For details, see `zfp fixed-accuracy mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-accuracy-mode>`_.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'zfp_fixed_accuracy',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(accuracy=0.001))
+
+    - **Reversible** (i.e., lossless) mode: To use, set the ``reversible`` argument to True
+      For details, see `zfp reversible mode <https://zfp.readthedocs.io/en/latest/modes.html#reversible-mode>`_.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'zfp_reversible',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(reversible=True))
+
+    - **Expert** mode: To use, set the ``minbits``, ``maxbits``, ``maxprec`` and ``minexp`` arguments.
+      For details, see `zfp expert mode <https://zfp.readthedocs.io/en/latest/modes.html#expert-mode>`_.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'zfp_expert',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1074))
 
     :param float rate:
         Use fixed-rate mode and set the number of compressed bits per value.
@@ -271,22 +378,20 @@ class Zfp(_FilterRefClass):
 
 
 class Zstd(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'zstd',
+            data=numpy.arange(100),
+            **hdf5plugin.Zstd())
+        f.close()
     """
     filter_id = ZSTD_ID
-
-
-class FciDecomp(_FilterRefClass):
-    """h5py.Group.create_dataset's compression and compression_opts arguments for using FciDecomp filter.
-    """
-    filter_id = FCIDECOMP_ID
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not config.cpp11:
-            _logger.error(
-                "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
-                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler.")
 
 
 def _init_filters():

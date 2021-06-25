@@ -752,6 +752,7 @@ if __name__ == "__main__":
           ext_modules=extensions,
           install_requires=['h5py'],
           setup_requires=['setuptools'],
+          extras_require={'dev': ['sphinx', 'sphinx_rtd_theme']},
           cmdclass=cmdclass,
           libraries=libraries,
           zip_safe=False,
