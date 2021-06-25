@@ -126,6 +126,8 @@ class TestHDF5PluginRW(unittest.TestCase):
                     with self.subTest(compression=cname,
                                       shuffle=shuffle,
                                       clevel=clevel):
+                        if cname == 'snappy' and not hdf5plugin.config.cpp11:
+                            self.skipTest("snappy unavailable without C++11")
                         filter_ = self._test(
                             'blosc',
                             compressed=clevel!=0,  # No compression for clevel=0
