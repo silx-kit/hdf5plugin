@@ -31,7 +31,8 @@ Documentation relies on `Sphinx <https://www.sphinx-doc.org>`_.
 
 To build documentation, run from the project root directory::
 
-   sphinx-build -b html doc/ build/html
+   python setup.py build
+   PYTHONPATH=build/lib.<os>-<machine>-<pyver>/ sphinx-build -b html doc/ build/html
 
 Guidelines to add a compression filter
 ======================================
