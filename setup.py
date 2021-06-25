@@ -707,7 +707,7 @@ f = open("README.rst")
 long_description=f.read()
 f.close()
 license = "https://github.com/silx-kit/hdf5plugin/blob/master/LICENSE"
-classifiers = ["Development Status :: 4 - Beta",
+classifiers = ["Development Status :: 5 - Production/Stable",
                "Environment :: Console",
                "Environment :: MacOS X",
                "Environment :: Win32 (MS Windows)",
