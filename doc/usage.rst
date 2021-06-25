@@ -95,6 +95,20 @@ Zstd
    :members:
    :undoc-members:
 
+Use HDF5 filters in other applications
+++++++++++++++++++++++++++++++++++++++
+
+Non `h5py`_ or non-Python users can also benefit from the supplied HDF5 compression filters for reading compressed datasets by setting the ``HDF5_PLUGIN_PATH`` environment variable the value of ``hdf5plugin.PLUGINS_PATH``, which can be retrieved from the command line with::
+
+    python -c "import hdf5plugin; print(hdf5plugin.PLUGINS_PATH)"
+
+For instance::
+
+    export HDF5_PLUGIN_PATH=$(python -c "import hdf5plugin; print(hdf5plugin.PLUGINS_PATH)")
+
+should allow MatLab or IDL users to read data compressed using the supported plugins.
+
+Setting the ``HDF5_PLUGIN_PATH`` environment variable allows already existing programs or Python code to read compressed data without any modification.
 
 .. _h5py: https://www.h5py.org
 .. _h5py.Group.create_dataset: https://docs.h5py.org/en/stable/high/group.html#h5py.Group.create_dataset
