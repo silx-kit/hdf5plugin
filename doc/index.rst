@@ -10,16 +10,6 @@ hdf5plugin
 
 Alternatives to install HDF5 compression filters are: system-wide installation on Linux or other conda packages: `blosc-hdf5-plugin <https://anaconda.org/conda-forge/blosc-hdf5-plugin>`_, `hdf5-lz4 <https://anaconda.org/nsls2forge/hdf5-lz4>`_.
 
-.. toctree::
-   :hidden:
-
-   changelog.rst
-   compression_opts.rst
-   contribute.rst
-   information.rst
-   install.rst
-   usage.rst
-
 :doc:`install`
     How-to install *hdf5plugin*
 
@@ -31,6 +21,15 @@ Alternatives to install HDF5 compression filters are: system-wide installation o
 
 :doc:`contribute`
     How-to contribute to *hdf5plugin*
+
+.. toctree::
+   :hidden:
+
+   install.rst
+   usage.rst
+   information.rst
+   contribute.rst
+   changelog.rst
 
 Indices and tables
 ==================
