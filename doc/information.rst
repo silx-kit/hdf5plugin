@@ -33,7 +33,9 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * LZ4 plugin (v0.1.0) and lz4 (v1.3.0, tag r122): https://github.com/nexusformat/HDF5-External-Filter-Plugins, https://github.com/lz4/lz4
 * bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
 * hdf5-blosc plugin (v1.0.0), c-blosc (v1.20.1) and snappy (v1.1.1): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/Blosc/c-blosc/tree/v1.17.0/internal-complibs/snappy-1.1.1
-* FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID:25160a42fb62e71e4b0ce081f5cb3f8bb73938b5): ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2/ and https://github.com/team-charls/charls.git
+* FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID: 25160a42fb62e71e4b0ce081f5cb3f8bb73938b5):
+  ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2 and
+  https://github.com/team-charls/charls
 * HDF5-ZFP plugin (v1.0.1) and zfp (v0.5.5): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
 * HDF5Plugin-Zstandard (commit d5afdb5) and zstd (v1.4.5): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/v1.20.1/internal-complibs/zstd-1.4.5
 
