@@ -14,6 +14,11 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os
+
+# See https://docs.readthedocs.io/en/stable/builds.html#build-environment
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+
 
 # -- Project information -----------------------------------------------------
 
@@ -29,6 +34,9 @@ author = 'ESRF - Data Analysis Unit'
 extensions = [
 ]
 
+if not on_rtd:
+    extensions.append('sphinx_rtd_theme')
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
@@ -40,4 +48,4 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'default'
+html_theme = 'default' if on_rtd else 'sphinx_rtd_theme'
