@@ -5,6 +5,8 @@ hdf5plugin
 
 * Supported operating systems: Linux, Windows, macOS.
 * Supported versions of Python: >= 3.4
+* Supported architectures: All.
+  Specific optimizations are available for *x86* family and *ppc64le*.
 
 *hdf5plugin* provides a generic way to enable the use of the provided HDF5 compression filters with `h5py` that can be installed via `pip` or `conda`.
 
