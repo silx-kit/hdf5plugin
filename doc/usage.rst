@@ -4,81 +4,97 @@
 
 .. currentmodule:: hdf5plugin
 
-To use it, just use ``import hdf5plugin`` and supported compression filters are available from `h5py <https://www.h5py.org>`_.
+``hdf5plugin`` allows using additional HDF5 compression filters with `h5py`_ for reading and writing compressed datasets.
+
+Available constants:
+
+* ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
+* ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
+
+Read compressed datasets
+++++++++++++++++++++++++
+
+In order to read compressed dataset with `h5py`_, use:
+
+.. code-block:: python
+
+    import hdf5plugin
+
+It registers ``hdf5plugin`` supported compression filters with the HDF5 library used by `h5py`_.
+Hence, HDF5 compressed datasets can be read as any other dataset (see `h5py documentation <https://docs.h5py.org/en/stable/high/dataset.html#reading-writing-data>`_).
+
+Write compressed datasets
++++++++++++++++++++++++++
+
+As for reading compressed datasets, ``import hdf5plugin`` is required to enable the supported compression filters.
+
+To create a compressed dataset use `h5py.Group.create_dataset`_ and set the ``compression`` and ``compression_opts`` arguments.
+
+``hdf5plugin`` provides helpers to prepare those compression options: `Bitshuffle`_, `Blosc`_, `FciDecomp`_, `LZ4`_, `Zfp`_, `Zstd`_.
 
 Sample code:
 
 .. code-block:: python
 
-  import numpy
-  import h5py
-  import hdf5plugin
+    import numpy
+    import h5py
+    import hdf5plugin
 
-  # Compression
-  f = h5py.File('test.h5', 'w')
-  f.create_dataset('data', data=numpy.arange(100), **hdf5plugin.LZ4())
-  f.close()
+    # Compression
+    f = h5py.File('test.h5', 'w')
+    f.create_dataset('data', data=numpy.arange(100), **hdf5plugin.LZ4())
+    f.close()
 
-  # Decompression
-  f = h5py.File('test.h5', 'r')
-  data = f['data'][()]
-  f.close()
+    # Decompression
+    f = h5py.File('test.h5', 'r')
+    data = f['data'][()]
+    f.close()
 
-``hdf5plugin`` provides:
+Relevant `h5py`_ documentation: `Filter pipeline <https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline>`_ and `Chunked Storage <https://docs.h5py.org/en/stable/high/dataset.html#chunked-storage>`_.
 
-* Compression option helper classes to prepare arguments to provide to ``h5py.Group.create_dataset``:
-
-  - `Bitshuffle`_
-  - `Blosc`_
-  - `FciDecomp`_
-  - `LZ4`_
-  - `Zfp`_
-
-
-* The HDF5 filter ID of embedded plugins:
-
-  - ``BLOSC_ID``
-  - ``BSHUF_ID``
-  - ``FCIDECOMP_ID``
-  - ``LZ4_ID``
-  - ``ZFP_ID``
-  - ``ZSTD_ID``
-
-* ``FILTERS``: A dictionary mapping provided filters to their ID
-* ``PLUGINS_PATH``: The directory where the provided filters library are stored.
 
 Bitshuffle
 ==========
 
 .. autoclass:: Bitshuffle
-   :undoc-members: filter_id
+   :members:
+   :undoc-members:
 
 Blosc
 =====
 
 .. autoclass:: Blosc
-   :undoc-members: filter_id
+   :members:
+   :undoc-members:
 
 FciDecomp
 =========
 
 .. autoclass:: FciDecomp
-   :undoc-members: filter_id
+   :members:
+   :undoc-members:
 
 LZ4
 ===
 
 .. autoclass:: LZ4
-   :undoc-members: filter_id
+   :members:
+   :undoc-members:
 
 Zfp
 ===
 
 .. autoclass:: Zfp
-   :undoc-members: filter_id
+   :members:
+   :undoc-members:
 
 Zstd
 ====
 
 .. autoclass:: Zstd
-   :undoc-members: filter_id
+   :members:
+   :undoc-members:
+
+
+.. _h5py: https://www.h5py.org
+.. _h5py.Group.create_dataset: https://docs.h5py.org/en/stable/high/group.html#h5py.Group.create_dataset
