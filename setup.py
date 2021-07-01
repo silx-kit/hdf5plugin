@@ -129,9 +129,9 @@ class HostConfig:
             self.arch = None
 
         # Set architecture specific compile args
-        if self.arch in ('X86_32', 'X86_64', 'MIPS_32', 'MIPS_64'):
+        if self.arch in ('X86_32', 'X86_64', 'MIPS_64'):
             self.native_compile_args = ("-march=native",)
-        elif self.arch in ('ARM_7', 'ARM_8', 'PPC_32', 'PPC_64'):
+        elif self.arch in ('ARM_7', 'ARM_8', 'PPC_64'):
             self.native_compile_args = ("-mcpu=native",)
         else:
             self.native_compile_args = ()
