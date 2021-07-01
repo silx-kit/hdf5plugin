@@ -9,8 +9,9 @@ This version of `hdf5plugin` requires Python3 adds `mips64` supports and improve
 - Fixed `python setup.py install` (PR #125, #130)
 - Improved build options support (PR #125, #130, #135, #140)
 - Improved tests (PR #128, #129, #132)
-- Updated project description/metadata: Added Python3.9, `python_requires`, updated status to "Stable" (PR #119, #127, #138)
 - Cleaned-up python2 compatibility code (PR #134)
+- Updated project description/metadata: Added Python3.9, `python_requires`, updated status to "Stable" (PR #119, #127, #138)
+- Updated CHANGELOG and version (PR #142)
 
 3.0.0
 -----
