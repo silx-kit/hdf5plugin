@@ -30,7 +30,6 @@ __license__ = "MIT"
 __date__ = "15/05/2020"
 
 import ctypes as _ctypes
-from glob import glob as _glob
 import logging as _logging
 import os as _os
 import struct as _struct
@@ -414,13 +413,13 @@ def _init_filters():
                 continue
 
         # Load DLL
-        filename = _glob(_os.path.join(PLUGINS_PATH, 'libh5' + name + '*'))
-        if len(filename):
-            filename = filename[0]
-        else:
-            _logger.error("Cannot initialize filter %s: File not found", name)
+        filename = _os.path.join(
+            PLUGINS_PATH, 'libh5' + name + config.filter_file_extension)
+        try:
+            lib = _ctypes.CDLL(filename)
+        except OSError:
+            _logger.error("Failed to load filter %s: %s", name, filename)
             continue
-        lib = _ctypes.CDLL(filename)
 
         if _sys.platform.startswith('win'):
             # Use register_filter function to register filter
