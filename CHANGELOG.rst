@@ -1,4 +1,4 @@
-3.1.0: 2021/07/01
+3.1.0: 2021/07/02
 -----------------
 
 This version of `hdf5plugin` requires Python3 adds `mips64` supports and improves support for other architectures.
