@@ -146,8 +146,8 @@
            'xsaves',
            'xtopology',
            'xtpr'],
- 'hz_actual': '1.8345 GHz',
- 'hz_actual_raw': [1834549000, 0],
+ 'hz_actual': '1.5591 GHz',
+ 'hz_actual_raw': [1559106000, 0],
  'hz_advertised': '2.5000 GHz',
  'hz_advertised_raw': [2500000000, 0],
  'l1_data_cache_size': '1.3 MiB',
@@ -164,56 +164,56 @@
 === plugin config ===
 HDF5PluginBuildOptions(openmp=True, native=True, sse2=True, avx2=True, cpp11=True, ipp='/home/esrf/wright/intel/oneapi/ipp/latest', filter_file_extension='.so')
 === Generating test data 0.001 uint16 (2162, 2068) ===
-wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 0.713 s 0.008 GB 115.0:1
-OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.563 s 0.570 s 1.588 GB/s
-OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.467 s 0.533 s 1.913 GB/s
-OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.385 s 0.442 s 2.320 GB/s
-OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.322 s 0.427 s 2.776 GB/s
-OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.418 s 0.515 s 2.138 GB/s
-OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.566 s 0.584 s 1.581 GB/s
-TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.615 s 1.948 s 1.454 GB/s
+wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 0.724 s 0.008 GB 115.0:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.554 s 0.575 s 1.614 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.471 s 0.536 s 1.899 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.382 s 0.428 s 2.341 GB/s
+OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.332 s 0.436 s 2.696 GB/s
+OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.411 s 0.502 s 2.174 GB/s
+OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.606 s 0.633 s 1.475 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.596 s 0.610 s 1.501 GB/s
 === Generating test data 0.001 uint32 (2162, 2068) ===
-wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 6.293 s 0.013 GB 137.7:1
-OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.937 s 0.957 s 1.908 GB/s
-OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.778 s 0.788 s 2.298 GB/s
-OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.684 s 0.688 s 2.615 GB/s
-OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.654 s 0.666 s 2.737 GB/s
-OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.785 s 0.795 s 2.279 GB/s
-OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.294 s 1.334 s 1.382 GB/s
-TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.754 s 1.810 s 1.020 GB/s
+wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 6.122 s 0.013 GB 137.7:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.931 s 0.947 s 1.920 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.803 s 0.811 s 2.227 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.694 s 0.700 s 2.576 GB/s
+OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.682 s 0.685 s 2.624 GB/s
+OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.780 s 0.792 s 2.292 GB/s
+OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.360 s 1.374 s 1.315 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.727 s 1.914 s 1.035 GB/s
 === Generating test data 1 uint16 (2162, 2068) ===
-wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 34.566 s 0.135 GB 6.6:1
-OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.606 s 0.615 s 1.475 GB/s
-OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.468 s 0.474 s 1.912 GB/s
-OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.394 s 0.397 s 2.269 GB/s
-OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.344 s 0.346 s 2.602 GB/s
-OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.407 s 0.409 s 2.196 GB/s
-OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.480 s 0.488 s 1.864 GB/s
-TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 1.477 s 3.229 s 0.605 GB/s
+wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 33.249 s 0.135 GB 6.6:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.604 s 0.613 s 1.482 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.472 s 0.478 s 1.895 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.392 s 0.396 s 2.281 GB/s
+OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.349 s 0.351 s 2.560 GB/s
+OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.409 s 0.411 s 2.187 GB/s
+OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.477 s 0.486 s 1.874 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 1.600 s 3.699 s 0.559 GB/s
 === Generating test data 1 uint32 (2162, 2068) ===
-wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 4.288 s 0.142 GB 12.6:1
-OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.979 s 0.995 s 1.826 GB/s
-OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.836 s 0.846 s 2.138 GB/s
-OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.742 s 0.748 s 2.411 GB/s
-OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.690 s 0.694 s 2.591 GB/s
-OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.817 s 0.824 s 2.189 GB/s
-OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.150 s 1.188 s 1.556 GB/s
-TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.741 s 3.395 s 1.028 GB/s
+wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 4.728 s 0.142 GB 12.6:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.002 s 1.048 s 1.784 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.830 s 0.841 s 2.155 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.717 s 0.721 s 2.496 GB/s
+OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.687 s 0.693 s 2.603 GB/s
+OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.793 s 0.797 s 2.255 GB/s
+OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.200 s 1.231 s 1.490 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.733 s 2.168 s 1.032 GB/s
 === Generating test data 1000 uint16 (2162, 2068) ===
-wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 27.186 s 0.488 GB 1.8:1
-OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.636 s 0.653 s 1.405 GB/s
-OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.517 s 0.524 s 1.729 GB/s
-OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.448 s 0.452 s 1.997 GB/s
-OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.408 s 0.412 s 2.191 GB/s
-OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.470 s 0.479 s 1.901 GB/s
-OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.549 s 0.559 s 1.629 GB/s
-TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.731 s 1.705 s 1.223 GB/s
+wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 32.213 s 0.488 GB 1.8:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.623 s 0.641 s 1.435 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.514 s 0.519 s 1.741 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.445 s 0.449 s 2.011 GB/s
+OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.407 s 0.411 s 2.196 GB/s
+OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.452 s 0.465 s 1.979 GB/s
+OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.553 s 0.577 s 1.618 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.732 s 0.767 s 1.222 GB/s
 === Generating test data 1000 uint32 (2162, 2068) ===
-wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 1.796 s 0.488 GB 3.7:1
-OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.049 s 1.074 s 1.705 GB/s
-OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.927 s 1.147 s 1.930 GB/s
-OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.986 s 1.038 s 1.814 GB/s
-OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.829 s 1.013 s 2.156 GB/s
-OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.939 s 1.152 s 1.905 GB/s
-OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.259 s 1.304 s 1.420 GB/s
-TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.323 s 1.382 s 1.352 GB/s
+wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 1.856 s 0.488 GB 3.7:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.059 s 1.088 s 1.689 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.094 s 1.150 s 1.635 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.896 s 0.980 s 1.996 GB/s
+OMP_NUM_THREADS 8 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.751 s 1.019 s 2.381 GB/s
+OMP_NUM_THREADS 16 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.933 s 1.152 s 1.917 GB/s
+OMP_NUM_THREADS 32 read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.325 s 1.358 s 1.350 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 1.306 s 1.342 s 1.370 GB/s
