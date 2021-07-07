@@ -43,7 +43,7 @@ Available options
    * - ``HDF5PLUGIN_HDF5_DIR``
      - ``--hdf5``
      - Custom path to HDF5 (as in h5py).
-   * - ``HDF5PLUGIN_HDF5_DIR``
+   * - ``HDF5PLUGIN_OPENMP``
      - ``--openmp``
      - Whether or not to compile with `OpenMP`_.
        Default: True if probed (always False on macOS).
