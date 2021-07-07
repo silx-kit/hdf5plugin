@@ -19,9 +19,12 @@
 
 
 // Constants.
+#ifdef HDF5PLUGIN_USEIPP
+#include <ippdc.h>
+#else
 // Use fast decompression instead of safe decompression for LZ4.
 #define BSHUF_LZ4_DECOMPRESS_FAST
-
+#endif
 
 // Macros.
 #define CHECK_ERR_FREE_LZ(count, buf) if (count < 0) {                      \
@@ -96,6 +99,17 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
+#ifdef HDF5PLUGIN_USEIPP
+    int outsize = size * elem_size;
+    IppStatus ret = ippsDecodeLZ4_8u((Ipp8u *) in + 4, nbytes_from_header,
+                                     (Ipp8u *) tmp_buf  , &outsize);
+    if( (ret == ippStsNoErr) && (outsize == (size*elem_size)) ){
+      nbytes = nbytes_from_header;
+    } else {
+      free(tmp_buf);
+      return -91;
+    }
+#else
 #ifdef BSHUF_LZ4_DECOMPRESS_FAST
     nbytes = LZ4_decompress_fast((const char*) in + 4, (char*) tmp_buf, size * elem_size);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
@@ -112,6 +126,7 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
         return -91;
     }
     nbytes = nbytes_from_header;
+#endif
 #endif
     count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);

@@ -211,6 +211,7 @@ class BuildConfig:
             use_avx2=None,
             use_openmp=None,
             use_native=None,
+            ipp_dir=None,
         ):
 
         self.__config_file = str(config_file)
@@ -251,6 +252,10 @@ class BuildConfig:
             use_native = host_config.has_native() if env_native is None else env_native == "True"
         self.__use_native = bool(use_native)
 
+        if ipp_dir is None:
+            ipp_dir = os.environ.get("HDF5PLUGIN_IPP_DIR", None)
+        self.__ipp_dir = ipp_dir
+
         # Gather used compile args
         compile_args = []
         if self.__use_sse2:
@@ -259,9 +264,14 @@ class BuildConfig:
             compile_args.extend(host_config.avx2_compile_args)
         if self.__use_native:
             compile_args.extend(host_config.native_compile_args)
+        if self.__ipp_dir is not None:
+            compile_args += [p+"DHDF5PLUGIN_USEIPP" for p in '-/']
         self.__compile_args = tuple(compile_args)
 
+
     hdf5_dir = property(lambda self: self.__hdf5_dir)
+    ipp_dir = property(lambda self: self.__ipp_dir)
+    use_ipp = property(lambda self: self.__ipp_dir is not None)
     filter_file_extension = property(lambda self: self.__filter_file_extension)
     use_cpp11 = property(lambda self: self.__use_cpp11)
     use_sse2 = property(lambda self: self.__use_sse2)
@@ -277,6 +287,7 @@ class BuildConfig:
             'sse2': self.use_sse2,
             'avx2': self.use_avx2,
             'cpp11': self.use_cpp11,
+            'ipp': self.ipp_dir,
             'filter_file_extension': self.filter_file_extension,
         }
         return 'config = ' + str(build_config) + '\n'
@@ -321,6 +332,9 @@ class Build(build):
         ('cpp11=', None, "Whether or not to compile C++11 code if available."
          "Default: HDF5PLUGIN_CPP11 env. var. if set, else "
          "True if probed."),
+        ('ipp=', None, "Location of $IPPROOT to compile with intel's ipp for bslz4 reading. "
+         "Default: HDF5PLUGIN_IPP_DIR environment variable if set, "
+         "otherwise uses a built-in lz4 (1.7.1)"),
         ]
     user_options.extend(build.user_options)
 
@@ -334,6 +348,7 @@ class Build(build):
         self.native = None
         self.sse2 = None
         self.avx2 = None
+        self.ipp = None
 
     def finalize_options(self):
         build.finalize_options(self)
@@ -346,6 +361,7 @@ class Build(build):
             use_avx2=self.avx2,
             use_openmp=self.openmp,
             use_native=self.native,
+            ipp_dir=self.ipp,
         )
         logger.info("Build configuration: %s", self.hdf5plugin_config.get_config_string())
 
@@ -430,6 +446,8 @@ class PluginBuildExt(build_ext):
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
                 e.set_hdf5_dir(config.hdf5_dir)
+                if config.use_ipp:
+                    e.set_ipp_dir(config.ipp_dir)
                 e.extra_compile_args.extend(config.compile_args)
 
                 if config.use_cpp11:
@@ -483,6 +501,15 @@ class HDF5PluginExtension(Extension):
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
         self.cpp11_required = cpp11_required
+
+    def set_ipp_dir(self, ipproot):
+        machine = platform.machine()
+        arch = { 'x86_64': 'intel64',
+                 'x86_32': 'ia32' }
+        if machine in arch:
+            self.extra_objects += [ os.path.join( ipproot, 'lib', arch[machine], "libipp%s.a"%(lib) )
+                                    for lib in ("dc","s","core") ]
+            self.include_dirs.append( os.path.join( ipproot, 'include' ) )
 
     def set_hdf5_dir(self, hdf5_dir=None):
         """Set the HDF5 installation directory to use to build the plugins.
@@ -543,6 +570,7 @@ bithsuffle_plugin = HDF5PluginExtension(
     include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
+    extra_objects=[],
     sse2=sse2_options,
     )
 
@@ -863,6 +891,7 @@ cmdclass = dict(
     debian_src=sdist_debian)
 if BDistWheel is not None:
     cmdclass['bdist_wheel'] = BDistWheel
+
 
 
 if __name__ == "__main__":

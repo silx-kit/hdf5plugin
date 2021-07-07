@@ -1,0 +1,178 @@
+=== cpuinfo ===
+{'arch': 'X86_64',
+ 'arch_string_raw': 'x86_64',
+ 'bits': 64,
+ 'brand_raw': 'Intel(R) Core(TM) i3-7100 CPU @ 3.90GHz',
+ 'count': 4,
+ 'cpuinfo_version': [8, 0, 0],
+ 'cpuinfo_version_string': '8.0.0',
+ 'family': 6,
+ 'flags': ['3dnowprefetch',
+           'abm',
+           'acpi',
+           'adx',
+           'aes',
+           'aperfmperf',
+           'apic',
+           'arat',
+           'arch_perfmon',
+           'art',
+           'avx',
+           'avx2',
+           'bmi1',
+           'bmi2',
+           'bts',
+           'clflush',
+           'clflushopt',
+           'cmov',
+           'constant_tsc',
+           'cpuid',
+           'cpuid_fault',
+           'cx16',
+           'cx8',
+           'de',
+           'ds_cpl',
+           'dtes64',
+           'dtherm',
+           'dts',
+           'ept',
+           'erms',
+           'est',
+           'f16c',
+           'flexpriority',
+           'flush_l1d',
+           'fma',
+           'fpu',
+           'fsgsbase',
+           'fxsr',
+           'ht',
+           'hwp',
+           'hwp_act_window',
+           'hwp_epp',
+           'hwp_notify',
+           'ibpb',
+           'ibrs',
+           'intel_pt',
+           'invpcid',
+           'invpcid_single',
+           'lahf_lm',
+           'lm',
+           'mca',
+           'mce',
+           'md_clear',
+           'mmx',
+           'monitor',
+           'movbe',
+           'mpx',
+           'msr',
+           'mtrr',
+           'nonstop_tsc',
+           'nopl',
+           'nx',
+           'osxsave',
+           'pae',
+           'pat',
+           'pbe',
+           'pcid',
+           'pclmulqdq',
+           'pdcm',
+           'pdpe1gb',
+           'pebs',
+           'pge',
+           'pln',
+           'pni',
+           'popcnt',
+           'pse',
+           'pse36',
+           'pti',
+           'pts',
+           'rdrand',
+           'rdrnd',
+           'rdseed',
+           'rdtscp',
+           'rep_good',
+           'sdbg',
+           'sep',
+           'sgx',
+           'smap',
+           'smep',
+           'ss',
+           'ssbd',
+           'sse',
+           'sse2',
+           'sse4_1',
+           'sse4_2',
+           'ssse3',
+           'stibp',
+           'syscall',
+           'tm',
+           'tm2',
+           'tpr_shadow',
+           'tsc',
+           'tsc_adjust',
+           'tsc_deadline_timer',
+           'tscdeadline',
+           'vme',
+           'vmx',
+           'vnmi',
+           'vpid',
+           'x2apic',
+           'xgetbv1',
+           'xsave',
+           'xsavec',
+           'xsaveopt',
+           'xsaves',
+           'xtopology',
+           'xtpr'],
+ 'hz_actual': [3900345000, 0],
+ 'hz_actual_friendly': '3.9003 GHz',
+ 'hz_advertised': [3900000000, 0],
+ 'hz_advertised_friendly': '3.9000 GHz',
+ 'l1_data_cache_size': 32768,
+ 'l1_instruction_cache_size': 32768,
+ 'l2_cache_associativity': 6,
+ 'l2_cache_line_size': 256,
+ 'l2_cache_size': 262144,
+ 'l3_cache_size': 3145728,
+ 'model': 158,
+ 'python_version': '3.7.7.final.0 (64 bit)',
+ 'stepping': 9,
+ 'vendor_id_raw': 'GenuineIntel'}
+=== plugin config ===
+HDF5PluginBuildOptions(openmp=True, native=True, sse2=True, avx2=True, cpp11=True, ipp=None, filter_file_extension='.so')
+=== Generating test data 0.001 uint16 (2162, 2068) ===
+wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 0.414 s 0.008 GB 115.0:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.437 s 0.450 s 2.045 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.298 s 0.303 s 2.996 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.289 s 0.292 s 3.089 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.290 s 0.295 s 3.085 GB/s
+=== Generating test data 0.001 uint32 (2162, 2068) ===
+wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 1.192 s 0.013 GB 137.7:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.654 s 0.671 s 2.734 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.487 s 0.499 s 3.676 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.463 s 0.467 s 3.863 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.456 s 0.458 s 3.918 GB/s
+=== Generating test data 1 uint16 (2162, 2068) ===
+wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 0.371 s 0.135 GB 6.6:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.488 s 0.502 s 1.831 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.335 s 0.339 s 2.672 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.322 s 0.332 s 2.779 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.322 s 0.327 s 2.774 GB/s
+=== Generating test data 1 uint32 (2162, 2068) ===
+wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 1.317 s 0.142 GB 12.6:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.701 s 0.718 s 2.551 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.521 s 0.532 s 3.432 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.494 s 0.499 s 3.617 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.500 s 0.503 s 3.575 GB/s
+=== Generating test data 1000 uint16 (2162, 2068) ===
+wrote /dev/shm/bench.h5 testdata 0.894 GB (100, 2162, 2068) 0.485 s 0.488 GB 1.8:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.525 s 0.544 s 1.703 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.385 s 0.389 s 2.325 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.375 s 0.379 s 2.388 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint16 0.894 GB 0.374 s 0.375 s 2.391 GB/s
+=== Generating test data 1000 uint32 (2162, 2068) ===
+wrote /dev/shm/bench.h5 testdata 1.788 GB (100, 2162, 2068) 1.512 s 0.488 GB 3.7:1
+OMP_NUM_THREADS 1 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.768 s 0.793 s 2.329 GB/s
+OMP_NUM_THREADS 2 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.592 s 0.601 s 3.022 GB/s
+OMP_NUM_THREADS 4 read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.563 s 0.570 s 3.178 GB/s
+TESTREAD read /dev/shm/bench.h5 testdata uint32 1.788 GB 0.565 s 0.566 s 3.164 GB/s
