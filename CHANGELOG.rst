@@ -1,3 +1,11 @@
+3.1.1: 2021/07/07
+-----------------
+
+This is a bug fix release:
+
+- Fixed `hdf5plugin` when installed as a Debian/Ubuntu package (PR #147)
+- Fixed and updated documentation (PR #143, #148)
+
 3.1.0: 2021/07/02
 -----------------
 
