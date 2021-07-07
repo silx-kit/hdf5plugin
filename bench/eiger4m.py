@@ -99,7 +99,7 @@ def bench_cases( path, nframes = 100 ):
             print("TESTREAD",end = ' ')
             tst = bench_read( h5name, dsname )
             assert (tst == frms).all()
-             
+    os.remove( h5name )             
         
 if __name__=="__main__":
     np.random.seed(10007*10009)
