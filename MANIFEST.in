@@ -13,3 +13,5 @@ recursive-include src *
 recursive-include test *.py *.h5
 recursive-include package *
 global-exclude *__pycache__/*
+global-exclude *.ipynb_checkpoints/*
+global-exclude .*.swp
