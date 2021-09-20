@@ -33,6 +33,7 @@ author = 'ESRF - Data Analysis Unit'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'nbsphinx',
 ]
 
 if not on_rtd:

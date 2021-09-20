@@ -25,6 +25,13 @@ Project resources
   - Windows: `AppVeyor <https://ci.appveyor.com/project/ESRF/hdf5plugin>`_
 - `Weekly builds <https://silx.gitlab-pages.esrf.fr/bob/hdf5plugin/>`_
 
+* :doc:`Presentation <hdf5plugin_EuropeanHUG2021>` at the `European HDF Users Group (HUG) Summer 2021 <https://www.hdfgroup.org/hug/europeanhug21/>`_:
+
+  - :doc:`Presentation material <hdf5plugin_EuropeanHUG2021>`
+    (:download:`Notebook <hdf5plugin_EuropeanHUG2021.ipynb>`),
+    `Video <https://youtu.be/DP-r2omEnrg>`_
+
+
 HDF5 filters and compression libraries
 --------------------------------------
 
