@@ -586,9 +586,14 @@ include_dirs += lz4_include_dirs
 define_macros.append(('HAVE_LZ4', 1))
 
 # snappy
-snappy_dir = 'src/snappy-1.1.1/'
+snappy_dir = 'src/snappy/'
 snappy_lib = ('snappy', {
-    'sources': glob(snappy_dir + '*.cc'),
+    'sources': [
+        snappy_dir + 'snappy-c.cc',
+        snappy_dir + 'snappy-sinksource.cc',
+        snappy_dir + 'snappy-stubs-internal.cc',
+        snappy_dir + 'snappy.cc',
+    ],
     'include_dirs': glob(snappy_dir),
     'cflags': ['-std=c++11']})
 
