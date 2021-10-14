@@ -1,3 +1,10 @@
+3.2.0: 2021/10/14
+-----------------
+
+- Updated libraries: blosc v1.21.1 (lz4 v1.9.3, zlib v1.2.11, zstd v1.5.0), snappy v1.1.9 (PR #152)
+- Fixed compilation issue occuring on ppc64le in conda-forge (PR #154)
+- Documentation: Added European HDF User Group presentation (PR #150) and updated changelog (PR #155)
+
 3.1.1: 2021/07/07
 -----------------
 
