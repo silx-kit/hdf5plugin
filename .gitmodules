@@ -1,6 +1,0 @@
-[submodule "src/snappy/third_party/benchmark"]
-	path = src/snappy/third_party/benchmark
-	url = https://github.com/google/benchmark.git
-[submodule "src/snappy/third_party/googletest"]
-	path = src/snappy/third_party/googletest
-	url = https://github.com/google/googletest.git
