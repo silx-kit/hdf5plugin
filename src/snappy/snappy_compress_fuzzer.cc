@@ -28,10 +28,9 @@
 //
 // libFuzzer harness for fuzzing snappy compression code.
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "snappy.h"
