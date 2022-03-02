@@ -390,8 +390,32 @@ class Zstd(_FilterRefClass):
             data=numpy.arange(100),
             **hdf5plugin.Zstd())
         f.close()
+
+    :param int clevel: Compression level. Negative values allow for faster
+        speeds at the cost of compression. Ultra compression extends from
+        20 through 22. Default: 3.
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'zstd',
+            data=numpy.arange(100),
+            **hdf5plugin.Zstd(clevel=22))
+        f.close()
     """
     filter_id = ZSTD_ID
+
+    def __init__(self, clevel=None):
+        """
+        `clevel` is chosen to be consistent with the Blosc plugin.
+        The plugin C code refers to clevel as `aggression`.
+        Zstd refers to `CLevel` (e.g. `ZSTD_defaultCLevel()`)
+        and `compressionLevel` for the `clevel` argument.
+        """
+        clevel = int(clevel)
+        if clevel is not None:
+            self.filter_options = (clevel,)
 
 
 def _init_filters():
