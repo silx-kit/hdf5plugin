@@ -414,7 +414,7 @@ class Zstd(_FilterRefClass):
         and `compressionLevel` for the `clevel` argument.
         """
         if clevel is not None:
-            clevel = int(clevel)
+            clevel = _ctypes.c_uint(clevel).value
             self.filter_options = (clevel,)
 
 
