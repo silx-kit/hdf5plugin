@@ -177,6 +177,17 @@ class TestHDF5PluginRW(unittest.TestCase):
     def testZstd(self):
         """Write/read test with Zstd filter plugin"""
         self._test('zstd')
+        tests = [
+            {'clevel': 3},
+            {'clevel': 22},
+            {'clevel': 0}
+        ]
+        for options in tests:
+            for dtype in (numpy.float32, numpy.float64):
+                with self.subTest(options=options, dtype=dtype):
+                    self._test('zstd', dtype=dtype, **options)
+
+
 
 
 class TestPackage(unittest.TestCase):
