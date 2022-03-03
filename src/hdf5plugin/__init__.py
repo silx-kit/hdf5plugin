@@ -413,8 +413,8 @@ class Zstd(_FilterRefClass):
         Zstd refers to `CLevel` (e.g. `ZSTD_defaultCLevel()`)
         and `compressionLevel` for the `clevel` argument.
         """
-        clevel = int(clevel)
         if clevel is not None:
+            clevel = int(clevel)
             self.filter_options = (clevel,)
 
 
