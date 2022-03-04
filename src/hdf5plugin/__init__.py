@@ -391,7 +391,7 @@ class Zstd(_FilterRefClass):
             **hdf5plugin.Zstd())
         f.close()
 
-    :param int clevel: Compression level from 1 (lowest compression) to 22 (maximum compression).
+    :param int clevel: Compression level from -131072 (lowest compression) to 22 (maximum compression).
         Ultra compression extends from 20 through 22. Default: 3.
 
     .. code-block:: python
@@ -407,6 +407,7 @@ class Zstd(_FilterRefClass):
 
     def __init__(self, clevel=None):
         if clevel is not None:
+             # filter_options are passed as uints: conversion needed to pass negative clevel
             clevel = _ctypes.c_uint(clevel).value
             self.filter_options = (clevel,)
 
