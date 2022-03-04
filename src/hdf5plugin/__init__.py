@@ -408,7 +408,6 @@ class Zstd(_FilterRefClass):
 
     def __init__(self, clevel=None):
         if clevel is not None:
-            clevel = _ctypes.c_uint(clevel).value
             self.filter_options = (clevel,)
 
 
