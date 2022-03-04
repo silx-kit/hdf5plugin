@@ -179,8 +179,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         self._test('zstd')
         tests = [
             {'clevel': 3},
-            {'clevel': 22},
-            {'clevel': 0}
+            {'clevel': 22}
         ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
