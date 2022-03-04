@@ -407,12 +407,6 @@ class Zstd(_FilterRefClass):
     filter_id = ZSTD_ID
 
     def __init__(self, clevel=None):
-        """
-        `clevel` is chosen to be consistent with the Blosc plugin.
-        The plugin C code refers to clevel as `aggression`.
-        Zstd refers to `CLevel` (e.g. `ZSTD_defaultCLevel()`)
-        and `compressionLevel` for the `clevel` argument.
-        """
         if clevel is not None:
             clevel = _ctypes.c_uint(clevel).value
             self.filter_options = (clevel,)
