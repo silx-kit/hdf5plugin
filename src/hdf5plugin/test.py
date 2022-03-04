@@ -180,9 +180,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         tests = [
             {'clevel': 3},
             {'clevel': 22},
-            {'clevel': 0},
-            {'clevel': -1},
-            {'clevel': -1000}
+            {'clevel': 0}
         ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
