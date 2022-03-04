@@ -405,9 +405,9 @@ class Zstd(_FilterRefClass):
     """
     filter_id = ZSTD_ID
 
-    def __init__(self, clevel=None):
-        if clevel is not None:
-            self.filter_options = (clevel,)
+    def __init__(self, clevel=3):
+        assert 1 <= clevel <= 22
+        self.filter_options = (clevel,)
 
 
 def _init_filters():
