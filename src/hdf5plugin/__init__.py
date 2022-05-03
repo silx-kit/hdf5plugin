@@ -390,8 +390,24 @@ class Zstd(_FilterRefClass):
             data=numpy.arange(100),
             **hdf5plugin.Zstd())
         f.close()
+
+    :param int clevel: Compression level from 1 (lowest compression) to 22 (maximum compression).
+        Ultra compression extends from 20 through 22. Default: 3.
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'zstd',
+            data=numpy.arange(100),
+            **hdf5plugin.Zstd(clevel=22))
+        f.close()
     """
     filter_id = ZSTD_ID
+
+    def __init__(self, clevel=3):
+        assert 1 <= clevel <= 22
+        self.filter_options = (clevel,)
 
 
 def _init_filters():
