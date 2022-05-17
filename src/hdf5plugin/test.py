@@ -99,6 +99,8 @@ class TestHDF5PluginRW(unittest.TestCase):
         os.remove(filename)
         return filters[0]
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BSHUF_ID),
+                         "Bitshuffle filter not available")
     def testBitshuffle(self):
         """Write/read test with bitshuffle filter plugin"""
         self._test('bshuf')  # Default options
@@ -111,6 +113,8 @@ class TestHDF5PluginRW(unittest.TestCase):
                         filter_ = self._test('bshuf', dtype, compressed=lz4, nelems=nelems, lz4=lz4)
                         self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BLOSC_ID),
+                         "Blosc filter not available")
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
         self._test('blosc')  # Default options
@@ -137,6 +141,8 @@ class TestHDF5PluginRW(unittest.TestCase):
                         self.assertEqual(
                             filter_[2][4:], (clevel, shuffle, compression_id))
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.LZ4_ID),
+                         "LZ4 filter not available")
     def testLZ4(self):
         """Write/read test with lz4 filter plugin"""
         self._test('lz4')
@@ -174,6 +180,8 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         self._test('zfp', dtype=numpy.int32, reversible=True)
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZSTD_ID),
+                         "Zstd filter not available")
     def testZstd(self):
         """Write/read test with Zstd filter plugin"""
         self._test('zstd')
@@ -200,6 +208,7 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(config.sse2, bool)
         self.assertIsInstance(config.avx2, bool)
         self.assertIsInstance(config.cpp11, bool)
+        self.assertIsInstance(config.embedded_filters, tuple)
 
     def testVersion(self):
         """Test version information"""
