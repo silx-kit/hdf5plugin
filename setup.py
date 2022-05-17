@@ -693,7 +693,7 @@ else:
 
 lz4_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/LZ4/H5Zlz4.c', 'src/lz4-r122/lz4.c'],
+    sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c', 'src/lz4-r122/lz4.c'],
     depends=['src/lz4-r122/lz4.h'],
     include_dirs=['src/lz4-r122'],
     extra_compile_args=extra_compile_args,

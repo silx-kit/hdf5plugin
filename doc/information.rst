@@ -37,7 +37,7 @@ HDF5 filters and compression libraries
 
 HDF5 compression filters and compression libraries sources were obtained from:
 
-* LZ4 plugin (v0.1.0) and lz4 (v1.3.0, tag r122): https://github.com/nexusformat/HDF5-External-Filter-Plugins, https://github.com/lz4/lz4
+* LZ4 plugin (commit d48f960) and lz4 (v1.3.0, tag r122): https://github.com/nexusformat/HDF5-External-Filter-Plugins, https://github.com/lz4/lz4
 * bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
 * hdf5-blosc plugin (v1.0.0), c-blosc (v1.21.1) and snappy (v1.1.8): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/google/snappy
 * FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID: 25160a42fb62e71e4b0ce081f5cb3f8bb73938b5):
