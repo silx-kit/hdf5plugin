@@ -426,7 +426,7 @@ def _init_filters():
         # Check if filter is already loaded (not on buggy HDF5 versions)
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
             if _h5py.h5z.filter_avail(filter_id):
-                _logger.warning("%s filter already loaded, skip it.", name)
+                _logger.info("%s filter already loaded, skip it.", name)
                 continue
 
         # Load DLL
