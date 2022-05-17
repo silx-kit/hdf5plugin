@@ -220,5 +220,9 @@ def run_tests(*args, **kwargs):
 
 
 if __name__ == '__main__':
+    import argparse
     import sys
-    sys.exit(0 if run_tests() else 1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verbose", "-v", action="count", default=1, help="Increase verbosity")
+    options = parser.parse_args()
+    sys.exit(0 if run_tests(verbosity=options.verbose) else 1)
