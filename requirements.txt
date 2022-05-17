@@ -1,4 +1,6 @@
+py-cpuinfo==8.0.0
 setuptools
 sphinx
 sphinx_rtd_theme
 nbsphinx
+wheel

@@ -52,6 +52,13 @@ except Exception:  # cpuinfo raises Exception for unsupported architectures
     logger.warning("Architecture is not supported by cpuinfo")
     cpuinfo = None
 
+try:  # Embedded copy of cpuinfo
+    from cpuinfo import _parse_arch as cpuinfo_parse_arch
+except Exception:
+    try:  # Installed version of cpuinfo (when installing with pip)
+        from cpuinfo.cpuinfo import _parse_arch as cpuinfo_parse_arch
+    except Exception:
+        cpuinfo_parse_arch = None
 
 # Patch bdist_wheel
 try:
@@ -124,8 +131,8 @@ class HostConfig:
 
         # Get machine architecture description
         self.machine = platform.machine().lower()
-        if cpuinfo is not None:
-            self.arch = cpuinfo._parse_arch(self.machine)[0]
+        if cpuinfo_parse_arch is not None:
+            self.arch = cpuinfo_parse_arch(self.machine)[0]
         else:
             self.arch = None
 
