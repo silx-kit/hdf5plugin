@@ -261,6 +261,15 @@ class BuildConfig:
             compile_args.extend(host_config.native_compile_args)
         self.__compile_args = tuple(compile_args)
 
+        self.embedded_filters = []
+
+        self.not_embedded_filters = []
+        env_strip = os.environ.get('HDF5PLUGIN_STRIP', None)
+        if env_strip:
+            self.not_embedded_filters = [
+                name.strip().lower() for name in env_strip.split(',')
+            ]
+
     hdf5_dir = property(lambda self: self.__hdf5_dir)
     filter_file_extension = property(lambda self: self.__filter_file_extension)
     use_cpp11 = property(lambda self: self.__use_cpp11)
@@ -278,6 +287,7 @@ class BuildConfig:
             'avx2': self.use_avx2,
             'cpp11': self.use_cpp11,
             'filter_file_extension': self.filter_file_extension,
+            'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
         return 'config = ' + str(build_config) + '\n'
 
@@ -347,7 +357,6 @@ class Build(build):
             use_openmp=self.openmp,
             use_native=self.native,
         )
-        logger.info("Build configuration: %s", self.hdf5plugin_config.get_config_string())
 
         if not self.hdf5plugin_config.use_cpp11:
             # Filter out C++11 libraries
@@ -355,10 +364,25 @@ class Build(build):
                 (name, info) for name, info in self.distribution.libraries
                 if '-std=c++11' not in info.get('cflags', [])]
 
-            # Filter out C++11-only extensions
-            self.distribution.ext_modules = [
-                ext for ext in self.distribution.ext_modules
-                if not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
+            # Add C++11-only extensions to stripped plugins
+            for ext in self.distribution.ext_modules:
+                if isinstance(ext, HDF5PluginExtension) and ext.cpp11_required:
+                    self.hdf5plugin_config.not_embedded_filters.append(
+                        ext.hdf5_plugin_name
+                    )
+
+        # Filter out stripped plugins
+        self.distribution.ext_modules = [
+            ext for ext in self.distribution.ext_modules
+            if not isinstance(ext, HDF5PluginExtension) or ext.hdf5_plugin_name not in self.hdf5plugin_config.not_embedded_filters
+        ]
+
+        self.hdf5plugin_config.embedded_filters = [
+            ext.hdf5_plugin_name for ext in self.distribution.ext_modules
+            if isinstance(ext, HDF5PluginExtension)
+        ]
+
+        logger.info("Build configuration: %s", self.hdf5plugin_config.get_config_string())
 
     def has_config_changed(self):
         """Check if configuration file has changed"""
@@ -504,6 +528,13 @@ class HDF5PluginExtension(Extension):
         if sys.platform.startswith('win'):
             self.library_dirs.insert(0, os.path.join(hdf5_dir, 'lib'))
         self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include'))
+
+    @property
+    def hdf5_plugin_name(self):
+        """Return HDF5 plugin short name"""
+        module_name = self.name.split('.')[-1]
+        assert module_name.startswith('libh5')
+        return module_name[5:]  # Strip libh5
 
 
 def prefix(directory, files):
