@@ -58,7 +58,7 @@ Please read the different licenses:
 
 * bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/bitshuffle/LICENSE>`_
 * blosc: See `src/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/src/hdf5-blosc/LICENSES/>`_, `src/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc/LICENSES/>`_ and `src/snappy/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/snappy/COPYING>`_
-* lz4: See `src/LZ4/COPYING  <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/COPYING>`_ and `src/lz4-r122/LICENSE  <https://github.com/silx-kit/hdf5plugin/blob/main/src/lz4-r122/LICENSE>`_
+* lz4: See `src/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/COPYING>`_, `src/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/LICENSE>`_ and `src/lz4-r122/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/lz4-r122/LICENSE>`_
 * FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/fcidecomp/LICENSE.txt>`_ and `src/charls/src/License.txt  <https://github.com/silx-kit/hdf5plugin/blob/main/src/charls/src/License.txt>`_
 * zfp: See `src/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/H5Z-ZFP/LICENSE>`_ and `src/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/zfp/LICENSE>`_
 * zstd: See `src/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/HDF5Plugin-Zstandard/LICENSE>`_
