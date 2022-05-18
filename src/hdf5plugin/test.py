@@ -107,7 +107,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         return filters[0]
 
     @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
-    def testBitshuffle(self):
+    def testDepreactedBitshuffle(self):
         """Write/read test with bitshuffle filter plugin"""
         self._test('bshuf')  # Default options
 
@@ -118,6 +118,25 @@ class TestHDF5PluginRW(unittest.TestCase):
                     with self.subTest(lz4=lz4, dtype=dtype, nelems=nelems):
                         filter_ = self._test('bshuf', dtype, compressed=lz4, nelems=nelems, lz4=lz4)
                         self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
+
+    @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
+    def testBitshuffle(self):
+        """Write/read test with bitshuffle filter plugin"""
+        self._test('bshuf')  # Default options
+
+        compression_ids = {
+            'none': 0,
+            'lz4': 2,
+            'zstd': 3
+        }
+
+        # Specify options
+        for cname in ('none', 'lz4', 'zstd'):
+            for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
+                for nelems in (1024, 2048):
+                    with self.subTest(cname=cname, dtype=dtype, nelems=nelems):
+                        filter_ = self._test('bshuf', dtype, compressed=cname!='none', nelems=nelems, cname=cname)
+                        self.assertEqual(filter_[2][3:5], (nelems, compression_ids[cname]))
 
     @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
     def testBlosc(self):
