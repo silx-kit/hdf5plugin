@@ -680,7 +680,6 @@ zstandard_plugin = HDF5PluginExtension(
     sources=zstandard_sources,
     depends=zstandard_depends,
     include_dirs=zstandard_include_dirs,
-    define_macros=define_macros,
     )
 
 
