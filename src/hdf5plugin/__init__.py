@@ -411,7 +411,7 @@ class Zstd(_FilterRefClass):
             clevel = _ctypes.c_uint(clevel).value
             self.filter_options = (clevel,)
 
-
+            
 def _init_filters():
     """Initialise and register HDF5 filters with h5py
 
@@ -420,15 +420,15 @@ def _init_filters():
     hdf5_version = _h5py.h5.get_libversion()
 
     for name, filter_id in FILTERS.items():
-        # Skip "optional" filters if not built
-        if name == 'fcidecomp' and not config.cpp11:
-            _logger.info("%s filter not available in this build of hdf5plugin.", name)
+        # Skip filters that were not embedded
+        if name not in config.embedded_filters:
+            _logger.debug("%s filter not available in this build of hdf5plugin.", name)
             continue
 
         # Check if filter is already loaded (not on buggy HDF5 versions)
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
             if _h5py.h5z.filter_avail(filter_id):
-                _logger.warning("%s filter already loaded, skip it.", name)
+                _logger.info("%s filter already loaded, skip it.", name)
                 continue
 
         # Load DLL

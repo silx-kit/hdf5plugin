@@ -52,6 +52,13 @@ except Exception:  # cpuinfo raises Exception for unsupported architectures
     logger.warning("Architecture is not supported by cpuinfo")
     cpuinfo = None
 
+try:  # Embedded copy of cpuinfo
+    from cpuinfo import _parse_arch as cpuinfo_parse_arch
+except Exception:
+    try:  # Installed version of cpuinfo (when installing with pip)
+        from cpuinfo.cpuinfo import _parse_arch as cpuinfo_parse_arch
+    except Exception:
+        cpuinfo_parse_arch = None
 
 # Patch bdist_wheel
 try:
@@ -124,8 +131,8 @@ class HostConfig:
 
         # Get machine architecture description
         self.machine = platform.machine().lower()
-        if cpuinfo is not None:
-            self.arch = cpuinfo._parse_arch(self.machine)[0]
+        if cpuinfo_parse_arch is not None:
+            self.arch = cpuinfo_parse_arch(self.machine)[0]
         else:
             self.arch = None
 
@@ -261,6 +268,15 @@ class BuildConfig:
             compile_args.extend(host_config.native_compile_args)
         self.__compile_args = tuple(compile_args)
 
+        self.embedded_filters = []
+
+        self.not_embedded_filters = []
+        env_strip = os.environ.get('HDF5PLUGIN_STRIP', None)
+        if env_strip:
+            self.not_embedded_filters = [
+                name.strip().lower() for name in env_strip.split(',')
+            ]
+
     hdf5_dir = property(lambda self: self.__hdf5_dir)
     filter_file_extension = property(lambda self: self.__filter_file_extension)
     use_cpp11 = property(lambda self: self.__use_cpp11)
@@ -278,6 +294,7 @@ class BuildConfig:
             'avx2': self.use_avx2,
             'cpp11': self.use_cpp11,
             'filter_file_extension': self.filter_file_extension,
+            'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
         return 'config = ' + str(build_config) + '\n'
 
@@ -302,25 +319,12 @@ class Build(build):
     """Build command with extra options used by PluginBuildExt"""
 
     user_options = [
-        ('hdf5=', None, "Custom path to HDF5 (as in h5py). "
-         "Default: HDF5PLUGIN_HDF5_DIR environment variable if set."),
-        ('openmp=', None, "Whether or not to compile with OpenMP. "
-         "Default: HDF5PLUGIN_OPENMP env. var. if set, else "
-         "True if probed (always False on macOS)."),
-        ('native=', None, "True to compile specifically for the host, "
-         "False for generic support (For unix compilers only). "
-         "Default: HDF5PLUGIN_NATIVE env. var. if set, else "
-         "True on supported architectures, False otherwise"),
-        ('sse2=', None, "Whether or not to compile with SSE2 support. "
-         "Default: HDF5PLUGIN_SSE2 env. var. if set, else "
-         "True on ppc64le and when probed on x86, False otherwise"),
-        ('avx2=', None, "Whether or not to compile with AVX2 support. "
-         "avx2=True requires sse2=True. "
-         "Default: HDF5PLUGIN_AVX2 env. var. if set, else "
-         "True on x86 when probed, False otherwise"),
-        ('cpp11=', None, "Whether or not to compile C++11 code if available."
-         "Default: HDF5PLUGIN_CPP11 env. var. if set, else "
-         "True if probed."),
+        ('hdf5=', None, "Deprecated, use HDF5PLUGIN_HDF5_DIR environment variable"),
+        ('openmp=', None, "Deprecated, use HDF5PLUGIN_OPENMP environment variable"),
+        ('native=', None, "Deprecated, use HDF5PLUGIN_NATIVE environment variable"),
+        ('sse2=', None, "Deprecated, use HDF5PLUGIN_SSE2 environment variable"),
+        ('avx2=', None, "Deprecated, use HDF5PLUGIN_AVX2 environment variable"),
+        ('cpp11=', None, "Deprecated, use HDF5PLUGIN_CPP11 environment variable"),
         ]
     user_options.extend(build.user_options)
 
@@ -337,6 +341,13 @@ class Build(build):
 
     def finalize_options(self):
         build.finalize_options(self)
+        for argument in ('hdf5', 'cpp11', 'openmp', 'native', 'sse2', 'avx2'):
+            if getattr(self, argument) is not None:
+                logger.warning(
+                    "--%s Deprecation warning: "
+                    "use HDF5PLUGIN_%s environement variable.",
+                    argument,
+                    "HDF5_DIR" if argument == "hdf5" else argument.upper())
         self.hdf5plugin_config = BuildConfig(
             config_file=os.path.join(self.build_lib, PROJECT, '_config.py'),
             compiler=self.compiler,
@@ -347,7 +358,6 @@ class Build(build):
             use_openmp=self.openmp,
             use_native=self.native,
         )
-        logger.info("Build configuration: %s", self.hdf5plugin_config.get_config_string())
 
         if not self.hdf5plugin_config.use_cpp11:
             # Filter out C++11 libraries
@@ -355,10 +365,25 @@ class Build(build):
                 (name, info) for name, info in self.distribution.libraries
                 if '-std=c++11' not in info.get('cflags', [])]
 
-            # Filter out C++11-only extensions
-            self.distribution.ext_modules = [
-                ext for ext in self.distribution.ext_modules
-                if not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
+            # Add C++11-only extensions to stripped plugins
+            for ext in self.distribution.ext_modules:
+                if isinstance(ext, HDF5PluginExtension) and ext.cpp11_required:
+                    self.hdf5plugin_config.not_embedded_filters.append(
+                        ext.hdf5_plugin_name
+                    )
+
+        # Filter out stripped plugins
+        self.distribution.ext_modules = [
+            ext for ext in self.distribution.ext_modules
+            if not isinstance(ext, HDF5PluginExtension) or ext.hdf5_plugin_name not in self.hdf5plugin_config.not_embedded_filters
+        ]
+
+        self.hdf5plugin_config.embedded_filters = [
+            ext.hdf5_plugin_name for ext in self.distribution.ext_modules
+            if isinstance(ext, HDF5PluginExtension)
+        ]
+
+        logger.info("Build configuration: %s", self.hdf5plugin_config.get_config_string())
 
     def has_config_changed(self):
         """Check if configuration file has changed"""
@@ -505,6 +530,13 @@ class HDF5PluginExtension(Extension):
             self.library_dirs.insert(0, os.path.join(hdf5_dir, 'lib'))
         self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include'))
 
+    @property
+    def hdf5_plugin_name(self):
+        """Return HDF5 plugin short name"""
+        module_name = self.name.split('.')[-1]
+        assert module_name.startswith('libh5')
+        return module_name[5:]  # Strip libh5
+
 
 def prefix(directory, files):
     """Add a directory as prefix to a list of files.
@@ -648,7 +680,6 @@ zstandard_plugin = HDF5PluginExtension(
     sources=zstandard_sources,
     depends=zstandard_depends,
     include_dirs=zstandard_include_dirs,
-    define_macros=define_macros,
     )
 
 
@@ -661,9 +692,9 @@ else:
 
 lz4_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/LZ4/H5Zlz4.c', 'src/lz4-r122/lz4.c'],
-    depends=['src/lz4-r122/lz4.h'],
-    include_dirs=['src/lz4-r122'],
+    sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'] + lz4_sources,
+    depends=lz4_depends,
+    include_dirs=lz4_include_dirs,
     extra_compile_args=extra_compile_args,
     libraries=['Ws2_32'] if sys.platform.startswith('win') else [],
     )

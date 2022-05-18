@@ -39,6 +39,8 @@ from hdf5plugin.test import suite as hdf5plugin_suite
 class TestHDF5PluginRead(unittest.TestCase):
     """Test reading existing files with compressed data"""
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BLOSC_ID),
+                         "Blosc filter not available")
     def testBlosc(self):
         """Test reading Blosc compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))
@@ -60,6 +62,8 @@ class TestHDF5PluginRead(unittest.TestCase):
         target.shape = expected_shape
         self.assertTrue(numpy.allclose(data, target), "Incorrect readout")
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.LZ4_ID),
+                         "LZ4 filter not available")
     def testLZ4(self):
         """Test reading lz4 compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))
@@ -75,6 +79,8 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.shape[2] == 2070, "Incorrect shape")
         self.assertTrue(data[21, 1911, 1549] == 3141, "Incorrect value")
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BSHUF_ID),
+                         "Bitshuffle filter not available")
     def testBitshuffle(self):
         """Test reading bitshuffle compressed data"""
         dirname = os.path.abspath(os.path.dirname(__file__))

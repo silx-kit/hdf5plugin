@@ -1,0 +1,3 @@
+[build-system]
+requires = ["py-cpuinfo==8.0.0", "setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

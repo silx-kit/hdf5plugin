@@ -101,7 +101,7 @@ jobs:
 
       - name: Install from source package
         run:
-          pip install --pre --find-links dist/ --no-cache-dir --no-index hdf5plugin
+          pip install --pre dist/hdf5plugin*
 
       - name: Print python info
         run: |
