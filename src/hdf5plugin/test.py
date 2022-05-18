@@ -32,6 +32,12 @@ import h5py
 import hdf5plugin
 
 
+def should_test(filter_name):
+    """Returns True if the given filter should be tested"""
+    filter_id = hdf5plugin.FILTERS[filter_name]
+    return filter_name in hdf5plugin.config.embedded_filters or h5py.h5z.filter_avail(filter_id)
+
+
 class TestHDF5PluginRW(unittest.TestCase):
     """Test write/read a HDF5 file with the plugins"""
 
@@ -99,8 +105,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         os.remove(filename)
         return filters[0]
 
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BSHUF_ID),
-                         "Bitshuffle filter not available")
+    @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
     def testBitshuffle(self):
         """Write/read test with bitshuffle filter plugin"""
         self._test('bshuf')  # Default options
@@ -113,8 +118,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                         filter_ = self._test('bshuf', dtype, compressed=lz4, nelems=nelems, lz4=lz4)
                         self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
 
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BLOSC_ID),
-                         "Blosc filter not available")
+    @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
         self._test('blosc')  # Default options
@@ -141,8 +145,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                         self.assertEqual(
                             filter_[2][4:], (clevel, shuffle, compression_id))
 
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.LZ4_ID),
-                         "LZ4 filter not available")
+    @unittest.skipUnless(should_test("lz4"), "LZ4 filter not available")
     def testLZ4(self):
         """Write/read test with lz4 filter plugin"""
         self._test('lz4')
@@ -151,8 +154,7 @@ class TestHDF5PluginRW(unittest.TestCase):
         filter_ = self._test('lz4', nbytes=1024)
         self.assertEqual(filter_[2], (1024,))
 
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.FCIDECOMP_ID),
-                         "FCIDECOMP filter not available")
+    @unittest.skipUnless(should_test("fcidecomp"), "FCIDECOMP filter not available")
     def testFciDecomp(self):
         """Write/read test with fcidecomp filter plugin"""
         # Test with supported datatypes
@@ -160,8 +162,7 @@ class TestHDF5PluginRW(unittest.TestCase):
             with self.subTest(dtype=dtype):
                 self._test('fcidecomp', dtype=dtype)
 
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
-                         "ZFP filter not available")
+    @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
         tests = [
@@ -180,8 +181,7 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         self._test('zfp', dtype=numpy.int32, reversible=True)
 
-    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZSTD_ID),
-                         "Zstd filter not available")
+    @unittest.skipUnless(should_test("zstd"), "Zstd filter not available")
     def testZstd(self):
         """Write/read test with Zstd filter plugin"""
         self._test('zstd')
@@ -193,8 +193,6 @@ class TestHDF5PluginRW(unittest.TestCase):
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
                     self._test('zstd', dtype=dtype, **options)
-
-
 
 
 class TestPackage(unittest.TestCase):
