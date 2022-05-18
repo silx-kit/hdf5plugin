@@ -52,6 +52,13 @@ except Exception:  # cpuinfo raises Exception for unsupported architectures
     logger.warning("Architecture is not supported by cpuinfo")
     cpuinfo = None
 
+try:  # Embedded copy of cpuinfo
+    from cpuinfo import _parse_arch as cpuinfo_parse_arch
+except Exception:
+    try:  # Installed version of cpuinfo (when installing with pip)
+        from cpuinfo.cpuinfo import _parse_arch as cpuinfo_parse_arch
+    except Exception:
+        cpuinfo_parse_arch = None
 
 # Patch bdist_wheel
 try:
@@ -124,8 +131,8 @@ class HostConfig:
 
         # Get machine architecture description
         self.machine = platform.machine().lower()
-        if cpuinfo is not None:
-            self.arch = cpuinfo._parse_arch(self.machine)[0]
+        if cpuinfo_parse_arch is not None:
+            self.arch = cpuinfo_parse_arch(self.machine)[0]
         else:
             self.arch = None
 
@@ -302,25 +309,12 @@ class Build(build):
     """Build command with extra options used by PluginBuildExt"""
 
     user_options = [
-        ('hdf5=', None, "Custom path to HDF5 (as in h5py). "
-         "Default: HDF5PLUGIN_HDF5_DIR environment variable if set."),
-        ('openmp=', None, "Whether or not to compile with OpenMP. "
-         "Default: HDF5PLUGIN_OPENMP env. var. if set, else "
-         "True if probed (always False on macOS)."),
-        ('native=', None, "True to compile specifically for the host, "
-         "False for generic support (For unix compilers only). "
-         "Default: HDF5PLUGIN_NATIVE env. var. if set, else "
-         "True on supported architectures, False otherwise"),
-        ('sse2=', None, "Whether or not to compile with SSE2 support. "
-         "Default: HDF5PLUGIN_SSE2 env. var. if set, else "
-         "True on ppc64le and when probed on x86, False otherwise"),
-        ('avx2=', None, "Whether or not to compile with AVX2 support. "
-         "avx2=True requires sse2=True. "
-         "Default: HDF5PLUGIN_AVX2 env. var. if set, else "
-         "True on x86 when probed, False otherwise"),
-        ('cpp11=', None, "Whether or not to compile C++11 code if available."
-         "Default: HDF5PLUGIN_CPP11 env. var. if set, else "
-         "True if probed."),
+        ('hdf5=', None, "Deprecated, use HDF5PLUGIN_HDF5_DIR environment variable"),
+        ('openmp=', None, "Deprecated, use HDF5PLUGIN_OPENMP environment variable"),
+        ('native=', None, "Deprecated, use HDF5PLUGIN_NATIVE environment variable"),
+        ('sse2=', None, "Deprecated, use HDF5PLUGIN_SSE2 environment variable"),
+        ('avx2=', None, "Deprecated, use HDF5PLUGIN_AVX2 environment variable"),
+        ('cpp11=', None, "Deprecated, use HDF5PLUGIN_CPP11 environment variable"),
         ]
     user_options.extend(build.user_options)
 
@@ -337,6 +331,13 @@ class Build(build):
 
     def finalize_options(self):
         build.finalize_options(self)
+        for argument in ('hdf5', 'cpp11', 'openmp', 'native', 'sse2', 'avx2'):
+            if getattr(self, argument) is not None:
+                logger.warning(
+                    "--%s Deprecation warning: "
+                    "use HDF5PLUGIN_%s environement variable.",
+                    argument,
+                    "HDF5_DIR" if argument == "hdf5" else argument.upper())
         self.hdf5plugin_config = BuildConfig(
             config_file=os.path.join(self.build_lib, PROJECT, '_config.py'),
             compiler=self.compiler,
