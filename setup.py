@@ -539,37 +539,6 @@ PLUGIN_LIB_DEPENDENCIES = dict()
 """Mapping plugin name to library name they depend on"""
 
 
-# bitshuffle (+lz4) plugin
-# Plugins from https://github.com/kiyo-masui/bitshuffle
-bithsuffle_dir = 'src/bitshuffle'
-
-# Set compile args for both MSVC and others, list is stripped at build time
-extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
-extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-if platform.machine() == "ppc64le":
-    # Required on ppc64le
-    sse2_options = {'extra_compile_args': ['-DUSESSE2'] }
-else:
-    sse2_options = {}
-extra_link_args = ['-fopenmp', '/openmp']
-
-bithsuffle_plugin = HDF5PluginExtension(
-    "hdf5plugin.plugins.libh5bshuf",
-    sources=prefix(bithsuffle_dir,
-        ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-         "src/bitshuffle.c", "src/bitshuffle_core.c",
-         "src/iochain.c", "lz4/lz4.c"]),
-    depends=prefix(bithsuffle_dir,
-        ["src/bitshuffle.h", "src/bitshuffle_core.h",
-         "src/iochain.h", 'src/bshuf_h5filter.h',
-         "lz4/lz4.h"]),
-    include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
-    extra_compile_args=extra_compile_args,
-    extra_link_args=extra_link_args,
-    sse2=sse2_options,
-    )
-
-
 # blosc plugin
 # Plugin from https://github.com/Blosc/hdf5-blosc
 # c-blosc from https://github.com/Blosc/c-blosc
@@ -633,10 +602,14 @@ include_dirs += glob(blosc_dir + 'internal-complibs/zlib*')
 define_macros.append(('HAVE_ZLIB', 1))
 
 # zstd
-sources += glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
-depends += glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
-include_dirs += glob(blosc_dir + 'internal-complibs/zstd*')
-include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
+zstd_sources = glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+zstd_depends = glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
+zstd_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
+zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
+
+sources += zstd_sources
+depends += zstd_depends
+include_dirs += zstd_include_dirs
 define_macros.append(('HAVE_ZSTD', 1))
 
 extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
@@ -664,18 +637,49 @@ PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy'
 
 # HDF5Plugin-Zstandard
 zstandard_dir = os.path.join("src", "HDF5Plugin-Zstandard")
-zstandard_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
-zstandard_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 zstandard_sources = [os.path.join(zstandard_dir, 'zstd_h5plugin.c')]
-zstandard_sources += glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+zstandard_sources += zstd_sources
 zstandard_depends = [os.path.join(zstandard_dir, 'zstd_h5plugin.h')]
-zstandard_depends += glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
+zstandard_depends += zstd_depends
 zstandard_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5zstd",
     sources=zstandard_sources,
     depends=zstandard_depends,
-    include_dirs=zstandard_include_dirs,
+    include_dirs=zstd_include_dirs,
     )
+
+# bitshuffle (+lz4 or zstd) plugin
+# Plugins from https://github.com/kiyo-masui/bitshuffle
+bithsuffle_dir = 'src/bitshuffle'
+
+# Set compile args for both MSVC and others, list is stripped at build time
+extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
+extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+if platform.machine() == "ppc64le":
+    # Required on ppc64le
+    sse2_options = {'extra_compile_args': ['-DUSESSE2'] }
+else:
+    sse2_options = {}
+extra_link_args = ['-fopenmp', '/openmp']
+define_macros = [("ZSTD_SUPPORT", 1)]
+
+bithsuffle_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5bshuf",
+    sources=prefix(bithsuffle_dir,
+        ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
+         "src/bitshuffle.c", "src/bitshuffle_core.c",
+         "src/iochain.c", "lz4/lz4.c"]) + zstd_sources,
+    depends=prefix(bithsuffle_dir,
+        ["src/bitshuffle.h", "src/bitshuffle_core.h",
+         "src/iochain.h", 'src/bshuf_h5filter.h',
+         "lz4/lz4.h"]) + zstd_depends,
+    include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']) + zstd_include_dirs,
+    define_macros=define_macros,
+    extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args,
+    sse2=sse2_options,
+    )
+
 
 
 # lz4 plugin
