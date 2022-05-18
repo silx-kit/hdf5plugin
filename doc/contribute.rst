@@ -89,12 +89,18 @@ The meaning of those integers is filter dependent and is described below.
 bitshuffle
 ..........
 
-compression_opts: (**block_size**, **lz4 compression**)
+compression_opts: (**block_size**, **compression**, **level**)
 
 - **block size**: Number of elements (not bytes) per block.
   It MUST be a mulitple of 8.
   Default: 0 for a block size of about 8 kB.
-- **lz4 compression**: 0: disabled (default), 2: enabled.
+- **compression**:
+
+  * 0: No compression
+  * 2: LZ4
+  * 3: Zstd
+
+- **level**: Compression level, only used with Zstd compression.
 
 By default the filter uses bitshuffle, but does NOT compress with LZ4.
 
