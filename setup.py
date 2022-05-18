@@ -693,9 +693,9 @@ else:
 
 lz4_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5lz4",
-    sources=['src/LZ4/H5Zlz4.c', 'src/lz4-r122/lz4.c'],
-    depends=['src/lz4-r122/lz4.h'],
-    include_dirs=['src/lz4-r122'],
+    sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'] + lz4_sources,
+    depends=lz4_depends,
+    include_dirs=lz4_include_dirs,
     extra_compile_args=extra_compile_args,
     libraries=['Ws2_32'] if sys.platform.startswith('win') else [],
     )
