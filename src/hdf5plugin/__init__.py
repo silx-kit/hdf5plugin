@@ -418,9 +418,9 @@ def _init_filters():
     hdf5_version = _h5py.h5.get_libversion()
 
     for name, filter_id in FILTERS.items():
-        # Skip "optional" filters if not built
-        if name == 'fcidecomp' and not config.cpp11:
-            _logger.info("%s filter not available in this build of hdf5plugin.", name)
+        # Skip filters that were not embedded
+        if name not in config.embedded_filters:
+            _logger.debug("%s filter not available in this build of hdf5plugin.", name)
             continue
 
         # Check if filter is already loaded (not on buggy HDF5 versions)
