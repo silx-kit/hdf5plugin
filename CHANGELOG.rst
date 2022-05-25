@@ -8,7 +8,7 @@
 - Added `-v` option to `python -m hdf5plugin.test` (PR #166)
 - Changed "filter already loaded, skip it." log message from warning to info (PR #168)
 - Updated build, now using `pyproject.toml` (PR #167, #173)
-- Updated changelog and version (PR #172)
+- Updated changelog and version (PR #174)
 
 3.2.0: 2021/10/15
 -----------------
