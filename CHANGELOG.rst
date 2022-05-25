@@ -1,3 +1,15 @@
+3.3.0: 2022/05/25
+-----------------
+
+- Deprecated build options passed as arguments to `setup.py`, use environment variables instead (PR #167)
+- Updated LZ4 filter to latest available code and LZ4 compression v1.9.3 (PR #172)
+- Added `clevel` argument to `Zstd` (PR #164)
+- Added `config.embedded_filters` to advertise embedded filters, and `HDF5PLUGIN_STRIP` to configure it during the build (PR #169)
+- Added `-v` option to `python -m hdf5plugin.test` (PR #166)
+- Changed "filter already loaded, skip it." log message from warning to info (PR #168)
+- Updated build, now using `pyproject.toml` (PR #167, #173)
+- Updated changelog and version (PR #172)
+
 3.2.0: 2021/10/15
 -----------------
 
