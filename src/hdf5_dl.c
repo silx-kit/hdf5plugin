@@ -30,6 +30,8 @@
  * HDF5 library.
  */
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 #include <dlfcn.h>
 #include "hdf5.h"
 #include "H5PLextern.h"
@@ -265,6 +267,23 @@ int init_filter(const char* libname)
 herr_t H5open(void)
 {
 CALL(0, H5open)
+};
+
+herr_t H5free_memory(void *mem)
+{
+    /* Special case: Compression filter is not suppose to use this function */
+    free(mem);
+    return 0;
+};
+
+void * H5allocate_memory(size_t size, hbool_t clear)
+{
+    /* Special case: Compression filter is not suppose to use this function */
+    void * ptr = malloc(size);
+    if (clear) {
+        memset(ptr, 0, size);
+    }
+    return ptr;
 };
 
 /*H5E*/
