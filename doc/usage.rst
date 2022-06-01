@@ -9,7 +9,7 @@
 Available constants:
 
 * ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
-* ``hdf5plugin.PLUGINS_PATH``: The directory where the provided filters library are stored.
+* ``hdf5plugin.PLUGIN_PATH``: The directory where the provided filters library are stored.
 
 Read compressed datasets
 ++++++++++++++++++++++++
@@ -98,13 +98,13 @@ Zstd
 Use HDF5 filters in other applications
 ++++++++++++++++++++++++++++++++++++++
 
-Non `h5py`_ or non-Python users can also benefit from the supplied HDF5 compression filters for reading compressed datasets by setting the ``HDF5_PLUGIN_PATH`` environment variable the value of ``hdf5plugin.PLUGINS_PATH``, which can be retrieved from the command line with::
+Non `h5py`_ or non-Python users can also benefit from the supplied HDF5 compression filters for reading compressed datasets by setting the ``HDF5_PLUGIN_PATH`` environment variable the value of ``hdf5plugin.PLUGIN_PATH``, which can be retrieved from the command line with::
 
-    python -c "import hdf5plugin; print(hdf5plugin.PLUGINS_PATH)"
+    python -c "import hdf5plugin; print(hdf5plugin.PLUGIN_PATH)"
 
 For instance::
 
-    export HDF5_PLUGIN_PATH=$(python -c "import hdf5plugin; print(hdf5plugin.PLUGINS_PATH)")
+    export HDF5_PLUGIN_PATH=$(python -c "import hdf5plugin; print(hdf5plugin.PLUGIN_PATH)")
 
 should allow MatLab or IDL users to read data compressed using the supported plugins.
 
