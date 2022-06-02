@@ -50,10 +50,11 @@ from ._version import version, version_info, hexversion, strictversion  # noqa
 from ._config import config
 config = _namedtuple('HDF5PluginBuildOptions', tuple(config.keys()))(**config)
 
-PLUGINS_PATH = _os.path.abspath(
+PLUGIN_PATH = _os.path.abspath(
         _os.path.join(_os.path.dirname(__file__), 'plugins'))
 """Path where HDF5 filter plugins are stored"""
 
+PLUGINS_PATH = PLUGIN_PATH  # Backward compatibility
 
 # IDs of provided filters
 BLOSC_ID = 32001
@@ -431,7 +432,7 @@ def _init_filters():
 
         # Load DLL
         filename = _glob(_os.path.join(
-            PLUGINS_PATH, 'libh5' + name + '*' + config.filter_file_extension))
+            PLUGIN_PATH, 'libh5' + name + '*' + config.filter_file_extension))
         if len(filename):
             filename = filename[0]
         else:
