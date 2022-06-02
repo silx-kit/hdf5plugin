@@ -338,14 +338,9 @@ H5_DLL herr_t H5get_libversion(unsigned *majnum, unsigned *minnum,
 H5_DLL herr_t H5check_version(unsigned majnum, unsigned minnum,
 			       unsigned relnum);
 H5_DLL herr_t H5is_library_threadsafe(hbool_t *is_ts);
-// Special case
-// H5_DLL herr_t H5free_memory(void *mem);
-// H5_DLL void *H5allocate_memory(size_t size, hbool_t clear);
+H5_DLL herr_t H5free_memory(void *mem);
+H5_DLL void *H5allocate_memory(size_t size, hbool_t clear);
 H5_DLL void *H5resize_memory(void *mem, size_t size);
-
-// Filters should use malloc/free
-#define H5free_memory(mem) free(mem)
-#define H5allocate_memory(size, clear) malloc(size)
 
 #ifdef __cplusplus
 }
