@@ -25,6 +25,12 @@ Project resources
   - Windows: `AppVeyor <https://ci.appveyor.com/project/ESRF/hdf5plugin>`_
 - `Weekly builds <https://silx.gitlab-pages.esrf.fr/bob/hdf5plugin/>`_
 
+* :doc:`Presentation <hdf5plugin_EuropeanHUG2022>` at the `European HDF Users Group (HUG) Meeting 2022 <https://www.hdfgroup.org/hug/europeanhug22/>`_:
+
+  - :doc:`Presentation material <hdf5plugin_EuropeanHUG2022>`
+    (:download:`Notebook <hdf5plugin_EuropeanHUG2022.ipynb>`)
+
+
 * :doc:`Presentation <hdf5plugin_EuropeanHUG2021>` at the `European HDF Users Group (HUG) Summer 2021 <https://www.hdfgroup.org/hug/europeanhug21/>`_:
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2021>`
