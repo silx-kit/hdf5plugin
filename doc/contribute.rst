@@ -59,8 +59,8 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 
 * In case of import errors related to HDF5-related undefined symbols, add eventual missing functions under ``src/hdf5_dl.c``.
 
-* Add a compression options helper function named ``<filter_name>_options`` in ``hdf5plugins/__init__.py`` which should return a dictionary containing the values for the ``compression`` and ``compression_opts`` arguments of ``h5py.Group.create_dataset``.
-  This is intended to ease the usage of ``compression_opts``.
+* Add a compression options helper class named ``FilterName`` in ``hdf5plugins/__init__.py`` which should inherit from ``_FilterRefClass``.
+  This is intended to ease the usage of ``h5py.Group.create_dataset`` ``compression_opts`` argument.
 
 * Add tests:
 
@@ -76,7 +76,8 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 
   - The ``hdf5plugin.<FilterName>`` compression argument helper class.
 
-* Update ``doc/contribute.rst`` to document the format of ``compression_opts`` expected by the filter (see `Compression filters can be configured with the ``compression_opts`` argument of `h5py.Group.create_dataset <http://docs.h5py.org/en/stable/high/group.html#Group.create_dataset>`_ method by providing a tuple of integers.
+* Update ``doc/contribute.rst`` to document the format of ``compression_opts`` expected by the filter
+  (see `h5py custom compression filters <https://docs.h5py.org/en/stable/high/dataset.html#custom-compression-filters>`_).
 
 Low-level compression filter arguments
 ======================================
