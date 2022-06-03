@@ -123,6 +123,14 @@ compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compression
 
 By default the filter uses byte shuffle and blosclz.
 
+bzip2
+.....
+
+compression_opts: (**block size**,)
+
+- **block_size**: Size of the blocks as a multiple of 100k.
+  It must be in the range [1, 9].
+
 lz4
 ...
 

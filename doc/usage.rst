@@ -67,6 +67,13 @@ Blosc
    :members:
    :undoc-members:
 
+BZip2
+=====
+
+.. autoclass:: BZip2
+   :members:
+   :undoc-members:
+
 FciDecomp
 =========
 
