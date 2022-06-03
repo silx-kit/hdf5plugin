@@ -1,3 +1,11 @@
+3.3.1: 2022/06/03
+-----------------
+
+- Fixed LZ4 filter compilation with `HDF5PLUGIN_HDF5_DIR` (PR #178)
+- Renamed `PLUGINS_PATH` constant to `PLUGIN_PATH` without `S` (PR #179)
+- Added notebook of European HUG meeting 2022 (PR #176)
+- Updated changelog and version (PR #181)
+
 3.3.0: 2022/05/25
 -----------------
 
