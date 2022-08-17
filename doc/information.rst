@@ -28,7 +28,8 @@ Project resources
 * :doc:`Presentation <hdf5plugin_EuropeanHUG2022>` at the `European HDF Users Group (HUG) Meeting 2022 <https://www.hdfgroup.org/hug/europeanhug22/>`_:
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2022>`
-    (:download:`Notebook <hdf5plugin_EuropeanHUG2022.ipynb>`)
+    (:download:`Notebook <hdf5plugin_EuropeanHUG2022.ipynb>`),
+    `Video <https://youtu.be/Titp1XRBh9k>`_
 
 
 * :doc:`Presentation <hdf5plugin_EuropeanHUG2021>` at the `European HDF Users Group (HUG) Summer 2021 <https://www.hdfgroup.org/hug/europeanhug21/>`_:
