@@ -39,7 +39,7 @@ install:
 
 
 build_script:
-    - "python setup.py bdist_wheel bdist_msi"
+    - "python setup.py bdist_wheel"
     - ps: "ls dist"
 
 
