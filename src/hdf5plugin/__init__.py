@@ -60,6 +60,9 @@ PLUGINS_PATH = PLUGIN_PATH  # Backward compatibility
 BLOSC_ID = 32001
 """Blosc filter ID"""
 
+BZIP2_ID = 307
+"""Bzip2 filter ID"""
+
 LZ4_ID = 32004
 """LZ4_ID filter ID"""
 
@@ -77,6 +80,7 @@ FCIDECOMP_ID = 32018
 
 FILTERS = {'blosc': BLOSC_ID,
            'bshuf': BSHUF_ID,
+           'bzip2': BZIP2_ID,
            'lz4': LZ4_ID,
            'zfp': ZFP_ID,
            'zstd': ZSTD_ID,
@@ -202,6 +206,30 @@ class Blosc(_FilterRefClass):
         assert 0 <= clevel <= 9
         assert shuffle in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE)
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
+
+
+class BZip2(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using BZip2 filter.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'bzip2',
+            data=numpy.arange(100),
+            **hdf5plugin.BZip2(blocksize=5))
+        f.close()
+
+    :param int blocksize: Size of the blocks as a multiple of 100k
+    """
+    filter_id = BZIP2_ID
+
+    def __init__(self, blocksize=9) -> None:
+        blocksize = int(blocksize)
+        assert 1 <= blocksize <= 9
+        self.filter_options = (blocksize,)
 
 
 class FciDecomp(_FilterRefClass):

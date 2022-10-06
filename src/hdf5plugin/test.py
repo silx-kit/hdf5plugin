@@ -67,6 +67,7 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         args = {"blosc": hdf5plugin.Blosc,
                 "bshuf": hdf5plugin.Bitshuffle,
+                "bzip2": hdf5plugin.BZip2,
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
                 "zfp": hdf5plugin.Zfp,
@@ -144,6 +145,17 @@ class TestHDF5PluginRW(unittest.TestCase):
                             shuffle=shuffle)
                         self.assertEqual(
                             filter_[2][4:], (clevel, shuffle, compression_id))
+
+    @unittest.skipUnless(should_test("bzip2"), "BZip2 filter not available")
+    def testBZip2(self):
+        """Write/read test with BZip2 filter plugin"""
+        self._test('bzip2')  # Default options
+
+        # Specify options
+        for blocksize in range(1, 10):
+            with self.subTest(blocksize=blocksize):
+                filter_ = self._test('bzip2', blocksize=blocksize)
+                self.assertEqual(filter_[2][0], blocksize)
 
     @unittest.skipUnless(should_test("lz4"), "LZ4 filter not available")
     def testLZ4(self):

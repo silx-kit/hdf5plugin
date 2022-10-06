@@ -700,6 +700,30 @@ lz4_plugin = HDF5PluginExtension(
     )
 
 
+# BZIP2
+bzip2_dir = "src/bzip2"
+bzip2_sources = prefix(
+    bzip2_dir,
+    ["blocksort.c", "huffman.c", "crctable.c", "randtable.c", "compress.c", "decompress.c", "bzlib.c"])
+bzip2_depends = glob(bzip2_dir + "/*.h")
+bzip2_include_dirs = [bzip2_dir]
+bzip2_extra_compile_args = [
+    "-Wall",
+    "-Winline",
+    "-O2",
+    "-g",
+    "-D_FILE_OFFSET_BITS=64"
+]
+
+bzip2_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5bzip2",
+    sources=['src/PyTables/src/H5Zbzip2.c', 'src/H5Zbzip2_plugin.c'] + bzip2_sources,
+    depends=['src/PyTables/src/H5Zbzip2.h'] + bzip2_depends,
+    include_dirs=['src/PyTables/src/'] + bzip2_include_dirs,
+    define_macros=[('HAVE_BZ2_LIB', 1)],
+    extra_compile_args=bzip2_extra_compile_args,
+    )
+
 # FCIDECOMP
 fcidecomp_dir = 'src/fcidecomp/FCIDECOMP_V1.0.2/Software/FCIDECOMP_SOURCES'
 extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
@@ -778,7 +802,8 @@ zfp_lib = ('zfp', {
 
 libraries = [snappy_lib, charls_lib, zfp_lib]
 
-extensions = [lz4_plugin,
+extensions = [bzip2_plugin,
+              lz4_plugin,
               bithsuffle_plugin,
               blosc_plugin,
               fcidecomp_plugin,
