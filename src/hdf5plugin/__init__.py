@@ -487,6 +487,7 @@ def _init_filters():
             _logger.error("Cannot initialize filter %s: %d", name, retval)
             continue
 
+        _logger.debug("Registered filter: %s (%s)", name, filename)
         yield filename, lib
 
 
