@@ -48,7 +48,7 @@ from ._version import version, version_info, hexversion, strictversion  # noqa
 
 # Give access to build-time config
 from ._config import config
-config = _namedtuple('HDF5PluginBuildOptions', tuple(config.keys()))(**config)
+config = _namedtuple('HDF5PluginBuildConfig', tuple(config.keys()))(**config)
 
 PLUGIN_PATH = _os.path.abspath(
         _os.path.join(_os.path.dirname(__file__), 'plugins'))
@@ -488,7 +488,21 @@ def _init_filters():
             continue
 
         _logger.debug("Registered filter: %s (%s)", name, filename)
-        yield filename, lib
+        yield name, (filename, lib)
 
 
 _filters = dict(_init_filters())  # Store loaded filters
+
+
+def get_config():
+    """Provides information about build configuration and filters registered by hdf5plugin
+    """
+    registered_filters = dict((name, filename) for name, (filename, lib) in _filters.items())
+    HDF5PluginConfig = _namedtuple(
+        'HDF5PluginConfig',
+        ('build_config', 'registered_filters'),
+    )
+    return HDF5PluginConfig(
+        build_config=config,
+        registered_filters=dict((name, filename) for name, (filename, lib) in _filters.items()),
+    )
