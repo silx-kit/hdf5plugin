@@ -52,7 +52,7 @@ config = _namedtuple('HDF5PluginBuildConfig', tuple(config.keys()))(**config)
 
 PLUGIN_PATH = _os.path.abspath(
         _os.path.join(_os.path.dirname(__file__), 'plugins'))
-"""Path where HDF5 filter plugins are stored"""
+"""Directory where the provided HDF5 filter plugins are stored."""
 
 PLUGINS_PATH = PLUGIN_PATH  # Backward compatibility
 
@@ -86,7 +86,7 @@ FILTERS = {'blosc': BLOSC_ID,
            'zstd': ZSTD_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
-"""Mapping of filter name to HDF5 filter ID for available filters"""
+"""Mapping of provided filter's name to their HDF5 filter ID."""
 
 
 try:
@@ -495,7 +495,7 @@ _filters = dict(_init_filters())  # Store loaded filters
 
 
 def get_config():
-    """Provides information about build configuration and filters registered by hdf5plugin
+    """Provides information about build configuration and filters registered by hdf5plugin.
     """
     registered_filters = dict((name, filename) for name, (filename, lib) in _filters.items())
     HDF5PluginConfig = _namedtuple(
