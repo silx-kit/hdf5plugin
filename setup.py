@@ -87,11 +87,11 @@ else:
 
 # Probe host capabilities and manage build config
 
-def check_compile_flag(compiler, flag, extension='.c'):
+def check_compile_flags(compiler, *flags, extension='.c'):
     """Try to compile an empty file to check for compiler args
 
     :param distutils.ccompiler.CCompiler compiler: The compiler to use
-    :param str flag: Flag argument to pass to compiler
+    :param flags: Flags argument to pass to compiler
     :param str extension: Source file extension (default: '.c')
     :returns: Whether or not compilation was successful
     :rtype: bool
@@ -103,7 +103,7 @@ def check_compile_flag(compiler, flag, extension='.c'):
             f.write('int main (int argc, char **argv) { return 0; }\n')
 
         try:
-            compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=[flag])
+            compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=list(flags))
         except errors.CompileError:
             return False
         else:
@@ -171,7 +171,7 @@ class HostConfig:
         """Check C++11 availability on host"""
         if self.__compiler.compiler_type == 'msvc':
             return sys.version_info[:2] >= (3, 5)
-        return check_compile_flag(self.__compiler, '-std=c++11', extension='.cc')
+        return check_compile_flags(self.__compiler, '-std=c++11', extension='.cc')
 
     def has_sse2(self) -> bool:
         """Check SSE2 availability on host"""
@@ -179,7 +179,7 @@ class HostConfig:
             if not has_cpu_flag('sse2'):
                 return False  # SSE2 not available on host
             return (self.__compiler.compiler_type == 'msvc' or
-                    check_compile_flag(self.__compiler, '-msse2'))
+                    check_compile_flags(self.__compiler, '-msse2'))
         if self.machine == 'ppc64le':
             return True
         return False  # Disabled by default
@@ -191,7 +191,7 @@ class HostConfig:
                 return False  # AVX2 not available on host
             if self.__compiler.compiler_type == 'msvc':
                 return sys.version_info[:2] >= (3, 5)
-            return check_compile_flag(self.__compiler, '-mavx2')
+            return check_compile_flags(self.__compiler, '-mavx2')
         return False  # Disabled by default
 
     def has_openmp(self) -> bool:
@@ -199,11 +199,13 @@ class HostConfig:
         if sys.platform.startswith('darwin'):
             return False
         prefix = '/' if self.__compiler.compiler_type == 'msvc' else '-f'
-        return check_compile_flag(self.__compiler, prefix + 'openmp')
+        return check_compile_flags(self.__compiler, prefix + 'openmp')
 
     def has_native(self) -> bool:
         """Returns native build option availability on host"""
-        return len(self.native_compile_args) > 0
+        if len(self.native_compile_args) > 0:
+            return check_compile_flags(self.__compiler, *self.native_compile_args)
+        return False
 
 
 class BuildConfig:
