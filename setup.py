@@ -270,13 +270,6 @@ class BuildConfig:
 
         self.embedded_filters = []
 
-        self.not_embedded_filters = []
-        env_strip = os.environ.get('HDF5PLUGIN_STRIP', None)
-        if env_strip:
-            self.not_embedded_filters = [
-                name.strip().lower() for name in env_strip.split(',')
-            ]
-
     hdf5_dir = property(lambda self: self.__hdf5_dir)
     filter_file_extension = property(lambda self: self.__filter_file_extension)
     use_cpp11 = property(lambda self: self.__use_cpp11)
@@ -365,18 +358,10 @@ class Build(build):
                 (name, info) for name, info in self.distribution.libraries
                 if '-std=c++11' not in info.get('cflags', [])]
 
-            # Add C++11-only extensions to stripped plugins
-            for ext in self.distribution.ext_modules:
-                if isinstance(ext, HDF5PluginExtension) and ext.cpp11_required:
-                    self.hdf5plugin_config.not_embedded_filters.append(
-                        ext.hdf5_plugin_name
-                    )
-
-        # Filter out stripped plugins
-        self.distribution.ext_modules = [
-            ext for ext in self.distribution.ext_modules
-            if not isinstance(ext, HDF5PluginExtension) or ext.hdf5_plugin_name not in self.hdf5plugin_config.not_embedded_filters
-        ]
+            # Filter out C++11-only extensions
+            self.distribution.ext_modules = [
+                ext for ext in self.distribution.ext_modules
+                if not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
 
         self.hdf5plugin_config.embedded_filters = [
             ext.hdf5_plugin_name for ext in self.distribution.ext_modules
@@ -548,6 +533,10 @@ def prefix(directory, files):
     return ['/'.join((directory, f)) for f in files]
 
 
+PLUGIN_LIB_DEPENDENCIES = dict()
+"""Mapping plugin name to library name they depend on"""
+
+
 # bitshuffle (+lz4) plugin
 # Plugins from https://github.com/kiyo-masui/bitshuffle
 bithsuffle_dir = 'src/bitshuffle'
@@ -666,6 +655,8 @@ blosc_plugin = HDF5PluginExtension(
     avx2=avx2_kwargs,
     cpp11=cpp11_kwargs,
     )
+PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy'
+
 
 # HDF5Plugin-Zstandard
 zstandard_dir = os.path.join("src", "HDF5Plugin-Zstandard")
@@ -757,6 +748,8 @@ fcidecomp_plugin = HDF5PluginExtension(
     cpp11_required=True,
     define_macros=[('CHARLS_STATIC', 1)],
     )
+PLUGIN_LIB_DEPENDENCIES['fcidecomp'] = 'charls'
+
 
 # CharLS
 charls_dir = "src/charls/src"
@@ -789,6 +782,7 @@ h5zfp_plugin = HDF5PluginExtension(
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     )
+PLUGIN_LIB_DEPENDENCIES['zfp'] = 'zfp'
 
 # zfp
 zfp_dir = os.path.join("src", "zfp")
@@ -800,16 +794,47 @@ zfp_lib = ('zfp', {
     'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
     })
 
-libraries = [snappy_lib, charls_lib, zfp_lib]
 
-extensions = [bzip2_plugin,
-              lz4_plugin,
-              bithsuffle_plugin,
-              blosc_plugin,
-              fcidecomp_plugin,
-              h5zfp_plugin,
-              zstandard_plugin,
-              ]
+def apply_filter_strip(libraries, extensions, dependencies):
+    """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
+    stripped_filters = set(
+        name.strip().lower()
+        for name in os.environ.get('HDF5PLUGIN_STRIP', '').split(',')
+        if name.strip()
+    )
+
+    if 'all' in stripped_filters:
+        return [], []
+
+    # Filter out library that won't be used because of stripped filters
+    lib_names = set(
+        lib_name for filter_name, lib_name in dependencies.items()
+        if filter_name not in stripped_filters
+    )
+    libraries = [
+        lib for lib in libraries if lib[0] in lib_names
+    ]
+
+    # Filter out stripped filters
+    extensions = [
+        ext for ext in extensions
+        if isinstance(ext, HDF5PluginExtension) and  ext.hdf5_plugin_name not in stripped_filters
+    ]
+    return libraries, extensions
+
+libraries, extensions = apply_filter_strip(
+    libraries=[snappy_lib, charls_lib, zfp_lib],
+    extensions=[
+        bzip2_plugin,
+        lz4_plugin,
+        bithsuffle_plugin,
+        blosc_plugin,
+        fcidecomp_plugin,
+        h5zfp_plugin,
+        zstandard_plugin,
+    ],
+    dependencies=PLUGIN_LIB_DEPENDENCIES,
+)
 
 
 # setup
