@@ -450,6 +450,7 @@ def _init_filters():
         # Skip filters that were not embedded
         if name not in config.embedded_filters:
             _logger.debug("%s filter not available in this build of hdf5plugin.", name)
+            yield name, ("unknown", "unknown")
             continue
 
         # Check if filter is already loaded (not on buggy HDF5 versions)
