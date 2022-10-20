@@ -640,6 +640,8 @@ include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 define_macros.append(('HAVE_ZSTD', 1))
 
 extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
+extra_compile_args += ['-O3', '-ffast-math']
+extra_compile_args += ['/Ox', '/fp:fast']
 extra_compile_args += ['-pthread']
 extra_link_args = ['-pthread']
 
