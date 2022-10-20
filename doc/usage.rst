@@ -6,11 +6,6 @@
 
 ``hdf5plugin`` allows using additional HDF5 compression filters with `h5py`_ for reading and writing compressed datasets.
 
-Available constants:
-
-* ``hdf5plugin.FILTERS``: A dictionary mapping provided filters to their ID
-* ``hdf5plugin.PLUGIN_PATH``: The directory where the provided filters library are stored.
-
 Read compressed datasets
 ++++++++++++++++++++++++
 
@@ -101,6 +96,21 @@ Zstd
 .. autoclass:: Zstd
    :members:
    :undoc-members:
+
+Get information about hdf5plugin
+++++++++++++++++++++++++++++++++
+
+Available constants:
+
+.. autodata:: FILTERS
+   :annotation:
+
+.. autodata:: PLUGIN_PATH
+   :annotation:
+
+Functions:
+
+.. autofunction:: get_config
 
 Use HDF5 filters in other applications
 ++++++++++++++++++++++++++++++++++++++

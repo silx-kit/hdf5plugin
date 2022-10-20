@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2022 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -48,11 +48,11 @@ from ._version import version, version_info, hexversion, strictversion  # noqa
 
 # Give access to build-time config
 from ._config import config
-config = _namedtuple('HDF5PluginBuildOptions', tuple(config.keys()))(**config)
+config = _namedtuple('HDF5PluginBuildConfig', tuple(config.keys()))(**config)
 
 PLUGIN_PATH = _os.path.abspath(
         _os.path.join(_os.path.dirname(__file__), 'plugins'))
-"""Path where HDF5 filter plugins are stored"""
+"""Directory where the provided HDF5 filter plugins are stored."""
 
 PLUGINS_PATH = PLUGIN_PATH  # Backward compatibility
 
@@ -86,7 +86,7 @@ FILTERS = {'blosc': BLOSC_ID,
            'zstd': ZSTD_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
-"""Mapping of filter name to HDF5 filter ID for available filters"""
+"""Mapping of provided filter's name to their HDF5 filter ID."""
 
 
 try:
@@ -456,6 +456,7 @@ def _init_filters():
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
             if _h5py.h5z.filter_avail(filter_id):
                 _logger.info("%s filter already loaded, skip it.", name)
+                yield name, ("unknown", "unknown")
                 continue
 
         # Load DLL
@@ -487,7 +488,22 @@ def _init_filters():
             _logger.error("Cannot initialize filter %s: %d", name, retval)
             continue
 
-        yield filename, lib
+        _logger.debug("Registered filter: %s (%s)", name, filename)
+        yield name, (filename, lib)
 
 
 _filters = dict(_init_filters())  # Store loaded filters
+
+
+def get_config():
+    """Provides information about build configuration and filters registered by hdf5plugin.
+    """
+    registered_filters = dict((name, filename) for name, (filename, lib) in _filters.items())
+    HDF5PluginConfig = _namedtuple(
+        'HDF5PluginConfig',
+        ('build_config', 'registered_filters'),
+    )
+    return HDF5PluginConfig(
+        build_config=config,
+        registered_filters=dict((name, filename) for name, (filename, lib) in _filters.items()),
+    )
