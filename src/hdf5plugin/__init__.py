@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2022 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -450,13 +450,13 @@ def _init_filters():
         # Skip filters that were not embedded
         if name not in config.embedded_filters:
             _logger.debug("%s filter not available in this build of hdf5plugin.", name)
-            yield name, ("unknown", "unknown")
             continue
 
         # Check if filter is already loaded (not on buggy HDF5 versions)
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
             if _h5py.h5z.filter_avail(filter_id):
                 _logger.info("%s filter already loaded, skip it.", name)
+                yield name, ("unknown", "unknown")
                 continue
 
         # Load DLL
