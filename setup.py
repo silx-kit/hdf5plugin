@@ -32,6 +32,7 @@ import itertools
 import logging
 import os
 import sys
+import sysconfig
 import tempfile
 import platform
 from setuptools import setup, Extension
@@ -39,8 +40,13 @@ from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
 from setuptools.command.build_py import build_py
 from setuptools.command.build_clib import build_clib
-from distutils.command.build import build
-from distutils import ccompiler, errors, sysconfig
+try:  # setuptools >=62.4.0
+    from setuptools.command.build import build
+except ImportError:
+    from distutils.command.build import build
+import distutils.ccompiler
+import distutils.errors
+import distutils.sysconfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -105,7 +111,7 @@ def check_compile_flags(compiler, *flags, extension='.c'):
 
         try:
             compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=list(flags))
-        except errors.CompileError:
+        except distutils.errors.CompileError:
             return False
         else:
             return True
@@ -126,8 +132,8 @@ class HostConfig:
     https://gcc.gnu.org/onlinedocs/gcc/Submodel-Options.html#Submodel-Options
     """
     def __init__(self, compiler=None):
-        compiler = ccompiler.new_compiler(compiler, force=True)
-        sysconfig.customize_compiler(compiler)
+        compiler = distutils.ccompiler.new_compiler(compiler, force=True)
+        distutils.sysconfig.customize_compiler(compiler)
         self.__compiler = compiler
 
         # Get machine architecture description

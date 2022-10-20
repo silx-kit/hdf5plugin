@@ -14,9 +14,6 @@ print("       maxsize: %s\t maxunicode: %s" % (sys.maxsize, sys.maxunicode))
 print(sys.version)
 print(" ")
 
-try:
-    from distutils.sysconfig import get_config_vars
-except ImportError:
-    from sysconfig import get_config_vars
+from sysconfig import get_config_vars
 print("Config: " + str(get_config_vars("CONFIG_ARGS")))
 print("")
