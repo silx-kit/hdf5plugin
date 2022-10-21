@@ -35,6 +35,7 @@ import logging as _logging
 import os as _os
 import struct as _struct
 import sys as _sys
+import traceback as _traceback
 from collections.abc import Mapping as _Mapping
 from collections import namedtuple as _namedtuple
 import h5py as _h5py
@@ -456,7 +457,7 @@ def _init_filters():
         if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
             if _h5py.h5z.filter_avail(filter_id):
                 _logger.info("%s filter already loaded, skip it.", name)
-                yield name, ("unknown", "unknown")
+                yield name, ("unknown", None)
                 continue
 
         # Load DLL
@@ -471,6 +472,7 @@ def _init_filters():
             lib = _ctypes.CDLL(filename)
         except OSError:
             _logger.error("Failed to load filter %s: %s", name, filename)
+            _logger.error(_traceback.format_exc())
             continue
 
         if _sys.platform.startswith('win'):
@@ -498,7 +500,6 @@ _filters = dict(_init_filters())  # Store loaded filters
 def get_config():
     """Provides information about build configuration and filters registered by hdf5plugin.
     """
-    registered_filters = dict((name, filename) for name, (filename, lib) in _filters.items())
     HDF5PluginConfig = _namedtuple(
         'HDF5PluginConfig',
         ('build_config', 'registered_filters'),
