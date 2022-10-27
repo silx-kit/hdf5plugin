@@ -76,8 +76,14 @@ ZFP_ID = 32013
 ZSTD_ID = 32015
 """Zstandard filter ID"""
 
+SZ_ID = 32017
+"""FCIDECOMP filter ID"""
+
+
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
+
+
 
 FILTERS = {'blosc': BLOSC_ID,
            'bshuf': BSHUF_ID,
@@ -85,6 +91,7 @@ FILTERS = {'blosc': BLOSC_ID,
            'lz4': LZ4_ID,
            'zfp': ZFP_ID,
            'zstd': ZSTD_ID,
+           'sz': SZ_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
 """Mapping of provided filter's name to their HDF5 filter ID."""

@@ -799,6 +799,37 @@ zfp_lib = ('zfp', {
     })
 
 
+# sz and sz plugin
+sz_dir = os.path.join("src", "SZ", "sz")
+sz_sources = glob(os.path.join(sz_dir, "src", "*.c"))
+sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
+sz_lib = ("sz", {
+    "sources": sz_sources,
+    "include_dirs": sz_include_dirs,
+    "cflags": ['-DBUILD_HDF5_FILTER:BOOL=ON'],
+    })
+
+
+h5zsz_dir = os.path.join("src","SZ","hdf5-filter","H5Z-SZ")
+sources = glob(h5zsz_dir + "/src/"+ "*.c")
+depends = glob(h5zsz_dir + "/src/" + "*.h")
+include_dirs = [h5zsz_dir]
+include_dirs = [h5zsz_dir, sz_dir]
+extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
+extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+extra_link_args = ['-fopenmp', '/openmp', "-lzstd"]
+
+sz_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5sz",
+    sources=sources,
+    depends=depends,
+    include_dirs=include_dirs,
+    extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args,
+)
+PLUGIN_LIB_DEPENDENCIES['sz'] = 'sz'
+
+
 def apply_filter_strip(libraries, extensions, dependencies):
     """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
     stripped_filters = set(
@@ -827,7 +858,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
@@ -836,10 +867,12 @@ libraries, extensions = apply_filter_strip(
         fcidecomp_plugin,
         h5zfp_plugin,
         zstandard_plugin,
+        sz_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
 
+# raise Exception((libraries, extensions))
 
 # setup
 
