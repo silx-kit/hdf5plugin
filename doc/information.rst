@@ -25,6 +25,11 @@ Project resources
   - Windows: `AppVeyor <https://ci.appveyor.com/project/ESRF/hdf5plugin>`_
 - `Weekly builds <https://silx.gitlab-pages.esrf.fr/bob/hdf5plugin/>`_
 
+`hdf5plugin` can be cited with its `Zenodo DOI <https://doi.org/10.5281/zenodo.7257761>`_.
+
+Presentations
+-------------
+
 * :doc:`Presentation <hdf5plugin_EuropeanHUG2022>` at the `European HDF Users Group (HUG) Meeting 2022 <https://www.hdfgroup.org/hug/europeanhug22/>`_:
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2022>`

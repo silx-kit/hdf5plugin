@@ -1,6 +1,9 @@
 hdf5plugin
 ==========
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7257761.svg
+   :target: https://doi.org/10.5281/zenodo.7257761
+
 *hdf5plugin* provides `HDF5 compression filters <https://portal.hdfgroup.org/display/support/Registered+Filter+Plugins>`_` (namely: blosc, bitshuffle, bzip2, FCIDECOMP, lz4, ZFP, zstd) and makes them usable from `h5py <https://www.h5py.org>`_.
 
 See `documentation <http://www.silx.org/doc/hdf5plugin/latest/>`_.
