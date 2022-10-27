@@ -77,7 +77,7 @@ ZSTD_ID = 32015
 """Zstandard filter ID"""
 
 SZ_ID = 32017
-"""FCIDECOMP filter ID"""
+"""SZ filter ID"""
 
 
 FCIDECOMP_ID = 32018

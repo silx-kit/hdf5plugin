@@ -798,22 +798,22 @@ zfp_lib = ('zfp', {
     'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
     })
 
-
-# sz and sz plugin
+# Trying to add sz and its hdf5 plugin
 sz_dir = os.path.join("src", "SZ", "sz")
 sz_sources = glob(os.path.join(sz_dir, "src", "*.c"))
 sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
 sz_lib = ("sz", {
     "sources": sz_sources,
     "include_dirs": sz_include_dirs,
-    "cflags": ['-DBUILD_HDF5_FILTER:BOOL=ON'],
-    })
+    "cflags": ["-lzstd"],
+})
+
+# "cflags": ['-DBUILD_HDF5_FILTER:BOOL=ON'],
 
 
-h5zsz_dir = os.path.join("src","SZ","hdf5-filter","H5Z-SZ")
-sources = glob(h5zsz_dir + "/src/"+ "*.c")
+h5zsz_dir = os.path.join("src", "SZ", "hdf5-filter", "H5Z-SZ")
+sources = glob(h5zsz_dir + "/src/" + "*.c")
 depends = glob(h5zsz_dir + "/src/" + "*.h")
-include_dirs = [h5zsz_dir]
 include_dirs = [h5zsz_dir, sz_dir]
 extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
 extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
