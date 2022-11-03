@@ -26,7 +26,7 @@ __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "15/12/2020"
 
-
+import shutil
 from glob import glob
 import logging
 import os
@@ -69,6 +69,7 @@ else:
     from pkg_resources import parse_version
     import wheel
     from wheel.bdist_wheel import get_platform
+
 
     class BDistWheel(bdist_wheel):
         """Override bdist_wheel to handle as pure python package"""
@@ -421,6 +422,12 @@ class PluginBuildExt(build_ext):
     It also handles extra compile arguments depending on the build options.
     """
 
+    def run(self):
+        for ext in self.extensions:
+            if isinstance(ext, SZ):
+                self.build_cmake(ext)
+        super().run()
+
     def get_export_symbols(self, ext):
         """Overridden to remove PyInit_* export"""
         return ext.export_symbols
@@ -471,6 +478,33 @@ class PluginBuildExt(build_ext):
                 arg for arg in e.extra_link_args if arg.startswith(prefix)]
 
         build_ext.build_extensions(self)
+
+    def build_cmake(self, ext):
+        import pathlib
+        cwd = pathlib.Path().absolute()
+
+        # these dirs will be created in build_py, so if you don't have
+        # any python sources to bundle, the dirs will be missing
+        build_temp = pathlib.Path(self.build_temp)
+        if not build_temp.exists():
+            build_temp.mkdir(parents=True, exist_ok=True)
+
+        extdir = pathlib.Path(self.get_ext_fullpath(ext.name)).parent
+        if not extdir.exists():
+            extdir.mkdir(parents=True, exist_ok=True)
+
+        folder = extdir.absolute()
+        cmake_args = [
+            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY:PATH=' + folder.as_posix(),
+            "-DBUILD_HDF5_FILTER:BOOL=ON",
+        ]
+
+        os.chdir(str(build_temp))
+
+        self.spawn(['cmake', str(cwd) + "/src/SZ"] + cmake_args)
+        if not self.dry_run:
+            self.spawn(['cmake', '--build', '.'])
+        os.chdir(str(cwd))
 
 
 class HDF5PluginExtension(Extension):
@@ -525,6 +559,12 @@ class HDF5PluginExtension(Extension):
         return module_name[5:]  # Strip libh5
 
 
+class SZ(HDF5PluginExtension):
+    def __init__(self, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
+        self.name = "hdf5plugin.plugins.libh5sz"
+        super().__init__(self.name, sse2=sse2, avx2=avx2, cpp11=cpp11, cpp11_required=cpp11_required, sources=[], **kwargs)
+
+
 def prefix(directory, files):
     """Add a directory as prefix to a list of files.
 
@@ -537,7 +577,6 @@ def prefix(directory, files):
 
 PLUGIN_LIB_DEPENDENCIES = dict()
 """Mapping plugin name to library name they depend on"""
-
 
 # bitshuffle (+lz4) plugin
 # Plugins from https://github.com/kiyo-masui/bitshuffle
@@ -858,7 +897,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
@@ -867,14 +906,15 @@ libraries, extensions = apply_filter_strip(
         fcidecomp_plugin,
         h5zfp_plugin,
         zstandard_plugin,
-        sz_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
 
-# raise Exception((libraries, extensions))
+# Add SZ extension.
+extensions += [SZ()]
 
 # setup
+
 
 def get_version(debian=False):
     """Returns current version number from _version.py file"""
