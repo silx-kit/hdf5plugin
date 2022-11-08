@@ -603,6 +603,7 @@ define_macros.append(('HAVE_ZLIB', 1))
 
 # zstd
 zstd_sources = glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+zstd_extra_objects = glob(blosc_dir +'internal-complibs/zstd*/*/*.S')
 zstd_depends = glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
 zstd_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
 zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
@@ -622,6 +623,7 @@ blosc_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5blosc",
     sources=sources + \
         prefix(hdf5_blosc_dir,['blosc_filter.c', 'blosc_plugin.c']),
+    extra_objects=zstd_extra_objects,
     depends=depends + \
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
@@ -644,6 +646,7 @@ zstandard_depends += zstd_depends
 zstandard_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5zstd",
     sources=zstandard_sources,
+    extra_objects=zstd_extra_objects,
     depends=zstandard_depends,
     include_dirs=zstd_include_dirs,
     )
@@ -669,6 +672,7 @@ bithsuffle_plugin = HDF5PluginExtension(
         ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
          "src/bitshuffle.c", "src/bitshuffle_core.c",
          "src/iochain.c", "lz4/lz4.c"]) + zstd_sources,
+    extra_objects=zstd_extra_objects,
     depends=prefix(bithsuffle_dir,
         ["src/bitshuffle.h", "src/bitshuffle_core.h",
          "src/iochain.h", 'src/bshuf_h5filter.h',
