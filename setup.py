@@ -422,11 +422,6 @@ class PluginBuildExt(build_ext):
     It also handles extra compile arguments depending on the build options.
     """
 
-    def run(self):
-        for ext in self.extensions:
-            if isinstance(ext, SZ):
-                self.build_cmake(ext)
-        super().run()
 
     def get_export_symbols(self, ext):
         """Overridden to remove PyInit_* export"""
@@ -479,32 +474,6 @@ class PluginBuildExt(build_ext):
 
         build_ext.build_extensions(self)
 
-    def build_cmake(self, ext):
-        import pathlib
-        cwd = pathlib.Path().absolute()
-
-        # these dirs will be created in build_py, so if you don't have
-        # any python sources to bundle, the dirs will be missing
-        build_temp = pathlib.Path(self.build_temp)
-        if not build_temp.exists():
-            build_temp.mkdir(parents=True, exist_ok=True)
-
-        extdir = pathlib.Path(self.get_ext_fullpath(ext.name)).parent
-        if not extdir.exists():
-            extdir.mkdir(parents=True, exist_ok=True)
-
-        folder = extdir.absolute()
-        cmake_args = [
-            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY:PATH=' + folder.as_posix(),
-            "-DBUILD_HDF5_FILTER:BOOL=ON",
-        ]
-
-        os.chdir(str(build_temp))
-
-        self.spawn(['cmake', str(cwd) + "/src/SZ"] + cmake_args)
-        if not self.dry_run:
-            self.spawn(['cmake', '--build', '.'])
-        os.chdir(str(cwd))
 
 
 class HDF5PluginExtension(Extension):
@@ -908,7 +877,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
@@ -917,12 +886,10 @@ libraries, extensions = apply_filter_strip(
         fcidecomp_plugin,
         h5zfp_plugin,
         zstandard_plugin,
+        sz_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
-
-# Add SZ extension.
-extensions += [SZ()]
 
 # setup
 
