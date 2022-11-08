@@ -179,3 +179,12 @@ The following values depends on the value of **mode**:
   - **minexp**: Smallest absolute bit plane number encoded.
 
 - *Reversible* mode: (5, 0, 0, 0, 0, 0)
+
+zstd
+....
+
+compression_opts: (**clevel**,)
+
+- **clevel**:
+  Compression level from 1 (lowest compression) to 22 (maximum compression).
+  Ultra compression extends from 20 through 22. Default: 3.
