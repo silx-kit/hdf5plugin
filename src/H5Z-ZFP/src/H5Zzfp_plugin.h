@@ -1,23 +1,14 @@
 #ifndef H5Z_ZFP_PLUGIN_H
 #define H5Z_ZFP_PLUGIN_H
 
-/* Filter ID number registered with The HDF Group */
-#define H5Z_FILTER_ZFP 32013
+#include "H5Zzfp_version.h"
 
-#define H5Z_FILTER_ZFP_VERSION_MAJOR 1
-#define H5Z_FILTER_ZFP_VERSION_MINOR 0
-#define H5Z_FILTER_ZFP_VERSION_PATCH 1
+/* HDF5 generic cd_vals[] memory layout (6 unsigned ints) for
+   controlling H5Z-ZFP behavior as a plugin. NOTE: These cd_vals
+   used to pass properties in-memory from caller to filter via HDF5
+   generic interface are NOT THE SAME AS the cd_vals[] that
+   ultimately get stored to the file for the filter "header" data. 
 
-#define H5Z_ZFP_MODE_RATE      1
-#define H5Z_ZFP_MODE_PRECISION 2
-#define H5Z_ZFP_MODE_ACCURACY  3
-#define H5Z_ZFP_MODE_EXPERT    4
-#define H5Z_ZFP_MODE_REVERSIBLE 5
-
-#define H5Z_ZFP_CD_NELMTS_MEM ((size_t) 6) /* used in public API to filter */
-#define H5Z_ZFP_CD_NELMTS_MAX ((size_t) 6) /* max, over all versions, used in dataset header */
-
-/* HDF5 filter cd_vals[] layout (6 unsigned ints)
 cd_vals    0       1        2         3         4         5    
 ----------------------------------------------------------------
 rate:      1    unused    rateA     rateB     unused    unused
@@ -26,10 +17,6 @@ accuracy:  3    unused    accA      accB      unused    unused
 expert:    4    unused    minbits   maxbits   maxprec   minexp
 
 A/B are high/low words of a double.
-
-Note: This is *NOT* the same layout that is ultimately stored
-to the file. A wholly different, cd_vals is stored in the file
-using zfp_write_header.
 */
 
 #define H5Pset_zfp_rate_cdata(R, N, CD)          \
@@ -67,10 +54,10 @@ do {                                                    \
     if ((N>=6)&&(CD[0] == H5Z_ZFP_MODE_EXPERT))         \
     {                                                   \
         unsigned int *p; int *q;                        \
-        p = MiB; *p = CD[2];                            \
-        p = MaB; *p = CD[3];                            \
-        p = MaP; *p = CD[4];                            \
-        q = MiE; *q = (int) CD[5];                      \
+        p = &MiB; *p = CD[2];                           \
+        p = &MaB; *p = CD[3];                           \
+        p = &MaP; *p = CD[4];                           \
+        q = &MiE; *q = (int) CD[5];                     \
     }                                                   \
 } while(0)
 

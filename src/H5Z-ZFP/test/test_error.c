@@ -8,16 +8,16 @@ This file is part of H5Z-ZFP. Please also read the BSD license
 https://raw.githubusercontent.com/LLNL/H5Z-ZFP/master/LICENSE 
 */
 
+#define _GNU_SOURCE /* ahead of ALL headers to take proper effect */
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-
-#define _GNU_SOURCE
 #include <string.h>
+#include <strings.h>
+#include <unistd.h>
 
 #include "hdf5.h"
 
@@ -206,7 +206,11 @@ int main(int argc, char **argv)
     /* test incorrect data type */
     tid = H5Tcreate(H5T_STRING, 8);
     if (0 <= (dsid = H5Dcreate(fid, "bad_type", tid, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
+#if defined(ZFP_LIB_VERSION) && ZFP_LIB_VERSION<=0x052
+    assert(check_hdf5_error_stack_for_string("requires datatype class of H5T_FLOAT"));
+#else
     assert(check_hdf5_error_stack_for_string("requires datatype class of H5T_FLOAT or H5T_INTEGER"));
+#endif
     H5Tclose(tid);
 
     /* test invalid size of data type */
@@ -219,7 +223,11 @@ int main(int argc, char **argv)
     /* test invalid chunking on highd data */
     cpid = setup_filter(5, chunk, zfpmode, rate, acc, prec, minbits, maxbits, maxprec, minexp);
     if (0 <= (dsid = H5Dcreate(fid, "bad_chunking", H5T_NATIVE_FLOAT, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
+#if defined(ZFP_LIB_VERSION) && ZFP_LIB_VERSION<=0x053
+    assert(check_hdf5_error_stack_for_string("chunk must have only 1...3 non-unity dimensions"));
+#else
     assert(check_hdf5_error_stack_for_string("chunk must have only 1...4 non-unity dimensions"));
+#endif
     H5Pclose(cpid);
 
     /* write a compressed dataset to be corrupted later */

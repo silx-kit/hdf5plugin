@@ -81,11 +81,10 @@ static void print_cdvals(int zfpmode, double rate, double acc, uint prec,
 
     /* h5repack -f argument format...
 
-        h5repack -f UD=32013,6,3,0,3539053052,1062232653,0,0
-
+        h5repack -f UD=32013,0,6,3,0,3539053052,1062232653,0,0
     */
     printf("\nh5repack -f argument...\n");
-    printf("    -f UD=%u,%u", H5Z_FILTER_ZFP, cd_nelmts);
+    printf("    -f UD=%u,0,%u", H5Z_FILTER_ZFP, cd_nelmts);
     for (i = 0; i < cd_nelmts; i++)
         printf(",%u", cd_values[i]);
     printf("\n");
@@ -96,8 +95,8 @@ int main(int argc, char **argv)
     int i;
 
     /* compression parameters (defaults taken from ZFP header) */
-    int zfpmode = 0;
-    double rate = 4;
+    int zfpmode = 1;
+    double rate = 3.5;
     double acc = 0;
     uint prec = 0;
     uint minbits = 0;

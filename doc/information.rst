@@ -56,7 +56,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID: 25160a42fb62e71e4b0ce081f5cb3f8bb73938b5):
   ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2 and
   https://github.com/team-charls/charls
-* HDF5-ZFP plugin (v1.0.1) and zfp (v0.5.5): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
+* HDF5-ZFP plugin (commit `cd5422c <https://github.com/LLNL/H5Z-ZFP/commit/cd5422c146836e17c7a0380bfb05cf52d0c4467c>`_) and zfp (v1.0.0): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
 * HDF5Plugin-Zstandard (commit d5afdb5) and zstd (v1.5.0): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/zstd-1.5.0
 
 License
