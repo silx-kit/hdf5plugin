@@ -49,7 +49,7 @@ HDF5 filters and compression libraries
 
 HDF5 compression filters and compression libraries sources were obtained from:
 
-* **LZ4 plugin** (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_) and **lz4** (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/lz4-1.9.3
+* **LZ4 plugin** (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_) and **lz4** (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/lz4-1.9.3
 * **bitshuffle plugin** (0.4.2 + patch `PR #122 <https://github.com/kiyo-masui/bitshuffle/pull/122>`_) and **zstd** (v1.5.2): https://github.com/kiyo-masui/bitshuffle and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2
 * **bzip2 plugin** (from PyTables v3.7.0) and **bzip2** (v1.0.8): https://github.com/PyTables/PyTables/, https://sourceware.org/git/bzip2.git
 * **hdf5-blosc plugin** (v1.0.0), **c-blosc** (commit `9dc93b1 <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8>`_) and **snappy** (v1.1.9): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/google/snappy
