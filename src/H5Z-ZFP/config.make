@@ -17,9 +17,25 @@ else ifeq ($(PWD_BASE),test)
 else ifeq ($(PWD_BASE),H5Z-ZFP)
     H5Z_ZFP_BASE := ./src
 endif
+
 H5Z_ZFP_PLUGIN := $(H5Z_ZFP_BASE)/plugin
 H5Z_ZFP_VERSINFO := $(shell grep '^\#define H5Z_FILTER_ZFP_VERSION_[MP]' $(H5Z_ZFP_BASE)/H5Zzfp_plugin.h | cut -d' ' -f3 | tr '\n' '.' | cut -d'.' -f-3 2>/dev/null)
-ZFP_HAS_REVERSIBLE := $(shell grep zfp_stream_set_reversible $(ZFP_HOME)/include/zfp.h)
+ZFP_HAS_REVERSIBLE :=
+ifneq ($(ZFP_HOME),)
+    ZFP_HAS_REVERSIBLE := $(shell grep zfp_stream_set_reversible $(ZFP_HOME)/include/zfp.h 2>/dev/null)
+endif
+
+# Construct make-time knowledge of ZFP library version
+ZFP_LIB_VERSION := $(shell grep '^\#define ZFP_VERSION_[MPT]' $(ZFP_HOME)/include/zfp/version.h 2>/dev/null | tr ' ' '\n' | grep '[0-9]' | tr -d '\n')
+ifeq ($(ZFP_LIB_VERSION),)
+    ZFP_LIB_VERSION := $(shell grep '^\#define ZFP_VERSION_[MRPT]' $(ZFP_HOME)/include/zfp.h 2>/dev/null | tr ' ' '\n' | grep '[0-9]' | tr -d '\n' 2>/dev/null)
+endif
+ifeq ($(ZFP_LIB_VERSION),)
+    ZFP_LIB_VERSION := $(shell grep '^\#define ZFP_VERSION_[MRPT]' $(ZFP_HOME)/inc/zfp.h 2>/dev/null | tr ' ' '\n' | grep '[0-9]' | tr -d '\n' 2>/dev/null)
+endif
+ifeq ($(ZFP_LIB_VERSION),)
+    $(warning WARNING: ZFP lib version not detected by make -- some tests may run)
+endif
 
 # Detect system type
 PROCESSOR := $(shell uname -p | tr '[:upper:]' '[:lower:]')
@@ -123,23 +139,61 @@ else ifneq ($(findstring f77, $(FC)),)
     FC =
 endif
 
-ifeq ($(wildcard $(ZFP_HOME)/include),)
-ZFP_INC = $(ZFP_HOME)/inc
-else
+ifneq ($(wildcard $(ZFP_HOME)/include),)
 ZFP_INC = $(ZFP_HOME)/include
+else ifneq ($(wildcard $(ZFP_HOME)/inc),)
+ZFP_INC = $(ZFP_HOME)/inc
 endif
-ZFP_LIB = $(ZFP_HOME)/lib
+ifeq ($(wildcard $(ZFP_INC)/zfp.h),) # no header file
+$(error "zfp.h not found")
+endif
 
-HDF5_INC = $(HDF5_HOME)/include
-HDF5_LIB = $(HDF5_HOME)/lib
-HDF5_BIN = $(HDF5_HOME)/bin
+ifeq ($(wildcard $(ZFP_HOME)/lib),)
+ZFP_LIB = $(ZFP_HOME)/lib64
+else
+ZFP_LIB = $(ZFP_HOME)/lib
+endif
+
+# Check if ZFP has CFP
+ifeq ($(wildcard $(ZFP_LIB)/libcfp.*),) # no cfp lib file
+  ZFP_HAS_CFP = 0
+else
+  ifeq ($(wildcard $(ZFP_INC)/zfp/array.h),) # no 1.0.0 header file
+    ifeq ($(wildcard $(ZFP_INC)/cfparrays.h),) # no 0.5.5 header file
+        ZFP_HAS_CFP = 0
+    else
+        ZFP_HAS_CFP = 1
+    endif
+  else
+    ZFP_HAS_CFP = 1
+  endif
+endif
+
+# Check if specified individually the HDF5 include directory,
+# library directory and bin directory separated by commas, i.e. HDF5_HOME=INC,LIB,BIN
+FOUND_LIST=$(shell echo "$(HDF5_HOME)" | grep -q "," && echo "true")
+ifeq ("$(FOUND_LIST)","true")
+  HDF5_INC = $(shell echo $(HDF5_HOME) | awk -F'[,]' '{print $$1}')
+  HDF5_LIB = $(shell echo $(HDF5_HOME) | awk -F'[,]' '{print $$2}')
+  HDF5_BIN = $(shell echo $(HDF5_HOME) | awk -F'[,]' '{print $$3}')
+  MAKEVARS =
+else
+  HDF5_INC = $(HDF5_HOME)/include
+  ifeq ($(wildcard $(HDF5_HOME)/lib),)
+    HDF5_LIB = $(HDF5_HOME)/lib64
+  else
+    HDF5_LIB = $(HDF5_HOME)/lib
+  endif
+  HDF5_BIN = $(HDF5_HOME)/bin
+  MAKEVARS = HDF5_HOME=$(HDF5_HOME)
+endif
 
 ifeq ($(PREFIX),)
     PREFIX := $(shell pwd)/install
 endif
 INSTALL ?= install
 
-MAKEVARS = ZFP_HOME=$(ZFP_HOME) HDF5_HOME=$(HDF5_HOME) PREFIX=$(PREFIX)
+MAKEVARS += ZFP_HOME=$(ZFP_HOME)  PREFIX=$(PREFIX)
 
 .SUFFIXES:
 .SUFFIXES: .c .F90 .h .o .mod

@@ -54,7 +54,7 @@ install: all
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/{plugin,include,lib}
 	$(INSTALL) plugin/libh5zzfp.$(SOEXT) $(DESTDIR)$(PREFIX)/plugin
 	$(INSTALL) libh5zzfp.a $(DESTDIR)$(PREFIX)/lib
-	$(INSTALL) -m 644 H5Zzfp.h H5Zzfp_lib.h H5Zzfp_plugin.h H5Zzfp_props.h $(DESTDIR)$(PREFIX)/include
+	$(INSTALL) -m 644 H5Zzfp.h H5Zzfp_lib.h H5Zzfp_plugin.h H5Zzfp_version.h H5Zzfp_props.h $(DESTDIR)$(PREFIX)/include
 ifneq ($(FC),)
 	$(INSTALL) -m 644 *.[mM][oO][dD] $(DESTDIR)$(PREFIX)/include
 endif

@@ -1,0 +1,133 @@
+name: h5z-zfp
+
+# Controls when the action will run. 
+#Triggers the workflow on push or pull requests.
+on: 
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# A workflow run is made up of one or more jobs that
+# can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  linux-build:
+    strategy:
+      matrix:
+        name: ["Ubuntu Latest GCC"]
+        include:
+          - name: "Ubuntu Latest GCC"
+            artifact: "Linux.tar.xz"
+            os: ubuntu-latest
+
+    name: ${{ matrix.name }}
+    # The type of runner that the job will run on.
+    runs-on: ${{ matrix.os }}
+    if: "!contains(github.event.head_commit.message, 'skip-ci')"
+
+    # Steps represent a sequence of tasks that will be executed 
+    # as part of the job.
+    steps:
+    - name: Install Dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get install -qq libhdf5-dev
+        sudo apt-get install -qq hdf5-tools
+        echo  "HDF5_HOME=/usr/include/hdf5/serial,/usr/lib/x86_64-linux-gnu/hdf5/serial,/usr/bin" >> $GITHUB_ENV
+        # Set env vars
+        echo "CC=gcc" >> $GITHUB_ENV
+        echo "FC=gfortran" >> $GITHUB_ENV
+        echo "CXX=g++"  >> $GITHUB_ENV
+        
+ # Checks-out the repository under $GITHUB_WORKSPACE so the job can access it.
+    - name: Get Sources
+      uses: actions/checkout@v2
+
+##################################
+# INSTALL ZFP
+##################################
+                 
+    - name: install ZFP
+      run: |
+        git clone https://github.com/LLNL/zfp.git
+        export HOME_DIR=$(echo ~)
+        cd zfp
+        git checkout 1.0.0
+        mkdir build;cd build
+        cmake -D ZFP_BIT_STREAM_WORD_SIZE=8 -D BUILD_CFP=ON -D CMAKE_INSTALL_PREFIX=$PWD/zfp -D BUILD_TESTING=OFF -D BUILD_UTILITIES=OFF ..
+        make install
+        echo "ZFP_HOME=$PWD/zfp" >> $GITHUB_ENV
+        echo "ZFP_DIR=$PWD/zfp" >> $GITHUB_ENV
+      shell: bash
+
+##################################
+# BUILD AND TEST H5Z-ZFP
+##################################
+
+    - name: build (autotools) and check
+      run: |
+        make all
+        make check
+      shell: bash
+
+    - name: build (cmake)
+      run: |
+        mkdir build; cd build
+        cmake -D FORTRAN_INTERFACE=ON -D CMAKE_BUILD_TYPE=Release ..
+        make
+      shell: bash
+
+    
+  windows-build:
+    name: 'Windows MSVC/Clang'
+    defaults:
+      run:
+        shell: bash
+    runs-on: windows-2019
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v2
+      - name: install prerequisites
+        run: |
+          choco install \
+            unzip \
+            wget
+      - name: setup MSVC Tools
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: download HDF5 for Windows
+        run: |
+          wget --quiet \
+            https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.1/bin/windows/hdf5-1.12.1-Std-win10_64-vs16.zip
+          unzip hdf5-1.12.1-Std-win10_64-vs16.zip
+      - name: Install HDF5 for Windows
+        run: msiexec /i "hdf\HDF5-1.12.1-win64.msi" /qn
+        shell: cmd
+      - name: Download and install ZFP
+        run: |
+          git clone https://github.com/LLNL/zfp.git
+          cd zfp
+          git checkout 1.0.0
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_UTILITIES=OFF \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_CFP=ON \
+            -DZFP_BIT_STREAM_WORD_SIZE=8
+          cmake --build . -j 3
+          cmake --build . --target install
+      - name: update PATH
+        run: |
+          echo "C:/Program Files/HDF_Group/HDF5/1.12.1/bin" >> $GITHUB_PATH
+      - name: configure cmake
+        run: |
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DFORTRAN_INTERFACE=OFF \
+            -TClangCL
+          cmake --build . -j 3
+          cmake --build . --target install
