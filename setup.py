@@ -603,7 +603,7 @@ define_macros.append(('HAVE_ZLIB', 1))
 
 # zstd
 zstd_sources = glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
-if sys.platform.startswith('linux') or sys.platform.startswith('macos'):
+if os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True' and (sys.platform.startswith('linux') or sys.platform.startswith('macos')):
     zstd_extra_objects = glob(blosc_dir +'internal-complibs/zstd*/*/*.S')
     zstd_define_macros = []
 else:

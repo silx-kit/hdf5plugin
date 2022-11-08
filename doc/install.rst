@@ -53,6 +53,9 @@ Available options
    * - ``HDF5PLUGIN_AVX2``
      - Whether or not to compile with `AVX2`_ support. avx2=True requires sse2=True.
        Default: True on x86 when probed, False otherwise
+   * - ``HDF5PLUGIN_BMI2``
+     - Whether or not to compile Zstandard with `BMI2`_ support if available.
+       Default: True on Linux and MacOS, False otherwise
    * - ``HDF5PLUGIN_CPP11``
      - Whether or not to compile C++11 code if available.
        Default: True if probed.
@@ -61,5 +64,6 @@ Note: Boolean options are passed as ``True`` or ``False``.
 
 
 .. _AVX2: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2
+.. _BMI2: https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set
 .. _SSE2: https://en.wikipedia.org/wiki/SSE2
 .. _OpenMP: https://www.openmp.org/
