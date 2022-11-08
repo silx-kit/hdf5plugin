@@ -528,12 +528,6 @@ class HDF5PluginExtension(Extension):
         return module_name[5:]  # Strip libh5
 
 
-class SZ(HDF5PluginExtension):
-    def __init__(self, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
-        self.name = "hdf5plugin.plugins.libh5sz"
-        super().__init__(self.name, sse2=sse2, avx2=avx2, cpp11=cpp11, cpp11_required=cpp11_required, sources=[], **kwargs)
-
-
 def prefix(directory, files):
     """Add a directory as prefix to a list of files.
 
