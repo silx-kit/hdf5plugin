@@ -1,5 +1,5 @@
 os:
-    - Visual Studio 2015
+    - Visual Studio 2019
 
 cache:
     - '%LOCALAPPDATA%\pip\Cache'
@@ -12,11 +12,11 @@ environment:
         WIN_SDK_ROOT: "C:\\Program Files\\Microsoft SDKs\\Windows"
 
     matrix:
-        # Python 3.7
-        - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
-          TEST_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
+        # Python 3.10
+        - BUILD_PY_PATH: "C:\\Python310-x64;C:\\Python310-x64\\Scripts"
+          TEST_PY_PATH: "C:\\Python310-x64;C:\\Python310-x64\\Scripts"
           INSTALL_CMD: "python -m pip install --upgrade --pre"
-          H5PY_OLDER_VERSION: "2.8.0"
+          H5PY_OLDER_VERSION: "3.6.0"
 
         # Miniconda37
         - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
