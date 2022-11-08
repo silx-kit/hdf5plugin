@@ -7,7 +7,7 @@ before_install:
   - pwd
   - ls
   - pushd /tmp
-  - wget http://computation.llnl.gov/projects/floating-point-compression/download/zfp-0.5.5.tar.gz
+  - wget https://github.com/LLNL/zfp/releases/download/0.5.5/zfp-0.5.5.tar.gz
   - tar -xzf zfp-0.5.5.tar.gz
   - pushd zfp-0.5.5
   - make DEFS=-DBIT_STREAM_WORD_TYPE=uint8

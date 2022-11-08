@@ -67,14 +67,14 @@ first, use the ``print_h5repack_farg``::
         help=0                                     this help message
 
     h5repack -f argument...
-        -f UD=32013,4,1,0,0,1074921472
+        -f UD=32013,0,4,1,0,0,1074921472
 
-Next, cut-n-paste the ``-f UD=32013,4,1,0,0,1074921472`` in a command
+Next, cut-n-paste the ``-f UD=32013,0,4,1,0,0,1074921472`` in a command
 to ``h5repack`` like so::
 
     env LD_LIBRARY_PATH=<path-to-dir-with-libhdf5.so>:$(LD_LIBRARY_PATH) \
         HDF5_PLUGIN_PATH=<path-to-dir-with-libh5zzfp.so> \
-        $(HDF5_BIN)/h5repack -f UD=32013,4,1,0,0,1074921472 \
+        $(HDF5_BIN)/h5repack -f UD=32013,0,4,1,0,0,1074921472 \
              -l Pressure,Pressure2,Pressure3:CHUNK=10x20x5 \
              -l Velocity,Velocity2,Velocity3,VelocityZ,VelocityZ2,VelocityZ3:CHUNK=11x21x1x1 \
              -l VelocityX_2D:CHUNK=21x31 \
@@ -100,14 +100,14 @@ first, use the ``print_h5repack_farg``::
         help=0                                     this help message
 
     h5repack -f argument...
-        -f UD=32013,4,3,0,858993459,1068708659
+        -f UD=32013,0,4,3,0,858993459,1068708659
 
-Next, cut-n-paste the ``-f UD=32013,4,3,0,858993459,1068708659`` in a command
+Next, cut-n-paste the ``-f UD=32013,0,4,3,0,858993459,1068708659`` in a command
 to ``h5repack`` like so::
 
     env LD_LIBRARY_PATH=<path-to-dir-with-libhdf5.so>:$(LD_LIBRARY_PATH) \
         HDF5_PLUGIN_PATH=<path-to-dir-with-libh5zzfp.so> \
-        $(HDF5_BIN)/h5repack -f UD=32013,4,3,0,858993459,1068708659 \
+        $(HDF5_BIN)/h5repack -f UD=32013,0,4,3,0,858993459,1068708659 \
              -l Pressure,Pressure2,Pressure3:CHUNK=10x20x5 \
              -l Velocity,Velocity2,Velocity3,VelocityZ,VelocityZ2,VelocityZ3:CHUNK=11x21x1x1 \
              -l VelocityX_2D:CHUNK=21x31 \

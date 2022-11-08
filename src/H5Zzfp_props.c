@@ -54,14 +54,14 @@ static herr_t H5Pset_zfp(hid_t plist, int mode, ...)
         }
         case H5Z_ZFP_MODE_PRECISION:
         {
-            ctrls_p->details.prec = va_arg(ap, uint);
+            ctrls_p->details.prec = va_arg(ap, unsigned int);
             break;
         }
         case H5Z_ZFP_MODE_EXPERT:
         {
-            ctrls_p->details.expert.minbits = va_arg(ap, uint);
-            ctrls_p->details.expert.maxbits = va_arg(ap, uint);
-            ctrls_p->details.expert.maxprec = va_arg(ap, uint);
+            ctrls_p->details.expert.minbits = va_arg(ap, unsigned int);
+            ctrls_p->details.expert.maxbits = va_arg(ap, unsigned int);
+            ctrls_p->details.expert.maxprec = va_arg(ap, unsigned int);
             ctrls_p->details.expert.minexp  = va_arg(ap, int);
             break;
         }
@@ -136,3 +136,38 @@ herr_t H5Pset_zfp_reversible(hid_t plist)
 {
     return H5Pset_zfp(plist, H5Z_ZFP_MODE_REVERSIBLE);
 }
+
+
+/* Used only for Fortran wrappers */
+
+void H5Pset_zfp_rate_cdata_f(double rate, size_t *cd_nelmts_f, unsigned int *cd_values) {
+  size_t cd_nelmts = *cd_nelmts_f;
+  H5Pset_zfp_rate_cdata(rate, cd_nelmts, cd_values);
+  *cd_nelmts_f = cd_nelmts;
+}
+
+void H5Pset_zfp_precision_cdata_f(unsigned int prec, size_t *cd_nelmts_f, unsigned int *cd_values) {
+  size_t cd_nelmts = *cd_nelmts_f;
+  H5Pset_zfp_precision_cdata(prec, cd_nelmts, cd_values);
+  *cd_nelmts_f = cd_nelmts;
+}
+
+void H5Pset_zfp_accuracy_cdata_f(double acc, size_t *cd_nelmts_f, unsigned int *cd_values) {
+  size_t cd_nelmts = *cd_nelmts_f;
+  H5Pset_zfp_accuracy_cdata(acc, cd_nelmts, cd_values);
+  *cd_nelmts_f = cd_nelmts;
+}
+
+void H5Pset_zfp_expert_cdata_f(unsigned int minbits, unsigned int maxbits, unsigned int maxprec, 
+                               int minexp, size_t *cd_nelmts_f, unsigned int *cd_values) {
+  size_t cd_nelmts = *cd_nelmts_f;
+  H5Pset_zfp_expert_cdata(minbits, maxbits, maxprec, minexp, cd_nelmts, cd_values);
+  *cd_nelmts_f = cd_nelmts;
+}
+
+void H5Pset_zfp_reversible_cdata_f(size_t *cd_nelmts_f, unsigned int *cd_values) {
+  size_t cd_nelmts = *cd_nelmts_f;
+  H5Pset_zfp_reversible_cdata(cd_nelmts, cd_values);
+  *cd_nelmts_f = cd_nelmts;
+}
+

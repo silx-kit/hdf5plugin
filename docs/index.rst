@@ -22,6 +22,8 @@ Contents:
    installation
    interfaces
    hdf5_chunking
+   direct
    h5repack
    endian_issues
    tests
+   cmake

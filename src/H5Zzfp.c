@@ -39,7 +39,6 @@ and calls to bitstream methods with 'B ' as in
 #include "H5PLextern.h"
 #include "H5Spublic.h"
 #include "zfp.h"
-#include "bitstream.h"
 #define Z
 #define B 
 #endif /* ] AS_SILO_BUILTIN */
@@ -47,14 +46,30 @@ and calls to bitstream methods with 'B ' as in
 #include "H5Zzfp_plugin.h"
 #include "H5Zzfp_props_private.h"
 
-/* Convenient CPP logic to capture ZFP lib version numbers as compile time string and hex number */
+/* Convenient CPP logic to capture ZFP lib version numbers as compile time hex number */
+#define ZFP_VERSION_NO__(Maj,Min,Pat,Twk)  (0x ## Maj ## Min ## Pat ## Twk)
+#define ZFP_VERSION_NO_(Maj,Min,Pat,Twk)   ZFP_VERSION_NO__(Maj,Min,Pat,Twk)
+#if defined(ZFP_VERSION_TWEAK)
+#define ZFP_VERSION_NO                 ZFP_VERSION_NO_(ZFP_VERSION_MAJOR,ZFP_VERSION_MINOR,ZFP_VERSION_PATCH,ZFP_VERSION_TWEAK)
+#elif defined(ZFP_VERSION_RELEASE)
+#define ZFP_VERSION_NO                 ZFP_VERSION_NO_(ZFP_VERSION_MAJOR,ZFP_VERSION_MINOR,ZFP_VERSION_RELEASE,0)
+#elif defined(ZFP_VERSION_PATCH)
+#define ZFP_VERSION_NO                 ZFP_VERSION_NO_(ZFP_VERSION_MAJOR,ZFP_VERSION_MINOR,ZFP_VERSION_PATCH,0)
+#else
+#error ZFP LIBRARY VERSION NOT DETECTED
+#endif
+
+/* Older versions of ZFP don't define this */
+#ifndef ZFP_VERSION_STRING
 #define ZFP_VERSION_STR__(Maj,Min,Rel) #Maj "." #Min "." #Rel
 #define ZFP_VERSION_STR_(Maj,Min,Rel)  ZFP_VERSION_STR__(Maj,Min,Rel)
-#define ZFP_VERSION_STR                ZFP_VERSION_STR_(ZFP_VERSION_MAJOR,ZFP_VERSION_MINOR,ZFP_VERSION_RELEASE)
+#define ZFP_VERSION_STRING             ZFP_VERSION_STR_(ZFP_VERSION_MAJOR,ZFP_VERSION_MINOR,ZFP_VERSION_RELEASE)
+#endif
 
-#define ZFP_VERSION_NO__(Maj,Min,Rel)  (0x0 ## Maj ## Min ## Rel)
-#define ZFP_VERSION_NO_(Maj,Min,Rel)   ZFP_VERSION_NO__(Maj,Min,Rel)
-#define ZFP_VERSION_NO                 ZFP_VERSION_NO_(ZFP_VERSION_MAJOR,ZFP_VERSION_MINOR,ZFP_VERSION_RELEASE)
+/* Older versions of ZFP don't define this publicly */
+#ifndef ZFP_CODEC
+#define ZFP_CODEC ZFP_VERSION_MINOR
+#endif
 
 /* Convenient CPP logic to capture H5Z_ZFP Filter version numbers as string and hex number */
 #define H5Z_FILTER_ZFP_VERSION_STR__(Maj,Min,Pat) #Maj "." #Min "." #Pat
@@ -90,7 +105,7 @@ const H5Z_class2_t H5Z_ZFP[1] = {{
     1,                      /* decoder_present flag         */
     "H5Z-ZFP"               /* Filter name for debugging    */
     "-" H5Z_FILTER_ZFP_VERSION_STR
-    " (ZFP-" ZFP_VERSION_STR ")",
+    " (ZFP-" ZFP_VERSION_STRING ")",
     H5Z_zfp_can_apply,      /* The "can apply" callback     */
     H5Z_zfp_set_local,      /* The "set local" callback     */
     H5Z_filter_zfp,         /* The actual filter function   */
@@ -125,11 +140,6 @@ int H5Z_zfp_finalize(void)
     return 1;
 }
 
-static void H5Z_zfp_final(void)
-{
-    H5Z_zfp_finalize();
-}
-
 static htri_t
 H5Z_zfp_can_apply(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
 {   
@@ -159,7 +169,7 @@ H5Z_zfp_can_apply(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
         H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADTYPE, -1, "bad chunk data space");
 
     /* confirm ZFP library can handle this data */
-#if ZFP_VERSION_NO < 0x0051
+#if ZFP_VERSION_NO < 0x0510
     if (!(dclass == H5T_FLOAT))
         H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADTYPE, 0,
             "requires datatype class of H5T_FLOAT");
@@ -181,10 +191,11 @@ H5Z_zfp_can_apply(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
     }
 
     if (ndims_used == 0 || ndims_used > max_ndims)
+#if ZFP_VERSION_NO < 0x0530
         H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
-#if ZFP_VERSION_NO < 0x0053
             "chunk must have only 1...3 non-unity dimensions");
 #else
+        H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
             "chunk must have only 1...4 non-unity dimensions");
 #endif
 
@@ -270,13 +281,14 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
         case 1: dummy_field = Z zfp_field_1d(0, zt, dims_used[0]); break;
         case 2: dummy_field = Z zfp_field_2d(0, zt, dims_used[1], dims_used[0]); break;
         case 3: dummy_field = Z zfp_field_3d(0, zt, dims_used[2], dims_used[1], dims_used[0]); break;
-#if ZFP_VERSION_NO >= 0x0054
+#if ZFP_VERSION_NO >= 0x0540
         case 4: dummy_field = Z zfp_field_4d(0, zt, dims_used[3], dims_used[2], dims_used[1], dims_used[0]); break;
 #endif
+#if ZFP_VERSION_NO < 0x0530
         default: H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
-#if ZFP_VERSION_NO < 0x0053
                      "chunks may have only 1...3 non-unity dims");
 #else
+        default: H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0,
                      "chunks may have only 1...4 non-unity dims");
 #endif
     }
@@ -306,7 +318,7 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
         
     /* Into hdr_cd_values, we encode ZFP library and H5Z-ZFP plugin version info at
        entry 0 and use remaining entries as a tiny buffer to write ZFP native header. */
-    hdr_cd_values[0] = (unsigned int) ((ZFP_VERSION_NO<<16) | H5Z_FILTER_ZFP_VERSION_NO);
+    hdr_cd_values[0] = (unsigned int) ((ZFP_VERSION_NO<<16) | (ZFP_CODEC<<12) | H5Z_FILTER_ZFP_VERSION_NO);
     if (0 == (dummy_bstr = B stream_open(&hdr_cd_values[1], sizeof(hdr_cd_values))))
         H5Z_ZFP_PUSH_AND_GOTO(H5E_RESOURCE, H5E_NOSPACE, 0, "stream_open() failed");
 
@@ -322,14 +334,14 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
                 Z zfp_stream_set_rate(dummy_zstr, ctrls.details.rate, zt, ndims_used, 0);
                 break;
             case H5Z_ZFP_MODE_PRECISION:
-#if ZFP_VERSION_NO < 0x0051
+#if ZFP_VERSION_NO < 0x0510
                 Z zfp_stream_set_precision(dummy_zstr, ctrls.details.prec, zt);
 #else
                 Z zfp_stream_set_precision(dummy_zstr, ctrls.details.prec);
 #endif
                 break;
             case H5Z_ZFP_MODE_ACCURACY:
-#if ZFP_VERSION_NO < 0x0051
+#if ZFP_VERSION_NO < 0x0510
                 Z zfp_stream_set_accuracy(dummy_zstr, ctrls.details.acc, zt);
 #else
                 Z zfp_stream_set_accuracy(dummy_zstr, ctrls.details.acc);
@@ -340,7 +352,7 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
                     ctrls.details.expert.maxbits, ctrls.details.expert.maxprec,
                     ctrls.details.expert.minexp);
                 break;
-#if ZFP_VERSION_NO >= 0x0055
+#if ZFP_VERSION_NO >= 0x0550
             case H5Z_ZFP_MODE_REVERSIBLE:
                 Z zfp_stream_set_reversible(dummy_zstr);
                 break;
@@ -357,14 +369,14 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
                 Z zfp_stream_set_rate(dummy_zstr, *((double*) &mem_cd_values[2]), zt, ndims_used, 0);
                 break;
             case H5Z_ZFP_MODE_PRECISION:
-#if ZFP_VERSION_NO < 0x0051
+#if ZFP_VERSION_NO < 0x0510
                 Z zfp_stream_set_precision(dummy_zstr, mem_cd_values[2], zt);
 #else
                 Z zfp_stream_set_precision(dummy_zstr, mem_cd_values[2]);
 #endif
                 break;
             case H5Z_ZFP_MODE_ACCURACY:
-#if ZFP_VERSION_NO < 0x0051
+#if ZFP_VERSION_NO < 0x0510
                 Z zfp_stream_set_accuracy(dummy_zstr, *((double*) &mem_cd_values[2]), zt);
 #else
                 Z zfp_stream_set_accuracy(dummy_zstr, *((double*) &mem_cd_values[2]));
@@ -374,7 +386,7 @@ H5Z_zfp_set_local(hid_t dcpl_id, hid_t type_id, hid_t chunk_space_id)
                 Z zfp_stream_set_params(dummy_zstr, mem_cd_values[2], mem_cd_values[3],
                     mem_cd_values[4], (int) mem_cd_values[5]);
                 break;
-#if ZFP_VERSION_NO >= 0x0055
+#if ZFP_VERSION_NO >= 0x0550
             case H5Z_ZFP_MODE_REVERSIBLE:
                 Z zfp_stream_set_reversible(dummy_zstr);
                 break;
@@ -489,6 +501,58 @@ done:
     return retval;
 }
 
+/*
+Compare ZFP codec version used when data was written to what is
+currently being used to read the data. There is a challenge here
+in that earlier versions of this filter recorded only the ZFP
+library version, not the codec version. Although ZFP codec version
+was encoded as minor digit of ZFP library version, that convention
+ended with ZFP version 1.0.0. So, if an old version of this filter
+is used with newer ZFP libraries, we won't know the codec version
+used to write the data with certainty. The best we can do is guess
+it. If there becomes a version of the ZFP library for which that guess
+(currently 5) is wrong, the logic here will need to be updated to
+capture knowledge of the ZFP library version for which the codec
+version was incrimented.
+*/
+
+static int
+zfp_codec_version_mismatch(
+    unsigned int h5zfpver_from_cd_val_data_in_file,
+    unsigned int zfpver_from_cd_val_data_in_file,
+    unsigned int zfpcodec_from_cd_val_data_in_file)
+{
+    int writer_codec;
+    int reader_codec;
+
+    if (h5zfpver_from_cd_val_data_in_file < 0x0110)
+    {
+        /* for data written with older versions of the filter,
+           we infer codec from ZFP library version stored in the file. */
+        zfpver_from_cd_val_data_in_file <<= 4;
+        if (zfpver_from_cd_val_data_in_file < 0x0500)
+            writer_codec = 4;
+        else if (zfpver_from_cd_val_data_in_file < 0x1000)
+            writer_codec = (zfpver_from_cd_val_data_in_file & 0x0F00)>>8;
+        else if (zfpver_from_cd_val_data_in_file == 0x1000)
+            writer_codec = 5;
+        else
+            writer_codec = 5; /* can only guess */
+    }
+    else
+        writer_codec = zfpcodec_from_cd_val_data_in_file;
+
+#if ZFP_VERSION_NO < 0x0500
+    reader_codec = 4;
+#elif ZFP_VERSION_NO < 0x1000
+    reader_codec = 5;
+#else
+    reader_codec = ZFP_CODEC;
+#endif
+
+    return writer_codec > reader_codec;
+}
+
 static size_t
 H5Z_filter_zfp(unsigned int flags, size_t cd_nelmts,
     const unsigned int cd_values[], size_t nbytes,
@@ -497,7 +561,9 @@ H5Z_filter_zfp(unsigned int flags, size_t cd_nelmts,
     static char const *_funcname_ = "H5Z_filter_zfp";
     void *newbuf = 0;
     size_t retval = 0;
-    int cd_vals_zfpver = (cd_values[0]>>16)&0x0000FFFF;
+    unsigned int cd_vals_h5zzfpver = cd_values[0]&0x00000FFF;
+    unsigned int cd_vals_zfpcodec = (cd_values[0]>>12)&0x0000000F;
+    unsigned int cd_vals_zfpver = (cd_values[0]>>16)&0x0000FFFF;
     H5T_order_t swap = H5T_ORDER_NONE;
     uint64 zfp_mode, zfp_meta;
     bitstream *bstr = 0;
@@ -513,10 +579,9 @@ H5Z_filter_zfp(unsigned int flags, size_t cd_nelmts,
         int status;
         size_t bsize, dsize;
 
-        /* Worry about zfp version and endian mismatch only for decompression */
-        if (cd_vals_zfpver > ZFP_VERSION)
-            H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_NOSPACE, 0, "ZFP lib version, "
-                ZFP_VERSION_STR ", too old to decompress this data");
+        /* Worry about zfp version mismatch only for decompression */
+        if (zfp_codec_version_mismatch(cd_vals_h5zzfpver, cd_vals_zfpver, cd_vals_zfpcodec))
+            H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_READERROR, 0, "ZFP codec version mismatch");
 
         /* Set up the ZFP field object */
         if (0 == (zfld = Z zfp_field_alloc()))

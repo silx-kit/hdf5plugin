@@ -1,0 +1,59 @@
+# h5z_zfp-config.cmake
+# --------------------
+#
+# Finds the H5Z_ZFP library, specify the starting search path in H5Z_ZFP_ROOT
+#
+# Static vs. shared
+# ----------------- 
+# To make use of the static library instead of the shared one, one needs
+# to set the variable H5Z_ZFP_USE_STATIC_LIBS to ON before calling find_package.
+# Example:
+#   set(H5Z_ZFP_USE_STATIC_LIBS ON)
+#   find_package(H5Z_ZFP REQUIRED CONFIG)
+#
+# This will define the following variables:
+#
+#   H5Z_ZFP_FOUND       - True if the system has the H5Z_ZFP library.
+#   H5Z_ZFP_WITH_OPENMP - True if the zfp library has been built with OpenMP support.
+#
+# and the following imported targets:
+#
+#   h5z_zfp::h5z_zfp - The H5Z_ZFP library.
+
+find_path(H5Z_ZFP_INCLUDE_DIR NAMES H5Zzfp.h DOC "H5Z_ZFP include directory")
+if(H5Z_ZFP_USE_STATIC_LIBS)
+  find_library(H5Z_ZFP_LIBRARY NAMES libh5zzfp.a DOC "H5Z_ZFP library")
+else()
+  find_library(H5Z_ZFP_LIBRARY NAMES libh5zzfp.so HINTS $ENV{H5Z_ZFP_ROOT}/plugin DOC "H5Z_ZFP library")
+endif()
+
+include(FindPackageHandleStandardArgs)
+set(${CMAKE_FIND_PACKAGE_NAME}_CONFIG "${CMAKE_CURRENT_LIST_FILE}")
+find_package_handle_standard_args(H5Z_ZFP
+  FOUND_VAR H5Z_ZFP_FOUND
+  REQUIRED_VARS H5Z_ZFP_LIBRARY H5Z_ZFP_INCLUDE_DIR
+  CONFIG_MODE
+)
+
+if(H5Z_ZFP_FOUND)
+  set(HDF5_USE_STATIC_LIBRARIES ${H5Z_ZFP_USE_STATIC_LIBS})
+  find_package(HDF5 MODULE REQUIRED COMPONENTS C)
+  find_package(ZFP REQUIRED CONFIG)
+  if(H5Z_ZFP_USE_STATIC_LIBS)
+    add_library(h5z_zfp::h5z_zfp STATIC IMPORTED)
+  else()
+    add_library(h5z_zfp::h5z_zfp SHARED IMPORTED)
+  endif()
+  set_target_properties(h5z_zfp::h5z_zfp PROPERTIES
+    IMPORTED_LOCATION "${H5Z_ZFP_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${H5Z_ZFP_INCLUDE_DIR}"
+    INTERFACE_LINK_LIBRARIES "zfp::zfp;${HDF5_LIBRARIES}"
+    LINK_LIBRARIES "zfp::zfp;${HDF5_LIBRARIES}"
+  )
+  set(H5Z_ZFP_WITH_OPENMP ${ZFP_WITH_OPENMP})
+endif()
+
+mark_as_advanced(
+  H5Z_ZFP_INCLUDE_DIR
+  H5Z_ZFP_LIBRARY
+)
