@@ -603,6 +603,13 @@ define_macros.append(('HAVE_ZLIB', 1))
 
 # zstd
 zstd_sources = glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+if os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True' and (sys.platform.startswith('linux') or sys.platform.startswith('macos')):
+    zstd_extra_objects = glob(blosc_dir +'internal-complibs/zstd*/*/*.S')
+    zstd_define_macros = []
+else:
+    zstd_extra_objects = []
+    zstd_define_macros = [('ZSTD_DISABLE_ASM', 1)]
+
 zstd_depends = glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
 zstd_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
 zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
@@ -622,10 +629,11 @@ blosc_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5blosc",
     sources=sources + \
         prefix(hdf5_blosc_dir,['blosc_filter.c', 'blosc_plugin.c']),
+    extra_objects=zstd_extra_objects,
     depends=depends + \
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
-    define_macros=define_macros,
+    define_macros=define_macros + zstd_define_macros,
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     sse2=sse2_kwargs,
@@ -644,8 +652,10 @@ zstandard_depends += zstd_depends
 zstandard_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5zstd",
     sources=zstandard_sources,
+    extra_objects=zstd_extra_objects,
     depends=zstandard_depends,
     include_dirs=zstd_include_dirs,
+    define_macros=zstd_define_macros,
     )
 
 # bitshuffle (+lz4 or zstd) plugin
@@ -669,12 +679,13 @@ bithsuffle_plugin = HDF5PluginExtension(
         ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
          "src/bitshuffle.c", "src/bitshuffle_core.c",
          "src/iochain.c", "lz4/lz4.c"]) + zstd_sources,
+    extra_objects=zstd_extra_objects,
     depends=prefix(bithsuffle_dir,
         ["src/bitshuffle.h", "src/bitshuffle_core.h",
          "src/iochain.h", 'src/bshuf_h5filter.h',
          "lz4/lz4.h"]) + zstd_depends,
     include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']) + zstd_include_dirs,
-    define_macros=define_macros,
+    define_macros=define_macros + zstd_define_macros,
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     sse2=sse2_options,

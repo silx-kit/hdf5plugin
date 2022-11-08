@@ -23,7 +23,6 @@ jobs:
           Ubuntu Clang No ZSTD,
           Windows MSVC Win32,
           Windows MSVC Win64,
-          Windows GCC,
           macOS Clang,
           macOS GCC
         ]
@@ -107,11 +106,6 @@ jobs:
             compiler: cl
             cmake-args: -A x64
 
-          - name: Windows GCC
-            os: windows-latest
-            compiler: gcc
-            cmake-args: -G Ninja
-
           - name: macOS Clang
             os: macOS-latest
             compiler: clang
@@ -121,7 +115,7 @@ jobs:
             compiler: gcc
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Install packages (Ubuntu)
       if: runner.os == 'Linux' && matrix.packages

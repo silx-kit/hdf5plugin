@@ -19,8 +19,8 @@
     $ win-dynamic-linking.exe
     Blosc version info: 1.7.0.dev
     Compression: 400000000 -> 19928862 (20.1x)
-    Decompression succesful!
-    Succesful roundtrip!
+    Decompression successful!
+    Successful roundtrip!
 
 */
 
@@ -93,7 +93,7 @@ int main(){
   /* Compress with clevel=3, shuffle active, 16-bytes data size, blosclz and 2 threads */
   csize = blosc_compress_ctx(3, 1, 16, isize, data, data_out, osize, "blosclz", 0, 2);
   if (csize == 0) {
-    printf("Buffer is uncompressible.  Giving up.\n");
+    printf("Buffer is incompressible.  Giving up.\n");
     return 1;
   }
   else if (csize < 0) {
@@ -110,7 +110,7 @@ int main(){
     return dsize;
   }
 
-  printf("Decompression succesful!\n");
+  printf("Decompression successful!\n");
 
   for(i=0;i<SIZE;i++){
     if(data[i] != data_dest[i]) {
@@ -119,7 +119,7 @@ int main(){
     }
   }
 
-  printf("Succesful roundtrip!\n");
+  printf("Successful roundtrip!\n");
   return 0;
   
 out:

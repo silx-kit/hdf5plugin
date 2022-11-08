@@ -13,6 +13,8 @@
 #       build fuzz test programs and generates the "test" target
 #   BUILD_BENCHMARKS: default ON
 #       build the benchmark program
+#   HIDE_SYMBOLS: default ON
+#       hide the symbols that aren't specifically exported
 #   DEACTIVATE_SSE2: default OFF
 #       do not attempt to build with SSE2 instructions
 #   DEACTIVATE_AVX2: default OFF
@@ -74,7 +76,8 @@ cmake_minimum_required(VERSION 2.8.12)
 if (NOT CMAKE_VERSION VERSION_LESS 3.3)
     cmake_policy(SET CMP0063 NEW)
 endif()
-project(blosc C)
+# The project can have ASM (zstd 1.5.2 is starting to use it)
+project(blosc LANGUAGES C ASM)
 
 # parse the full version numbers from blosc.h
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/blosc/blosc.h _blosc_h_contents)
@@ -98,6 +101,11 @@ option(BUILD_TESTS
     "Build test programs from the blosc compression library" ON)
 option(BUILD_FUZZERS
     "Build fuzzer programs from the blosc compression library" ${BUILD_STATIC})
+# Hide symbols by default unless they're specifically exported.
+# This makes it easier to keep the set of exported symbols the
+# same across all compilers/platforms.
+option(HIDE_SYMBOLS
+    "Build a libraries with hidden symbols unless they're specifically exported" ON)
 option(BUILD_BENCHMARKS
     "Build benchmark programs from the blosc compression library" ON)
 option(DEACTIVATE_SSE2
@@ -122,7 +130,7 @@ option(PREFER_EXTERNAL_ZSTD
     "Find and use external Zstd library instead of included sources." OFF)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-
+include(GNUInstallDirs)
 
 if(NOT DEACTIVATE_LZ4)
     if(PREFER_EXTERNAL_LZ4)
@@ -342,7 +350,7 @@ if (BLOSC_INSTALL)
         "${CMAKE_CURRENT_BINARY_DIR}/blosc.pc"
         @ONLY)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/blosc.pc"
-            DESTINATION lib/pkgconfig COMPONENT DEV)
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig" COMPONENT DEV)
 
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
