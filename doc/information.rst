@@ -49,7 +49,7 @@ HDF5 filters and compression libraries
 
 HDF5 compression filters and compression libraries sources were obtained from:
 
-* LZ4 plugin (commit d48f960) and lz4 (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/lz4-1.9.3
+* LZ4 plugin (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/commit/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_) and lz4 (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/lz4-1.9.3
 * bitshuffle plugin (0.4.2 + patch `PR #122 <https://github.com/kiyo-masui/bitshuffle/pull/122>`_) and zstd (v1.5.0): https://github.com/kiyo-masui/bitshuffle and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/zstd-1.5.0
 * bzip2 plugin (from PyTables v3.7.0) and bzip2 (v1.0.8): https://github.com/PyTables/PyTables/, https://sourceware.org/git/bzip2.git
 * hdf5-blosc plugin (v1.0.0), c-blosc (v1.21.1) and snappy (v1.1.9): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/google/snappy
@@ -57,7 +57,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
   ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2 and
   https://github.com/team-charls/charls
 * HDF5-ZFP plugin (commit `cd5422c <https://github.com/LLNL/H5Z-ZFP/commit/cd5422c146836e17c7a0380bfb05cf52d0c4467c>`_) and zfp (v1.0.0): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
-* HDF5Plugin-Zstandard (commit d5afdb5) and zstd (v1.5.0): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/zstd-1.5.0
+* HDF5Plugin-Zstandard (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/commit/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) and zstd (v1.5.0): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/zstd-1.5.0
 
 License
 -------
