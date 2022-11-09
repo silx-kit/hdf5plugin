@@ -72,6 +72,7 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
         args = {"blosc": hdf5plugin.Blosc,
+                "blosc2": hdf5plugin.Blosc2,
                 "bshuf": hdf5plugin.Bitshuffle,
                 "bzip2": hdf5plugin.BZip2,
                 "lz4": hdf5plugin.LZ4,
@@ -187,6 +188,31 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                             shuffle=shuffle)
                         self.assertEqual(
                             filter_[2][4:], (clevel, shuffle, compression_id))
+
+    @unittest.skipUnless(should_test("blosc2"), "Blosc2 filter not available")
+    def testBlosc2(self):
+        """Write/read test with blosc2 filter plugin"""
+        self._test('blosc2')  # Default options
+
+        # Specify options
+        tested_filters = (hdf5plugin.Blosc2.NOFILTER,
+                    hdf5plugin.Blosc2.SHUFFLE,
+                    hdf5plugin.Blosc2.BITSHUFFLE)
+        compress = 'blosclz', 'lz4', 'lz4hc', 'zlib', 'zstd'
+        for compression_id, cname in enumerate(compress):
+            for filters in tested_filters:
+                for clevel in range(10):
+                    with self.subTest(compression=cname,
+                                      filters=filters,
+                                      clevel=clevel):
+                        filter_ = self._test(
+                            'blosc2',
+                            compressed=clevel!=0,  # No compression for clevel=0
+                            cname=cname,
+                            clevel=clevel,
+                            filters=filters)
+                        self.assertEqual(
+                            filter_[2][4:], (clevel, filters, compression_id))
 
     @unittest.skipUnless(should_test("bzip2"), "BZip2 filter not available")
     def testBZip2(self):
