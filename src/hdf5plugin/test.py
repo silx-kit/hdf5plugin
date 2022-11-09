@@ -98,10 +98,12 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
                 # Read chunk raw (compressed) data
                 chunk = f['data'].id.read_direct_chunk((0,) * data.ndim)[1]
 
-                if compressed:  # Check if chunk is actually compressed
+                if compressed is True:  # Check if chunk is actually compressed
                     self.assertLess(len(chunk), data.nbytes)
-                else:
+                elif compressed is False:
                     self.assertEqual(len(chunk), data.nbytes)
+                else:
+                    assert compressed == 'nocheck'
 
         if lossless:
             self.assertTrue(numpy.array_equal(saved, data))
@@ -207,7 +209,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                                       clevel=clevel):
                         filter_ = self._test(
                             'blosc2',
-                            compressed=clevel!=0,  # No compression for clevel=0
+                            compressed='nocheck' if clevel == 0 else True,  # For clevel=0, chunks are larger
                             cname=cname,
                             clevel=clevel,
                             filters=filters)
