@@ -775,6 +775,61 @@ def get_blosc_plugin():
 PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib', 'zstd'
 
 
+def get_blosc2_plugin():
+    # blosc2 plugin from PyTables and c-blosc2
+    hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src/'
+    blosc2_dir = 'src/c-blosc2/'
+
+    # blosc sources
+    sources = [f for f in glob(blosc2_dir + 'blosc/*.c')
+            if 'avx2' not in f and 'sse2' not in f and 'altivec' not in f and 'neon' not in f]
+    # TODO win32/ ?
+    depends = [f for f in glob(blosc2_dir + 'blosc/*.h')]
+    include_dirs = [blosc2_dir, blosc2_dir + 'blosc', blosc2_dir + 'include']
+    define_macros = []
+
+    # TODO enable sse2/avx2/altivec/neon
+
+    # compression libs
+    # lz4
+    include_dirs += get_lz4_clib('include_dirs')
+    define_macros.append(('HAVE_LZ4', 1))
+
+    # zlib
+    # TODO zlib-ng
+    include_dirs += get_zlib_clib('include_dirs')
+    define_macros.append(('HAVE_ZLIB', 1))
+    # define_macros.append(('HAVE_ZLIB_NG', 1))
+
+    # zstd
+    include_dirs += get_zstd_clib('include_dirs')
+    define_macros.append(('HAVE_ZSTD', 1))
+
+    # TODO check if appropriate
+    extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
+    extra_compile_args += ['-O3', '-ffast-math']
+    extra_compile_args += ['/Ox', '/fp:fast']
+    extra_compile_args += ['-pthread']
+    extra_link_args = ['-pthread']
+
+    return HDF5PluginExtension(
+        "hdf5plugin.plugins.libh5blosc2",
+        sources=sources + \
+            prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
+        extra_objects=get_zstd_clib('extra_objects'),
+        include_dirs=include_dirs + [hdf5_blosc2_dir],
+        define_macros=define_macros,
+        extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
+        # TODO sse2=sse2_kwargs,
+        # TODO avx2=avx2_kwargs,
+        # TODO cpp11=cpp11_kwargs,
+        )
+
+
+PLUGIN_LIB_DEPENDENCIES['blosc2'] = 'lz4', 'zlib', 'zstd'
+
+
 def get_zstandard_plugin():
     """HDF5Plugin-Zstandard plugin build config"""
     zstandard_dir = 'src/HDF5Plugin-Zstandard'
@@ -1031,6 +1086,7 @@ libraries, extensions = apply_filter_strip(
         get_lz4_plugin(),
         get_bitshuffle_plugin(),
         get_blosc_plugin(),
+        get_blosc2_plugin(),
         get_fcidecomp_plugin(),
         get_h5zfp_plugin(),
         get_zstandard_plugin(),
