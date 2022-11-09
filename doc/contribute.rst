@@ -133,6 +133,33 @@ compression_opts: (0, 0, 0, 0, **compression level**, **shuffle**, **compression
 
 By default the filter uses byte shuffle and blosclz.
 
+blosc2
+......
+
+compression_opts: (0, 0, 0, 0, **compression level**, **filter**, **compression**)
+
+- First 4 values are reserved.
+- **compression level**:
+  From 0 (no compression) to 9 (maximum compression).
+  Default: 5.
+- **filter**: Pre-compression filter:
+
+  * 0: no shuffle
+  * 1: byte shuffle
+  * 2: bit shuffle
+  * 3: delta: diff current block with first one
+  * 4: truncate precision: Truncate mantissa for floating point types
+
+- **compression**: The compressor blosc ID:
+
+  * 0: blosclz (default)
+  * 1: lz4
+  * 2: lz4hc
+  * 3: zlib
+  * 4: zstd
+
+By default the filter uses byte shuffle and blosclz.
+
 bzip2
 .....
 
