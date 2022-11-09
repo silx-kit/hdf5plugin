@@ -789,6 +789,15 @@ def get_blosc2_plugin():
     define_macros = []
 
     # TODO enable sse2/avx2/altivec/neon
+    sse2_kwargs = {
+        'sources': [f for f in glob(blosc2_dir + 'blosc/*.c') if 'sse2' in f],
+        'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
+        }
+
+    avx2_kwargs = {
+        'sources': [f for f in glob(blosc2_dir + 'blosc/*.c') if 'avx2' in f],
+        'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)],
+        }
 
     # compression libs
     # lz4
@@ -815,14 +824,14 @@ def get_blosc2_plugin():
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc2",
         sources=sources + \
-            prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
+            prefix(hdf5_blosc2_dir,['blosc2_filter.c', 'blosc2_plugin.c']),
         extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc2_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        # TODO sse2=sse2_kwargs,
-        # TODO avx2=avx2_kwargs,
+        sse2=sse2_kwargs,
+        avx2=avx2_kwargs,
         # TODO cpp11=cpp11_kwargs,
         )
 
