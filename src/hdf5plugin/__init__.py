@@ -148,18 +148,48 @@ class Bitshuffle(_FilterRefClass):
         The number of elements per block.
         It needs to be divisible by eight (default is 0, about 8kB per block)
         Default: 0 (for about 8kB per block).
-    :param bool lz4:
-        Whether to use lz4 compression or not as part of the filter.
-        Default: True
+    :param str cname:
+        `lz4` (default), `none`, `zstd`
+    :param int clevel: Compression level, used only for `zstd` compression.
+        Can be negative, and must be below or equal to 22 (maximum compression).
+        Default: 3.
     """
     filter_id = BSHUF_ID
 
-    def __init__(self, nelems=0, lz4=True):
+    __COMPRESSIONS = {
+        'none': 0,
+        'lz4': 2,
+        'zstd': 3,
+    }
+
+    def __init__(self, nelems=0, cname=None, clevel=3, lz4=None):
         nelems = int(nelems)
         assert nelems % 8 == 0
+        assert clevel <= 22
 
-        lz4_enabled = 2 if lz4 else 0
-        self.filter_options = (nelems, lz4_enabled)
+        if lz4 is not None:
+            if cname is not None:
+                raise ValueError("Providing both cname and lz4 arguments is not supported")
+            _logger.warning(
+                "Depreaction: hdf5plugin.Bitshuffle's lz4 argument is deprecated, "
+                "use cname='lz4' or 'none' instead.")
+            cname = 'lz4' if lz4 else 'none'
+
+        if cname in (True, False):
+            _logger.warning(
+                "Depreaction: hdf5plugin.Bitshuffle's boolean argument is deprecated, "
+                "use cname='lz4' or 'none' instead.")
+            cname = 'lz4' if cname else 'none'
+
+        if cname is None:
+            cname = 'lz4'
+        if cname not in self.__COMPRESSIONS:
+            raise ValueError("Unsupported compression: %s" % cname)
+
+        if cname == 'zstd':
+            self.filter_options = (nelems, self.__COMPRESSIONS[cname], clevel)
+        else:
+            self.filter_options = (nelems, self.__COMPRESSIONS[cname])
 
 
 class Blosc(_FilterRefClass):

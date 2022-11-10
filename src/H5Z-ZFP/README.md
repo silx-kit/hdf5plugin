@@ -3,7 +3,7 @@
 A highly flexible floating point and integer
 compression plugin for the HDF5 library using ZFP compression.
 
-[![Build Status](https://travis-ci.org/LLNL/H5Z-ZFP.svg?branch=master)](https://travis-ci.org/LLNL/H5Z-ZFP)
+[![Build Status](https://travis-ci.com/LLNL/H5Z-ZFP.svg?branch=master)](https://travis-ci.com/LLNL/H5Z-ZFP)
 [![Documentation Status](https://readthedocs.org/projects/h5z-zfp/badge/?version=latest)](http://h5z-zfp.readthedocs.io)
 [![codecov](https://codecov.io/gh/LLNL/H5Z-ZFP/branch/master/graph/badge.svg)](https://codecov.io/gh/LLNL/H5Z-ZFP)
 
@@ -28,10 +28,11 @@ package  due  to  the  likely  broad  appeal  and  utility  of the ZFP
 compression library.
 
 This plugin supports all modes of the ZFP compression library, *rate*,
-*accuracy*, *precision* and *expert* and *lossless*. It supports 1, 2 and
-3 dimensional datasets of single and double precision integer and floating
-point data. It can be applied to HDF5 datasets of more than 3 dimensions
-(or 4 dimensions for ZFP versions 0.5.5 and newer) as long as no more than 3
-(or 4) dimensions of the HDF5 dataset chunking are of size greater than 1.
+*accuracy*, *precision*, *expert* and *lossless*. It supports 1, 2, 3 and
+4 dimensional datasets (for ZFP version 0.5.5 and newer) of single and double
+precision integer and floating point data. It can be applied to HDF5 datasets
+of more than 3 dimensions (or 4 dimensions for ZFP versions 0.5.5 and newer)
+as long as no more than 3 (or 4) dimensions of the HDF5 dataset *chunking* are
+of size greater than 1.
 
 [**Full documentation**](http://h5z-zfp.readthedocs.io)

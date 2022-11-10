@@ -26,7 +26,7 @@ __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "15/12/2020"
 
-import shutil
+
 from glob import glob
 import logging
 import os
@@ -69,7 +69,6 @@ else:
     from pkg_resources import parse_version
     import wheel
     from wheel.bdist_wheel import get_platform
-
 
     class BDistWheel(bdist_wheel):
         """Override bdist_wheel to handle as pure python package"""
@@ -412,15 +411,6 @@ class BuildCLib(build_clib):
             build_info['cflags'] = cflags
 
             updated_libraries.append((lib_name, build_info))
-            # FIXME: Is there a cleaner way of running the configure script for SZ?
-            if lib_name == "sz":
-                from pathlib import Path
-                # Execute configure script
-                configure_path = Path().cwd() / "src" / "SZ" / "configure"
-                self.spawn([configure_path.as_posix()])
-                # Move config.h from the current working directory to SZ directory.
-                config_h_path = Path().cwd() / "config.h"
-                config_h_path.rename(configure_path.parent / "config.h")
 
         super().build_libraries(updated_libraries)
 
@@ -430,7 +420,6 @@ class PluginBuildExt(build_ext):
 
     It also handles extra compile arguments depending on the build options.
     """
-
 
     def get_export_symbols(self, ext):
         """Overridden to remove PyInit_* export"""
@@ -482,7 +471,6 @@ class PluginBuildExt(build_ext):
                 arg for arg in e.extra_link_args if arg.startswith(prefix)]
 
         build_ext.build_extensions(self)
-
 
 
 class HDF5PluginExtension(Extension):
@@ -550,36 +538,6 @@ def prefix(directory, files):
 PLUGIN_LIB_DEPENDENCIES = dict()
 """Mapping plugin name to library name they depend on"""
 
-# bitshuffle (+lz4) plugin
-# Plugins from https://github.com/kiyo-masui/bitshuffle
-bithsuffle_dir = 'src/bitshuffle'
-
-# Set compile args for both MSVC and others, list is stripped at build time
-extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
-extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-if platform.machine() == "ppc64le":
-    # Required on ppc64le
-    sse2_options = {'extra_compile_args': ['-DUSESSE2'] }
-else:
-    sse2_options = {}
-extra_link_args = ['-fopenmp', '/openmp']
-
-bithsuffle_plugin = HDF5PluginExtension(
-    "hdf5plugin.plugins.libh5bshuf",
-    sources=prefix(bithsuffle_dir,
-        ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-         "src/bitshuffle.c", "src/bitshuffle_core.c",
-         "src/iochain.c", "lz4/lz4.c"]),
-    depends=prefix(bithsuffle_dir,
-        ["src/bitshuffle.h", "src/bitshuffle_core.h",
-         "src/iochain.h", 'src/bshuf_h5filter.h',
-         "lz4/lz4.h"]),
-    include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']),
-    extra_compile_args=extra_compile_args,
-    extra_link_args=extra_link_args,
-    sse2=sse2_options,
-    )
-
 
 # blosc plugin
 # Plugin from https://github.com/Blosc/hdf5-blosc
@@ -644,10 +602,21 @@ include_dirs += glob(blosc_dir + 'internal-complibs/zlib*')
 define_macros.append(('HAVE_ZLIB', 1))
 
 # zstd
-sources += glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
-depends += glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
-include_dirs += glob(blosc_dir + 'internal-complibs/zstd*')
-include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
+zstd_sources = glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+if os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True' and (sys.platform.startswith('linux') or sys.platform.startswith('macos')):
+    zstd_extra_objects = glob(blosc_dir +'internal-complibs/zstd*/*/*.S')
+    zstd_define_macros = []
+else:
+    zstd_extra_objects = []
+    zstd_define_macros = [('ZSTD_DISABLE_ASM', 1)]
+
+zstd_depends = glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
+zstd_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
+zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
+
+sources += zstd_sources
+depends += zstd_depends
+include_dirs += zstd_include_dirs
 define_macros.append(('HAVE_ZSTD', 1))
 
 extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
@@ -660,10 +629,11 @@ blosc_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5blosc",
     sources=sources + \
         prefix(hdf5_blosc_dir,['blosc_filter.c', 'blosc_plugin.c']),
+    extra_objects=zstd_extra_objects,
     depends=depends + \
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
-    define_macros=define_macros,
+    define_macros=define_macros + zstd_define_macros,
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     sse2=sse2_kwargs,
@@ -675,18 +645,52 @@ PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy'
 
 # HDF5Plugin-Zstandard
 zstandard_dir = os.path.join("src", "HDF5Plugin-Zstandard")
-zstandard_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
-zstandard_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 zstandard_sources = [os.path.join(zstandard_dir, 'zstd_h5plugin.c')]
-zstandard_sources += glob(blosc_dir +'internal-complibs/zstd*/*/*.c')
+zstandard_sources += zstd_sources
 zstandard_depends = [os.path.join(zstandard_dir, 'zstd_h5plugin.h')]
-zstandard_depends += glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
+zstandard_depends += zstd_depends
 zstandard_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5zstd",
     sources=zstandard_sources,
+    extra_objects=zstd_extra_objects,
     depends=zstandard_depends,
-    include_dirs=zstandard_include_dirs,
+    include_dirs=zstd_include_dirs,
+    define_macros=zstd_define_macros,
     )
+
+# bitshuffle (+lz4 or zstd) plugin
+# Plugins from https://github.com/kiyo-masui/bitshuffle
+bithsuffle_dir = 'src/bitshuffle'
+
+# Set compile args for both MSVC and others, list is stripped at build time
+extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
+extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+if platform.machine() == "ppc64le":
+    # Required on ppc64le
+    sse2_options = {'extra_compile_args': ['-DUSESSE2'] }
+else:
+    sse2_options = {}
+extra_link_args = ['-fopenmp', '/openmp']
+define_macros = [("ZSTD_SUPPORT", 1)]
+
+bithsuffle_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5bshuf",
+    sources=prefix(bithsuffle_dir,
+        ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
+         "src/bitshuffle.c", "src/bitshuffle_core.c",
+         "src/iochain.c", "lz4/lz4.c"]) + zstd_sources,
+    extra_objects=zstd_extra_objects,
+    depends=prefix(bithsuffle_dir,
+        ["src/bitshuffle.h", "src/bitshuffle_core.h",
+         "src/iochain.h", 'src/bshuf_h5filter.h',
+         "lz4/lz4.h"]) + zstd_depends,
+    include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']) + zstd_include_dirs,
+    define_macros=define_macros + zstd_define_macros,
+    extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args,
+    sse2=sse2_options,
+    )
+
 
 
 # lz4 plugin
@@ -809,7 +813,7 @@ zfp_lib = ('zfp', {
     'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
     })
 
-# Trying to add sz and its hdf5 plugin
+# SZ library and its hdf5 filter
 sz_dir = os.path.join("src", "SZ", "sz")
 sz_sources = glob(os.path.join(sz_dir, "src", "*.c"))
 sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
@@ -894,8 +898,8 @@ libraries, extensions = apply_filter_strip(
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
 
-# setup
 
+# setup
 
 def get_version(debian=False):
     """Returns current version number from _version.py file"""

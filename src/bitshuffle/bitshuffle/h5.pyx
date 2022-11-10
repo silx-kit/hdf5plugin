@@ -14,6 +14,7 @@ Constants
 
     H5FILTER : The Bitshuffle HDF5 filter integer identifier.
     H5_COMPRESS_LZ4 : Filter option flag for LZ4 compression.
+    H5_COMPRESS_ZSTD : Filter option flag for ZSTD compression.
 
 Functions
 =========
@@ -42,9 +43,10 @@ Examples
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import sys
 import numpy
 import h5py
-from h5py import h5d, h5s, h5t, h5p, filters
+from h5py import h5d, h5fd, h5s, h5t, h5p, h5z, defs, filters
 
 cimport cython
 
@@ -53,11 +55,39 @@ cdef extern from b"bshuf_h5filter.h":
     int bshuf_register_h5filter()
     int BSHUF_H5FILTER
     int BSHUF_H5_COMPRESS_LZ4
+    int BSHUF_H5_COMPRESS_ZSTD
+
+cdef extern int init_filter(const char* libname)
 
 cdef int LZF_FILTER = 32000
 
 H5FILTER = BSHUF_H5FILTER
 H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
+H5_COMPRESS_ZSTD = BSHUF_H5_COMPRESS_ZSTD
+
+# Init HDF5 dynamic loading with HDF5 library used by h5py
+if not sys.platform.startswith('win'):
+    if sys.version_info[0] >= 3:
+        libs = [bytes(h5d.__file__, encoding='utf-8'),
+                bytes(h5fd.__file__, encoding='utf-8'),
+                bytes(h5s.__file__, encoding='utf-8'),
+                bytes(h5t.__file__, encoding='utf-8'),
+                bytes(h5p.__file__, encoding='utf-8'),
+                bytes(h5z.__file__, encoding='utf-8'),
+                bytes(defs.__file__, encoding='utf-8')]
+    else:
+        libs = [h5d.__file__, h5fd.__file__, h5s.__file__, h5t.__file__,
+                h5p.__file__, h5z.__file__, defs.__file__]
+
+    # Ensure all symbols are loaded
+    success = -1
+    for lib in libs:
+        success = init_filter(lib)
+        if success == 0:
+            break
+
+    if success == -1:
+        raise RuntimeError("Failed to load all HDF5 symbols using these libs: {}".format(libs))
 
 
 def register_h5_filter():
@@ -101,7 +131,7 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
     tmp_shape = maxshape if maxshape is not None else shape
     # Validate chunk shape
     chunks_larger = (numpy.array([ not i>=j
-                     for i,j in zip(tmp_shape,chunks) if i is not None])).any()
+                     for i, j in zip(tmp_shape, chunks) if i is not None])).any()
     if isinstance(chunks, tuple) and chunks_larger:
         errmsg = ("Chunk shape must not be greater than data shape in any "
                   "dimension. {} is not compatible with {}".format(chunks, shape))
@@ -190,11 +220,11 @@ def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
 
 
 def create_bitshuffle_compressed_dataset(parent, name, shape, dtype,
-                                        chunks=None, maxshape=None,
-                                        fillvalue=None, track_times=None):
+                                         chunks=None, maxshape=None,
+                                         fillvalue=None, track_times=None):
     """Create dataset with bitshuffle+internal LZ4 compression."""
 
-    filter_pipeline = [H5FILTER,]
+    filter_pipeline = [H5FILTER, ]
     filter_opts = [(0, H5_COMPRESS_LZ4)]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline,

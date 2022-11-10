@@ -2,17 +2,19 @@
 Tests and Examples
 ==================
 
-The tests directory contains a few simple tests of the H5Z-ZFP_ filter.
+The tests directory contains a few simple tests of the H5Z-ZFP_ filter some
+of which also serve as decent examples.
 
 The test client, `test_write.c <https://github.com/LLNL/H5Z-ZFP/blob/master/test/test_write.c>`_
 is compiled a couple of different ways.
 One target is ``test_write_plugin`` which demonstrates the use of this filter as
 a standalone plugin. The other target, ``test_write_lib``, demonstrates the use
-of the filter as an explicitly linked library. These test a simple 1D array with
-and without ZFP_ compression using either the :ref:`generic-interface` (for plugin)
+of the filter as an explicitly linked library. By default, these test a simple
+1D array with and without ZFP_ compression using either the :ref:`generic-interface` (for plugin)
 or the :ref:`properties-interface` (for library).  You can use the code there as an
-example of using the ZFP_ filter either as a plugin or as a library.
-The command ``test_write_lib help`` or ``test_write_plugin help`` will print a
+example of using the ZFP_ filter either as a plugin or as a library. However, these
+also include some advanced usages for 4D and 6D, time-varying (e.g. *extendible*)
+datasets.  The command ``test_write_lib help`` or ``test_write_plugin help`` will print a
 list of the example's options and how to use them.
 
 ------------------

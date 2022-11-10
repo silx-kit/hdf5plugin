@@ -2,13 +2,19 @@
  Release notes for C-Blosc
 ===========================
 
+Changes from 1.21.1 to 1.21.2
+=============================
+
+#XXX version-specific blurb XXX#
+
+
 Changes from 1.21.0 to 1.21.1
 =============================
 
 * Fix pthread flag when linking on ppc64le.  See #318.  Thanks to Axel Huebl.
 
 * Updates in codecs (some bring important performance improvements):
-  * BloscLZ updated to 2.5.1.
+  * BloscLZ updated to 2.5.1
   * Zlib updated to 1.2.11
   * Zstd updated to 1.5.0
 
@@ -36,7 +42,7 @@ Changes from 1.20.0 to 1.20.1
 Changes from 1.19.1 to 1.20.0
 =============================
 
-* More saftey checks have been implemented so that potential flaws
+* More safety checks have been implemented so that potential flaws
   discovered by new fuzzers in OSS-Fuzzer are fixed now.  Thanks to
   Nathan Moinvaziri (@nmoinvaz).
 
@@ -195,7 +201,7 @@ Changes from 1.14.4 to 1.15.0
   compatibility with quite old gcc compilers.  See PR #243.  Thanks to
   Andreas Martin.
 
-- Empty buffers can be compressed again (this was unadvertedly prevented while
+- Empty buffers can be compressed again (this was inadvertently prevented while
   fixing #234).  See #247.  Thanks to Valentin Haenel.
 
 - LZ4 internal codec upgraded to 1.8.3 (from 1.8.1.2).
@@ -299,8 +305,8 @@ Changes from 1.13.7 to 1.14.0
     $ ./simple
     Blosc version info: 1.14.0.dev ($Date:: 2018-02-15 #$)
     Compression: 4000000 -> 41384 (96.7x)
-    Decompression succesful!
-    Succesful roundtrip!
+    Decompression successful!
+    Successful roundtrip!
 
   and here with the BLOSC_PRINT_SHUFFLE_ACCEL environment variable set::
 
@@ -320,8 +326,8 @@ Changes from 1.13.7 to 1.14.0
     YMM state enabled: True
     ZMM state enabled: False
     Compression: 4000000 -> 41384 (96.7x)
-    Decompression succesful!
-    Succesful roundtrip!
+    Decompression successful!
+    Successful roundtrip!
 
   Blosc only currently leverages the SSE2 and AVX2 instruction sets, but
   it can recognize all of the above.  This is useful mainly for debugging.
@@ -560,7 +566,7 @@ Changes from 1.8.1 to 1.9.0
 * In the same vein, from now on, when the BLOSC_NTHREADS environment
   variable is set to an integer, every call to blosc_compress() and
   blosc_decompress() will call blosc_set_nthreads(BLOSC_NTHREADS)
-  before the actuall compression/decompression process.  See blosc.h
+  before the actual compression/decompression process.  See blosc.h
   for details.
 
 * Finally, if BLOSC_CLEVEL, BLOSC_SHUFFLE, BLOSC_TYPESIZE and/or
@@ -838,7 +844,7 @@ Changes from 1.3.6 to 1.4.0
   tests pass here.
 
 * Architectures requiring strict access alignment are supported as well.
-  Due to this, arquitectures with a high penalty in accessing unaligned
+  Due to this, architectures with a high penalty in accessing unaligned
   data (e.g. Raspberry Pi, ARMv6) can compress up to 2.5x faster.
 
 * LZ4 has been updated to r119 (1.2.0) so as to fix a possible security
@@ -1175,7 +1181,7 @@ Changes from 0.8.0 to 0.9
   info.
 
 - Added a protection for MacOSX so that it has to not link against
-  posix_memalign() funtion, which seems not available in old versions of
+  posix_memalign() function, which seems not available in old versions of
   MacOSX (for example, Tiger).  At nay rate, posix_memalign() is not
   necessary on Mac because 16 bytes alignment is ensured by default.
   Thanks to Ivan Vilata.  Fixes #3.

@@ -25,6 +25,11 @@ Project resources
   - Windows: `AppVeyor <https://ci.appveyor.com/project/ESRF/hdf5plugin>`_
 - `Weekly builds <https://silx.gitlab-pages.esrf.fr/bob/hdf5plugin/>`_
 
+`hdf5plugin` can be cited with its `Zenodo DOI <https://doi.org/10.5281/zenodo.7257761>`_.
+
+Presentations
+-------------
+
 * :doc:`Presentation <hdf5plugin_EuropeanHUG2022>` at the `European HDF Users Group (HUG) Meeting 2022 <https://www.hdfgroup.org/hug/europeanhug22/>`_:
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2022>`
@@ -44,15 +49,15 @@ HDF5 filters and compression libraries
 
 HDF5 compression filters and compression libraries sources were obtained from:
 
-* LZ4 plugin (commit d48f960) and lz4 (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/lz4-1.9.3
-* bitshuffle plugin (0.3.5): https://github.com/kiyo-masui/bitshuffle
-* bzip2 plugin (from PyTables v3.7.0) and bzip2 (v1.0.8): https://github.com/PyTables/PyTables/, https://sourceware.org/git/bzip2.git
-* hdf5-blosc plugin (v1.0.0), c-blosc (v1.21.1) and snappy (v1.1.9): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/google/snappy
-* FCIDECOMP plugin (v1.0.2) and CharLS (branch 1.x-master SHA1 ID: 25160a42fb62e71e4b0ce081f5cb3f8bb73938b5):
+* **LZ4 plugin** (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_) and **lz4** (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/lz4-1.9.3
+* **bitshuffle plugin** (0.4.2 + patch `PR #122 <https://github.com/kiyo-masui/bitshuffle/pull/122>`_) and **zstd** (v1.5.2): https://github.com/kiyo-masui/bitshuffle and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2
+* **bzip2 plugin** (from PyTables v3.7.0) and **bzip2** (v1.0.8): https://github.com/PyTables/PyTables/, https://sourceware.org/git/bzip2.git
+* **hdf5-blosc plugin** (v1.0.0), **c-blosc** (commit `9dc93b1 <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8>`_) and **snappy** (v1.1.9): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/google/snappy
+* **FCIDECOMP plugin** (v1.0.2) and **CharLS** (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_):
   ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2 and
   https://github.com/team-charls/charls
-* HDF5-ZFP plugin (v1.0.1) and zfp (v0.5.5): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
-* HDF5Plugin-Zstandard (commit d5afdb5) and zstd (v1.5.0): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/v1.21.1/internal-complibs/zstd-1.5.0
+* **HDF5-ZFP plugin** (commit `cd5422c <https://github.com/LLNL/H5Z-ZFP/tree/cd5422c146836e17c7a0380bfb05cf52d0c4467c>`_) and **zfp** (v1.0.0): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
+* **HDF5Plugin-Zstandard** (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) and **zstd** (v1.5.2): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2
 
 License
 -------

@@ -62,6 +62,8 @@ LLC,  and shall  not be  used for  advertising or  product endorsement
 purposes.
 */
 
+#define _GNU_SOURCE
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,7 +71,9 @@ purposes.
 
 #include "hdf5.h"
 
-#include "H5Zzfp.h"
+#ifndef H5Z_ZFP_USE_PLUGIN
+#include "H5Zzfp_lib.h"
+#endif
 
 #define NAME_LEN 256
 
@@ -87,7 +91,8 @@ purposes.
             A = PARSEA;                                         \
             break;                                              \
         }                                                       \
-        else if (!strncasecmp(argv[i], "help", 4))              \
+        else if (!strncmp(#A, "help", 4) &&                     \
+                  strcasestr(argv[i], "help"))                  \
         {                                                       \
             return 0;                                           \
         }                                                       \
@@ -97,10 +102,12 @@ purposes.
 }
 
 /* convenience macro to handle errors */
-#define ERROR(FNAME)                                            \
-do {                                                            \
-    fprintf(stderr, #FNAME " failed at line %d\n", __LINE__);   \
-    return 1;                                                   \
+#define ERROR(FNAME)                                              \
+do {                                                              \
+    int _errno = errno;                                           \
+    fprintf(stderr, #FNAME " failed at line %d, errno=%d (%s)\n", \
+        __LINE__, _errno, _errno?strerror(_errno):"ok");          \
+    return 1;                                                     \
 } while(0)
 
 int main(int argc, char **argv)
@@ -133,7 +140,7 @@ int main(int argc, char **argv)
     HANDLE_ARG(max_absdiff,strtod(argv[i]+len2,0),"%g",set maximum absolute diff);
     HANDLE_ARG(max_reldiff,strtod(argv[i]+len2,0),"%g",set maximum relative diff);
     HANDLE_ARG(doint,(int) strtol(argv[i]+len2,0,10),"%d",check integer datasets instead);
-    HANDLE_ARG(ret,(int) strtol(argv[i]+len2,0,10),"%d",return count of abs(1) or rel(2) diffs);
+    HANDLE_ARG(ret,(int) strtol(argv[i]+len2,0,10),"%d",return 1 if diffs (0=all,1=abs,2=rel));
     HANDLE_ARG(help,(int)strtol(argv[i]+len2,0,10),"%d",this help message);
 
 #ifndef H5Z_ZFP_USE_PLUGIN
@@ -184,11 +191,17 @@ int main(int argc, char **argv)
     printf("Relative Diffs: %d values are different; actual-max-reldiff = %g\n",
         num_reldiffs, actual_max_reldiff);
 
+#ifndef H5Z_ZFP_USE_PLUGIN
+    /* When filter is used as a library, we need to finalize it */
+    H5Z_zfp_finalize();
+#endif
+
     free(obuf);
     free(cbuf);
     free(ifile);
 
+    if (ret == 0) return (num_absdiffs+num_reldiffs)>0;
     if (ret == 1) return num_absdiffs>0;
     if (ret == 2) return num_reldiffs>0;
-    return (num_absdiffs+num_reldiffs)>0;
+    return 0;
 }
