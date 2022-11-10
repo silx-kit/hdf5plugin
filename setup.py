@@ -412,6 +412,11 @@ class BuildCLib(build_clib):
             build_info['cflags'] = cflags
 
             updated_libraries.append((lib_name, build_info))
+            # FIXME: Is there a cleaner way of running the configure script for SZ?
+            if lib_name == "sz":
+                from pathlib import Path
+                configure_path = Path().cwd() / "src" / "SZ" / "configure"
+                self.spawn([configure_path.as_posix()])
 
         super().build_libraries(updated_libraries)
 
