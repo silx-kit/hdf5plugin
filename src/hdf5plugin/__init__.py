@@ -414,6 +414,43 @@ class Zfp(_FilterRefClass):
         _logger.info("filter options = %s" % (self.filter_options,))
 
 
+class SZ(_FilterRefClass):
+    filter_id = SZ_ID
+
+    def __init__(self, abs=None, rel=None, pw_rel=None):
+        # Check that a single option is selected:
+        assert sum([abs is None, rel is None, pw_rel is None]) == 2, "Please select a single option."
+
+        # Get SZ encoding options
+        if abs is not None:
+            sz_mode = 0
+            parameter = abs
+        elif rel is not None:
+            sz_mode = 1
+            parameter = rel
+        elif pw_rel is not None:
+            sz_mode = 10
+            parameter = pw_rel
+        else:
+            raise NotImplementedError("One of the options need to be provided: abs, rel or pw_rel .")
+
+        packed_error = self.pack_error(parameter)
+        compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
+
+        _logger.info(f"SZ mode {sz_mode} used.")
+        _logger.info(f"filter options {compression_opts}")
+
+        self.filter_options = compression_opts
+
+    @staticmethod
+    def pack_error(error: float) -> tuple:
+        from struct import pack, unpack
+        packed = pack('<d', error)  # Pack as IEEE 754 double
+        high = unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
+        low = unpack('<I', packed[4:8])[0]
+        return low, high
+
+
 class Zstd(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
