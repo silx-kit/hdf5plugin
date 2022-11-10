@@ -415,8 +415,12 @@ class BuildCLib(build_clib):
             # FIXME: Is there a cleaner way of running the configure script for SZ?
             if lib_name == "sz":
                 from pathlib import Path
+                # Execute configure script
                 configure_path = Path().cwd() / "src" / "SZ" / "configure"
                 self.spawn([configure_path.as_posix()])
+                # Move config.h from the current working directory to SZ directory.
+                config_h_path = Path().cwd() / "config.h"
+                config_h_path.rename(configure_path.parent / "config.h")
 
         super().build_libraries(updated_libraries)
 
