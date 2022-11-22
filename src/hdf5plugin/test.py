@@ -38,8 +38,8 @@ def should_test(filter_name):
     return filter_name in hdf5plugin.config.embedded_filters or h5py.h5z.filter_avail(filter_id)
 
 
-class TestHDF5PluginRW(unittest.TestCase):
-    """Test write/read a HDF5 file with the plugins"""
+class BaseTestHDF5PluginRW(unittest.TestCase):
+    """Base class for testing write/read HDF5 dataset with the plugins"""
 
     @classmethod
     def setUpClass(cls):
@@ -106,6 +106,10 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         os.remove(filename)
         return filters[0]
+
+
+class TestHDF5PluginRW(BaseTestHDF5PluginRW):
+    """Test write/read a HDF5 file with the plugins"""
 
     @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
     def testDepreactedBitshuffle(self):
@@ -265,9 +269,28 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(version_info.serial, int)
 
 
+class TestRegisterFilter(BaseTestHDF5PluginRW):
+    """Test usage of the register_filter function"""
+
+    @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
+    def test(self):
+        """Re-register all embedded filters"""
+        for name in hdf5plugin.config.embedded_filters:
+            with self.subTest(name=name):
+                status = hdf5plugin.register_filter(name)
+                self.assertTrue(status)
+
+                if name == 'fcidecomp':
+                    self._test('fcidecomp', dtype=numpy.uint8)
+                elif name in ('sz', 'zfp'):
+                    self._test(name, dtype=numpy.float32, lossless=False)
+                else:
+                    self._test(name)
+
+
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW, TestPackage):
+    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 
