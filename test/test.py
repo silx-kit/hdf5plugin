@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2020 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2022 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "12/05/2020"
+__date__ = "22/11/2022"
 
 
 import os
@@ -136,7 +136,40 @@ class TestHDF5PluginRead(unittest.TestCase):
                                       "Values should not be identical")
             self.assertTrue(numpy.allclose(original, compressed),
                                       "Values should be close")
-        
+
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SZ_ID),
+                         "SZ filter not available")
+    def testSZ(self):
+        """Test reading SZ compressed data"""
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        for fname in ["sz_testfloat_8_8_128.h5"]:
+            fname = os.path.join(dirname, fname)
+            self.assertTrue(os.path.exists(fname),
+                            "Cannot find %s file" % fname)
+            h5 = h5py.File(fname, "r")
+            compressed = h5["testfloat"][()]
+            h5.close()
+            original_shape = (128, 8, 8)
+            original = numpy.array([0.23454477,
+                                    0.23452051,
+                                    0.23450762,
+                                    0.23450902,
+                                    0.23451449,
+                                    0.23453577,
+                                    0.23457345,
+                                    0.23459189,
+                                    0.23454477,
+                                    0.23452051,
+                                    0.23450762,
+                                    0.23450902,
+                                    0.23451449,
+                                    0.23453577], dtype=numpy.float32)
+            self.assertTrue(original_shape == compressed.shape,
+                            "Incorrect shape")
+            self.assertTrue(original.dtype == compressed.dtype,
+                            "Incorrect dtype")
+            self.assertTrue(numpy.alltrue(original[0:8] == compressed[0, 0, :8]),
+                                      "Values should not be identical")
 
 def suite():
     testSuite = unittest.TestSuite()
