@@ -235,6 +235,7 @@ void SZ_copymetaDataToCdArray(size_t* cd_nelmts, unsigned int *cd_values, int da
  {
 	 unsigned char bytes[8] = {0};
 	 *new_cd_values = (unsigned int*)malloc(sizeof(unsigned int)*16);
+	 memset(*new_cd_values, 0, sizeof(unsigned int)*16);
 	 
 	//correct dimension if needed
 	size_t _r[5];

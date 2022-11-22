@@ -8,13 +8,10 @@
  */
 
 
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
+#include <unistd.h>
 #include <math.h>
 #include "sz.h"
 #include "CompressElement.h"

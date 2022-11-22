@@ -362,7 +362,7 @@ void decode_MSST19(unsigned char *s, size_t targetLength, node t, int *out, int 
     int* valueTable = (int*)malloc(tableSize * sizeof(int));
     uint8_t* lengthTable = (uint8_t*)malloc(tableSize * sizeof(int));
     node* nodeTable = (node*)malloc(tableSize * sizeof(node));
-    uint32_t maskTable[maxBits+8];
+    uint32_t* maskTable = (uint32_t*) malloc((maxBits+8) * sizeof(uint32_t));
     int j;
     for(uint32_t i=0; i<tableSize; i++){
         n = t;
@@ -437,6 +437,7 @@ void decode_MSST19(unsigned char *s, size_t targetLength, node t, int *out, int 
     free(valueTable);
     free(lengthTable);
     free(nodeTable);
+    free(maskTable);
 	return;
 }
 void pad_tree_uchar(HuffmanTree* huffmanTree, unsigned char* L, unsigned char* R, unsigned int* C, unsigned char* t, unsigned int i, node root)

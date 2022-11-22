@@ -9,13 +9,10 @@
  */
 
 
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
+#include <unistd.h>
 #include <math.h>
 #include "sz.h"
 #include "CompressElement.h"
@@ -719,7 +716,8 @@ size_t dataLength, size_t *outSize, float min, float max)
 		size_t totalByteLength = 3 + exe_params->SZ_SIZE_TYPE + 1 + floatSize*dataLength;
 		*newByteData = (unsigned char*)malloc(totalByteLength);
 
-		unsigned char dsLengthBytes[exe_params->SZ_SIZE_TYPE];
+		/* unsigned char dsLengthBytes[exe_params->SZ_SIZE_TYPE]; */
+		unsigned char* dsLengthBytes = (unsigned char*) malloc((exe_params->SZ_SIZE_TYPE) * sizeof(unsigned char));
 		intToBytes_bigEndian(dsLengthBytes, dataLength);//4
 		for (i = 0; i < 3; i++)//3
 			(*newByteData)[k++] = versionNumber[i];
@@ -745,6 +743,7 @@ size_t dataLength, size_t *outSize, float min, float max)
 				floatToBytes(p, oriData[i]);
 		}
 		*outSize = totalByteLength;
+		free(dsLengthBytes);
 	}
 
 	free(pwrErrBound);

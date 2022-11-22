@@ -18,12 +18,14 @@
 void sz_init_c_(char *configFile,int *len,int *ierr)
 {
     int i;
-    char s2[*len+1];
+    /*char s2[*len+1];*/
+    char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=configFile[i];
     s2[*len]='\0';
  //   printf("sconfigFile=%s\n",configFile);
     *ierr = SZ_Init(s2);
+    free(s2);
 }
 
 void sz_finalize_c_()
@@ -32,17 +34,17 @@ void sz_finalize_c_()
 }
 
 //compress with config (without args in function)
-void sz_compress_d1_float_(float* data, unsigned char *bytes, size_t *outSize, size_t *r1)	
+void sz_compress_d1_float_(float* data, unsigned char *bytes, size_t *outSize, size_t *r1)
 {
 	unsigned char *tmp_bytes = SZ_compress(SZ_FLOAT, data, outSize, 0, 0, 0, 0, *r1);
-	memcpy(bytes, tmp_bytes, *outSize);	
+	memcpy(bytes, tmp_bytes, *outSize);
 	free(tmp_bytes);
 }
 
-void sz_compress_d1_float_rev_(float* data, float *reservedValue, unsigned char *bytes, size_t *outSize, size_t *r1)	
+void sz_compress_d1_float_rev_(float* data, float *reservedValue, unsigned char *bytes, size_t *outSize, size_t *r1)
 {
 	unsigned char *tmp_bytes = SZ_compress_rev(SZ_FLOAT, data, reservedValue, outSize, 0, 0, 0, 0, *r1);
-	memcpy(bytes, tmp_bytes, *outSize);	
+	memcpy(bytes, tmp_bytes, *outSize);
 	free(tmp_bytes);
 }
 
@@ -407,101 +409,123 @@ void sz_decompress_d5_double_(unsigned char *bytes, size_t *byteLength, double *
 void sz_batchaddvar_d1_float_(int var_id, char* varName, int *len, float* data, int *errBoundMode, float *absErrBound, float *relBoundRatio, size_t *r1)
 {
 	int i;
-    char s2[*len+1];
+    /*char s2[*len+1];*/
+    char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_FLOAT, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, 0, 0, 0, *r1);
+	free(s2);
 }
 void sz_batchaddvar_d2_float_(int var_id, char* varName, int *len, float* data, int *errBoundMode, float *absErrBound, float *relBoundRatio, size_t *r1, size_t *r2)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_FLOAT, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, 0, 0, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d3_float_(int var_id, char* varName, int *len, float* data, int *errBoundMode, float *absErrBound, float *relBoundRatio, size_t *r1, size_t *r2, size_t *r3)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_FLOAT, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, 0, *r3, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d4_float_(int var_id, char* varName, int *len, float* data, int *errBoundMode, float *absErrBound, float *relBoundRatio, size_t *r1, size_t *r2, size_t *r3, size_t *r4)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_FLOAT, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, *r4, *r3, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d5_float_(int var_id, char* varName, int *len, float* data, int *errBoundMode, float *absErrBound, float *relBoundRatio, size_t *r1, size_t *r2, size_t *r3, size_t *r4, size_t *r5)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_FLOAT, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, *r5, *r4, *r3, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d1_double_(int var_id, char* varName, int *len, double* data, int *errBoundMode, double *absErrBound, double *relBoundRatio, size_t *r1)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_DOUBLE, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, 0, 0, 0, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d2_double_(int var_id, char* varName, int *len, double* data, int *errBoundMode, double *absErrBound, double *relBoundRatio, size_t *r1, size_t *r2)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_DOUBLE, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, 0, 0, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d3_double_(int var_id, char* varName, int *len, double* data, int *errBoundMode, double *absErrBound, double *relBoundRatio, size_t *r1, size_t *r2, size_t *r3)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_DOUBLE, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, 0, *r3, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d4_double_(int var_id, char* varName, int *len, double* data, int *errBoundMode, double *absErrBound, double *relBoundRatio, size_t *r1, size_t *r2, size_t *r3, size_t *r4)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_DOUBLE, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, 0, *r4, *r3, *r2, *r1);
+    free(s2);
 }
 void sz_batchaddvar_d5_double_(int var_id, char* varName, int *len, double* data, int *errBoundMode, double *absErrBound, double *relBoundRatio, size_t *r1, size_t *r2, size_t *r3, size_t *r4, size_t *r5)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';		
+    s2[*len]='\0';
 	SZ_batchAddVar(var_id, s2, SZ_DOUBLE, data, *errBoundMode, *absErrBound, *relBoundRatio, 0.1, *r5, *r4, *r3, *r2, *r1);
+    free(s2);
 }
 void sz_batchdelvar_c_(char* varName, int *len, int *errState)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
     s2[*len]='\0';
 	*errState = SZ_batchDelVar(s2);
+	free(s2);
 }
 
 /*@deprecated*/
@@ -520,13 +544,15 @@ void sz_batch_decompress_c_(unsigned char* bytes, size_t *byteLength, int *ierr)
 void sz_getvardim_c_(char* varName, int *len, int *dim, size_t *r1, size_t *r2, size_t *r3, size_t *r4, size_t *r5)
 {
 	int i;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
     s2[*len]='\0';
-    
+
     SZ_getVarData(s2, r5, r4, r3, r2, r1);
     *dim = computeDimension(*r5, *r4, *r3, *r2, *r1);
+    free(s2);
 }
 
 void compute_total_batch_size_c_(size_t *totalSize)
@@ -538,29 +564,33 @@ void sz_getvardata_float_(char* varName, int *len, float* data)
 {
 	int i;
 	size_t r1, r2, r3, r4, r5;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';	
-	
+    s2[*len]='\0';
+
 	float* tmp_data = (float*)SZ_getVarData(s2, &r5, &r4, &r3, &r2, &r1);
 	int size = computeDataLength(r5, r4, r3, r2, r1);
 	memcpy(data, tmp_data, size*sizeof(float));
-	free(tmp_data);	
+	free(tmp_data);
+	free(s2);
 }
 void sz_getvardata_double_(char* varName, int *len, double* data)
 {
 	int i;
 	size_t r1, r2, r3, r4, r5;
-    char s2[*len+1];
+	/*char s2[*len+1];*/
+	char* s2 = (char*) malloc((*len + 1) * sizeof(char));
     for(i=0;i<*len;i++)
         s2[i]=varName[i];
-    s2[*len]='\0';	
-    
+    s2[*len]='\0';
+
 	double* tmp_data = (double*)SZ_getVarData(s2, &r5, &r4, &r3, &r2, &r1);
 	int size = computeDataLength(r5, r4, r3, r2, r1);
 	memcpy(data, tmp_data, size*sizeof(double));
 	//free(tmp_data);
+	free(s2);
 }
 
 void sz_freevarset_c_(int *mode)

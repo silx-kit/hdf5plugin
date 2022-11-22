@@ -17,12 +17,12 @@
 size_t convertIntArray2ByteArray_fast_1b(unsigned char* intArray, size_t intArrayLength, unsigned char **result)
 {
 	size_t byteLength = 0;
-	size_t i, j; 
+	size_t i, j;
 	if(intArrayLength%8==0)
 		byteLength = intArrayLength/8;
 	else
 		byteLength = intArrayLength/8+1;
-		
+
 	if(byteLength>0)
 		*result = (unsigned char*)malloc(byteLength*sizeof(unsigned char));
 	else
@@ -47,12 +47,12 @@ size_t convertIntArray2ByteArray_fast_1b(unsigned char* intArray, size_t intArra
 size_t convertIntArray2ByteArray_fast_1b_to_result(unsigned char* intArray, size_t intArrayLength, unsigned char *result)
 {
 	size_t byteLength = 0;
-	size_t i, j; 
+	size_t i, j;
 	if(intArrayLength%8==0)
 		byteLength = intArrayLength/8;
 	else
 		byteLength = intArrayLength/8+1;
-		
+
 	size_t n = 0;
 	int tmp, type;
 	for(i = 0;i<byteLength;i++)
@@ -70,7 +70,7 @@ size_t convertIntArray2ByteArray_fast_1b_to_result(unsigned char* intArray, size
 	return byteLength;
 }
 
-void convertByteArray2IntArray_fast_1b(size_t intArrayLength, unsigned char* byteArray, size_t byteArrayLength, unsigned char **intArray)	
+void convertByteArray2IntArray_fast_1b(size_t intArrayLength, unsigned char* byteArray, size_t byteArrayLength, unsigned char **intArray)
 {
     if(intArrayLength > byteArrayLength*8)
     {
@@ -81,11 +81,11 @@ void convertByteArray2IntArray_fast_1b(size_t intArrayLength, unsigned char* byt
 	if(intArrayLength>0)
 		*intArray = (unsigned char*)malloc(intArrayLength*sizeof(unsigned char));
 	else
-		*intArray = NULL;    
-    
+		*intArray = NULL;
+
 	size_t n = 0, i;
 	int tmp;
-	for (i = 0; i < byteArrayLength-1; i++) 
+	for (i = 0; i < byteArrayLength-1; i++)
 	{
 		tmp = byteArray[i];
 		(*intArray)[n++] = (tmp & 0x80) >> 7;
@@ -95,34 +95,34 @@ void convertByteArray2IntArray_fast_1b(size_t intArrayLength, unsigned char* byt
 		(*intArray)[n++] = (tmp & 0x08) >> 3;
 		(*intArray)[n++] = (tmp & 0x04) >> 2;
 		(*intArray)[n++] = (tmp & 0x02) >> 1;
-		(*intArray)[n++] = (tmp & 0x01) >> 0;		
+		(*intArray)[n++] = (tmp & 0x01) >> 0;
 	}
-	
-	tmp = byteArray[i];	
+
+	tmp = byteArray[i];
 	if(n == intArrayLength)
 		return;
 	(*intArray)[n++] = (tmp & 0x80) >> 7;
 	if(n == intArrayLength)
-		return;	
+		return;
 	(*intArray)[n++] = (tmp & 0x40) >> 6;
 	if(n == intArrayLength)
-		return;	
+		return;
 	(*intArray)[n++] = (tmp & 0x20) >> 5;
 	if(n == intArrayLength)
 		return;
 	(*intArray)[n++] = (tmp & 0x10) >> 4;
 	if(n == intArrayLength)
-		return;	
+		return;
 	(*intArray)[n++] = (tmp & 0x08) >> 3;
 	if(n == intArrayLength)
-		return;	
+		return;
 	(*intArray)[n++] = (tmp & 0x04) >> 2;
 	if(n == intArrayLength)
-		return;	
+		return;
 	(*intArray)[n++] = (tmp & 0x02) >> 1;
 	if(n == intArrayLength)
-		return;	
-	(*intArray)[n++] = (tmp & 0x01) >> 0;		
+		return;
+	(*intArray)[n++] = (tmp & 0x01) >> 0;
 }
 
 /**
@@ -151,8 +151,8 @@ size_t convertIntArray2ByteArray_fast_2b(unsigned char* timeStepType, size_t tim
 			int type = timeStepType[n];
 			switch(type)
 			{
-			case 0: 
-				
+			case 0:
+
 				break;
 			case 1:
 				tmp = (tmp | (1 << (6-j*2)));
@@ -191,8 +191,8 @@ size_t convertIntArray2ByteArray_fast_2b_inplace(unsigned char* timeStepType, si
 			int type = timeStepType[n];
 			switch(type)
 			{
-			case 0: 
-				
+			case 0:
+
 				break;
 			case 1:
 				tmp = (tmp | (1 << (6-j*2)));
@@ -252,7 +252,7 @@ void convertByteArray2IntArray_fast_2b(size_t stepLength, unsigned char* byteArr
 }
 
 size_t convertIntArray2ByteArray_fast_3b(unsigned char* timeStepType, size_t timeStepTypeLength, unsigned char **result)
-{	
+{
 	size_t i = 0, k = 0, byteLength = 0, n = 0;
 	if(timeStepTypeLength%8==0)
 		byteLength = timeStepTypeLength*3/8;
@@ -275,7 +275,7 @@ size_t convertIntArray2ByteArray_fast_3b(unsigned char* timeStepType, size_t tim
 		case 1:
 			tmp = tmp | (timeStepType[n] << 2);
 			break;
-		case 2: 
+		case 2:
 			tmp = tmp | (timeStepType[n] >> 1);
 			(*result)[i++] = (unsigned char)tmp;
 			tmp = 0 | (timeStepType[n] << 7);
@@ -303,24 +303,24 @@ size_t convertIntArray2ByteArray_fast_3b(unsigned char* timeStepType, size_t tim
 	}
 	if(k!=7) //load the last one
 		(*result)[i] = (unsigned char)tmp;
-	
+
 	return byteLength;
 }
 
 void convertByteArray2IntArray_fast_3b(size_t stepLength, unsigned char* byteArray, size_t byteArrayLength, unsigned char **intArray)
-{	
+{
 	if(stepLength > byteArrayLength*8/3)
 	{
 		printf("Error: stepLength > byteArray.length*8/3, impossible case unless bugs elsewhere.\n");
 		printf("stepLength=%zu, byteArray.length=%zu\n", stepLength, byteArrayLength);
-		exit(0);		
+		exit(0);
 	}
 	if(stepLength>0)
 		*intArray = (unsigned char*)malloc(stepLength*sizeof(unsigned char));
 	else
 		*intArray = NULL;
 	size_t i = 0, ii = 0, n = 0;
-	unsigned char tmp = byteArray[i];	
+	unsigned char tmp = byteArray[i];
 	for(n=0;n<stepLength;)
 	{
 		switch(n%8)
@@ -328,7 +328,7 @@ void convertByteArray2IntArray_fast_3b(size_t stepLength, unsigned char* byteArr
 		case 0:
 			(*intArray)[n++] = (tmp & 0xE0) >> 5;
 			break;
-		case 1: 
+		case 1:
 			(*intArray)[n++] = (tmp & 0x1C) >> 2;
 			break;
 		case 2:
@@ -351,7 +351,7 @@ void convertByteArray2IntArray_fast_3b(size_t stepLength, unsigned char* byteArr
 			ii |= (tmp & 0xC0) >> 6;
 			(*intArray)[n++] = ii;
 			break;
-		case 6: 
+		case 6:
 			(*intArray)[n++] = (tmp & 0x38) >> 3;
 			break;
 		case 7:
@@ -369,14 +369,14 @@ inline int getLeftMovingSteps(size_t k, unsigned char resiBitLength)
 }
 
 /**
- * 
+ *
  * @param timeStepType is the resiMidBits
  * @param resiBitLength is the length of resiMidBits for each element, (the number of resiBitLength == the # of unpredictable elements
  * @return
  */
 size_t convertIntArray2ByteArray_fast_dynamic(unsigned char* timeStepType, unsigned char resiBitLength, size_t nbEle, unsigned char **bytes)
 {
-	size_t i = 0, j = 0, k = 0; 
+	size_t i = 0, j = 0, k = 0;
 	int value;
 	DynamicByteArray* dba;
 	new_DBA(&dba, 1024);
@@ -415,14 +415,14 @@ size_t convertIntArray2ByteArray_fast_dynamic(unsigned char* timeStepType, unsig
 }
 
 /**
- * 
+ *
  * @param timeStepType is the resiMidBits
  * @param resiBitLength is the length of resiMidBits for each element, (the number of resiBitLength == the # of unpredictable elements
  * @return
  */
 size_t convertIntArray2ByteArray_fast_dynamic2(unsigned char* timeStepType, unsigned char* resiBitLength, size_t resiBitLengthLength, unsigned char **bytes)
 {
-	size_t i = 0, j = 0, k = 0; 
+	size_t i = 0, j = 0, k = 0;
 	int value;
 	DynamicByteArray* dba;
 	new_DBA(&dba, 1024);
@@ -467,14 +467,14 @@ int computeBitNumRequired(size_t dataLength)
 		return 32 - numberOfLeadingZeros_Int(dataLength);
 	else
 		return 64 - numberOfLeadingZeros_Long(dataLength);
-		
+
 }
 
 void decompressBitArraybySimpleLZ77(int** result, unsigned char* bytes, size_t bytesLength, size_t totalLength, int validLength)
 {
 	size_t pairLength = (bytesLength*8)/(validLength+1);
 	size_t tmpLength = pairLength*2;
-	int tmpResult[tmpLength];
+	int* tmpResult = (int*) malloc(tmpLength * sizeof(int));
 	size_t i, j, k = 0;
 	for(i = 0;i<tmpLength;i+=2)
 	{
@@ -484,13 +484,13 @@ void decompressBitArraybySimpleLZ77(int** result, unsigned char* bytes, size_t b
 		unsigned char curByte = bytes[outIndex];
 		tmpResult[i] = (curByte >> (8-1-innerIndex)) & 0x01;
 		k++;
-		
+
 		int numResult = extractBytes(bytes, k, validLength);
-		
+
 		tmpResult[i+1] = numResult;
 		k = k + validLength;
 	}
-	
+
 	*result = (int*)malloc(sizeof(int)*totalLength);
 	k = 0;
 	for(i = 0;i<tmpLength;i=i+2)
@@ -500,4 +500,5 @@ void decompressBitArraybySimpleLZ77(int** result, unsigned char* bytes, size_t b
 		for(j = 0;j<num;j++)
 			(*result)[k++] = state;
 	}
+	free(tmpResult);
 }

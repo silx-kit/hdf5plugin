@@ -8,14 +8,11 @@
  */
 
 
-#include "config.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
+#include <unistd.h>
 #include <math.h>
 #include "sz.h"
 #include "CompressElement.h"
@@ -1923,7 +1920,8 @@ size_t dataLength, double realPrecision, float valueRangeSize, float medianValue
 	uint64_t* const buffer = (uint64_t*)&predRelErrRatio;
 	const int shift = 52-bits;
 	uint64_t expoIndex, mantiIndex;
-	uint16_t* tables[range+1];
+	/* uint16_t* tables[range+1]; */
+    uint16_t** tables =  (uint16_t**) malloc((range + 1) * sizeof(uint16_t*));
 	for(int i=0; i<=range; i++){
 		tables[i] = levelTable.subTables[i].table;
 	}
@@ -1987,6 +1985,7 @@ size_t dataLength, double realPrecision, float valueRangeSize, float medianValue
 	free(exactMidByteArray); //exactMidByteArray->array has been released in free_TightDataPointStorageF(tdps);
 	free(precisionTable);
 	freeTopLevelTableWideInterval(&levelTable);
+	free(tables);
 	return tdps;
 }
 
@@ -2068,7 +2067,8 @@ TightDataPointStorageF* SZ_compress_float_2D_MDQ_MSST19(float *oriData, size_t r
     uint64_t* const buffer = (uint64_t*)&predRelErrRatio;
     const int shift = 52-bits;
     uint64_t expoIndex, mantiIndex;
-    uint16_t* tables[range+1];
+    /* uint16_t* tables[range+1]; */
+    uint16_t** tables =  (uint16_t**) malloc((range + 1) * sizeof(uint16_t*));
     for(int i=0; i<=range; i++){
         tables[i] = levelTable.subTables[i].table;
     }
@@ -2260,6 +2260,7 @@ TightDataPointStorageF* SZ_compress_float_2D_MDQ_MSST19(float *oriData, size_t r
 	free(exactMidByteArray); //exactMidByteArray->array has been released in free_TightDataPointStorageF(tdps);
 	free(precisionTable);
 	freeTopLevelTableWideInterval(&levelTable);
+	free(tables);
 	return tdps;
 }
 
@@ -2337,7 +2338,8 @@ TightDataPointStorageF* SZ_compress_float_3D_MDQ_MSST19(float *oriData, size_t r
     uint64_t* const buffer = (uint64_t*)&predRelErrRatio;
     const int shift = 52-bits;
     uint64_t expoIndex, mantiIndex;
-    uint16_t* tables[range+1];
+    /* uint16_t* tables[range+1]; */
+    uint16_t** tables =  (uint16_t**) malloc((range + 1) * sizeof(uint16_t*));
     for(int i=0; i<=range; i++){
         tables[i] = levelTable.subTables[i].table;
     }
@@ -2715,6 +2717,7 @@ TightDataPointStorageF* SZ_compress_float_3D_MDQ_MSST19(float *oriData, size_t r
 	free(exactMidByteArray); //exactMidByteArray->array has been released in free_TightDataPointStorageF(tdps);
 	free(precisionTable);
 	freeTopLevelTableWideInterval(&levelTable);
+	free(tables);
 	return tdps;
 }
 
