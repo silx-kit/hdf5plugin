@@ -4,7 +4,7 @@ hdf5plugin
 *hdf5plugin* provides `HDF5 compression filters <https://portal.hdfgroup.org/display/support/Registered+Filter+Plugins>`_ (namely: blosc, bitshuffle, bzip2, FCIDECOMP, lz4, ZFP, zstd) and makes them usable from `h5py <https://www.h5py.org>`_.
 
 * Supported operating systems: Linux, Windows, macOS.
-* Supported versions of Python: >= 3.4
+* Supported versions of Python: >= 3.7
 * Supported architectures: All.
   Specific optimizations are available for *x86* family and *ppc64le*.
 
