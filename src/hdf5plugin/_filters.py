@@ -419,22 +419,73 @@ class Zfp(_FilterRefClass):
 
 
 class SZ(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
+
+    For more details about the compressor `SZ <https://https://szcompressor.org/>`_.
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'sz',
+            data=numpy.random.random(100),
+            **hdf5plugin.SZ())
+        f.close()
+
+    This filter provides different modes:
+
+    - **Absolute** mode: To use, set the ``absolute`` argument.
+      It ensures that the resulting values will be within the absolute tolerance provided with the argument.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_absolute',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(absolute=0.1))
+
+    - **Relative** mode: To use, set the ``relative`` argument.
+      It ensures that the resulting values will be within the relative tolerance provided with the argument.
+      The tolerance will be computed by multiplying the the argument provided by the range of the data values.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_relative',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ(relative=0.01))
+
+    - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
+      It ensures that each grid point of the resulting values will be within the relative tolerance provided with the
+      argument.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_pointwise_relative',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ(pointwise_relative=0.01))
+
+    """
+
     filter_id = SZ_ID
 
-    def __init__(self, abs=None, rel=None, pw_rel=None):
+    def __init__(self, absolute=None, relative=None, pointwise_relative=1e-05):
         # Check that a single option is selected:
-        assert sum([abs is None, rel is None, pw_rel is None]) == 2, "Please select a single option."
+        assert sum([absolute is None, relative is None, pointwise_relative is None]) == 2, \
+            "Please select a single option."
 
         # Get SZ encoding options
-        if abs is not None:
+        if absolute is not None:
             sz_mode = 0
-            parameter = abs
-        elif rel is not None:
+            parameter = absolute
+        elif relative is not None:
             sz_mode = 1
-            parameter = rel
-        elif pw_rel is not None:
+            parameter = relative
+        elif pointwise_relative is not None:
             sz_mode = 10
-            parameter = pw_rel
+            parameter = pointwise_relative
         else:
             raise NotImplementedError("One of the options need to be provided: abs, rel or pw_rel .")
 
