@@ -112,6 +112,19 @@ Functions:
 
 .. autofunction:: get_config
 
+Manage registered filters
++++++++++++++++++++++++++
+
+When imported, `hdf5plugin` initialises and registers the filters it embeds if there is no already registered filters for the corresponding filter IDs.
+
+`h5py`_ gives access to HDF5 functions handling registered filters in `h5py.h5z`_.
+This module allows checking the filter availability and registering/unregistering filters.
+
+`hdf5plugin` provides an extra `register_filter` function to register the filters it provides, e.g., to override an already loaded filters.
+Registering with this function is required to perform additional initialisation and enable writing compressed data with the given filter.
+
+.. autofunction:: register_filter
+
 Use HDF5 filters in other applications
 ++++++++++++++++++++++++++++++++++++++
 
@@ -128,4 +141,5 @@ should allow MatLab or IDL users to read data compressed using the supported plu
 Setting the ``HDF5_PLUGIN_PATH`` environment variable allows already existing programs or Python code to read compressed data without any modification.
 
 .. _h5py: https://www.h5py.org
+.. _h5py.h5z: https://github.com/h5py/h5py/blob/master/h5py/h5z.pyx
 .. _h5py.Group.create_dataset: https://docs.h5py.org/en/stable/high/group.html#h5py.Group.create_dataset
