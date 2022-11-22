@@ -281,6 +281,12 @@ class BuildConfig:
     use_native = property(lambda self: self.__use_native)
     compile_args = property(lambda self: self.__compile_args)
 
+    CONFIG_PY_TEMPLATE = """from collections import namedtuple
+
+HDF5PluginBuildConfig = namedtuple('HDF5PluginBuildConfig', {field_names})
+build_config = HDF5PluginBuildConfig(**{config})
+"""
+
     def get_config_string(self):
         build_config = {
             'openmp': self.use_openmp,
@@ -291,7 +297,10 @@ class BuildConfig:
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
-        return 'config = ' + str(build_config) + '\n'
+        return self.CONFIG_PY_TEMPLATE.format(
+            field_names=tuple(build_config.keys()),
+            config=str(build_config)
+        )
 
     def has_config_changed(self) -> bool:
         """Returns whether config file needs to be changed or not."""
