@@ -421,6 +421,7 @@ class Zfp(_FilterRefClass):
 class SZ(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
 
+    For more details about the compressor `SZ <https://https://szcompressor.org/>`_.
     It can be passed as keyword arguments:
 
     .. code-block:: python
@@ -435,7 +436,7 @@ class SZ(_FilterRefClass):
     This filter provides different modes:
 
     - **Absolute** mode: To use, set the ``absolute`` argument.
-      It ensures that the resulting values will be withing the absolute tolerance provided with the argument.
+      It ensures that the resulting values will be within the absolute tolerance provided with the argument.
 
       .. code-block:: python
 
@@ -445,7 +446,7 @@ class SZ(_FilterRefClass):
               **hdf5plugin.Zfp(absolute=0.1))
 
     - **Relative** mode: To use, set the ``relative`` argument.
-      It ensures that the resulting values will be withing the relative tolerance provided with the argument.
+      It ensures that the resulting values will be within the relative tolerance provided with the argument.
       The tolerance will be computed by multiplying the the argument provided by the range of the data values.
 
       .. code-block:: python
@@ -455,8 +456,8 @@ class SZ(_FilterRefClass):
               data=numpy.random.random(100),
               **hdf5plugin.SZ(relative=0.01))
 
-    - **Point-wise Relative** mode: To use, set the ``relative`` argument.
-      It ensures that each grid point of the resulting values will be withing the relative tolerance provided with the
+    - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
+      It ensures that each grid point of the resulting values will be within the relative tolerance provided with the
       argument.
 
       .. code-block:: python
