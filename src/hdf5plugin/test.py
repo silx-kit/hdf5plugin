@@ -203,8 +203,8 @@ class TestHDF5PluginRW(unittest.TestCase):
     def testSZ(self):
         """Write/read test with SZ filter plugin"""
         # TODO: Options mission
-        tests = [{'lossless':False, 'abs': 0.0001},
-                 {'lossless':False, 'rel': 0.01},
+        tests = [{'lossless': False, 'absolute': 0.0001},
+                 {'lossless': False, 'relative': 0.01},
                  ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
