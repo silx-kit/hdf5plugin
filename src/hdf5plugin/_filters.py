@@ -441,8 +441,8 @@ class SZ(_FilterRefClass):
         packed_error = self.pack_error(parameter)
         compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
 
-        _logger.info(f"SZ mode {sz_mode} used.")
-        _logger.info(f"filter options {compression_opts}")
+        logger.info(f"SZ mode {sz_mode} used.")
+        logger.info(f"filter options {compression_opts}")
 
         self.filter_options = compression_opts
 
