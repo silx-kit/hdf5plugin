@@ -46,6 +46,9 @@ typedef herr_t (* DL_func_H5Epush1)(
 typedef herr_t (* DL_func_H5Epush2)(
     hid_t err_stack, const char *file, const char *func, unsigned line,
     hid_t cls_id, hid_t maj_id, hid_t min_id, const char *msg, ...);
+
+typedef herr_t (* DL_func_H5Eprint2) ( hid_t err_stack, FILE * stream );
+
 /*H5P*/
 typedef htri_t (* DL_func_H5Pexist)(hid_t plist_id, const char *name);
 typedef herr_t (* DL_func_H5Pget)(hid_t plist_id, const char *name, void * value);
@@ -86,6 +89,7 @@ typedef htri_t (* DL_func_H5Sis_simple)(hid_t space_id);
 typedef herr_t (* DL_func_H5Tconvert)(hid_t src_id, hid_t dst_id, size_t nelmts,
     void *buf, void *background, hid_t plist_id);
 typedef hid_t (* DL_func_H5Tget_native_type)(hid_t type_id, H5T_direction_t direction);
+typedef H5T_sign_t (* DL_func_H5Tget_sign)(hid_t type_id);
 typedef size_t (* DL_func_H5Tget_size)(
     hid_t type_id);
 typedef H5T_class_t (* DL_func_H5Tget_class)(hid_t type_id);
@@ -93,9 +97,8 @@ typedef H5T_order_t (* DL_func_H5Tget_order)(hid_t type_id);
 typedef hid_t (* DL_func_H5Tget_super)(hid_t type);
 typedef herr_t (* DL_func_H5Tclose)(hid_t type_id);
 /*H5Z*/
-typedef herr_t (* DL_func_H5Zregister)(
-    const void *cls);
-
+typedef herr_t (* DL_func_H5Zregister)(const void *cls);
+typedef herr_t (* DL_func_H5Zunregister) (H5Z_filter_t id);
 
 static struct {
     /*H5*/
@@ -103,6 +106,7 @@ static struct {
     /*H5E*/
     DL_func_H5Epush1 H5Epush1;
     DL_func_H5Epush2 H5Epush2;
+    DL_func_H5Eprint2 H5Eprint2;
     /*H5P*/
     DL_func_H5Pexist H5Pexist;
     DL_func_H5Pget H5Pget;
@@ -123,6 +127,7 @@ static struct {
     /*H5T*/
     DL_func_H5Tconvert H5Tconvert;
     DL_func_H5Tget_native_type H5Tget_native_type;
+    DL_func_H5Tget_sign H5Tget_sign;
     DL_func_H5Tget_size H5Tget_size;
     DL_func_H5Tget_class H5Tget_class;
     DL_func_H5Tget_order H5Tget_order;
@@ -130,6 +135,7 @@ static struct {
     DL_func_H5Tclose H5Tclose;
     /*H5T*/
     DL_func_H5Zregister H5Zregister;
+    DL_func_H5Zunregister H5Zunregister;
 } DL_H5Functions = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -190,6 +196,8 @@ int init_filter(const char* libname)
         /*H5E*/
         DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)dlsym(handle, "H5Epush1");
         DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)dlsym(handle, "H5Epush2");
+        DL_H5Functions.H5Eprint2 = (DL_func_H5Eprint2)dlsym(handle, "H5Eprint2");
+
         /*H5P*/
         DL_H5Functions.H5Pexist = (DL_func_H5Pexist)dlsym(handle, "H5Pexist");
         DL_H5Functions.H5Pget = (DL_func_H5Pget)dlsym(handle, "H5Pget");
@@ -212,13 +220,15 @@ int init_filter(const char* libname)
         /*H5T*/
         DL_H5Functions.H5Tconvert = (DL_func_H5Tconvert)dlsym(handle, "H5Tconvert");
         DL_H5Functions.H5Tget_native_type = (DL_func_H5Tget_native_type)dlsym(handle, "H5Tget_native_type");
+        DL_H5Functions.H5Tget_sign = (DL_func_H5Tget_sign)dlsym(handle, "H5Tget_sign");
         DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
         DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
         DL_H5Functions.H5Tget_order = (DL_func_H5Tget_order)dlsym(handle, "H5Tget_order");
-        DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_super");
+        DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_s");
         DL_H5Functions.H5Tclose = (DL_func_H5Tclose)dlsym(handle, "H5Tclose");
         /*H5Z*/
         DL_H5Functions.H5Zregister = (DL_func_H5Zregister)dlsym(handle, "H5Zregister");
+        DL_H5Functions.H5Zunregister = (DL_func_H5Zunregister)dlsym(handle, "H5Zunregister");
 
         /*Variables*/
         DEF_DLSYM_VARIABLE(H5E_ARGS_g);
@@ -311,6 +321,10 @@ herr_t H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned li
     } else {
         return 0;
     }
+}
+
+herr_t H5Eprint2( hid_t err_stack, FILE * stream ){
+    CALL(0, H5Eprint2, err_stack, stream)
 }
 
 /*H5P*/
@@ -419,6 +433,11 @@ hid_t H5Tget_native_type(hid_t type_id, H5T_direction_t direction)
 CALL(0, H5Tget_native_type, type_id, direction)
 }
 
+H5T_sign_t H5Tget_sign(hid_t type_id)
+{
+CALL(-1, H5Tget_sign, type_id)
+}
+
 size_t H5Tget_size(hid_t type_id)
 {
 CALL(0, H5Tget_size, type_id)
@@ -449,3 +468,7 @@ herr_t H5Zregister(const void *cls)
 {
 CALL(-1, H5Zregister, cls)
 }
+
+herr_t H5Zunregister(H5Z_filter_t id){
+    CALL(0, H5Zunregister, id)
+};
