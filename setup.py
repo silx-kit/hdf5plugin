@@ -875,8 +875,8 @@ sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
 sz_sources += glob('src/SZ/zstd/*/*.c')
 # TODO sz_depends += glob('src/SZ/zstd*/*/*.h')
 
-FROM_BLOSC = True
-if FROM_BLOSC:
+ZLIB_FROM_BLOSC = True
+if ZLIB_FROM_BLOSC:
     sz_sources += glob(blosc_dir + 'internal-complibs/zlib*/*.c')
     ##depends += glob(blosc_dir + 'internal-complibs/zlib*/*.h')
 else:
@@ -885,13 +885,12 @@ else:
 sz_include_dirs += glob('src/SZ/zstd')
 sz_include_dirs += glob('src/SZ/zstd/common')
 
-if FROM_BLOSC:
+if ZLIB_FROM_BLOSC:
     sz_include_dirs += glob(blosc_dir + 'internal-complibs/zlib*')
-    sz_include_dirs += glob('src/SZ/')
 else:
     sz_include_dirs += glob('src/SZ/zlib')
-    sz_include_dirs += glob('src/SZ/')
 
+sz_include_dirs += glob('src/SZ/')
 sz_lib = ("sz", {
     "sources": sz_sources,
     "include_dirs": sz_include_dirs,
