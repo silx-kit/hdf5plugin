@@ -448,7 +448,7 @@ class BuildCLib(build_clib):
                         f.write("\n")
                         f.write("/* Define to 1 if you have the <unistd.h> header file. */\n")
                         f.write("/* #undef HAVE_UNISTD_H */\n")
-                        f.write("#define HAVE_UNISTD_H\n")
+                        f.write("#define HAVE_UNISTD_H 1\n")
                         f.write("\n")
                         f.write("/* Define to 1 if you have the `clock_gettime' function. */\n")
                         f.write("/* #undef HAVE_CLOCK_GETTIME */\n")
