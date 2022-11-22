@@ -471,7 +471,7 @@ class SZ(_FilterRefClass):
 
     filter_id = SZ_ID
 
-    def __init__(self, absolute=None, relative=None, pointwise_relative=None):
+    def __init__(self, absolute=None, relative=None, pointwise_relative=1e-05):
         # Check that a single option is selected:
         assert sum([absolute is None, relative is None, pointwise_relative is None]) == 2, \
             "Please select a single option."
