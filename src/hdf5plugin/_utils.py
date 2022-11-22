@@ -70,8 +70,8 @@ def register_filter(name):
     Unregister the previously registered filter if any.
 
     :param str name: Name of the filter (See `hdf5plugin.FILTERS`)
-    :return: Library filename if filter was successfully registered, None otherwise
-    :rtype: Union[str,None]
+    :return: True if successfully registered, False otherwise
+    :rtype: bool
     """
     if name not in FILTERS:
         raise ValueError("Unknown filter name: %s" % name)
@@ -83,6 +83,7 @@ def register_filter(name):
     # Unregister existing filter
     filter_id = FILTERS[name]
     is_avail = is_filter_available(name)
+    # TODO h5py>=2.10
     if is_avail is True:
         if not h5py.h5z.unregister_filter(filter_id):
             logger.error("Failed to unregister filter %s (%d)" % (name, filter_id))
@@ -151,13 +152,28 @@ def get_config():
     return HDF5PluginConfig(build_config, registered_filters)
 
 
-def init_filters():
-    """Initialise and register HDF5 filters"""
-    for name in FILTERS:
-        if is_filter_available(name) is True:
-            logger.info("%s filter already loaded, skip it.", name)
+def register(filters=tuple(FILTERS.keys()), force=True):
+    """Initialise and register `hdf5plugin` embedded filters given their names.
+
+    Unregister corresponding previously registered filters if any.
+
+    :param Union[str.Tuple[str]] filters:
+        Filter name or sequence of filter names (See `hdf5plugin.FILTERS`).
+    :param bool force:
+        True to register the filter even if a corresponding one if already available.
+        False to skip already available filters.
+    :return: True if all filters were registered successfully, False otherwise.
+    :rtype: bool
+    """
+    if isinstance(filters, str):
+        names = (filters,)
+
+    status = True
+    for filter_name in filters:
+        if not force and is_filter_available(filter_name) is True:
+            logger.info("%s filter already loaded, skip it.", filter_name)
             continue
-        register_filter(name)
+        status = status and register_filter(filter_name)
+    return status
 
-
-init_filters()
+register(force=False)

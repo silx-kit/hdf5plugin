@@ -270,22 +270,32 @@ class TestPackage(unittest.TestCase):
 
 
 class TestRegisterFilter(BaseTestHDF5PluginRW):
-    """Test usage of the register_filter function"""
+    """Test usage of the register function"""
+
+    def _simple_test(self, filter_name):
+        if filter_name == 'fcidecomp':
+            self._test('fcidecomp', dtype=numpy.uint8)
+        elif filter_name in ('sz', 'zfp'):
+            self._test(filter_name, dtype=numpy.float32, lossless=False)
+        else:
+            self._test(filter_name)
 
     @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
-    def test(self):
-        """Re-register all embedded filters"""
+    def test_register_single_filter(self):
+        """Re-register embedded filters one at a time"""
         for name in hdf5plugin.config.embedded_filters:
             with self.subTest(name=name):
-                status = hdf5plugin.register_filter(name)
+                status = hdf5plugin.register(name, force=True)
                 self.assertTrue(status)
+                self._simple_test(name)
 
-                if name == 'fcidecomp':
-                    self._test('fcidecomp', dtype=numpy.uint8)
-                elif name in ('sz', 'zfp'):
-                    self._test(name, dtype=numpy.float32, lossless=False)
-                else:
-                    self._test(name)
+    @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
+    def test_register_all_filters(self):
+        """Re-register embedded filters all at once"""
+        status = hdf5plugin.register()
+        for name in hdf5plugin.config.embedded_filters:
+            with self.subTest(name=name):
+                self._simple_test(name)
 
 
 def suite():
