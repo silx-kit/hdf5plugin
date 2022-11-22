@@ -25,6 +25,8 @@
 """This module provides compiled shared libraries for their use as HDF5 filters
 under windows, MacOS and linux."""
 
+import logging as _logging
+
 from ._version import __date__ as date  # noqa
 from ._version import version, version_info, hexversion, strictversion  # noqa
 
@@ -41,6 +43,12 @@ from ._filters import SZ_ID, SZ  # noqa
 from ._utils import get_config, PLUGIN_PATH, register  # noqa
 
 # Backward compatibility
-from ._config import build_config as config  # noqa
+PLUGINS_PATH = PLUGIN_PATH
 
-PLUGINS_PATH = PLUGIN_PATH  # noqa
+def __getattr__(name):
+    if name == "config":
+        _logging.getLogger(__name__).warning(
+            "hdf5plugin.config is deprecated, use get_config().build_config"
+        )
+        return get_config().build_config
+    raise AttributeError(f"module {__name__} has no attribute {name}")
