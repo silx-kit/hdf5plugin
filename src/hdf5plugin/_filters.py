@@ -53,6 +53,9 @@ ZFP_ID = 32013
 ZSTD_ID = 32015
 """Zstandard filter ID"""
 
+SZ_ID = 32017
+"""SZ filter ID"""
+
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
@@ -62,6 +65,7 @@ FILTERS = {'blosc': BLOSC_ID,
            'lz4': LZ4_ID,
            'zfp': ZFP_ID,
            'zstd': ZSTD_ID,
+           'sz': SZ_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
 """Mapping of provided filter's name to their HDF5 filter ID."""
@@ -412,6 +416,43 @@ class Zfp(_FilterRefClass):
            logger.info("ZFP default used")
         
         logger.info("filter options = %s" % (self.filter_options,))
+
+
+class SZ(_FilterRefClass):
+    filter_id = SZ_ID
+
+    def __init__(self, abs=None, rel=None, pw_rel=None):
+        # Check that a single option is selected:
+        assert sum([abs is None, rel is None, pw_rel is None]) == 2, "Please select a single option."
+
+        # Get SZ encoding options
+        if abs is not None:
+            sz_mode = 0
+            parameter = abs
+        elif rel is not None:
+            sz_mode = 1
+            parameter = rel
+        elif pw_rel is not None:
+            sz_mode = 10
+            parameter = pw_rel
+        else:
+            raise NotImplementedError("One of the options need to be provided: abs, rel or pw_rel .")
+
+        packed_error = self.pack_error(parameter)
+        compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
+
+        _logger.info(f"SZ mode {sz_mode} used.")
+        _logger.info(f"filter options {compression_opts}")
+
+        self.filter_options = compression_opts
+
+    @staticmethod
+    def pack_error(error: float) -> tuple:
+        from struct import pack, unpack
+        packed = pack('<d', error)  # Pack as IEEE 754 double
+        high = unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
+        low = unpack('<I', packed[4:8])[0]
+        return low, high
 
 
 class Zstd(_FilterRefClass):
