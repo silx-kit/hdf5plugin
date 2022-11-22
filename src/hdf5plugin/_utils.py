@@ -32,14 +32,11 @@ import traceback
 from collections import namedtuple
 import h5py
 
+from ._filters import FILTERS
+from ._config import build_config
+
 
 logger = logging.getLogger(__name__)
-
-from ._filters import FILTERS
-
-# Give access to build-time config
-from ._config import config
-config = namedtuple('HDF5PluginBuildConfig', tuple(config.keys()))(**config)
 
 
 PLUGIN_PATH = os.path.abspath(
@@ -56,7 +53,7 @@ def _init_filters():
 
     for name, filter_id in FILTERS.items():
         # Skip filters that were not embedded
-        if name not in config.embedded_filters:
+        if name not in build_config.embedded_filters:
             logger.debug("%s filter not available in this build of hdf5plugin.", name)
             continue
 
@@ -69,7 +66,7 @@ def _init_filters():
 
         # Load DLL
         filename = glob.glob(os.path.join(
-            PLUGIN_PATH, 'libh5' + name + '*' + config.filter_file_extension))
+            PLUGIN_PATH, 'libh5' + name + '*' + build_config.filter_file_extension))
         if len(filename):
             filename = filename[0]
         else:
@@ -112,6 +109,6 @@ def get_config():
         ('build_config', 'registered_filters'),
     )
     return HDF5PluginConfig(
-        build_config=config,
+        build_config=build_config,
         registered_filters=dict((name, filename) for name, (filename, lib) in _filters.items()),
     )

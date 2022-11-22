@@ -28,6 +28,8 @@ import struct
 from collections.abc import Mapping
 import h5py
 
+from ._config import build_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -256,8 +258,7 @@ class FciDecomp(_FilterRefClass):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from ._utils import config  # Lazy import to avoid circular include
-        if not config.cpp11:
+        if not build_config.cpp11:
             logger.error(
                 "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
                 "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler.")

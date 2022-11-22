@@ -40,6 +40,6 @@ from ._filters import ZSTD_ID, Zstd  # noqa
 from ._utils import get_config, PLUGIN_PATH  # noqa
 
 # Backward compatibility
-from ._utils import config  # noqa
+from ._config import build_config as config  # noqa
 
 PLUGINS_PATH = PLUGIN_PATH  # noqa
