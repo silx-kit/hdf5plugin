@@ -445,6 +445,7 @@ class BuildCLib(build_clib):
                     with open(configure_path.parent / "config.h", 'w') as f:
                         f.write("/* Define to 1 if you have the <sys/time.h> header file. */\n")
                         f.write("/* #undef HAVE_SYS_TIME_H */\n")
+                        f.write("#define HAVE_SYS_TIME_H 1\n")
                         f.write("\n")
                         f.write("/* Define to 1 if you have the <unistd.h> header file. */\n")
                         f.write("/* #undef HAVE_UNISTD_H */\n")
@@ -452,6 +453,7 @@ class BuildCLib(build_clib):
                         f.write("\n")
                         f.write("/* Define to 1 if you have the `clock_gettime' function. */\n")
                         f.write("/* #undef HAVE_CLOCK_GETTIME */\n")
+                        f.write("#define HAVE_CLOCK_GETTIME 1\n")
                         f.write("\n")
                         f.write("/* Define to 1 if you have the `gettimeofday' function. */\n")
                         # I think this one should be set ot 1, but cmake did not generate it
@@ -871,16 +873,14 @@ sz_dir = os.path.join("src", "SZ", "sz")
 sz_sources = glob(os.path.join(sz_dir, "src", "*.c"))
 sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
 sz_sources += glob('src/SZ/zstd/*/*.c')
+# TODO sz_depends += glob('src/SZ/zstd*/*/*.h')
 
-FROM_BLOSC = True
+FROM_BLOSC = False
 if FROM_BLOSC:
     sz_sources += glob(blosc_dir + 'internal-complibs/zlib*/*.c')
     ##depends += glob(blosc_dir + 'internal-complibs/zlib*/*.h')
 else:
     sz_sources += glob('src/SZ/zlib/*.c')
-
-
-# TODO sz_depends += glob('src/SZ/zstd*/*/*.h')
 
 sz_include_dirs += glob('src/SZ/zstd')
 sz_include_dirs += glob('src/SZ/zstd/common')
