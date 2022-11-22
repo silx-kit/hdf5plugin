@@ -36,6 +36,7 @@ from ._filters import LZ4_ID, LZ4  # noqa
 from ._filters import FCIDECOMP_ID, FciDecomp  # noqa
 from ._filters import ZFP_ID, Zfp  # noqa
 from ._filters import ZSTD_ID, Zstd  # noqa
+from ._filters import SZ_ID, SZ  # noqa
 
 from ._utils import get_config, PLUGIN_PATH  # noqa
 
