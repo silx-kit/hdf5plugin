@@ -440,6 +440,23 @@ class BuildCLib(build_clib):
                         # I think this one should be set ot 1, but cmake did not generate it
                         f.write("/* #undef HAVE_GETTIMEOFDAY */\n")
                         f.write("#define HAVE_GETTIMEOFDAY 1\n")
+                elif sys.platform.startswith("darwin"):
+                    # TODO: decide if providing a config.h or write it here
+                    with open(configure_path.parent / "config.h", 'w') as f:
+                        f.write("/* Define to 1 if you have the <sys/time.h> header file. */\n")
+                        f.write("/* #undef HAVE_SYS_TIME_H */\n")
+                        f.write("\n")
+                        f.write("/* Define to 1 if you have the <unistd.h> header file. */\n")
+                        f.write("/* #undef HAVE_UNISTD_H */\n")
+                        f.write("#define HAVE_UNISTD_H\n")
+                        f.write("\n")
+                        f.write("/* Define to 1 if you have the `clock_gettime' function. */\n")
+                        f.write("/* #undef HAVE_CLOCK_GETTIME */\n")
+                        f.write("\n")
+                        f.write("/* Define to 1 if you have the `gettimeofday' function. */\n")
+                        # I think this one should be set ot 1, but cmake did not generate it
+                        f.write("/* #undef HAVE_GETTIMEOFDAY */\n")
+                        f.write("#define HAVE_GETTIMEOFDAY 1\n")
                 else:
                     # TODO: Use cmake or supplied file instead of configure
                     # Execute configure script
