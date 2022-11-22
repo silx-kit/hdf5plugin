@@ -423,12 +423,30 @@ class BuildCLib(build_clib):
             # FIXME: Is there a cleaner way of running the configure script for SZ?
             if lib_name == "sz":
                 from pathlib import Path
-                # Execute configure script
                 configure_path = Path().cwd() / "src" / "SZ" / "configure"
-                self.spawn([configure_path.as_posix()])
-                # Move config.h from the current working directory to SZ directory.
-                config_h_path = Path().cwd() / "config.h"
-                config_h_path.rename(configure_path.parent / "config.h")
+                if sys.platform.startswith("win"):
+                    # TODO: decide if providing a config.h or write it here
+                    with open(configure_path.parent / "config.h", 'w') as f:
+                        f.write("/* Define to 1 if you have the <sys/time.h> header file. */\n")
+                        f.write("/* #undef HAVE_SYS_TIME_H */\n")
+                        f.write("\n")
+                        f.write("/* Define to 1 if you have the <unistd.h> header file. */\n")
+                        f.write("/* #undef HAVE_UNISTD_H */\n")
+                        f.write("\n")
+                        f.write("/* Define to 1 if you have the `clock_gettime' function. */\n")
+                        f.write("/* #undef HAVE_CLOCK_GETTIME */\n")
+                        f.write("\n")
+                        f.write("/* Define to 1 if you have the `gettimeofday' function. */\n")
+                        # I think this one should be set ot 1, but cmake did not generate it
+                        f.write("/* #undef HAVE_GETTIMEOFDAY */\n")
+                        f.write("#define HAVE_GETTIMEOFDAY 1\n")
+                else:
+                    # TODO: Use cmake or supplied file instead of configure
+                    # Execute configure script
+                    self.spawn([configure_path.as_posix()])
+                    # Move config.h from the current working directory to SZ directory.
+                    config_h_path = Path().cwd() / "config.h"
+                    config_h_path.rename(configure_path.parent / "config.h")
 
         super().build_libraries(updated_libraries)
 
