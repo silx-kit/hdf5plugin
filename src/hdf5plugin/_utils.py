@@ -158,8 +158,6 @@ def get_config():
 def register(filters=tuple(FILTERS.keys()), force=True):
     """Initialise and register `hdf5plugin` embedded filters given their names.
 
-    Unregister corresponding previously registered filters if any.
-
     :param Union[str.Tuple[str]] filters:
         Filter name or sequence of filter names (See `hdf5plugin.FILTERS`).
     :param bool force:
