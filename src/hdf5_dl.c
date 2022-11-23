@@ -324,7 +324,7 @@ herr_t H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned li
 }
 
 herr_t H5Eprint2( hid_t err_stack, FILE * stream ){
-    CALL(0, H5Eprint2, err_stack, stream)
+    CALL(-1, H5Eprint2, err_stack, stream)
 }
 
 /*H5P*/
