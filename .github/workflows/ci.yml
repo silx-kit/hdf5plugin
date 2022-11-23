@@ -38,7 +38,7 @@ jobs:
 
           - name-suffix: "sdist-h5py_3.6.0"
             os: ubuntu-latest
-            python-version: 3.10
+            python-version: 3.10.8
             BUILD_COMMAND: bdist_wheel
             H5PY_OLDER_VERSION: 3.6.0
 
@@ -50,7 +50,7 @@ jobs:
 
           - name-suffix: "bdist_wheel-h5py_3.0.0"
             os: macos-latest
-            python-version: 3.10
+            python-version: 3.10.8
             BUILD_COMMAND: bdist_wheel
             H5PY_OLDER_VERSION: 3.6.0
 
