@@ -64,11 +64,6 @@ class TestHDF5PluginRW(unittest.TestCase):
         """
         data = numpy.ones((1000,), dtype=dtype).reshape(100, 10)
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
-        print(filter_name,
-              dtype,
-              lossless,
-              compressed,
-              options)
 
         args = {"blosc": hdf5plugin.Blosc,
                 "bshuf": hdf5plugin.Bitshuffle,
