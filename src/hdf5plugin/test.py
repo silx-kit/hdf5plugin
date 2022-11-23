@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2019-2020 European Synchrotron Radiation Facility
+# Copyright (c) 2019-2022 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -70,6 +70,7 @@ class TestHDF5PluginRW(unittest.TestCase):
                 "bzip2": hdf5plugin.BZip2,
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
+                "sz": hdf5plugin.SZ,
                 "zfp": hdf5plugin.Zfp,
                 "zstd": hdf5plugin.Zstd,
                 }[filter_name](**options)
@@ -192,6 +193,18 @@ class TestHDF5PluginRW(unittest.TestCase):
         for dtype in (numpy.uint8, numpy.uint16, numpy.int8, numpy.int16):
             with self.subTest(dtype=dtype):
                 self._test('fcidecomp', dtype=dtype)
+
+    @unittest.skipUnless(should_test("sz"), "SZ filter not available")
+    def testSZ(self):
+        """Write/read test with SZ filter plugin"""
+        # TODO: Options mission
+        tests = [{'lossless': False, 'absolute': 0.0001},
+                 {'lossless': False, 'relative': 0.01},
+                 ]
+        for options in tests:
+            for dtype in (numpy.float32, numpy.float64):
+                with self.subTest(options=options, dtype=dtype):
+                    self._test('sz', dtype=dtype, **options)
 
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):

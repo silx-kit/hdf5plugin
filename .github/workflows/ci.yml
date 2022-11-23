@@ -24,12 +24,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name-suffix: "(Minimum Versions)"
-            os: ubuntu-latest
-            python-version: 3.6
-            BUILD_COMMAND: sdist
-            H5PY_OLDER_VERSION: 2.6.0
-            NUMPY_OLDER_VERSION: 1.11.3
+      #- name-suffix: "(Minimum Versions)"
+      #os: ubuntu-latest
+      #      python-version: 3.6
+      #      BUILD_COMMAND: sdist
+      #      H5PY_OLDER_VERSION: 2.6.0
+      #      NUMPY_OLDER_VERSION: 1.11.3
 
           - name-suffix: "bdist_wheel-h5py_2.8.0"
             os: ubuntu-latest

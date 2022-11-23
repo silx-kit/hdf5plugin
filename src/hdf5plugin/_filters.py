@@ -53,6 +53,9 @@ ZFP_ID = 32013
 ZSTD_ID = 32015
 """Zstandard filter ID"""
 
+SZ_ID = 32017
+"""SZ filter ID"""
+
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
@@ -62,6 +65,7 @@ FILTERS = {'blosc': BLOSC_ID,
            'lz4': LZ4_ID,
            'zfp': ZFP_ID,
            'zstd': ZSTD_ID,
+           'sz': SZ_ID,
            'fcidecomp': FCIDECOMP_ID,
            }
 """Mapping of provided filter's name to their HDF5 filter ID."""
@@ -141,7 +145,7 @@ class Bitshuffle(_FilterRefClass):
             if cname is not None:
                 raise ValueError("Providing both cname and lz4 arguments is not supported")
             logger.warning(
-                "Depreaction: hdf5plugin.Bitshuffle's lz4 argument is deprecated, "
+                "Deprecation: hdf5plugin.Bitshuffle's lz4 argument is deprecated, "
                 "use cname='lz4' or 'none' instead.")
             cname = 'lz4' if lz4 else 'none'
 
@@ -412,6 +416,89 @@ class Zfp(_FilterRefClass):
            logger.info("ZFP default used")
         
         logger.info("filter options = %s" % (self.filter_options,))
+
+
+class SZ(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
+
+    For more details about the compressor `SZ <https://https://szcompressor.org/>`_.
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'sz',
+            data=numpy.random.random(100),
+            **hdf5plugin.SZ())
+        f.close()
+
+    This filter provides different modes:
+
+    - **Absolute** mode: To use, set the ``absolute`` argument.
+      It ensures that the resulting values will be within the absolute tolerance provided with the argument.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_absolute',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(absolute=0.1))
+
+    - **Relative** mode: To use, set the ``relative`` argument.
+      It ensures that the resulting values will be within the relative tolerance provided with the argument.
+      The tolerance will be computed by multiplying the the argument provided by the range of the data values.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_relative',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ(relative=0.01))
+
+    - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
+      It ensures that each grid point of the resulting values will be within the relative tolerance provided with the
+      argument.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_pointwise_relative',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ(pointwise_relative=0.01))
+
+    """
+
+    filter_id = SZ_ID
+
+    def __init__(self, absolute=None, relative=None, pointwise_relative=1e-05):
+        # Get SZ encoding options
+        if absolute is not None:
+            sz_mode = 0
+            parameter = absolute
+        elif relative is not None:
+            sz_mode = 1
+            parameter = relative
+        elif pointwise_relative is not None:
+            sz_mode = 10
+            parameter = pointwise_relative
+        else:
+            raise TypeError("One of the options need to be provided: absolute, relative or pointwise_relative.")
+
+        packed_error = self.pack_error(parameter)
+        compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
+
+        logger.info(f"SZ mode {sz_mode} used.")
+        logger.info(f"filter options {compression_opts}")
+
+        self.filter_options = compression_opts
+
+    @staticmethod
+    def pack_error(error: float) -> tuple:
+        packed = struct.pack('<d', error)  # Pack as IEEE 754 double
+        high = struct.unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
+        low = struct.unpack('<I', packed[4:8])[0]
+        return low, high
 
 
 class Zstd(_FilterRefClass):
