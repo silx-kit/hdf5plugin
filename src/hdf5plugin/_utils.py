@@ -74,10 +74,10 @@ def register_filter(name):
     :rtype: bool
     """
     if name not in FILTERS:
-        raise ValueError("Unknown filter name: %s" % name)
+        raise ValueError(f"Unknown filter name: {name}")
 
     if name not in build_config.embedded_filters:
-        logger.debug("%s filter not available in this build of hdf5plugin.", name)
+        logger.debug(f"{name} filter not available in this build of hdf5plugin.")
         return False
 
     # Unregister existing filter
@@ -89,28 +89,28 @@ def register_filter(name):
         return False
     if is_avail is True:
         if not h5py.h5z.unregister_filter(filter_id):
-            logger.error("Failed to unregister filter %s (%d)" % (name, filter_id))
+            logger.error(f"Failed to unregister filter {name} ({filter_id})")
             return False
     if is_avail is None:  # Cannot probe filter availability
         try:
             h5py.h5z.unregister_filter(filter_id)
         except RuntimeError:
-            logger.debug("Filter %s (%d) not unregistered" % (name, filter_id))
+            logger.debug(f"Filter {name} ({filter_id}) not unregistered")
             logger.debug(traceback.format_exc())
     registered_filters.pop(name, None)
 
     # Load DLL
     filename = glob.glob(os.path.join(
-        PLUGIN_PATH, 'libh5' + name + '*' + build_config.filter_file_extension))
+        PLUGIN_PATH, f"libh5{name}*{build_config.filter_file_extension}"))
     if len(filename):
         filename = filename[0]
     else:
-        logger.error("Cannot initialize filter %s: File not found", name)
+        logger.error(f"Cannot initialize filter {name}: File not found")
         return False
     try:
         lib = ctypes.CDLL(filename)
     except OSError:
-        logger.error("Failed to load filter %s: %s", name, filename)
+        logger.error(f"Failed to load filter {name}: {filename}")
         logger.error(traceback.format_exc())
         return False
 
@@ -126,10 +126,10 @@ def register_filter(name):
             bytes(h5py.h5z.__file__, encoding='utf-8'))
 
     if retval < 0:
-        logger.error("Cannot initialize filter %s: %d", name, retval)
+        logger.error(f"Cannot initialize filter {name}: {retval}")
         return False
 
-    logger.debug("Registered filter: %s (%s)", name, filename)
+    logger.debug(f"Registered filter: {name} ({filename})")
     registered_filters[name] = filename, lib
     return True
 
@@ -172,7 +172,7 @@ def register(filters=tuple(FILTERS.keys()), force=True):
     status = True
     for filter_name in filters:
         if not force and is_filter_available(filter_name) is True:
-            logger.info("%s filter already loaded, skip it.", filter_name)
+            logger.info(f"{filter_name} filter already loaded, skip it.")
             continue
         status = status and register_filter(filter_name)
     return status
