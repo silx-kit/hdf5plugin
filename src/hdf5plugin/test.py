@@ -32,10 +32,13 @@ import h5py
 import hdf5plugin
 
 
+BUILD_CONFIG = hdf5plugin.get_config().build_config
+
+
 def should_test(filter_name):
     """Returns True if the given filter should be tested"""
     filter_id = hdf5plugin.FILTERS[filter_name]
-    return filter_name in hdf5plugin.config.embedded_filters or h5py.h5z.filter_avail(filter_id)
+    return filter_name in BUILD_CONFIG.embedded_filters or h5py.h5z.filter_avail(filter_id)
 
 
 class BaseTestHDF5PluginRW(unittest.TestCase):
@@ -159,7 +162,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                     with self.subTest(compression=cname,
                                       shuffle=shuffle,
                                       clevel=clevel):
-                        if cname == 'snappy' and not hdf5plugin.config.cpp11:
+                        if cname == 'snappy' and not BUILD_CONFIG.cpp11:
                             self.skipTest("snappy unavailable without C++11")
                         filter_ = self._test(
                             'blosc',
@@ -246,7 +249,33 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
 class TestPackage(unittest.TestCase):
     """Test general features of the hdf5plugin package"""
 
-    def testConfig(self):
+    def testConstants(self):
+        self.assertIsInstance(
+            hdf5plugin.FILTERS,
+            dict,
+        )
+        self.assertTrue(
+            hdf5plugin.PLUGIN_PATH.startswith(
+                os.path.abspath(os.path.dirname(__file__))
+            )
+        )
+        self.assertEqual(
+            hdf5plugin.PLUGIN_PATH,
+            hdf5plugin.PLUGINS_PATH,
+        )
+
+    def testGetConfig(self):
+        """Test hdf5plugin.get_config availability"""
+        config = hdf5plugin.get_config()
+        self.assertIsInstance(config.build_config.openmp, bool)
+        self.assertIsInstance(config.build_config.native, bool)
+        self.assertIsInstance(config.build_config.sse2, bool)
+        self.assertIsInstance(config.build_config.avx2, bool)
+        self.assertIsInstance(config.build_config.cpp11, bool)
+        self.assertIsInstance(config.build_config.embedded_filters, tuple)
+        self.assertIsInstance(config.registered_filters, dict)
+
+    def testDeprecatedConfig(self):
         """Test hdf5plugin.config availability"""
         config = hdf5plugin.config
         self.assertIsInstance(config.openmp, bool)
@@ -281,21 +310,21 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
             self._test(filter_name)
 
     @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
-    @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
+    @unittest.skipUnless(BUILD_CONFIG.embedded_filters, "No embedded filters")
     def test_register_single_filter(self):
         """Re-register embedded filters one at a time"""
-        for filter_name in hdf5plugin.config.embedded_filters:
+        for filter_name in BUILD_CONFIG.embedded_filters:
             with self.subTest(name=filter_name):
                 status = hdf5plugin.register(filter_name, force=True)
                 self.assertTrue(status)
                 self._simple_test(filter_name)
 
     @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
-    @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
+    @unittest.skipUnless(BUILD_CONFIG.embedded_filters, "No embedded filters")
     def test_register_all_filters(self):
         """Re-register embedded filters all at once"""
         status = hdf5plugin.register()
-        for filter_name in hdf5plugin.config.embedded_filters:
+        for filter_name in BUILD_CONFIG.embedded_filters:
             with self.subTest(name=filter_name):
                 self._simple_test(filter_name)
 
