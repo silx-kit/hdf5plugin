@@ -83,12 +83,15 @@ def register_filter(name):
     # Unregister existing filter
     filter_id = FILTERS[name]
     is_avail = is_filter_available(name)
-    # TODO h5py>=2.10
+    if h5py.version.version_tuple < (2, 10) and is_avail in (True, None):
+        logger.error(
+            "h5py.h5z.unregister_filter is not available in this version of h5py.")
+        return False
     if is_avail is True:
         if not h5py.h5z.unregister_filter(filter_id):
             logger.error("Failed to unregister filter %s (%d)" % (name, filter_id))
             return False
-    elif is_avail is None:  # Cannot probe filter availability
+    if is_avail is None:  # Cannot probe filter availability
         try:
             h5py.h5z.unregister_filter(filter_id)
         except RuntimeError:

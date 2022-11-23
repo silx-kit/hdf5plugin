@@ -280,6 +280,7 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
         else:
             self._test(filter_name)
 
+    @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
     @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
     def test_register_single_filter(self):
         """Re-register embedded filters one at a time"""
@@ -289,6 +290,7 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
                 self.assertTrue(status)
                 self._simple_test(filter_name)
 
+    @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
     @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
     def test_register_all_filters(self):
         """Re-register embedded filters all at once"""
