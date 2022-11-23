@@ -483,7 +483,7 @@ class SZ(_FilterRefClass):
             sz_mode = 10
             parameter = pointwise_relative
         else:
-            raise NotImplementedError("One of the options need to be provided: abs, rel or pw_rel .")
+            raise TypeError("One of the options need to be provided: absolute, relative or pointwise_relative.")
 
         packed_error = self.pack_error(parameter)
         compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
