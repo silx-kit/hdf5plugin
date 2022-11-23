@@ -44,71 +44,137 @@ PLUGIN_PATH = os.path.abspath(
 """Directory where the provided HDF5 filter plugins are stored."""
 
 
-def _init_filters():
-    """Initialise and register HDF5 filters with h5py
+def is_filter_available(name):
+    """Returns whether filter is already registered or not.
 
-    Generator of tuples: (filename, library handle)
+    :param str name: Name of the filter (See `hdf5plugin.FILTERS`)
+    :return: True if filter is registered, False if not and
+        None if it cannot be checked (libhdf5 not supporting it)
+    :rtype: Union[bool,None]
     """
+    filter_id = FILTERS[name]
+
     hdf5_version = h5py.h5.get_libversion()
+    if hdf5_version < (1, 8, 20) or (1, 10) <= hdf5_version < (1, 10, 2):
+        return None # h5z.filter_avail not available
+    return h5py.h5z.filter_avail(filter_id) > 0
 
-    for name, filter_id in FILTERS.items():
-        # Skip filters that were not embedded
-        if name not in build_config.embedded_filters:
-            logger.debug("%s filter not available in this build of hdf5plugin.", name)
-            continue
 
-        # Check if filter is already loaded (not on buggy HDF5 versions)
-        if (1, 8, 20) <= hdf5_version < (1, 10) or hdf5_version >= (1, 10, 2):
-            if h5py.h5z.filter_avail(filter_id):
-                logger.info("%s filter already loaded, skip it.", name)
-                yield name, ("unknown", None)
-                continue
+registered_filters = {}
+"""Store hdf5plugin registered filters as a mapping: name: (filename, ctypes.CDLL)"""
 
-        # Load DLL
-        filename = glob.glob(os.path.join(
-            PLUGIN_PATH, 'libh5' + name + '*' + build_config.filter_file_extension))
-        if len(filename):
-            filename = filename[0]
-        else:
-            logger.error("Cannot initialize filter %s: File not found", name)
-            continue
+
+def register_filter(name):
+    """Register a filter given its name
+
+    Unregister the previously registered filter if any.
+
+    :param str name: Name of the filter (See `hdf5plugin.FILTERS`)
+    :return: True if successfully registered, False otherwise
+    :rtype: bool
+    """
+    if name not in FILTERS:
+        raise ValueError("Unknown filter name: %s" % name)
+
+    if name not in build_config.embedded_filters:
+        logger.debug("%s filter not available in this build of hdf5plugin.", name)
+        return False
+
+    # Unregister existing filter
+    filter_id = FILTERS[name]
+    is_avail = is_filter_available(name)
+    if h5py.version.version_tuple < (2, 10) and is_avail in (True, None):
+        logger.error(
+            "h5py.h5z.unregister_filter is not available in this version of h5py.")
+        return False
+    if is_avail is True:
+        if not h5py.h5z.unregister_filter(filter_id):
+            logger.error("Failed to unregister filter %s (%d)" % (name, filter_id))
+            return False
+    if is_avail is None:  # Cannot probe filter availability
         try:
-            lib = ctypes.CDLL(filename)
-        except OSError:
-            logger.error("Failed to load filter %s: %s", name, filename)
-            logger.error(traceback.format_exc())
-            continue
+            h5py.h5z.unregister_filter(filter_id)
+        except RuntimeError:
+            logger.debug("Filter %s (%d) not unregistered" % (name, filter_id))
+            logger.debug(traceback.format_exc())
+    registered_filters.pop(name, None)
 
-        if sys.platform.startswith('win'):
-            # Use register_filter function to register filter
-            lib.register_filter.restype = ctypes.c_int
-            retval = lib.register_filter()
-        else:
-            # Use init_filter function to initialize DLL and register filter
-            lib.init_filter.argtypes = [ctypes.c_char_p]
-            lib.init_filter.restype = ctypes.c_int
-            retval = lib.init_filter(
-                bytes(h5py.h5z.__file__, encoding='utf-8'))
+    # Load DLL
+    filename = glob.glob(os.path.join(
+        PLUGIN_PATH, 'libh5' + name + '*' + build_config.filter_file_extension))
+    if len(filename):
+        filename = filename[0]
+    else:
+        logger.error("Cannot initialize filter %s: File not found", name)
+        return False
+    try:
+        lib = ctypes.CDLL(filename)
+    except OSError:
+        logger.error("Failed to load filter %s: %s", name, filename)
+        logger.error(traceback.format_exc())
+        return False
 
-        if retval < 0:
-            logger.error("Cannot initialize filter %s: %d", name, retval)
-            continue
+    if sys.platform.startswith('win'):
+        # Use register_filter function to register filter
+        lib.register_filter.restype = ctypes.c_int
+        retval = lib.register_filter()
+    else:
+        # Use init_filter function to initialize DLL and register filter
+        lib.init_filter.argtypes = [ctypes.c_char_p]
+        lib.init_filter.restype = ctypes.c_int
+        retval = lib.init_filter(
+            bytes(h5py.h5z.__file__, encoding='utf-8'))
 
-        logger.debug("Registered filter: %s (%s)", name, filename)
-        yield name, (filename, lib)
+    if retval < 0:
+        logger.error("Cannot initialize filter %s: %d", name, retval)
+        return False
+
+    logger.debug("Registered filter: %s (%s)", name, filename)
+    registered_filters[name] = filename, lib
+    return True
 
 
-_filters = dict(_init_filters())  # Store loaded filters
+HDF5PluginConfig = namedtuple(
+    'HDF5PluginConfig',
+    ('build_config', 'registered_filters'),
+)
 
 
 def get_config():
     """Provides information about build configuration and filters registered by hdf5plugin.
     """
-    HDF5PluginConfig = namedtuple(
-        'HDF5PluginConfig',
-        ('build_config', 'registered_filters'),
-    )
-    return HDF5PluginConfig(
-        build_config=build_config,
-        registered_filters=dict((name, filename) for name, (filename, lib) in _filters.items()),
-    )
+    filters = {}
+    for name in FILTERS:
+        info = registered_filters.get(name)
+        if info is not None:  # Registered by hdf5plugin
+            if is_filter_available(name) in (True, None):
+                filters[name] = info[0]
+        elif is_filter_available(name) is True:  # Registered elsewhere
+            filters[name] = "unknown"
+
+    return HDF5PluginConfig(build_config, filters)
+
+
+def register(filters=tuple(FILTERS.keys()), force=True):
+    """Initialise and register `hdf5plugin` embedded filters given their names.
+
+    :param Union[str.Tuple[str]] filters:
+        Filter name or sequence of filter names (See `hdf5plugin.FILTERS`).
+    :param bool force:
+        True to register the filter even if a corresponding one if already available.
+        False to skip already available filters.
+    :return: True if all filters were registered successfully, False otherwise.
+    :rtype: bool
+    """
+    if isinstance(filters, str):
+        filters = (filters,)
+
+    status = True
+    for filter_name in filters:
+        if not force and is_filter_available(filter_name) is True:
+            logger.info("%s filter already loaded, skip it.", filter_name)
+            continue
+        status = status and register_filter(filter_name)
+    return status
+
+register(force=False)

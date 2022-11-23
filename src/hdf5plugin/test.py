@@ -38,8 +38,8 @@ def should_test(filter_name):
     return filter_name in hdf5plugin.config.embedded_filters or h5py.h5z.filter_avail(filter_id)
 
 
-class TestHDF5PluginRW(unittest.TestCase):
-    """Test write/read a HDF5 file with the plugins"""
+class BaseTestHDF5PluginRW(unittest.TestCase):
+    """Base class for testing write/read HDF5 dataset with the plugins"""
 
     @classmethod
     def setUpClass(cls):
@@ -106,6 +106,10 @@ class TestHDF5PluginRW(unittest.TestCase):
 
         os.remove(filename)
         return filters[0]
+
+
+class TestHDF5PluginRW(BaseTestHDF5PluginRW):
+    """Test write/read a HDF5 file with the plugins"""
 
     @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
     def testDepreactedBitshuffle(self):
@@ -265,9 +269,40 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(version_info.serial, int)
 
 
+class TestRegisterFilter(BaseTestHDF5PluginRW):
+    """Test usage of the register function"""
+
+    def _simple_test(self, filter_name):
+        if filter_name == 'fcidecomp':
+            self._test('fcidecomp', dtype=numpy.uint8)
+        elif filter_name in ('sz', 'zfp'):
+            self._test(filter_name, dtype=numpy.float32, lossless=False)
+        else:
+            self._test(filter_name)
+
+    @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
+    @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
+    def test_register_single_filter(self):
+        """Re-register embedded filters one at a time"""
+        for filter_name in hdf5plugin.config.embedded_filters:
+            with self.subTest(name=filter_name):
+                status = hdf5plugin.register(filter_name, force=True)
+                self.assertTrue(status)
+                self._simple_test(filter_name)
+
+    @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
+    @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
+    def test_register_all_filters(self):
+        """Re-register embedded filters all at once"""
+        status = hdf5plugin.register()
+        for filter_name in hdf5plugin.config.embedded_filters:
+            with self.subTest(name=filter_name):
+                self._simple_test(filter_name)
+
+
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW, TestPackage):
+    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 
