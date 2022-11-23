@@ -102,11 +102,13 @@ Get information about hdf5plugin
 
 Available constants:
 
-.. autodata:: FILTERS
-   :annotation:
+.. py:data:: FILTERS
 
-.. autodata:: PLUGIN_PATH
-   :annotation:
+   Mapping of provided filter's name to their HDF5 filter ID.
+
+.. py:data:: PLUGIN_PATH
+
+   Directory where the provided HDF5 filter plugins are stored.
 
 Functions:
 
