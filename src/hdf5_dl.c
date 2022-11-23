@@ -470,5 +470,5 @@ CALL(-1, H5Zregister, cls)
 }
 
 herr_t H5Zunregister(H5Z_filter_t id){
-    CALL(0, H5Zunregister, id)
+    CALL(-1, H5Zunregister, id)
 };
