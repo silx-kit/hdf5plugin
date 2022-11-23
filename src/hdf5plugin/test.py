@@ -283,19 +283,19 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
     @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
     def test_register_single_filter(self):
         """Re-register embedded filters one at a time"""
-        for name in hdf5plugin.config.embedded_filters:
-            with self.subTest(name=name):
-                status = hdf5plugin.register(name, force=True)
+        for filter_name in hdf5plugin.config.embedded_filters:
+            with self.subTest(name=filter_name):
+                status = hdf5plugin.register(filter_name, force=True)
                 self.assertTrue(status)
-                self._simple_test(name)
+                self._simple_test(filter_name)
 
     @unittest.skipUnless(hdf5plugin.config.embedded_filters, "No embedded filters")
     def test_register_all_filters(self):
         """Re-register embedded filters all at once"""
         status = hdf5plugin.register()
-        for name in hdf5plugin.config.embedded_filters:
-            with self.subTest(name=name):
-                self._simple_test(name)
+        for filter_name in hdf5plugin.config.embedded_filters:
+            with self.subTest(name=filter_name):
+                self._simple_test(filter_name)
 
 
 def suite():

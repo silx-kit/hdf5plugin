@@ -60,7 +60,7 @@ def is_filter_available(name):
     return h5py.h5z.filter_avail(filter_id) > 0
 
 
-REGISTERED_FILTERS = {}
+registered_filters = {}
 """Store hdf5plugin registered filters as a mapping: name: (filename, ctypes.CDLL)"""
 
 
@@ -94,7 +94,7 @@ def register_filter(name):
         except RuntimeError:
             logger.debug("Filter %s (%d) not unregistered" % (name, filter_id))
             logger.debug(traceback.format_exc())
-    REGISTERED_FILTERS.pop(name, None)
+    registered_filters.pop(name, None)
 
     # Load DLL
     filename = glob.glob(os.path.join(
@@ -127,7 +127,7 @@ def register_filter(name):
         return False
 
     logger.debug("Registered filter: %s (%s)", name, filename)
-    REGISTERED_FILTERS[name] = filename, lib
+    registered_filters[name] = filename, lib
     return True
 
 
@@ -140,16 +140,16 @@ HDF5PluginConfig = namedtuple(
 def get_config():
     """Provides information about build configuration and filters registered by hdf5plugin.
     """
-    registered_filters = {}
+    filters = {}
     for name in FILTERS:
-        info = REGISTERED_FILTERS.get(name)
+        info = registered_filters.get(name)
         if info is not None:  # Registered by hdf5plugin
             if is_filter_available(name) in (True, None):
-                registered_filters[name] = info[0]
+                filters[name] = info[0]
         elif is_filter_available(name) is True:  # Registered elsewhere
-            registered_filters[name] = "unknown"
+            filters[name] = "unknown"
 
-    return HDF5PluginConfig(build_config, registered_filters)
+    return HDF5PluginConfig(build_config, filters)
 
 
 def register(filters=tuple(FILTERS.keys()), force=True):
@@ -166,7 +166,7 @@ def register(filters=tuple(FILTERS.keys()), force=True):
     :rtype: bool
     """
     if isinstance(filters, str):
-        names = (filters,)
+        filters = (filters,)
 
     status = True
     for filter_name in filters:
