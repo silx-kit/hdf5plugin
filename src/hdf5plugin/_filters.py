@@ -495,10 +495,9 @@ class SZ(_FilterRefClass):
 
     @staticmethod
     def pack_error(error: float) -> tuple:
-        from struct import pack, unpack
-        packed = pack('<d', error)  # Pack as IEEE 754 double
-        high = unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
-        low = unpack('<I', packed[4:8])[0]
+        packed = struct.pack('<d', error)  # Pack as IEEE 754 double
+        high = struct.unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
+        low = struct.unpack('<I', packed[4:8])[0]
         return low, high
 
 
