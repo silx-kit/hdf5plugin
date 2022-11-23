@@ -56,6 +56,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * **FCIDECOMP plugin** (v1.0.2) and **CharLS** (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_):
   ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2 and
   https://github.com/team-charls/charls
+* **SZ plugin** (commit `f36afa4ae9 https://github.com/szcompressor/SZ/commit/f36afa4ae9da0a8c50da3b9e89bfa89c8908b200>`_) and https://github.com/szcompressor/SZ
 * **HDF5-ZFP plugin** (commit `cd5422c <https://github.com/LLNL/H5Z-ZFP/tree/cd5422c146836e17c7a0380bfb05cf52d0c4467c>`_) and **zfp** (v1.0.0): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
 * **HDF5Plugin-Zstandard** (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) and **zstd** (v1.5.2): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2
 
@@ -74,6 +75,7 @@ Please read the different licenses:
 * bzip2: See `src/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/PyTables/LICENSE.txt>`_ and `src/bzip2/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/bzip2/LICENSE>`_
 * lz4: See `src/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/COPYING>`_, `src/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/LICENSE>`_ and `src/c-blosc/LICENSES/LZ4.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc/LICENSES/LZ4.txt>`_
 * FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/fcidecomp/LICENSE.txt>`_ and `src/charls/src/License.txt  <https://github.com/silx-kit/hdf5plugin/blob/main/src/charls/src/License.txt>`_
+* SZ: See `src/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/SZ/copyright-and-BSD-license.txt>`_
 * zfp: See `src/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/H5Z-ZFP/LICENSE>`_ and `src/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/zfp/LICENSE>`_
 * zstd: See `src/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/HDF5Plugin-Zstandard/LICENSE>`_
 
