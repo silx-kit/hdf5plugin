@@ -469,18 +469,20 @@ class SZ(_FilterRefClass):
         # Get SZ encoding options
         if absolute is not None:
             sz_mode = 0
-            parameter = absolute
         elif relative is not None:
             sz_mode = 1
-            parameter = relative
         elif pointwise_relative is not None:
             sz_mode = 10
-            parameter = pointwise_relative
         else:
             raise TypeError("One of the options need to be provided: absolute, relative or pointwise_relative.")
 
-        packed_error = self.pack_error(parameter)
-        compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
+        compression_opts = (
+            sz_mode,
+            *self.__pack_float64(absolute or 0.),
+            *self.__pack_float64(relative or 0.),
+            *self.__pack_float64(pointwise_relative or 0.),
+            *self.__pack_float64(0.),  # psnr
+        )
 
         logger.info(f"SZ mode {sz_mode} used.")
         logger.info(f"filter options {compression_opts}")
@@ -488,11 +490,11 @@ class SZ(_FilterRefClass):
         self.filter_options = compression_opts
 
     @staticmethod
-    def pack_error(error: float) -> tuple:
-        packed = struct.pack('<d', error)  # Pack as IEEE 754 double
-        high = struct.unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
-        low = struct.unpack('<I', packed[4:8])[0]
-        return low, high
+    def __pack_float64(error: float) -> tuple:
+        packed = struct.pack('>d', error)  # Pack as big-endian IEEE 754 double
+        high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
+        low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
+        return high, low
 
 
 class Zstd(_FilterRefClass):
