@@ -177,7 +177,7 @@ def get_filters(filters=tuple(FILTERS.keys())):
             raise ValueError(f"Expected int or str, not {type(name_or_id)}")
 
         for cls in FILTER_CLASSES:
-            if ((isinstance(name_or_id, str) and cls._filter_name == name_or_id.lower()) or
+            if ((isinstance(name_or_id, str) and cls.filter_name == name_or_id.lower()) or
                 (isinstance(name_or_id, int) and cls.filter_id == name_or_id)):
                     filter_classes.append(cls)
                     break

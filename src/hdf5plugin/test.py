@@ -346,7 +346,7 @@ class TestGetFilters(unittest.TestCase):
         filters = hdf5plugin.get_filters("registered")
         self.assertTrue(set(filters).issubset(_filters.FILTER_CLASSES))
 
-        filter_names = set(f._filter_name for f in filters)
+        filter_names = set(f.filter_name for f in filters)
         registered_names = set(hdf5plugin.get_config().registered_filters.keys())
         self.assertEqual(filter_names, registered_names)
 

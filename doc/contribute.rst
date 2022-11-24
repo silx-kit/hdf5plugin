@@ -57,7 +57,7 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 
 * Add a compression options helper class named ``FilterName`` in ``hdf5plugins/_filters.py`` which should inherit from ``_FilterRefClass``.
   This is intended to ease the usage of ``h5py.Group.create_dataset`` ``compression_opts`` argument.
-  It must have a `_filter_name` class attribute with the same name as in the extension defined in ``setup.py`` (without the ``libh5`` prefix) .
+  It must have a `filter_name` class attribute with the same name as in the extension defined in ``setup.py`` (without the ``libh5`` prefix) .
   This name is used to find the filter library.
 
 * Add ``FilterName`` to ``hdf5plugin._filters.FILTER_CLASSES``.
