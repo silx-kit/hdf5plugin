@@ -32,7 +32,7 @@ import traceback
 from collections import namedtuple
 import h5py
 
-from ._filters import FILTERS
+from ._filters import FILTER_CLASSES, FILTERS
 from ._config import build_config
 
 
@@ -153,6 +153,39 @@ def get_config():
             filters[name] = "unknown"
 
     return HDF5PluginConfig(build_config, filters)
+
+
+def get_filters(filters=tuple(FILTERS.keys())):
+    """Returns selected filter classes
+
+    By default it returns all filter classes.
+
+    :param Union[str,int,Tuple[Union[str,int]] filters:
+        Filter name or ID or sequence of filter names or IDs.
+        The default is all filters.
+        It also supports the value `"registered"` with selects
+        currently available filters.
+    :return: Tuple of filter classes
+    """
+    if filters == "registered":
+        filters = tuple(get_config().registered_filters.keys())
+    if isinstance(filters, (str, int)):
+        filters = (filters,)
+
+    filter_classes = []
+    for name_or_id in filters:
+        if not isinstance(name_or_id, (str, int)):
+            raise ValueError(f"Expected int or str, not {type(name_or_id)}")
+
+        for cls in FILTER_CLASSES:
+            if ((isinstance(name_or_id, str) and cls._filter_name == name_or_id.lower()) or
+                (isinstance(name_or_id, int) and cls.filter_id == name_or_id)):
+                    filter_classes.append(cls)
+                    break
+        else:
+            raise ValueError(f"Unknown filter: {name_or_id}")
+
+    return tuple(filter_classes)
 
 
 def register(filters=tuple(FILTERS.keys()), force=True):
