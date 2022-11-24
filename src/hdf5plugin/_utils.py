@@ -206,7 +206,7 @@ def register(filters=tuple(FILTERS.keys()), force=True):
         if not force and is_filter_available(filter_name) is True:
             logger.info(f"{filter_name} filter already loaded, skip it.")
             continue
-        status = status and register_filter(filter_name)
+        status = register_filter(filter_name) and status
     return status
 
 register(force=False)
