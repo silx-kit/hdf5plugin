@@ -156,14 +156,13 @@ def get_config():
 
 
 def get_filters(filters=tuple(FILTERS.keys())):
-    """Returns selected filter classes
+    """Returns selected filter classes.
 
     By default it returns all filter classes.
 
     :param Union[str,int,Tuple[Union[str,int]] filters:
-        Filter name or ID or sequence of filter names or IDs.
-        The default is all filters.
-        It also supports the value `"registered"` with selects
+        Filter name or ID or sequence of filter names or IDs (default: all filters).
+        It also supports the value `"registered"` which selects
         currently available filters.
     :return: Tuple of filter classes
     """
