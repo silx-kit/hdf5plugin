@@ -50,17 +50,17 @@ This briefly describes the steps to add a HDF5 compression filter to the zoo.
 * Update ``setup.py`` to build the filter dynamic library by adding an extension using the ``HDF5PluginExtension`` class (a subclass of ``setuptools.Extension``) which adds extra files and compile options to enable dynamic loading of the filter.
   The name of the extension should be ``hdf5plugin.plugins.libh5<filter_name>``.
 
+* In case of import errors related to HDF5-related undefined symbols, add eventual missing functions under ``src/hdf5_dl.c``.
+
 * Add a "CONSTANT" in ``src/hdf5plugin/_filters.py`` named with the ``FILTER_NAME_ID`` which value is the HDF5 filter ID
   (See `HDF5 registered filters <https://portal.hdfgroup.org/display/support/Registered+Filters>`_).
 
-* Add a ``"<filter_name>": <FILTER_ID_CONSTANT>`` entry in ``hdf5plugin._filters.FILTERS``.
-  You must use the same `filter_name` as in the extension in ``setup.py`` (without the ``libh5`` prefix) .
-  The names in ``FILTERS`` are used to find the available filter libraries.
-
-* In case of import errors related to HDF5-related undefined symbols, add eventual missing functions under ``src/hdf5_dl.c``.
-
 * Add a compression options helper class named ``FilterName`` in ``hdf5plugins/_filters.py`` which should inherit from ``_FilterRefClass``.
   This is intended to ease the usage of ``h5py.Group.create_dataset`` ``compression_opts`` argument.
+  It must have a `filter_name` class attribute with the same name as in the extension defined in ``setup.py`` (without the ``libh5`` prefix) .
+  This name is used to find the filter library.
+
+* Add ``FilterName`` to ``hdf5plugin._filters.FILTER_CLASSES``.
 
 * Add to ``hdf5plugin/__init__.py`` the import of the filter ID and helper class:
   ``from ._filters import FILTER_NAME_ID, FilterName  # noqa``

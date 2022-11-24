@@ -32,7 +32,7 @@ import traceback
 from collections import namedtuple
 import h5py
 
-from ._filters import FILTERS
+from ._filters import FILTER_CLASSES, FILTERS
 from ._config import build_config
 
 
@@ -155,26 +155,58 @@ def get_config():
     return HDF5PluginConfig(build_config, filters)
 
 
-def register(filters=tuple(FILTERS.keys()), force=True):
-    """Initialise and register `hdf5plugin` embedded filters given their names.
+def get_filters(filters=tuple(FILTERS.keys())):
+    """Returns selected filter classes.
 
-    :param Union[str.Tuple[str]] filters:
-        Filter name or sequence of filter names (See `hdf5plugin.FILTERS`).
+    By default it returns all filter classes.
+
+    :param Union[str,int,Tuple[Union[str,int]] filters:
+        Filter name or ID or sequence of filter names or IDs (default: all filters).
+        It also supports the value `"registered"` which selects
+        currently available filters.
+    :return: Tuple of filter classes
+    """
+    if filters == "registered":
+        filters = tuple(get_config().registered_filters.keys())
+    if isinstance(filters, (str, int)):
+        filters = (filters,)
+
+    filter_classes = []
+    for name_or_id in filters:
+        if not isinstance(name_or_id, (str, int)):
+            raise ValueError(f"Expected int or str, not {type(name_or_id)}")
+
+        for cls in FILTER_CLASSES:
+            if ((isinstance(name_or_id, str) and cls.filter_name == name_or_id.lower()) or
+                (isinstance(name_or_id, int) and cls.filter_id == name_or_id)):
+                    filter_classes.append(cls)
+                    break
+        else:
+            raise ValueError(f"Unknown filter: {name_or_id}")
+
+    return tuple(filter_classes)
+
+
+def register(filters=tuple(FILTERS.keys()), force=True):
+    """Initialise and register `hdf5plugin` embedded filters given their names or IDs.
+
+    :param Union[str,int,Tuple[Union[str,int]] filters:
+        Filter name or ID or sequence of filter names or IDs.
     :param bool force:
         True to register the filter even if a corresponding one if already available.
         False to skip already available filters.
     :return: True if all filters were registered successfully, False otherwise.
     :rtype: bool
     """
-    if isinstance(filters, str):
-        filters = (filters,)
+    filter_classes = get_filters(filters)
 
     status = True
-    for filter_name in filters:
+    for filter_class in filter_classes:
+        filter_name = filter_class.filter_name
         if not force and is_filter_available(filter_name) is True:
             logger.info(f"{filter_name} filter already loaded, skip it.")
             continue
-        status = status and register_filter(filter_name)
+        status = register_filter(filter_name) and status
     return status
 
 register(force=False)

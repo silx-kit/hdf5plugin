@@ -100,17 +100,15 @@ Zstd
 Get information about hdf5plugin
 ++++++++++++++++++++++++++++++++
 
-Available constants:
-
-.. py:data:: FILTERS
-
-   Mapping of provided filter's name to their HDF5 filter ID.
+Constants:
 
 .. py:data:: PLUGIN_PATH
 
    Directory where the provided HDF5 filter plugins are stored.
 
 Functions:
+
+.. autofunction:: get_filters
 
 .. autofunction:: get_config
 

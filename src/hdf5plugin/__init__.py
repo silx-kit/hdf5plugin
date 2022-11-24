@@ -40,7 +40,7 @@ from ._filters import ZFP_ID, Zfp  # noqa
 from ._filters import ZSTD_ID, Zstd  # noqa
 from ._filters import SZ_ID, SZ  # noqa
 
-from ._utils import get_config, PLUGIN_PATH, register  # noqa
+from ._utils import get_config, get_filters, PLUGIN_PATH, register  # noqa
 
 # Backward compatibility
 PLUGINS_PATH = PLUGIN_PATH

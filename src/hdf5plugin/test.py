@@ -32,6 +32,9 @@ import h5py
 import hdf5plugin
 
 
+from hdf5plugin import _filters
+
+
 BUILD_CONFIG = hdf5plugin.get_config().build_config
 
 
@@ -311,8 +314,8 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
 
     @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
     @unittest.skipUnless(BUILD_CONFIG.embedded_filters, "No embedded filters")
-    def test_register_single_filter(self):
-        """Re-register embedded filters one at a time"""
+    def test_register_single_filter_by_name(self):
+        """Re-register embedded filters one at a time given their name"""
         for filter_name in BUILD_CONFIG.embedded_filters:
             with self.subTest(name=filter_name):
                 status = hdf5plugin.register(filter_name, force=True)
@@ -321,17 +324,59 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
 
     @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
     @unittest.skipUnless(BUILD_CONFIG.embedded_filters, "No embedded filters")
+    def test_register_single_filter_by_id(self):
+        """Re-register embedded filters one at a time given their ID"""
+        for filter_name in BUILD_CONFIG.embedded_filters:
+            with self.subTest(name=filter_name):
+                filter_class = hdf5plugin.get_filters(filter_name)[0]
+                status = hdf5plugin.register(filter_class.filter_id, force=True)
+                self.assertTrue(status)
+                self._simple_test(filter_name)
+
+    @unittest.skipIf(h5py.version.version_tuple < (2, 10), "h5py<2.10: unregister_filer not available")
+    @unittest.skipUnless(BUILD_CONFIG.embedded_filters, "No embedded filters")
     def test_register_all_filters(self):
         """Re-register embedded filters all at once"""
         status = hdf5plugin.register()
+        self.assertTrue(status)
         for filter_name in BUILD_CONFIG.embedded_filters:
             with self.subTest(name=filter_name):
                 self._simple_test(filter_name)
 
 
+class TestGetFilters(unittest.TestCase):
+    """Test get_filters function"""
+
+    def testDefault(self):
+        """Get all filters: get_filters()"""
+        filters = hdf5plugin.get_filters()
+        self.assertEqual(filters, _filters.FILTER_CLASSES)
+
+    def testRegistered(self):
+        """Get registered filters: get_filters("registered")"""
+        filters = hdf5plugin.get_filters("registered")
+        self.assertTrue(set(filters).issubset(_filters.FILTER_CLASSES))
+
+        filter_names = set(f.filter_name for f in filters)
+        registered_names = set(hdf5plugin.get_config().registered_filters.keys())
+        self.assertEqual(filter_names, registered_names)
+
+    def testSelection(self):
+        """Get selected filters"""
+        tests = {
+            'blosc': (hdf5plugin.Blosc,),
+            ('blosc', 'zfp'): (hdf5plugin.Blosc, hdf5plugin.Zfp),
+            307: (hdf5plugin.BZip2,),
+            ('blosc', 307): (hdf5plugin.Blosc, hdf5plugin.BZip2),
+        }
+        for filters, ref in tests.items():
+            with self.subTest(filters=filters):
+                self.assertEqual(hdf5plugin.get_filters(filters), ref)
+
+
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter):
+    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter, TestGetFilters):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 
