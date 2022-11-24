@@ -973,13 +973,15 @@ sz3_plugin = HDF5PluginExtension(
     define_macros=zstd_define_macros,
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
-    cpp11_required=False,
+    cpp11=cpp11_kwargs,
+    cpp11_required=True,
     )
 
 sz3_lib = ("sz3", {
     "sources": sz3_sources + zstd_sources,
     "include_dirs": sz3_include_dirs + zstd_include_dirs,
-    #"cflags": ["-lzstd"],
+    #"cflags": ["-lzstd", '-std=c++11'],
+    "cflags": ['-std=c++11'],
     #sse2=sse2_kwargs,
     #avx2=avx2_kwargs,
     #cpp11=cpp11_kwargs,
