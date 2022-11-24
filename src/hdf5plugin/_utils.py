@@ -188,21 +188,21 @@ def get_filters(filters=tuple(FILTERS.keys())):
 
 
 def register(filters=tuple(FILTERS.keys()), force=True):
-    """Initialise and register `hdf5plugin` embedded filters given their names.
+    """Initialise and register `hdf5plugin` embedded filters given their names or IDs.
 
-    :param Union[str.Tuple[str]] filters:
-        Filter name or sequence of filter names (See `hdf5plugin.FILTERS`).
+    :param Union[str,int,Tuple[Union[str,int]] filters:
+        Filter name or ID or sequence of filter names or IDs.
     :param bool force:
         True to register the filter even if a corresponding one if already available.
         False to skip already available filters.
     :return: True if all filters were registered successfully, False otherwise.
     :rtype: bool
     """
-    if isinstance(filters, str):
-        filters = (filters,)
+    filter_classes = get_filters(filters)
 
     status = True
-    for filter_name in filters:
+    for filter_class in filter_classes:
+        filter_name = filter_class.filter_name
         if not force and is_filter_available(filter_name) is True:
             logger.info(f"{filter_name} filter already loaded, skip it.")
             continue
