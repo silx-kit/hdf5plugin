@@ -83,6 +83,13 @@ LZ4
    :members:
    :undoc-members:
 
+SZ
+==
+
+.. autoclass:: SZ
+   :members:
+   :undoc-members:
+
 Zfp
 ===
 

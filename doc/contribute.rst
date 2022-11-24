@@ -150,6 +150,34 @@ compression_opts: (**block_size**,)
   Default 0 for a block size of 1GB.
   It MUST be < 1.9 GB.
 
+sz
+..
+
+compression_opts: (
+  **error_bound_mode** (int32),
+  **abs_error high** (big endian float64),
+  **abs_error low**,
+  **rel_error high** (big endian float64),
+  **rel_error low**,
+  **pw_rel_error high** (big endian float64),
+  **pw_rel_error low**,
+  **psnr high** (big endian float64),
+  **psnr low**,
+)
+
+The `set_local` function prepends:
+
+- For **dim size** from 2 to 5:
+
+  (**dim size**, **data type**, **r1**, **r2**, **r3** (if **dim size**>=3), **r4** (if **dim size**>=4), **r5** (if **dim size**==5))
+
+  **rX** are set up to **dim size** (e.g., For **dim size** == 2 only **r1** and **r2** are used)
+
+- For **dim size** == 1: **r1** is stored on 64 bits:
+
+  (**dim size**, **data type**, **r1 most-significant bytes**, **r1 least-significant bytes**)
+
+
 zfp
 ...
 
