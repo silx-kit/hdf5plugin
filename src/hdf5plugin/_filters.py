@@ -158,7 +158,7 @@ class Bitshuffle(_FilterRefClass):
         if cname is None:
             cname = 'lz4'
         if cname not in self.__COMPRESSIONS:
-            raise ValueError("Unsupported compression: %s" % cname)
+            raise ValueError(f"Unsupported compression: {cname}")
 
         if cname == 'zstd':
             self.filter_options = (nelems, self.__COMPRESSIONS[cname], clevel)
@@ -415,7 +415,7 @@ class Zfp(_FilterRefClass):
         else:
            logger.info("ZFP default used")
         
-        logger.info("filter options = %s" % (self.filter_options,))
+        logger.info(f"filter options = {self.filter_options}")
 
 
 class SZ(_FilterRefClass):
