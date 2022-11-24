@@ -465,16 +465,16 @@ class SZ(_FilterRefClass):
     filter_name = "sz"
     filter_id = SZ_ID
 
-    def __init__(self, absolute=None, relative=None, pointwise_relative=1e-05):
+    def __init__(self, absolute=None, relative=None, pointwise_relative=None):
         # Get SZ encoding options
         if absolute is not None:
             sz_mode = 0
         elif relative is not None:
             sz_mode = 1
-        elif pointwise_relative is not None:
-            sz_mode = 10
         else:
-            raise TypeError("One of the options need to be provided: absolute, relative or pointwise_relative.")
+            sz_mode = 10
+            if pointwise_relative is None:
+                pointwise_relative = 1e-5
 
         compression_opts = (
             sz_mode,
