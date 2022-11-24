@@ -59,17 +59,6 @@ SZ_ID = 32017
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
-FILTERS = {'blosc': BLOSC_ID,
-           'bshuf': BSHUF_ID,
-           'bzip2': BZIP2_ID,
-           'lz4': LZ4_ID,
-           'zfp': ZFP_ID,
-           'zstd': ZSTD_ID,
-           'sz': SZ_ID,
-           'fcidecomp': FCIDECOMP_ID,
-           }
-"""Mapping of provided filter's name to their HDF5 filter ID."""
-
 
 try:
     _FilterRefClass = h5py.filters.FilterRefBase
@@ -128,6 +117,7 @@ class Bitshuffle(_FilterRefClass):
         Can be negative, and must be below or equal to 22 (maximum compression).
         Default: 3.
     """
+    _filter_name = "bshuf"
     filter_id = BSHUF_ID
 
     __COMPRESSIONS = {
@@ -201,6 +191,7 @@ class Blosc(_FilterRefClass):
     BITSHUFFLE = 2
     """Flag to enable bit-wise shuffle pre-compression filter"""
 
+    _filter_name = "blosc"
     filter_id = BLOSC_ID
 
     __COMPRESSIONS = {
@@ -236,6 +227,7 @@ class BZip2(_FilterRefClass):
 
     :param int blocksize: Size of the blocks as a multiple of 100k
     """
+    _filter_name = "bzip2"
     filter_id = BZIP2_ID
 
     def __init__(self, blocksize=9) -> None:
@@ -258,6 +250,7 @@ class FciDecomp(_FilterRefClass):
             **hdf5plugin.FciDecomp())
         f.close()
     """
+    _filter_name = "fcidecomp"
     filter_id = FCIDECOMP_ID
 
     def __init__(self, *args, **kwargs):
@@ -285,6 +278,7 @@ class LZ4(_FilterRefClass):
         It needs to be in the range of 0 < nbytes < 2113929216 (1,9GB).
         Default: 0 (for 1GB per block).
     """
+    _filter_name = "lz4"
     filter_id = LZ4_ID
 
     def __init__(self, nbytes=0):
@@ -374,6 +368,7 @@ class Zfp(_FilterRefClass):
     :param int minexp: Smallest absolute bit plane number encoded.
         It controls the absolute error.
     """
+    _filter_name = "zfp"
     filter_id = ZFP_ID
 
     def __init__(self,
@@ -468,7 +463,7 @@ class SZ(_FilterRefClass):
               **hdf5plugin.SZ(pointwise_relative=0.01))
 
     """
-
+    _filter_name = "sz"
     filter_id = SZ_ID
 
     def __init__(self, absolute=None, relative=None, pointwise_relative=1e-05):
@@ -527,8 +522,16 @@ class Zstd(_FilterRefClass):
             **hdf5plugin.Zstd(clevel=22))
         f.close()
     """
+    _filter_name = "zstd"
     filter_id = ZSTD_ID
 
     def __init__(self, clevel=3):
         assert 1 <= clevel <= 22
         self.filter_options = (clevel,)
+
+
+FILTER_CLASSES = Bitshuffle, Blosc, BZip2, FciDecomp, LZ4, SZ, Zfp, Zstd
+
+
+FILTERS = dict((cls._filter_name, cls.filter_id) for cls in FILTER_CLASSES)
+"""Mapping of provided filter's name to their HDF5 filter ID."""
