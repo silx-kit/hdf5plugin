@@ -831,7 +831,7 @@ zfp_lib = ('zfp', {
 sz_dir = os.path.join("src", "SZ", "sz")
 sz_sources = glob(os.path.join(sz_dir, "src", "*.c"))
 sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
-sz_include_dirs += glob('src/SZ/')
+sz_include_dirs += glob('src/SZ_extra/')
 sz_depends = glob('src/SZ/sz/include/*.h')
 sz_depends += glob('src/SZ/sz/*.h')
 
