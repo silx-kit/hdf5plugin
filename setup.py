@@ -998,7 +998,11 @@ if sys.platform.startswith("win"):
             else:
                 tmpfile.write(line)
     sz3_hdf5_plugin_source = patched_file_name
-    
+
+# Set compile args for both MSVC and others, list is stripped at build time
+sz3_extra_compile_args = ['-O3', '-ffast-math', '-std=c++11', '-fopenmp']
+sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+
 sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
     sources=[sz3_hdf5_plugin_source],
@@ -1006,7 +1010,7 @@ sz3_plugin = HDF5PluginExtension(
     depends= zstd_depends + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + zstd_include_dirs + [os.path.join(sz3_hdf5_dir, "include")],
     define_macros=zstd_define_macros,
-    extra_compile_args=extra_compile_args,
+    extra_compile_args=sz3_extra_compile_args,
     extra_link_args=extra_link_args,
     cpp11=cpp11_kwargs,
     cpp11_required=True,
