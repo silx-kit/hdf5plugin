@@ -504,81 +504,64 @@ class SZ(_FilterRefClass):
 
 
 class SZ3(_FilterRefClass):
-    """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using SZ3 filter.
+
+    void usage()
+    {
+            printf("Usage: print_h5repack_args <options>\n");
+            printf("Options:\n");
+            printf("	-M <error bound mode> : 10 options as follows. \n");
+            printf("		ABS (absolute error bound)\n");
+            printf("		REL (value range based error bound, so a.k.a., VR_REL)\n");
+            printf("		PSNR (peak signal-to-noise ratio)\n");
+            printf("		NORM2 (norm2)\n");
+            printf("	-A <absolute error bound>: specifying absolute error bound\n");
+            printf("	-R <value_range based relative error bound>: specifying relative error bound\n");
+            printf("	-N <norm2>: specifying norm2 error bound\n");
+            printf("	-S <PSNR>: specifying PSNR\n");
+            printf("* examples: \n");
+            printf("	print_h5repack_args -M ABS -A 1E-3 (output: -f UD=32024,0,9,0,1062232653,3539053052,0,0,0,0,0,0)\n");
+            printf("	print_h5repack_args -M REL -R 1E-4 (output: -f UD=32024,0,9,1,0,0,1058682594,3944497965,0,0,0,0)\n");
+            exit(0);
+    }
+
 
     For more details about the compressor `SZ <https://szcompressor.org/>`_.
-    It can be passed as keyword arguments:
-
-    .. code-block:: python
-
-        f = h5py.File('test.h5', 'w')
-        f.create_dataset(
-            'sz',
-            data=numpy.random.random(100),
-            **hdf5plugin.SZ())
-        f.close()
-
-    This filter provides different modes:
-
-    - **Absolute** mode: To use, set the ``absolute`` argument.
-      It ensures that the resulting values will be within the provided absolute tolerance.
-
-      .. code-block:: python
-
-          f.create_dataset(
-              'sz_absolute',
-              data=numpy.random.random(100),
-              **hdf5plugin.Zfp(absolute=0.1))
-
-    - **Relative** mode: To use, set the ``relative`` argument.
-      It ensures that the resulting values will be within the provided relative tolerance.
-      The tolerance will be computed by multiplying the provided argument by the range of the data values.
-
-      .. code-block:: python
-
-          f.create_dataset(
-              'sz_relative',
-              data=numpy.random.random(100),
-              **hdf5plugin.SZ(relative=0.01))
-
-    - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
-      It ensures that each grid point of the resulting values will be within the provided relative tolerance.
-
-      .. code-block:: python
-
-          f.create_dataset(
-              'sz_pointwise_relative',
-              data=numpy.random.random(100),
-              **hdf5plugin.SZ(pointwise_relative=0.01))
-
     """
     filter_name = "sz3"
     filter_id = SZ3_ID
 
-    def __init__(self, absolute=None, relative=None, pointwise_relative=None):
-        if (absolute, relative, pointwise_relative).count(None) < 2:
-            raise TypeError("hdf5plugin.SZ() takes at most one not None argument")
+    def __init__(self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None):
+        if (absolute, relative, norm2, peak_signal_to_noise_ratio, peak_signal_to_noise_ratio).count(None) < 2:
+            raise TypeError("hdf5plugin.SZ3() takes at most one not None argument")
 
-        # Get SZ encoding options
+        # Get SZ3 encoding options: range [0, 5]
         if absolute is not None:
             sz_mode = 0
         elif relative is not None:
             sz_mode = 1
+        elif norm2 is not None:
+            sz_mode = 2
+        elif peak_signal_to_noise_ratio is not None:
+            sz_mode = 3
         else:
-            sz_mode = 10
-            if pointwise_relative is None:
-                pointwise_relative = 1e-5
+            absolute = 0.001
+            sz_mode = 0
+        if sz_mode not in [0]:
+            raise NotImplementedError()
 
         compression_opts = (
             sz_mode,
             *self.__pack_float64(absolute or 0.),
             *self.__pack_float64(relative or 0.),
-            *self.__pack_float64(pointwise_relative or 0.),
-            *self.__pack_float64(0.),  # psnr
+            *self.__pack_float64(norm2 or 0.),
+            *self.__pack_float64(peak_signal_to_noise_ratio or 0.),
         )
-
         logger.info(f"SZ3 mode {sz_mode} used.")
         logger.info(f"filter options {compression_opts}")
+        # 9 values needed
+        if len(compression_opts) != 9:
+            raise IndexError("Invalid number of arguments")
 
         self.filter_options = compression_opts
 
