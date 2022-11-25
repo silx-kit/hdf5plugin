@@ -12,7 +12,7 @@ build:
     python: "3.10"
   jobs:
     pre_install:
-      - export HDF5PLUGIN_STRIP=all
+      - echo "HDF5PLUGIN_STRIP=${HDF5PLUGIN_STRIP}"
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
