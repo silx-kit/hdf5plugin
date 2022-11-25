@@ -45,6 +45,7 @@ from ._utils import get_config, get_filters, PLUGIN_PATH, register  # noqa
 # Backward compatibility
 PLUGINS_PATH = PLUGIN_PATH
 
+
 def __getattr__(name):
     if name == "config":
         _logging.getLogger(__name__).warning(
