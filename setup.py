@@ -668,13 +668,6 @@ zstd_depends = glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
 zstd_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
 zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 
-# zstd
-zstd_lib = ('zstd', {
-    'sources': zstd_sources,
-    'include_dirs': zstd_include_dirs,
-    #'cflags': ['-std=c++11']
-    })
-
 sources += zstd_sources
 depends += zstd_depends
 include_dirs += zstd_include_dirs
@@ -998,16 +991,6 @@ if sys.platform.startswith("win"):
                 tmpfile.write(line)
     sz3_hdf5_plugin_source = patched_file_name
 
-# Set compile args for both MSVC and others, list is stripped at build time
-sz3_extra_compile_args = ['-O3', '-ffast-math', '-fopenmp']
-if sys.platform.startswith("darwin"):
-    sz3_extra_compile_args += ['-std=c++14']
-    cflags = ['-std=c++14'] # std::make_unique is indeed C++14
-else:
-    sz3_extra_compile_args += ['-std=c++11']
-    cflags = ['-std=c++11'] # std::make_unique is indeed C++14
-sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-
 sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
     sources=[sz3_hdf5_plugin_source],
@@ -1015,23 +998,21 @@ sz3_plugin = HDF5PluginExtension(
     depends= zstd_depends + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + zstd_include_dirs + [os.path.join(sz3_hdf5_dir, "include")],
     define_macros=zstd_define_macros,
-    extra_compile_args=sz3_extra_compile_args,
+    extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
-    cpp11=cpp11_kwargs,
-    cpp11_required=True,
+    cpp11_required=False,
     )
 
 sz3_lib = ("sz3", {
     "sources": sz3_sources + zstd_sources,
     "include_dirs": sz3_include_dirs + zstd_include_dirs,
-    #"cflags": ["-lzstd", '-std=c++11'],
-    "cflags": cflags,
+    #"cflags": ["-lzstd"],
     #sse2=sse2_kwargs,
     #avx2=avx2_kwargs,
     #cpp11=cpp11_kwargs,
 })
 
-PLUGIN_LIB_DEPENDENCIES['sz3'] = 'zstd'
+PLUGIN_LIB_DEPENDENCIES['sz3'] = 'sz3'
 
 
 def apply_filter_strip(libraries, extensions, dependencies):
@@ -1062,17 +1043,16 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 libraries, extensions = apply_filter_strip(
-    #libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib, sz3_lib],
-    libraries=[zfp_lib, sz3_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib, sz3_lib],
     extensions=[
-        #bzip2_plugin,
-        #lz4_plugin,
-        #bithsuffle_plugin,
-        #blosc_plugin,
-        #fcidecomp_plugin,
-        #h5zfp_plugin,
-        #zstandard_plugin,
-        #sz_plugin,
+        bzip2_plugin,
+        lz4_plugin,
+        bithsuffle_plugin,
+        blosc_plugin,
+        fcidecomp_plugin,
+        h5zfp_plugin,
+        zstandard_plugin,
+        sz_plugin,
         sz3_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
