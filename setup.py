@@ -1001,7 +1001,7 @@ if sys.platform.startswith("win"):
 
 # Set compile args for both MSVC and others, list is stripped at build time
 sz3_extra_compile_args = ['-O3', '-ffast-math', '-fopenmp']
-if sys.platform.starswith("darwin"):
+if sys.platform.startswith("darwin"):
     sz3_extra_compile_args += ['-std=c++14']
     cflags = ['-std=c++14'] # std::make_unique is indeed C++14
 else:
