@@ -1000,7 +1000,13 @@ if sys.platform.startswith("win"):
     sz3_hdf5_plugin_source = patched_file_name
 
 # Set compile args for both MSVC and others, list is stripped at build time
-sz3_extra_compile_args = ['-O3', '-ffast-math', '-std=c++11', '-fopenmp']
+sz3_extra_compile_args = ['-O3', '-ffast-math', '-fopenmp']
+if sys.platform.starswith("darwin"):
+    sz3_extra_compile_args += ['-std=c++14']
+    cflags = ['-std=c++14'] # std::make_unique is indeed C++14
+else:
+    sz3_extra_compile_args += ['-std=c++11']
+    cflags = ['-std=c++11'] # std::make_unique is indeed C++14
 sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
 
 sz3_plugin = HDF5PluginExtension(
@@ -1016,10 +1022,6 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=True,
     )
 
-if sys.platform.startswith("darwin"):
-    cflags = ['-std=c++14'] # std::make_unique is indeed C++14
-else:
-    cflags = ['-std=c++11']
 sz3_lib = ("sz3", {
     "sources": sz3_sources + zstd_sources,
     "include_dirs": sz3_include_dirs + zstd_include_dirs,
