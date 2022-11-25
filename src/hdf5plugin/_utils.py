@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 PLUGIN_PATH = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), 'plugins'))
+    os.path.join(os.path.dirname(__file__), 'plugins'))
 """Directory where the provided HDF5 filter plugins are stored."""
 
 
@@ -56,7 +56,7 @@ def is_filter_available(name):
 
     hdf5_version = h5py.h5.get_libversion()
     if hdf5_version < (1, 8, 20) or (1, 10) <= hdf5_version < (1, 10, 2):
-        return None # h5z.filter_avail not available
+        return None  # h5z.filter_avail not available
     return h5py.h5z.filter_avail(filter_id) > 0
 
 
@@ -177,10 +177,11 @@ def get_filters(filters=tuple(FILTERS.keys())):
             raise ValueError(f"Expected int or str, not {type(name_or_id)}")
 
         for cls in FILTER_CLASSES:
-            if ((isinstance(name_or_id, str) and cls.filter_name == name_or_id.lower()) or
-                (isinstance(name_or_id, int) and cls.filter_id == name_or_id)):
-                    filter_classes.append(cls)
-                    break
+            if (
+                isinstance(name_or_id, str) and cls.filter_name == name_or_id.lower()
+            ) or (isinstance(name_or_id, int) and cls.filter_id == name_or_id):
+                filter_classes.append(cls)
+                break
         else:
             raise ValueError(f"Unknown filter: {name_or_id}")
 
@@ -208,5 +209,6 @@ def register(filters=tuple(FILTERS.keys()), force=True):
             continue
         status = register_filter(filter_name) and status
     return status
+
 
 register(force=False)
