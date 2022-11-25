@@ -466,6 +466,9 @@ class SZ(_FilterRefClass):
     filter_id = SZ_ID
 
     def __init__(self, absolute=None, relative=None, pointwise_relative=None):
+        if (absolute, relative, pointwise_relative).count(None) < 2:
+            raise TypeError("hdf5plugin.SZ() takes at most one not None argument")
+
         # Get SZ encoding options
         if absolute is not None:
             sz_mode = 0
