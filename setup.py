@@ -420,52 +420,6 @@ class BuildCLib(build_clib):
             build_info['cflags'] = cflags
 
             updated_libraries.append((lib_name, build_info))
-            # FIXME: Is there a cleaner way of running the configure script for SZ?
-            if lib_name == "sz":
-                from pathlib import Path
-                configure_path = Path().cwd() / "src" / "SZ" / "configure"
-                if sys.platform.startswith("win"):
-                    # TODO: decide if providing a config.h or write it here
-                    with open(configure_path.parent / "config.h", 'w') as f:
-                        f.write("/* Define to 1 if you have the <sys/time.h> header file. */\n")
-                        f.write("/* #undef HAVE_SYS_TIME_H */\n")
-                        f.write("\n")
-                        f.write("/* Define to 1 if you have the <unistd.h> header file. */\n")
-                        f.write("/* #undef HAVE_UNISTD_H */\n")
-                        f.write("\n")
-                        f.write("/* Define to 1 if you have the `clock_gettime' function. */\n")
-                        f.write("/* #undef HAVE_CLOCK_GETTIME */\n")
-                        f.write("\n")
-                        f.write("/* Define to 1 if you have the `gettimeofday' function. */\n")
-                        # I think this one should be set ot 1, but cmake did not generate it
-                        f.write("/* #undef HAVE_GETTIMEOFDAY */\n")
-                        f.write("#define HAVE_GETTIMEOFDAY 1\n")
-                elif sys.platform.startswith("darwin"):
-                    # TODO: decide if providing a config.h or write it here
-                    with open(configure_path.parent / "config.h", 'w') as f:
-                        f.write("/* Define to 1 if you have the <sys/time.h> header file. */\n")
-                        f.write("/* #undef HAVE_SYS_TIME_H */\n")
-                        f.write("#define HAVE_SYS_TIME_H 1\n")
-                        f.write("\n")
-                        f.write("/* Define to 1 if you have the <unistd.h> header file. */\n")
-                        f.write("/* #undef HAVE_UNISTD_H */\n")
-                        f.write("#define HAVE_UNISTD_H 1\n")
-                        f.write("\n")
-                        f.write("/* Define to 1 if you have the `clock_gettime' function. */\n")
-                        f.write("/* #undef HAVE_CLOCK_GETTIME */\n")
-                        f.write("#define HAVE_CLOCK_GETTIME 1\n")
-                        f.write("\n")
-                        f.write("/* Define to 1 if you have the `gettimeofday' function. */\n")
-                        # I think this one should be set ot 1, but cmake did not generate it
-                        f.write("/* #undef HAVE_GETTIMEOFDAY */\n")
-                        f.write("#define HAVE_GETTIMEOFDAY 1\n")
-                else:
-                    # TODO: Use cmake or supplied file instead of configure
-                    # Execute configure script
-                    self.spawn([configure_path.as_posix()])
-                    # Move config.h from the current working directory to SZ directory.
-                    config_h_path = Path().cwd() / "config.h"
-                    config_h_path.rename(configure_path.parent / "config.h")
 
         super().build_libraries(updated_libraries)
 
@@ -651,9 +605,13 @@ cpp11_kwargs = {
     }
 
 #zlib
-sources += glob(blosc_dir + 'internal-complibs/zlib*/*.c')
-depends += glob(blosc_dir + 'internal-complibs/zlib*/*.h')
-include_dirs += glob(blosc_dir + 'internal-complibs/zlib*')
+zlib_sources = glob(blosc_dir + 'internal-complibs/zlib*/*.c')
+zlib_depends = glob(blosc_dir + 'internal-complibs/zlib*/*.h')
+zlib_include_dirs = glob(blosc_dir + 'internal-complibs/zlib*')
+
+sources += zlib_sources
+depends += zlib_depends
+include_dirs += zlib_include_dirs
 define_macros.append(('HAVE_ZLIB', 1))
 
 # zstd
@@ -672,6 +630,7 @@ zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 sources += zstd_sources
 depends += zstd_depends
 include_dirs += zstd_include_dirs
+define_macros += zstd_define_macros
 define_macros.append(('HAVE_ZSTD', 1))
 
 extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
@@ -688,7 +647,7 @@ blosc_plugin = HDF5PluginExtension(
     depends=depends + \
         prefix(hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
     include_dirs=include_dirs + [hdf5_blosc_dir],
-    define_macros=define_macros + zstd_define_macros,
+    define_macros=define_macros,
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     sse2=sse2_kwargs,
@@ -872,39 +831,26 @@ zfp_lib = ('zfp', {
 sz_dir = os.path.join("src", "SZ", "sz")
 sz_sources = glob(os.path.join(sz_dir, "src", "*.c"))
 sz_include_dirs = [os.path.join(sz_dir, "include"), sz_dir]
-sz_sources += glob('src/SZ/zstd/*/*.c')
-# TODO sz_depends += glob('src/SZ/zstd*/*/*.h')
+sz_include_dirs += glob('src/SZ_extra/')
+sz_depends = glob('src/SZ/sz/include/*.h')
+sz_depends += glob('src/SZ/sz/*.h')
 
-HDF5PLUGIN_ZLIB_FROM_BLOSC = True
-if HDF5PLUGIN_ZLIB_FROM_BLOSC:
-    sz_sources += glob(blosc_dir + 'internal-complibs/zlib*/*.c')
-    ##depends += glob(blosc_dir + 'internal-complibs/zlib*/*.h')
-else:
-    sz_sources += glob('src/SZ/zlib/*.c')
+# zlib
+sz_sources += zlib_sources
+sz_include_dirs += zlib_include_dirs
+sz_depends += zlib_depends
 
-sz_include_dirs += glob('src/SZ/zstd')
-sz_include_dirs += glob('src/SZ/zstd/common')
-
-if HDF5PLUGIN_ZLIB_FROM_BLOSC:
-    sz_include_dirs += glob(blosc_dir + 'internal-complibs/zlib*')
-else:
-    sz_include_dirs += glob('src/SZ/zlib')
-
-sz_include_dirs += glob('src/SZ/')
-sz_lib = ("sz", {
-    "sources": sz_sources,
-    "include_dirs": sz_include_dirs,
-    #"cflags": ["-lzstd"],
-})
-
-# "cflags": ['-DBUILD_HDF5_FILTER:BOOL=ON'],
-
+# zstd
+sz_sources += zstd_sources
+sz_include_dirs += zstd_include_dirs
+sz_depends += zstd_depends
 
 h5zsz_dir = os.path.join("src", "SZ", "hdf5-filter", "H5Z-SZ")
-sources = glob(h5zsz_dir + "/src/" + "*.c")
+sources = glob(h5zsz_dir + "/src/*.c")
 sources += sz_sources
-depends = glob(h5zsz_dir + "/include/" + "*.h")
-include_dirs = [os.path.join(sz_dir, 'include'), os.path.join(h5zsz_dir, 'include')]
+depends = glob(h5zsz_dir + "/include/*.h")
+depends += sz_depends
+include_dirs = [os.path.join(h5zsz_dir, 'include')]
 include_dirs += sz_include_dirs
 extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
 extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
@@ -917,8 +863,9 @@ sz_plugin = HDF5PluginExtension(
     include_dirs=include_dirs,
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
+    define_macros=zstd_define_macros,
+    extra_objects=zstd_extra_objects,
 )
-PLUGIN_LIB_DEPENDENCIES['sz'] = 'sz'
 
 
 def apply_filter_strip(libraries, extensions, dependencies):
@@ -949,7 +896,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
