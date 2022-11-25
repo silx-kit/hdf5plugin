@@ -406,10 +406,10 @@ class Zfp(_FilterRefClass):
             minexp = struct.unpack('I', struct.pack('i', int(minexp)))[0]
             self.filter_options = 4, 0, minbits, maxbits, maxprec, minexp
             logger.info("ZFP mode 4 used. H5Z_ZFP_MODE_EXPERT")
-        
+
         else:
-           logger.info("ZFP default used")
-        
+            logger.info("ZFP default used")
+
         logger.info(f"filter options = {self.filter_options}")
 
 

@@ -27,8 +27,8 @@ under windows, MacOS and linux."""
 
 import logging as _logging
 
-from ._version import __date__ as date  # noqa
-from ._version import version, version_info, hexversion, strictversion  # noqa
+from . import _version
+from ._version import version, version_info  # noqa
 
 from ._filters import FILTERS  # noqa
 from ._filters import BLOSC_ID, Blosc  # noqa
@@ -45,10 +45,16 @@ from ._utils import get_config, get_filters, PLUGIN_PATH, register  # noqa
 # Backward compatibility
 PLUGINS_PATH = PLUGIN_PATH
 
+
 def __getattr__(name):
     if name == "config":
         _logging.getLogger(__name__).warning(
             "hdf5plugin.config is deprecated, use get_config().build_config"
         )
         return get_config().build_config
+    if name in ("date", "hexversion", "strictversion"):
+        _logging.getLogger(__name__).warning(
+            f"hdf5plugin.{name} is deprecated"
+        )
+        return getattr(_version, name)
     raise AttributeError(f"module {__name__} has no attribute {name}")

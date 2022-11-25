@@ -48,6 +48,7 @@ Bits (big endian order)     Meaning
 Thus 2.1.0a3 is hexversion 0x020100a3.
 
 """
+from collections import namedtuple
 
 __authors__ = ["Jérôme Kieffer"]
 __license__ = "MIT"
@@ -77,7 +78,6 @@ SERIAL = 0  # <16
 
 date = __date__
 
-from collections import namedtuple
 _version_info = namedtuple("version_info", ["major", "minor", "micro", "releaselevel", "serial"])
 
 version_info = _version_info(MAJOR, MINOR, MICRO, RELEV, SERIAL)

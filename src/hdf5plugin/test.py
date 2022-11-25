@@ -146,7 +146,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
             for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
                 for nelems in (1024, 2048):
                     with self.subTest(cname=cname, dtype=dtype, nelems=nelems):
-                        filter_ = self._test('bshuf', dtype, compressed=cname!='none', nelems=nelems, cname=cname)
+                        filter_ = self._test('bshuf', dtype, compressed=cname != 'none', nelems=nelems, cname=cname)
                         self.assertEqual(filter_[2][3:5], (nelems, compression_ids[cname]))
 
     @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
@@ -169,7 +169,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                             self.skipTest("snappy unavailable without C++11")
                         filter_ = self._test(
                             'blosc',
-                            compressed=clevel!=0,  # No compression for clevel=0
+                            compressed=clevel != 0,  # No compression for clevel=0
                             cname=cname,
                             clevel=clevel,
                             shuffle=shuffle)
@@ -227,7 +227,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
             {'lossless': True, 'reversible': True},  # Reversible
             # Expert: with default parameters
             {'lossless': False, 'minbits': 1, 'maxbits': 16657, 'maxprec': 64, 'minexp': -1074},
-            ]
+        ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
