@@ -623,7 +623,7 @@ class Zstd(_FilterRefClass):
         self.filter_options = (clevel,)
 
 
-FILTER_CLASSES = Bitshuffle, Blosc, BZip2, FciDecomp, LZ4, SZ, Zfp, Zstd
+FILTER_CLASSES = Bitshuffle, Blosc, BZip2, FciDecomp, LZ4, SZ, SZ3, Zfp, Zstd
 
 
 FILTERS = dict((cls.filter_name, cls.filter_id) for cls in FILTER_CLASSES)
