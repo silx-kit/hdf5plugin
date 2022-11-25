@@ -416,7 +416,7 @@ class Zfp(_FilterRefClass):
 class SZ(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
 
-    For more details about the compressor `SZ <https://https://szcompressor.org/>`_.
+    For more details about the compressor `SZ <https://szcompressor.org/>`_.
     It can be passed as keyword arguments:
 
     .. code-block:: python
@@ -431,7 +431,7 @@ class SZ(_FilterRefClass):
     This filter provides different modes:
 
     - **Absolute** mode: To use, set the ``absolute`` argument.
-      It ensures that the resulting values will be within the absolute tolerance provided with the argument.
+      It ensures that the resulting values will be within the provided absolute tolerance.
 
       .. code-block:: python
 
@@ -441,8 +441,8 @@ class SZ(_FilterRefClass):
               **hdf5plugin.Zfp(absolute=0.1))
 
     - **Relative** mode: To use, set the ``relative`` argument.
-      It ensures that the resulting values will be within the relative tolerance provided with the argument.
-      The tolerance will be computed by multiplying the the argument provided by the range of the data values.
+      It ensures that the resulting values will be within the provided relative tolerance.
+      The tolerance will be computed by multiplying the provided argument by the range of the data values.
 
       .. code-block:: python
 
@@ -452,8 +452,7 @@ class SZ(_FilterRefClass):
               **hdf5plugin.SZ(relative=0.01))
 
     - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
-      It ensures that each grid point of the resulting values will be within the relative tolerance provided with the
-      argument.
+      It ensures that each grid point of the resulting values will be within the provided relative tolerance.
 
       .. code-block:: python
 
@@ -466,22 +465,27 @@ class SZ(_FilterRefClass):
     filter_name = "sz"
     filter_id = SZ_ID
 
-    def __init__(self, absolute=None, relative=None, pointwise_relative=1e-05):
+    def __init__(self, absolute=None, relative=None, pointwise_relative=None):
+        if (absolute, relative, pointwise_relative).count(None) < 2:
+            raise TypeError("hdf5plugin.SZ() takes at most one not None argument")
+
         # Get SZ encoding options
         if absolute is not None:
             sz_mode = 0
-            parameter = absolute
         elif relative is not None:
             sz_mode = 1
-            parameter = relative
-        elif pointwise_relative is not None:
-            sz_mode = 10
-            parameter = pointwise_relative
         else:
-            raise TypeError("One of the options need to be provided: absolute, relative or pointwise_relative.")
+            sz_mode = 10
+            if pointwise_relative is None:
+                pointwise_relative = 1e-5
 
-        packed_error = self.pack_error(parameter)
-        compression_opts = (sz_mode, *packed_error, *packed_error, *packed_error, *packed_error)
+        compression_opts = (
+            sz_mode,
+            *self.__pack_float64(absolute or 0.),
+            *self.__pack_float64(relative or 0.),
+            *self.__pack_float64(pointwise_relative or 0.),
+            *self.__pack_float64(0.),  # psnr
+        )
 
         logger.info(f"SZ mode {sz_mode} used.")
         logger.info(f"filter options {compression_opts}")
@@ -489,11 +493,11 @@ class SZ(_FilterRefClass):
         self.filter_options = compression_opts
 
     @staticmethod
-    def pack_error(error: float) -> tuple:
-        packed = struct.pack('<d', error)  # Pack as IEEE 754 double
-        high = struct.unpack('<I', packed[0:4])[0]  # Unpack high bits as unsigned int
-        low = struct.unpack('<I', packed[4:8])[0]
-        return low, high
+    def __pack_float64(error: float) -> tuple:
+        packed = struct.pack('>d', error)  # Pack as big-endian IEEE 754 double
+        high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
+        low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
+        return high, low
 
 
 class Zstd(_FilterRefClass):
