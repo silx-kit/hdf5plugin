@@ -56,6 +56,9 @@ ZSTD_ID = 32015
 SZ_ID = 32017
 """SZ filter ID"""
 
+SZ3_ID = 32024
+"""SZ3 filter ID"""
+
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
@@ -499,6 +502,92 @@ class SZ(_FilterRefClass):
         low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
         return high, low
 
+
+class SZ3(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
+
+    For more details about the compressor `SZ <https://szcompressor.org/>`_.
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'sz',
+            data=numpy.random.random(100),
+            **hdf5plugin.SZ())
+        f.close()
+
+    This filter provides different modes:
+
+    - **Absolute** mode: To use, set the ``absolute`` argument.
+      It ensures that the resulting values will be within the provided absolute tolerance.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_absolute',
+              data=numpy.random.random(100),
+              **hdf5plugin.Zfp(absolute=0.1))
+
+    - **Relative** mode: To use, set the ``relative`` argument.
+      It ensures that the resulting values will be within the provided relative tolerance.
+      The tolerance will be computed by multiplying the provided argument by the range of the data values.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_relative',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ(relative=0.01))
+
+    - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
+      It ensures that each grid point of the resulting values will be within the provided relative tolerance.
+
+      .. code-block:: python
+
+          f.create_dataset(
+              'sz_pointwise_relative',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ(pointwise_relative=0.01))
+
+    """
+    filter_name = "sz3"
+    filter_id = SZ3_ID
+
+    def __init__(self, absolute=None, relative=None, pointwise_relative=None):
+        if (absolute, relative, pointwise_relative).count(None) < 2:
+            raise TypeError("hdf5plugin.SZ() takes at most one not None argument")
+
+        # Get SZ encoding options
+        if absolute is not None:
+            sz_mode = 0
+        elif relative is not None:
+            sz_mode = 1
+        else:
+            sz_mode = 10
+            if pointwise_relative is None:
+                pointwise_relative = 1e-5
+
+        compression_opts = (
+            sz_mode,
+            *self.__pack_float64(absolute or 0.),
+            *self.__pack_float64(relative or 0.),
+            *self.__pack_float64(pointwise_relative or 0.),
+            *self.__pack_float64(0.),  # psnr
+        )
+
+        logger.info(f"SZ3 mode {sz_mode} used.")
+        logger.info(f"filter options {compression_opts}")
+
+        self.filter_options = compression_opts
+
+    @staticmethod
+    def __pack_float64(error: float) -> tuple:
+        packed = struct.pack('>d', error)  # Pack as big-endian IEEE 754 double
+        high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
+        low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
+        return high, low
 
 class Zstd(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
