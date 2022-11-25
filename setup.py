@@ -539,7 +539,6 @@ class HDF5PluginExtension(Extension):
             self.export_symbols.append('register_filter')
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
-
         else:
             self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
@@ -1063,16 +1062,17 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib, sz3_lib],
+    #libraries=[snappy_lib, charls_lib, zfp_lib, sz_lib, sz3_lib],
+    libraries=[zfp_lib, sz3_lib],
     extensions=[
-        bzip2_plugin,
-        lz4_plugin,
-        bithsuffle_plugin,
-        blosc_plugin,
-        fcidecomp_plugin,
-        h5zfp_plugin,
-        zstandard_plugin,
-        sz_plugin,
+        #bzip2_plugin,
+        #lz4_plugin,
+        #bithsuffle_plugin,
+        #blosc_plugin,
+        #fcidecomp_plugin,
+        #h5zfp_plugin,
+        #zstandard_plugin,
+        #sz_plugin,
         sz3_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
