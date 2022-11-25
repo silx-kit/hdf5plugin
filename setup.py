@@ -669,6 +669,13 @@ zstd_depends = glob(blosc_dir +'internal-complibs/zstd*/*/*.h')
 zstd_include_dirs = glob(blosc_dir + 'internal-complibs/zstd*')
 zstd_include_dirs += glob(blosc_dir + 'internal-complibs/zstd*/common')
 
+# zstd
+zstd_lib = ('zstd', {
+    'sources': zstd_sources,
+    'include_dirs': zstd_include_dirs,
+    #'cflags': ['-std=c++11']
+    })
+
 sources += zstd_sources
 depends += zstd_depends
 include_dirs += zstd_include_dirs
@@ -964,9 +971,37 @@ if 1:
         f.write("\n")
         f.write("#endif //SZ3_VERSION_HP\n")
 
+sz3_hdf5_plugin_source = os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")
+if sys.platform.startswith("win"):
+    # TODO: there is a link issue with H5E_ERR_CLS (mixing or C++ and C) ?
+    # patch the code to get it compiled
+    patched_file_name = sz3_hdf5_plugin_source[:-4]+"_patched.cpp"
+    with open(sz3_hdf5_plugin_source, 'r') as tmpfile:
+        lines = tmpfile.readlines()
+
+    counter = False
+    with open(patched_file_name, 'w') as tmpfile:
+        for line in lines:
+            if "H5E_ERR_CLS" in line:
+                counter = True
+                tmpfile.write('#ifdef _MSC_VER\n')
+                tmpfile.write('printf("H5Z_sz3_set_local: Wrong number of cd_values: The new version has 9 integer elements in cd_values.\\n");\n')
+                tmpfile.write('#else\n')
+                tmpfile.write(line)
+            elif counter:
+                if "return" in line:
+                    counter = False
+                    tmpfile.write('#endif\n')
+                    tmpfile.write(line)
+                else:
+                    tmpfile.write(line)
+            else:
+                tmpfile.write(line)
+    sz3_hdf5_plugin_source = patched_file_name
+    
 sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
-    sources=[os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")],
+    sources=[sz3_hdf5_plugin_source],
     extra_objects=zstd_extra_objects,
     depends= zstd_depends + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + zstd_include_dirs + [os.path.join(sz3_hdf5_dir, "include")],
@@ -977,17 +1012,21 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=True,
     )
 
+if sys.platform.startswith("darwin"):
+    cflags = ['-std=c++14'] # std::make_unique is indeed C++14
+else:
+    cflags = ['-std=c++11']
 sz3_lib = ("sz3", {
     "sources": sz3_sources + zstd_sources,
     "include_dirs": sz3_include_dirs + zstd_include_dirs,
     #"cflags": ["-lzstd", '-std=c++11'],
-    "cflags": ['-std=c++11'],
+    "cflags": cflags,
     #sse2=sse2_kwargs,
     #avx2=avx2_kwargs,
     #cpp11=cpp11_kwargs,
 })
 
-PLUGIN_LIB_DEPENDENCIES['sz3'] = 'sz3'
+PLUGIN_LIB_DEPENDENCIES['sz3'] = 'zstd'
 
 
 def apply_filter_strip(libraries, extensions, dependencies):
