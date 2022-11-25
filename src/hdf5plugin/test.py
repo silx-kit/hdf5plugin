@@ -77,6 +77,7 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
                 "sz": hdf5plugin.SZ,
+                "sz3": hdf5plugin.SZ3,
                 "zfp": hdf5plugin.Zfp,
                 "zstd": hdf5plugin.Zstd,
                 }[filter_name](**options)
@@ -215,6 +216,18 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
                     self._test('sz', dtype=dtype, **options)
+
+    @unittest.skipUnless(should_test("sz3"), "SZ3 filter not available")
+    def testSZ3(self):
+        """Write/read test with SZ3 filter plugin"""
+        # TODO: Options mission
+        tests = [{'lossless': False, 'absolute': 0.001},
+                 #{'lossless': False, 'relative': 0.0001},
+                 ]
+        for options in tests:
+            for dtype in (numpy.float32, numpy.float64):
+                with self.subTest(options=options, dtype=dtype):
+                    self._test('sz3', dtype=dtype, **options)
 
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
