@@ -947,8 +947,12 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=False,
     )
 
-zstd_lib = ("zstd", {
-    "sources": zstd_sources + [os.path.join('src', 'hdf5_dl.c')],
+if sys.platfor.startswith('darwin'):
+    # this should be taken from the output of HDF5PluginExtension
+    zstd_sources += [os.path.join('src', 'hdf5_dl.c')]
+    zstd_include_dirs += [os.path.join('src', 'hdf5', 'include'), os.path.join('src', 'hdf5', 'include', 'darwin')]
+sz3_lib = ("sz3", {
+    "sources": zstd_sources,
     "include_dirs": zstd_include_dirs,
     #"cflags": ["-lzstd"],
     #sse2=sse2_kwargs,
@@ -956,7 +960,7 @@ zstd_lib = ("zstd", {
     #cpp11=cpp11_kwargs,
 })
 
-PLUGIN_LIB_DEPENDENCIES['sz3'] = 'zstd'
+PLUGIN_LIB_DEPENDENCIES['sz3'] = 'sz3'
 
 
 def apply_filter_strip(libraries, extensions, dependencies):
@@ -988,7 +992,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
 
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib, zstd_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib, sz3_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
