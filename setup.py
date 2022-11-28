@@ -495,11 +495,13 @@ class HDF5PluginExtension(Extension):
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
         else:
-            #if name.endswith("h5sz3"):
-            #    # MacOS does not like to mix C and C++ code
-            #    self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
-            #else:
-            self.sources.append(os.path.join('src', 'hdf5_dl.c'))
+            if name.endswith("h5sz3") and sys.platform.startswith('darwin'):
+                # MacOS does not like to mix C and C++ code and next line
+                # does not work for the macro CALL
+                #self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
+                pass
+            else:
+                self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
@@ -946,7 +948,7 @@ sz3_plugin = HDF5PluginExtension(
     )
 
 zstd_lib = ("zstd", {
-    "sources": zstd_sources,
+    "sources": zstd_sources + [os.path.join('src', 'hdf5_dl.c')],
     "include_dirs": zstd_include_dirs,
     #"cflags": ["-lzstd"],
     #sse2=sse2_kwargs,
