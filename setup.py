@@ -942,7 +942,17 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=False,
     )
 
+zstd_lib = ("zstd", {
+    "sources": zstd_sources,
+    "include_dirs": zstd_include_dirs,
+    #"cflags": ["-lzstd"],
+    #sse2=sse2_kwargs,
+    #avx2=avx2_kwargs,
+    #cpp11=cpp11_kwargs,
+})
+
 PLUGIN_LIB_DEPENDENCIES['sz3'] = 'zstd'
+
 
 def apply_filter_strip(libraries, extensions, dependencies):
     """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
@@ -973,7 +983,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
 
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib, zstd_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
