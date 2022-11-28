@@ -914,7 +914,7 @@ if 1:
         f.write("#endif //SZ3_VERSION_HP\n")
 
 sz3_hdf5_plugin_source = os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")
-if sys.platform.startswith("win"):
+if False and sys.platform.startswith("win"):
     # TODO: there is a link issue with H5E_ERR_CLS (mixing or C++ and C) ?
     # patch the code to get it compiled
     patched_file_name = sz3_hdf5_plugin_source[:-4]+"_patched.cpp"
