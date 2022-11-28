@@ -913,11 +913,26 @@ if 1:
         f.write("\n")
         f.write("#endif //SZ3_VERSION_HP\n")
 
+    if sys.platform.startswith("darwin"):
+        with open(configure_path / "omp.h", 'w') as f:
+            f.write("//\n")
+            f.write("// Dummy file for missing include\n")
+            f.write("//\n")
+        
+
+#TODO: Probably OpenMP should not be the default for this filter (sz3.config)
+sz3_extra_compile_args = ['-std=c++11', '-O3', '-ffast-math', '-fopenmp']
+sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+sz3_extra_link_args = ['-fopenmp', '/openmp', "-lm"]
+
+if sys.platform.startswith("darwin"):
+    sz3_extra_compile_args[0] = '-std=c++14'
+
 sz3_hdf5_plugin_source = os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")
 
 sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
-    sources=[sz3_hdf5_plugin_source],
+    sources=[sz3_hdf5_plugin_source] + sz3_sources,
     extra_objects=zstd_extra_objects,
     depends= zstd_depends + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + zstd_include_dirs + [os.path.join(sz3_hdf5_dir, "include")],
@@ -927,17 +942,7 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=False,
     )
 
-sz3_lib = ("sz3", {
-    "sources": sz3_sources + zstd_sources,
-    "include_dirs": sz3_include_dirs + zstd_include_dirs,
-    #"cflags": ["-lzstd"],
-    #sse2=sse2_kwargs,
-    #avx2=avx2_kwargs,
-    #cpp11=cpp11_kwargs,
-})
-
-PLUGIN_LIB_DEPENDENCIES['sz3'] = 'sz3'
-
+PLUGIN_LIB_DEPENDENCIES['sz3'] = 'zstd'
 
 def apply_filter_strip(libraries, extensions, dependencies):
     """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
@@ -968,7 +973,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
 
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib, sz3_lib],
+    libraries=[snappy_lib, charls_lib, zfp_lib],
     extensions=[
         bzip2_plugin,
         lz4_plugin,
