@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "23/11/2022"
+__date__ = "28/11/2022"
 
 
 from glob import glob
@@ -914,32 +914,6 @@ if 1:
         f.write("#endif //SZ3_VERSION_HP\n")
 
 sz3_hdf5_plugin_source = os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")
-if False and sys.platform.startswith("win"):
-    # TODO: there is a link issue with H5E_ERR_CLS (mixing or C++ and C) ?
-    # patch the code to get it compiled
-    patched_file_name = sz3_hdf5_plugin_source[:-4]+"_patched.cpp"
-    with open(sz3_hdf5_plugin_source, 'r') as tmpfile:
-        lines = tmpfile.readlines()
-
-    counter = False
-    with open(patched_file_name, 'w') as tmpfile:
-        for line in lines:
-            if "H5E_ERR_CLS" in line:
-                counter = True
-                tmpfile.write('#ifdef _MSC_VER\n')
-                tmpfile.write('printf("H5Z_sz3_set_local: Wrong number of cd_values: The new version has 9 integer elements in cd_values.\\n");\n')
-                tmpfile.write('#else\n')
-                tmpfile.write(line)
-            elif counter:
-                if "return" in line:
-                    counter = False
-                    tmpfile.write('#endif\n')
-                    tmpfile.write(line)
-                else:
-                    tmpfile.write(line)
-            else:
-                tmpfile.write(line)
-    sz3_hdf5_plugin_source = patched_file_name
 
 sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
