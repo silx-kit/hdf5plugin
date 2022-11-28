@@ -1,3 +1,47 @@
+4.0.0: 2022/11/28
+-----------------
+
+This version of ``hdf5plugin`` requires at least Python >= v3.7 (PR #210).
+
+While the provided plugin filters are backwards compatible, this version includes an updated version of the H5Z-ZFP filter (v1.1.0). This version of the filter can read data compressed by previous versions but newly ZFP-compressed data cannot be read by older versions (PR #190). 
+
+- New compression filters:
+
+  * Added **SZ** filter (PR #203, #206, #209, #213, #215)
+  * Added **BZip2** filter (PR #182)
+
+- New functions:
+
+  * Added **get_config()** function to retrieve build information and currently registered filters (PR #187)
+  * Added **get_filters()** function to retrieve selected compression filter helper class (PR #212)
+  * Added **register()** function to force registration of provided filters (PR #208, #212)
+
+- Deprecations:
+
+  * ``Bitshuffle``'s ``lz4`` argument: Use ``cname`` argument instead (PR #171)
+  * ``config``: use ``get_config()`` function instead (PR #210)
+  * ``date``, ``hexversion`` and ``strictversion`` (PR #217)
+
+- Updated filters:
+
+  * Updated ``snappy`` library to v1.1.9 (used by the ``blosc`` filter) (PR #192)
+  * Updated ``Zfp`` filter to HZ5-ZFP v1.1.0 and ZFP v1.0.0 (PR #190)
+  * Updated ``Bitshuffle`` filter to v0.4.2 (PR #171)
+  * Updated ``c-blosc`` to commit 9dc93b1 and ``zstd`` to v1.5.2 (PR #200)
+
+- Build:
+
+  * Updated ``HDF5PLUGIN_STRIP`` environment variable behaviour and added support for ``"all"`` value (PR #188)
+  * Added optimisation flags for the ``blosc`` filter compilation (PR #180)
+  * Added check of native flags availability (PR #189)
+
+- Misc.:
+
+  * Updated project to use Python >3.7 (PR #210)
+  * Code reorganisation, clean-up, code style (PR #191, #205, #217)
+  * Updated documentation (PR #184, #196, #199, #211, #218)
+  * Updated continuous integration tests (PR #198)
+
 3.3.1: 2022/06/03
 -----------------
 
