@@ -947,7 +947,7 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=False,
     )
 
-if sys.platfor.startswith('darwin'):
+if sys.platform.startswith('darwin'):
     # this should be taken from the output of HDF5PluginExtension
     zstd_sources += [os.path.join('src', 'hdf5_dl.c')]
     zstd_include_dirs += [os.path.join('src', 'hdf5', 'include'), os.path.join('src', 'hdf5', 'include', 'darwin')]
