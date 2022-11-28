@@ -494,7 +494,6 @@ class HDF5PluginExtension(Extension):
             self.export_symbols.append('register_filter')
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
-
         else:
             self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
@@ -871,7 +870,7 @@ sz_plugin = HDF5PluginExtension(
 
 # SZ3 library and its hdf5 filter
 sz3_dir = os.path.join("src", "SZ3")
-sz3_sources = glob(os.path.join(sz3_dir, "tools", "sz3", "sz3.*pp"))
+sz3_sources = [] #glob(os.path.join(sz3_dir, "tools", "sz3", "sz3.*pp"))
 sz3_include_dirs = [os.path.join(sz3_dir, "include"),
                     os.path.join(sz3_dir, "include", "SZ3"),
                     os.path.join(sz3_dir, "include", "SZ3", "api"),
@@ -937,8 +936,8 @@ sz3_plugin = HDF5PluginExtension(
     depends= zstd_depends + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + zstd_include_dirs + [os.path.join(sz3_hdf5_dir, "include")],
     define_macros=zstd_define_macros,
-    extra_compile_args=extra_compile_args,
-    extra_link_args=extra_link_args,
+    extra_compile_args=sz3_extra_compile_args,
+    extra_link_args=sz3_extra_link_args,
     cpp11_required=False,
     )
 
