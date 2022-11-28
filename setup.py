@@ -495,7 +495,11 @@ class HDF5PluginExtension(Extension):
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
         else:
-            self.sources.append(os.path.join('src', 'hdf5_dl.c'))
+            if name.endswith("h5sz3"):
+                # MacOS does not like to mix C and C++ code
+                self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
+            else:
+                self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
