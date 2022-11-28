@@ -23,7 +23,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 # -- Project information -----------------------------------------------------
 
 project = 'hdf5plugin'
-copyright = u'2016-2021, Data analysis unit, European Synchrotron Radiation Facility, Grenoble'
+copyright = u'2016-2022, Data analysis unit, European Synchrotron Radiation Facility, Grenoble'
 author = 'ESRF - Data Analysis Unit'
 
 # -- General configuration ---------------------------------------------------
