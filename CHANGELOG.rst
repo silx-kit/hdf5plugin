@@ -3,7 +3,7 @@
 
 This version of ``hdf5plugin`` requires at least Python >= v3.7 (PR #210).
 
-This version includes an updated version of **H5Z-ZFP** (v1.1.0) which compressed data cannot be read with older version of this filter (PR #190).
+This version includes an updated version of **H5Z-ZFP** (v1.1.0). Data compressed with this version of the filter cannot be read with older versions (PR #190).
 
 - New compression filters:
 
