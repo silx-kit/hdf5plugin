@@ -893,10 +893,59 @@ sz3_include_dirs = [os.path.join(sz3_dir, "include"),
                     ]
 sz3_hdf5_dir = os.path.join(sz3_dir, "tools", "H5Z-SZ3")
 
-HDF5PLUGIN_ZSTD_FROM_BLOSC = True
+# I have issues with the BMI on linux and Mac because of compiling Zstd separately
+HDF5PLUGIN_ZSTD_FROM_BLOSC = False
 if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
-    raise NotImplementedError("provided Zstd ignored")
+    sz3_zstd_cmake_list = [
+        './common/entropy_common.c',
+        './common/pool.c',
+        './common/threading.c',
+        './common/debug.c',
+        './common/xxhash.c',
+        './common/fse_decompress.c',
+        './common/zstd_common.c',
+        './common/error_private.c',
+        './compress/zstd_ldm.c',
+        './compress/zstd_lazy.c',
+        './compress/huf_compress.c',
+        './compress/zstd_opt.c',
+        './compress/zstd_double_fast.c',
+        './compress/zstd_compress.c',
+        './compress/zstd_compress_superblock.c',
+        './compress/zstd_compress_sequences.c',
+        './compress/zstd_compress_literals.c',
+        './compress/zstd_fast.c',
+        './compress/fse_compress.c',
+        './compress/zstdmt_compress.c',
+        './compress/hist.c',
+        './decompress/zstd_decompress.c',
+        './decompress/huf_decompress.c',
+        './decompress/zstd_ddict.c',
+        './decompress/zstd_decompress.c',
+        './decompress/zstd_decompress_block.c',
+        './deprecated/zbuff_common.c',
+        './deprecated/zbuff_compress.c',
+        './deprecated/zbuff_decompress.c',
+        './legacy/zstd_v05.c',
+        './legacy/zstd_v04.c',
+        './legacy/zstd_v06.c',
+        './legacy/zstd_v07.c',
+        './legacy/zstd_v03.c',
+        './legacy/zstd_v02.c',
+        './legacy/zstd_v01.c',
+        './dictBuilder/cover.c',
+        './dictBuilder/divsufsort.c',
+        './dictBuilder/zdict.c',
+        './dictBuilder/fastcover.c',
+        ]
 
+    zstd_sources = []
+    zstd_include_dirs = [os.path.join(sz3_dir, "tools", "zstd")]
+    for src in sz3_zstd_cmake_list:
+        items = src.split('/')
+        zstd_sources.append(os.path.join(sz3_dir, "tools", "zstd", items[1], items[2]))
+        zstd_include_dirs.append(os.path.join(sz3_dir, "tools", "zstd", items[1]))
+    
 if 1:
     from pathlib import Path
     configure_path = Path().cwd() / "src" / "SZ3" / "include" / "SZ3"
