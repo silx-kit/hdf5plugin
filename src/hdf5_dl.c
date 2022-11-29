@@ -1,6 +1,6 @@
 # /*##########################################################################
 #
-# Copyright (c) 2019 European Synchrotron Radiation Facility
+# Copyright (c) 2019-2022 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -435,7 +435,7 @@ CALL(0, H5Tget_native_type, type_id, direction)
 
 H5T_sign_t H5Tget_sign(hid_t type_id)
 {
-CALL(-1, H5Tget_sign, type_id)
+CALL(H5T_SGN_ERROR, H5Tget_sign, type_id)
 }
 
 size_t H5Tget_size(hid_t type_id)
@@ -450,7 +450,7 @@ CALL(H5T_NO_CLASS, H5Tget_class, type_id)
 
 H5T_order_t H5Tget_order(hid_t type_id)
 {
-CALL(0, H5Tget_order, type_id)
+CALL(H5T_ORDER_ERROR, H5Tget_order, type_id)
 }
 
 hid_t H5Tget_super(hid_t type)
