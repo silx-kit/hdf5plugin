@@ -978,12 +978,9 @@ if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
         zstd_include_dirs.append(os.path.join(sz3_dir, "tools", "zstd", items[1]))
 
 #TODO: Probably OpenMP should not be the default for this filter (sz3.config)
-sz3_extra_compile_args = ['-std=c++11', '-O3', '-ffast-math', '-fopenmp']
+sz3_extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
 sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
 sz3_extra_link_args = ['-fopenmp', '/openmp', "-lm"]
-
-if sys.platform.startswith("darwin"):
-    sz3_extra_compile_args[0] = '-std=c++14'
 
 sz3_hdf5_plugin_source = os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")
 
