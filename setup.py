@@ -972,10 +972,13 @@ if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
     zstd_sources = []
     zstd_depends = []
     zstd_include_dirs = [os.path.join(sz3_dir, "tools", "zstd")]
+    sz3_zstd_sources = []
     for src in sz3_zstd_cmake_list:
         items = src.split('/')
-        zstd_sources.append(os.path.join(sz3_dir, "tools", "zstd", items[1], items[2]))
+        sz3_zstd_sources.append(os.path.join(sz3_dir, "tools", "zstd", items[1], items[2]))
         zstd_include_dirs.append(os.path.join(sz3_dir, "tools", "zstd", items[1]))
+else:
+    sz3_zstd_sources = zstd_sources
 
 #TODO: Probably OpenMP should not be the default for this filter (sz3.config)
 sz3_extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
@@ -1003,7 +1006,7 @@ if sys.platform.startswith('darwin'):
     zstd_include_dirs += [os.path.join('src', 'hdf5', 'include'), os.path.join('src', 'hdf5', 'include', 'darwin')]
 
 sz3_lib = ("sz3", {
-    "sources": zstd_sources,
+    "sources": sz3_zstd_sources,
     "include_dirs": zstd_include_dirs,
     #"cflags": ["-lzstd"],
     #sse2=sse2_kwargs,
@@ -1041,20 +1044,21 @@ def apply_filter_strip(libraries, extensions, dependencies):
     ]
     return libraries, extensions
 
-library_list = [snappy_lib, charls_lib, zfp_lib]
+#library_list = [snappy_lib, charls_lib, zfp_lib]
+library_list = []
 if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
     library_list.append(sz3_lib)
 libraries, extensions = apply_filter_strip(
     libraries=library_list,
     extensions=[
-        bzip2_plugin,
-        lz4_plugin,
-        bithsuffle_plugin,
-        blosc_plugin,
-        fcidecomp_plugin,
-        h5zfp_plugin,
-        zstandard_plugin,
-        sz_plugin,
+        #bzip2_plugin,
+        #lz4_plugin,
+        #bithsuffle_plugin,
+        #blosc_plugin,
+        #fcidecomp_plugin,
+        #h5zfp_plugin,
+        #zstandard_plugin,
+        #sz_plugin,
         sz3_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
