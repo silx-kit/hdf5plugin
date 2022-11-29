@@ -495,7 +495,7 @@ class HDF5PluginExtension(Extension):
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
         else:
-            if name.endswith("h5sz3") and sys.platform.startswith('darwin'):
+            if name.endswith("h5sz3")# // and sys.platform.startswith('darwin'):
                 # MacOS does not like to mix C and C++ code and next line
                 # does not work for the macro CALL
                 #self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
@@ -996,10 +996,11 @@ sz3_plugin = HDF5PluginExtension(
     cpp11_required=False,
     )
 
-if sys.platform.startswith('darwin'):
+if not sys.platform.startswith('win'):
     # this should be taken from the output of HDF5PluginExtension
     zstd_sources += [os.path.join('src', 'hdf5_dl.c')]
     zstd_include_dirs += [os.path.join('src', 'hdf5', 'include'), os.path.join('src', 'hdf5', 'include', 'darwin')]
+
 sz3_lib = ("sz3", {
     "sources": zstd_sources,
     "include_dirs": zstd_include_dirs,
@@ -1041,16 +1042,17 @@ def apply_filter_strip(libraries, extensions, dependencies):
 
 
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib, sz3_lib],
+    #libraries=[snappy_lib, charls_lib, zfp_lib, sz3_lib],
+    libraries=[sz3_lib],
     extensions=[
-        bzip2_plugin,
-        lz4_plugin,
-        bithsuffle_plugin,
-        blosc_plugin,
-        fcidecomp_plugin,
-        h5zfp_plugin,
-        zstandard_plugin,
-        sz_plugin,
+        #bzip2_plugin,
+        #lz4_plugin,
+        #bithsuffle_plugin,
+        #blosc_plugin,
+        #fcidecomp_plugin,
+        #h5zfp_plugin,
+        #zstandard_plugin,
+        #sz_plugin,
         sz3_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
