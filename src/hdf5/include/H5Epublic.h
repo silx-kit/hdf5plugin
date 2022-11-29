@@ -52,8 +52,14 @@ typedef struct H5E_error2_t {
 #endif  /* _H5private_H */
 
 /* HDF5 error class */
+#ifdef __cplusplus
+extern "C" {
+#endif
 #define H5E_ERR_CLS		(H5OPEN H5E_ERR_CLS_g)
 H5_DLLVAR hid_t H5E_ERR_CLS_g;
+#ifdef __cplusplus
+}
+#endif
 
 /* Include the automatically generated public header information */
 /* (This includes the list of major and minor error codes for the library) */
