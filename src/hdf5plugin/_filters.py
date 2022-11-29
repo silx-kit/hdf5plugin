@@ -56,6 +56,9 @@ ZSTD_ID = 32015
 SZ_ID = 32017
 """SZ filter ID"""
 
+SZ3_ID = 32024
+"""SZ3 filter ID"""
+
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
 
@@ -500,6 +503,75 @@ class SZ(_FilterRefClass):
         return high, low
 
 
+class SZ3(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using SZ3 filter.
+
+    void usage()
+    {
+            printf("Usage: print_h5repack_args <options>\n");
+            printf("Options:\n");
+            printf("	-M <error bound mode> : 10 options as follows. \n");
+            printf("		ABS (absolute error bound)\n");
+            printf("		REL (value range based error bound, so a.k.a., VR_REL)\n");
+            printf("		PSNR (peak signal-to-noise ratio)\n");
+            printf("		NORM2 (norm2)\n");
+            printf("	-A <absolute error bound>: specifying absolute error bound\n");
+            printf("	-R <value_range based relative error bound>: specifying relative error bound\n");
+            printf("	-N <norm2>: specifying norm2 error bound\n");
+            printf("	-S <PSNR>: specifying PSNR\n");
+            printf("* examples: \n");
+            printf("	print_h5repack_args -M ABS -A 1E-3 (output: -f UD=32024,0,9,0,1062232653,3539053052,0,0,0,0,0,0)\n");
+            printf("	print_h5repack_args -M REL -R 1E-4 (output: -f UD=32024,0,9,1,0,0,1058682594,3944497965,0,0,0,0)\n");
+            exit(0);
+    }
+
+
+    For more details about the compressor `SZ <https://szcompressor.org/>`_.
+    """
+    filter_name = "sz3"
+    filter_id = SZ3_ID
+
+    def __init__(self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None):
+        if (absolute, relative, norm2, peak_signal_to_noise_ratio, peak_signal_to_noise_ratio).count(None) < 2:
+            raise TypeError("hdf5plugin.SZ3() takes at most one not None argument")
+
+        # Get SZ3 encoding options: range [0, 5]
+        if absolute is not None:
+            sz_mode = 0
+        elif relative is not None:
+            sz_mode = 1
+        elif norm2 is not None:
+            sz_mode = 2
+        elif peak_signal_to_noise_ratio is not None:
+            sz_mode = 3
+        else:
+            absolute = 0.001
+            sz_mode = 0
+        if sz_mode not in [0]:
+            raise NotImplementedError()
+
+        compression_opts = (
+            sz_mode,
+            *self.__pack_float64(absolute or 0.),
+            *self.__pack_float64(relative or 0.),
+            *self.__pack_float64(norm2 or 0.),
+            *self.__pack_float64(peak_signal_to_noise_ratio or 0.),
+        )
+        logger.info(f"SZ3 mode {sz_mode} used.")
+        logger.info(f"filter options {compression_opts}")
+        # 9 values needed
+        if len(compression_opts) != 9:
+            raise IndexError("Invalid number of arguments")
+
+        self.filter_options = compression_opts
+
+    @staticmethod
+    def __pack_float64(error: float) -> tuple:
+        packed = struct.pack('>d', error)  # Pack as big-endian IEEE 754 double
+        high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
+        low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
+        return high, low
+
 class Zstd(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
@@ -534,7 +606,7 @@ class Zstd(_FilterRefClass):
         self.filter_options = (clevel,)
 
 
-FILTER_CLASSES = Bitshuffle, Blosc, BZip2, FciDecomp, LZ4, SZ, Zfp, Zstd
+FILTER_CLASSES = Bitshuffle, Blosc, BZip2, FciDecomp, LZ4, SZ, SZ3, Zfp, Zstd
 
 
 FILTERS = dict((cls.filter_name, cls.filter_id) for cls in FILTER_CLASSES)
