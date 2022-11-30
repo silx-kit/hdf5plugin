@@ -21,7 +21,7 @@
 #include "CompressElement.h"
 #include "dataCompression.h"
 
-int computeByteSizePerIntValue(long valueRangeSize)
+int computeByteSizePerIntValue(int64_t valueRangeSize)
 {
 	if(valueRangeSize<=256)
 		return 1;
@@ -33,10 +33,10 @@ int computeByteSizePerIntValue(long valueRangeSize)
 		return 8;
 }
 
-long computeRangeSize_int(void* oriData, int dataType, size_t size, int64_t* valueRangeSize)
+int64_t computeRangeSize_int(void* oriData, int dataType, size_t size, int64_t* valueRangeSize)
 {
 	size_t i = 0;
-	long max = 0, min = 0;
+	int64_t max = 0, min = 0;
 
 	if(dataType==SZ_UINT8)
 	{
@@ -82,15 +82,15 @@ long computeRangeSize_int(void* oriData, int dataType, size_t size, int64_t* val
 	}
 	else if(dataType == SZ_UINT64)
 	{
-		unsigned long* data = (unsigned long*)oriData;
-		unsigned long data_;
+		uint64_t* data = (uint64_t*)oriData;
+		uint64_t data_;
 		min = data[0], max = min;
 		computeMinMax(data);
 	}
 	else if(dataType == SZ_INT64)
 	{
-		long* data = (long *)oriData;
-		long data_;
+		long* data = (int64_t *)oriData;
+		int64_t data_;
 		min = data[0], max = min;
 		computeMinMax(data);
 	}
@@ -331,7 +331,7 @@ double getRealPrecision_float(float valueRangeSize, int errBoundMode, double abs
 	return precision;
 }
 
-double getRealPrecision_int(long valueRangeSize, int errBoundMode, double absErrBound, double relBoundRatio, int *status)
+double getRealPrecision_int(int64_t valueRangeSize, int errBoundMode, double absErrBound, double relBoundRatio, int *status)
 {
 	int state = SZ_SCES;
 	double precision = 0;
@@ -509,7 +509,7 @@ void compressSingleDoubleValue_MSST19(DoubleValueCompressElement *vce, double tg
     if(ignBytesLength<0)
         ignBytesLength = 0;
 
-    long tmp_long = lfBuf.lvalue;
+    int64_t tmp_long = lfBuf.lvalue;
     longToBytes_bigEndian(vce->curBytes, tmp_long);
 
     lfBuf.lvalue = (lfBuf.lvalue >> ignBytesLength) << ignBytesLength;
@@ -534,7 +534,7 @@ void compressSingleDoubleValue(DoubleValueCompressElement *vce, double tgtValue,
 	if(ignBytesLength<0)
 		ignBytesLength = 0;
 
-	long tmp_long = lfBuf.lvalue;
+	int64_t tmp_long = lfBuf.lvalue;
 	longToBytes_bigEndian(vce->curBytes, tmp_long);
 
 	lfBuf.lvalue = (lfBuf.lvalue >> ignBytesLength)<<ignBytesLength;

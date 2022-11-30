@@ -28,7 +28,7 @@
 node *qqq;
 node *qq;
 int n_nodes = 0, qend;
-unsigned long **code;
+uint64_t **code;
 unsigned char *cout;
 int n_inode;*/
 

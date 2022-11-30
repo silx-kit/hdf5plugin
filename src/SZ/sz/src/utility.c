@@ -156,11 +156,11 @@ float calculate_delta_t(size_t size){
 int is_lossless_compressed_data(unsigned char* compressedBytes, size_t cmpSize)
 {
 #if ZSTD_VERSION_NUMBER >= 10300
-	unsigned long long frameContentSize = ZSTD_getFrameContentSize(compressedBytes, cmpSize);
+	uint64_t frameContentSize = ZSTD_getFrameContentSize(compressedBytes, cmpSize);
 	if(frameContentSize != ZSTD_CONTENTSIZE_ERROR)
 		return ZSTD_COMPRESSOR;
 #else
-	unsigned long long frameContentSize = ZSTD_getDecompressedSize(compressedBytes, cmpSize);
+	uint64_t frameContentSize = ZSTD_getDecompressedSize(compressedBytes, cmpSize);
 	if(frameContentSize != 0)
 		return ZSTD_COMPRESSOR;
 #endif
@@ -171,9 +171,9 @@ int is_lossless_compressed_data(unsigned char* compressedBytes, size_t cmpSize)
 	return -1; //fast mode (without GZIP or ZSTD)
 }
 
-unsigned long sz_lossless_compress(int losslessCompressor, int level, unsigned char* data, unsigned long dataLength, unsigned char** compressBytes)
+uint64_t sz_lossless_compress(int losslessCompressor, int level, unsigned char* data, uint64_t dataLength, unsigned char** compressBytes)
 {
-	unsigned long outSize = 0; 
+	uint64_t outSize = 0; 
 	size_t estimatedCompressedSize = 0;
 	switch(losslessCompressor)
 	{
@@ -194,9 +194,9 @@ unsigned long sz_lossless_compress(int losslessCompressor, int level, unsigned c
 	return outSize;
 }
 
-unsigned long sz_lossless_decompress(int losslessCompressor, unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize)
+uint64_t sz_lossless_decompress(int losslessCompressor, unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize)
 {
-	unsigned long outSize = 0;
+	uint64_t outSize = 0;
 	switch(losslessCompressor)
 	{
 	case GZIP_COMPRESSOR:
@@ -213,9 +213,9 @@ unsigned long sz_lossless_decompress(int losslessCompressor, unsigned char* comp
 	return outSize;
 }
 
-unsigned long sz_lossless_decompress65536bytes(int losslessCompressor, unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData)
+uint64_t sz_lossless_decompress65536bytes(int losslessCompressor, unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData)
 {
-	unsigned long outSize = 0;
+	uint64_t outSize = 0;
 	switch(losslessCompressor)
 	{
 	case GZIP_COMPRESSOR:

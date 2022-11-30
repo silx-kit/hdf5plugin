@@ -79,8 +79,8 @@ extern "C" {
 //typedef unsigned short uint16_t;
 //typedef int int32_t;
 //typedef unsigned int uint32_t;
-//typedef long int64_t;
-//typedef unsigned long uint64_t;
+//typedef int64_t int64_t;
+//typedef uint64_t uint64_t;
 
 #include "defines.h"
 
@@ -122,7 +122,7 @@ extern "C" {
         EARLY_BLOCK_COUNT = EARLY_BLOCK_COUNT + 1;                           \
     }                                                                        \
 
-//typedef unsigned long unsigned long;
+//typedef uint64_t uint64_t;
 //typedef unsigned int uint;
 
 typedef union lint16
@@ -141,15 +141,15 @@ typedef union lint32
 
 typedef union lint64
 {
-	long lvalue;
-	unsigned long ulvalue;
+	int64_t lvalue;
+	uint64_t ulvalue;
 	unsigned char byte[8];
 } lint64;
 
 typedef union ldouble
 {
     double value;
-    unsigned long lvalue;
+    uint64_t lvalue;
     unsigned char byte[8];
 } ldouble;
 

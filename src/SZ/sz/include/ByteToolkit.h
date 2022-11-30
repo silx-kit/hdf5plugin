@@ -20,11 +20,11 @@ extern "C" {
 
 extern unsigned short bytesToUInt16_bigEndian(unsigned char* bytes);
 extern unsigned int bytesToUInt32_bigEndian(unsigned char* bytes);
-extern unsigned long bytesToUInt64_bigEndian(unsigned char* b);
+extern uint64_t bytesToUInt64_bigEndian(unsigned char* b);
 
 extern short bytesToInt16_bigEndian(unsigned char* bytes);
 extern int bytesToInt32_bigEndian(unsigned char* bytes);
-extern long bytesToInt64_bigEndian(unsigned char* b);
+extern int64_t bytesToInt64_bigEndian(unsigned char* b);
 extern int bytesToInt_bigEndian(unsigned char* bytes);
 
 extern void intToBytes_bigEndian(unsigned char *b, unsigned int num);
@@ -33,22 +33,22 @@ extern void int64ToBytes_bigEndian(unsigned char *b, uint64_t num);
 extern void int32ToBytes_bigEndian(unsigned char *b, uint32_t num);
 extern void int16ToBytes_bigEndian(unsigned char *b, uint16_t num);
 
-extern long bytesToLong_bigEndian(unsigned char* b);
-extern void longToBytes_bigEndian(unsigned char *b, unsigned long num);
-long doubleToOSEndianLong(double value);
+extern int64_t bytesToLong_bigEndian(unsigned char* b);
+extern void longToBytes_bigEndian(unsigned char *b, uint64_t num);
+int64_t doubleToOSEndianLong(double value);
 int floatToOSEndianInt(float value);
 extern short getExponent_float(float value);
 extern short getPrecisionReqLength_float(float precision);
 extern short getExponent_double(double value);
 extern short getPrecisionReqLength_double(double precision);
 unsigned char numberOfLeadingZeros_Int(int i);
-unsigned char numberOfLeadingZeros_Long(long i);
+unsigned char numberOfLeadingZeros_Long(int64_t i);
 unsigned char getLeadingNumbers_Int(int v1, int v2);
-unsigned char getLeadingNumbers_Long(long v1, long v2);
+unsigned char getLeadingNumbers_Long(int64_t v1, int64_t v2);
 short bytesToShort(unsigned char* bytes);
 void shortToBytes(unsigned char* b, short value);
 int bytesToInt(unsigned char* bytes);
-long bytesToLong(unsigned char* bytes);
+int64_t bytesToLong(unsigned char* bytes);
 extern float bytesToFloat(unsigned char* bytes);
 extern void floatToBytes(unsigned char *b, float num);
 extern double bytesToDouble(unsigned char* bytes);

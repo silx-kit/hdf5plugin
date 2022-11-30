@@ -10,6 +10,8 @@
 #ifndef _TightDataPointStorageI_H
 #define _TightDataPointStorageI_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,7 +24,7 @@ typedef struct TightDataPointStorageI
 	int allSameData;
 	double realPrecision; //it's used as the pwrErrBoundRatio when errBoundMode==PW_REL
 	size_t exactDataNum;
-	long minValue;
+	int64_t minValue;
 	int exactByteSize;
 	int dataTypeSize; //the size of data type, e.g., it's 4 when data type is int32_t
 	
@@ -50,7 +52,7 @@ int new_TightDataPointStorageI_fromFlatBytes(TightDataPointStorageI **self, unsi
 void new_TightDataPointStorageI(TightDataPointStorageI **self,
 		size_t dataSeriesLength, size_t exactDataNum, int byteSize, 
 		int* type, unsigned char* exactDataBytes, size_t exactDataBytes_size,
-		double realPrecision, long minValue, int intervals, int dataType);
+		double realPrecision, int64_t minValue, int intervals, int dataType);
 
 void convertTDPStoBytes_int(TightDataPointStorageI* tdps, unsigned char* bytes, unsigned char sameByte);
 void convertTDPStoFlatBytes_int(TightDataPointStorageI *tdps, unsigned char** bytes, size_t *size);

@@ -47,7 +47,7 @@ int isZlibFormat(unsigned char magic1, unsigned char magic2)
 }
 
 /*zlib_compress() is only valid for median-size data compression. */
-unsigned long zlib_compress(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level)
+uint64_t zlib_compress(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level)
 {	
 	z_stream stream = {0};
 
@@ -59,7 +59,7 @@ unsigned long zlib_compress(unsigned char* data, unsigned long dataLength, unsig
 #endif
 
     uLong estCmpLen = deflateBound(&stream, dataLength);	
-	unsigned long outSize = estCmpLen;
+	uint64_t outSize = estCmpLen;
     	
 	*compressBytes = (unsigned char*)malloc(sizeof(unsigned char)*estCmpLen);
 	int err = compress2(*compressBytes, &outSize, data, dataLength, level);
@@ -71,9 +71,9 @@ unsigned long zlib_compress(unsigned char* data, unsigned long dataLength, unsig
 	return outSize;
 }
 
-unsigned long zlib_compress2(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level)
+uint64_t zlib_compress2(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level)
 {
-	unsigned long outSize;
+	uint64_t outSize;
 	
 	z_stream stream = {0};
     int err;
@@ -119,9 +119,9 @@ unsigned long zlib_compress2(unsigned char* data, unsigned long dataLength, unsi
     return outSize;
 }
 
-unsigned long zlib_compress3(unsigned char* data, unsigned long dataLength, unsigned char* compressBytes, int level)
+uint64_t zlib_compress3(unsigned char* data, uint64_t dataLength, unsigned char* compressBytes, int level)
 {
-	unsigned long outSize = 0;
+	uint64_t outSize = 0;
 
 	z_stream stream = {0};
     int err;
@@ -160,7 +160,7 @@ unsigned long zlib_compress3(unsigned char* data, unsigned long dataLength, unsi
     return outSize;
 }
 
-unsigned long zlib_compress4(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level)
+uint64_t zlib_compress4(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level)
 {
     z_stream c_stream = {0}; /* compression stream */
     int err = 0;
@@ -202,7 +202,7 @@ unsigned long zlib_compress4(unsigned char* data, unsigned long dataLength, unsi
     return c_stream.total_out;	
 }
 
-unsigned long zlib_compress5(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level)
+uint64_t zlib_compress5(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level)
 {
 	int ret, flush;
 	unsigned have;
@@ -263,9 +263,9 @@ unsigned long zlib_compress5(unsigned char* data, unsigned long dataLength, unsi
 	return strm.total_out;	
 }
 
-unsigned long zlib_uncompress(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize)
+uint64_t zlib_uncompress(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize)
 {
-	unsigned long outSize = targetOriSize;
+	uint64_t outSize = targetOriSize;
 	*oriData = (unsigned char*)malloc(sizeof(unsigned char)*targetOriSize);	
 	int status = uncompress(*oriData, &outSize, compressBytes, cmpSize); 
 	if(status!=Z_OK)
@@ -277,11 +277,11 @@ unsigned long zlib_uncompress(unsigned char* compressBytes, unsigned long cmpSiz
 	return outSize;
 }
 
-unsigned long zlib_uncompress2 (unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize)
+uint64_t zlib_uncompress2 (unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize)
 {
     z_stream stream = {0};
 
-	unsigned long outSize;
+	uint64_t outSize;
 	*oriData = (unsigned char*)malloc(sizeof(unsigned char)*targetOriSize);
 
     stream.zalloc = Z_NULL;
@@ -292,7 +292,7 @@ unsigned long zlib_uncompress2 (unsigned char* compressBytes, unsigned long cmpS
     stream.next_in = compressBytes;
     stream.avail_in = cmpSize;
     /* Check for source > 64K on 16-bit machine: */
-    if ((unsigned long)stream.avail_in != cmpSize) 
+    if ((uint64_t)stream.avail_in != cmpSize) 
     {
 		printf("Error: zlib_uncompress2: stream.avail_in != cmpSize");
 		//exit(1);
@@ -324,7 +324,7 @@ unsigned long zlib_uncompress2 (unsigned char* compressBytes, unsigned long cmpS
     return outSize;
 }
 
-unsigned long zlib_uncompress3(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize)
+uint64_t zlib_uncompress3(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize)
 {
 	int status;
 	z_stream z_strm; /* decompression stream */
@@ -389,7 +389,7 @@ unsigned long zlib_uncompress3(unsigned char* compressBytes, unsigned long cmpSi
 	return z_strm.total_out;
 }
 
-unsigned long zlib_uncompress4(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize)
+uint64_t zlib_uncompress4(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize)
 {
     int ret;
     unsigned int have;
@@ -456,10 +456,10 @@ unsigned long zlib_uncompress4(unsigned char* compressBytes, unsigned long cmpSi
     return strm.total_out;	
 }
 
-unsigned long zlib_uncompress65536bytes(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData)
+uint64_t zlib_uncompress65536bytes(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData)
 {
 	int err;
-	unsigned long targetOriSize = 65536;
+	uint64_t targetOriSize = 65536;
 	z_stream d_stream = {0}; /* decompression stream */
 
 	*oriData = (unsigned char*)malloc(sizeof(unsigned char)*targetOriSize);
@@ -493,7 +493,7 @@ unsigned long zlib_uncompress65536bytes(unsigned char* compressBytes, unsigned l
 	return d_stream.total_out;
 }
 
-unsigned long zlib_uncompress5(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize)
+uint64_t zlib_uncompress5(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize)
 {
 	int err;
 	z_stream d_stream = {0}; /* decompression stream */

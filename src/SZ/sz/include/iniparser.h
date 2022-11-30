@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdint.h>
 /*
  * The following #include is necessary on many Unixes but not Linux.
  * It is not needed for Windows platforms.
@@ -192,10 +192,10 @@ int iniparser_getint(dictionary * d, const char * key, int notfound);
   @return   long
 
   Credits: This function bases completely on int iniparser_getint and was
-  slightly modified to return long instead of int.
+  slightly modified to return int64_t instead of int.
  */
 /*--------------------------------------------------------------------------*/
-long iniparser_getlint(dictionary * d, const char * key, int notfound);
+int64_t iniparser_getlint(dictionary * d, const char * key, int notfound);
 
 /*-------------------------------------------------------------------------*/
 /**
