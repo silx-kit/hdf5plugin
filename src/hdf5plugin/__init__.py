@@ -32,6 +32,7 @@ from ._version import version, version_info  # noqa
 
 from ._filters import FILTERS  # noqa
 from ._filters import BLOSC_ID, Blosc  # noqa
+from ._filters import BLOSC2_ID, Blosc2  # noqa
 from ._filters import BSHUF_ID, Bitshuffle  # noqa
 from ._filters import BZIP2_ID, BZip2  # noqa
 from ._filters import LZ4_ID, LZ4  # noqa

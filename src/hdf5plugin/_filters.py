@@ -262,6 +262,7 @@ class Blosc2(_FilterRefClass):
     """Flag to zeroes the least significant bits of the mantissa of float32 and float64 types"""
 
     filter_id = BLOSC2_ID
+    filter_name = "blosc2"
 
     __COMPRESSIONS = {
         'blosclz': 0,
