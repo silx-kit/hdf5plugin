@@ -48,7 +48,7 @@ size_t cmpSize, int compressionType, double* hist_data)
 		{
 			if(targetUncompressSize<MIN_ZLIB_DEC_ALLOMEM_BYTES) //Considering the minimum size
 				targetUncompressSize = MIN_ZLIB_DEC_ALLOMEM_BYTES; 			
-			tmpSize = sz_lossless_decompress(confparams_dec->losslessCompressor, cmpBytes, (unsigned long)cmpSize, &szTmpBytes, (unsigned long)targetUncompressSize+4+MetaDataByteLength_double+exe_params->SZ_SIZE_TYPE);			
+			tmpSize = sz_lossless_decompress(confparams_dec->losslessCompressor, cmpBytes, (uint64_t)cmpSize, &szTmpBytes, (uint64_t)targetUncompressSize+4+MetaDataByteLength_double+exe_params->SZ_SIZE_TYPE);			
 			//szTmpBytes = (unsigned char*)malloc(sizeof(unsigned char)*tmpSize);
 			//memcpy(szTmpBytes, tmpBytes, tmpSize);
 			//free(tmpBytes); //release useless memory		

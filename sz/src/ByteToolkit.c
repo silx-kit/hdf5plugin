@@ -50,9 +50,9 @@ inline unsigned int bytesToUInt32_bigEndian(unsigned char* bytes)
 	return res;
 }
 
-inline unsigned long bytesToUInt64_bigEndian(unsigned char* b) {
-	unsigned long temp = 0;
-	unsigned long res = 0;
+inline uint64_t bytesToUInt64_bigEndian(unsigned char* b) {
+	uint64_t temp = 0;
+	uint64_t res = 0;
 
 	res <<= 8;
 	temp = b[0] & 0xff;
@@ -128,9 +128,9 @@ inline int bytesToInt32_bigEndian(unsigned char* bytes)
 	return res;
 }
 
-inline long bytesToInt64_bigEndian(unsigned char* b) {
-	long temp = 0;
-	long res = 0;
+inline int64_t bytesToInt64_bigEndian(unsigned char* b) {
+	int64_t temp = 0;
+	int64_t res = 0;
 
 	res <<= 8;
 	temp = b[0] & 0xff;
@@ -236,9 +236,9 @@ inline void int16ToBytes_bigEndian(unsigned char *b, uint16_t num)
 /**
  * @endianType: refers to the endian_type of unsigned char* b.
  * */
-inline long bytesToLong_bigEndian(unsigned char* b) {
-	long temp = 0;
-	long res = 0;
+inline int64_t bytesToLong_bigEndian(unsigned char* b) {
+	int64_t temp = 0;
+	int64_t res = 0;
 
 	res <<= 8;
 	temp = b[0] & 0xff;
@@ -275,7 +275,7 @@ inline long bytesToLong_bigEndian(unsigned char* b) {
 	return res;
 }
 
-inline void longToBytes_bigEndian(unsigned char *b, unsigned long num) 
+inline void longToBytes_bigEndian(unsigned char *b, uint64_t num) 
 {
 	b[0] = (unsigned char)(num>>56);
 	b[1] = (unsigned char)(num>>48);
@@ -290,7 +290,7 @@ inline void longToBytes_bigEndian(unsigned char *b, unsigned long num)
 }
 
 
-inline long doubleToOSEndianLong(double value)
+inline int64_t doubleToOSEndianLong(double value)
 {
 	ldouble buf;
 	buf.value = value;
@@ -334,11 +334,11 @@ inline short getPrecisionReqLength_float(float precision)
 
 inline short getExponent_double(double value)
 {
-	//long lvalue = doubleToBigEndianLong(value);
+	//int64_t lvalue = doubleToBigEndianLong(value);
 	
 	ldouble lbuf;
 	lbuf.value = value;
-	long lvalue = lbuf.lvalue;
+	int64_t lvalue = lbuf.lvalue;
 	
 	int expValue = (int)((lvalue & 0x7FF0000000000000) >> 52);
 	expValue -= 1023;
@@ -349,7 +349,7 @@ inline short getPrecisionReqLength_double(double precision)
 {
 	ldouble lbuf;
 	lbuf.value = precision;
-	long lvalue = lbuf.lvalue;
+	int64_t lvalue = lbuf.lvalue;
 	
 	int expValue = (int)((lvalue & 0x7FF0000000000000) >> 52);
 	expValue -= 1023;
@@ -371,11 +371,11 @@ unsigned char numberOfLeadingZeros_Int(int i) {
 	return n;
 }
 
-unsigned char numberOfLeadingZeros_Long(long i) {
+unsigned char numberOfLeadingZeros_Long(int64_t i) {
 	 if (i == 0)
 		return 64;
 	unsigned char n = 1;
-	int x = (int)(((unsigned long)i) >> 32);
+	int x = (int)(((uint64_t)i) >> 32);
 	if (x == 0) { n += 32; x = (int)i; }
 	if (((unsigned int)x) >> 16 == 0) { n += 16; x <<= 16; }
 	if (((unsigned int)x) >> 24 == 0) { n +=  8; x <<=  8; }
@@ -391,9 +391,9 @@ unsigned char getLeadingNumbers_Int(int v1, int v2)
 	return (unsigned char)numberOfLeadingZeros_Int(v);
 }
 
-unsigned char getLeadingNumbers_Long(long v1, long v2)
+unsigned char getLeadingNumbers_Long(int64_t v1, int64_t v2)
 {
-	long v = v1 ^ v2;
+	int64_t v = v1 ^ v2;
 	return (unsigned char)numberOfLeadingZeros_Long(v);
 }
 
@@ -422,7 +422,7 @@ int bytesToInt(unsigned char* bytes)
 	return buf.ivalue;
 }
 
-long bytesToLong(unsigned char* bytes)
+int64_t bytesToLong(unsigned char* bytes)
 {
 	ldouble buf;
 	memcpy(buf.byte, bytes, 8);
@@ -833,7 +833,7 @@ inline void sizeToBytes(unsigned char* outBytes, size_t size)
 }
 
 /**
- * put 'buf_nbBits' bits represented by buf into a long byte stream (the current output byte pointer is p, where offset is the number of bits already filled out for this byte so far)
+ * put 'buf_nbBits' bits represented by buf into a int64_t byte stream (the current output byte pointer is p, where offset is the number of bits already filled out for this byte so far)
  * */
 void put_codes_to_output(unsigned int buf, int bitSize, unsigned char** p, int* lackBits, size_t *outSize)
 {

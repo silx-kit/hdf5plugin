@@ -423,10 +423,10 @@ int iniparser_getint(dictionary * d, const char * key, int notfound)
   @return   long
 
   Credits: This function bases completely on int iniparser_getint and was
-  slightly modified to return long instead of int.
+  slightly modified to return int64_t instead of int.
  */
 /*--------------------------------------------------------------------------*/
-long iniparser_getlint(dictionary * d, const char * key, int notfound)
+int64_t iniparser_getlint(dictionary * d, const char * key, int notfound)
 {
     char    *   str ;
 
@@ -694,7 +694,7 @@ dictionary * iniparser_load(const char * ininame)
         /* Safety check against buffer overflows */
         if (line[len]!='\n') {
             fprintf(stderr,
-                    "iniparser: input line too long in %s (%d)\n",
+                    "iniparser: input line too int64_t in %s (%d)\n",
                     ininame,
                     lineno);
             dictionary_del(dict);

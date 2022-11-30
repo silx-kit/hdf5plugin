@@ -23,12 +23,12 @@ HuffmanTree* createHuffmanTree(int stateNum)
 
 	huffmanTree->pool = (struct node_t*)malloc(huffmanTree->allNodes*2*sizeof(struct node_t));
 	huffmanTree->qqq = (node*)malloc(huffmanTree->allNodes*2*sizeof(node));
-	huffmanTree->code = (unsigned long**)malloc(huffmanTree->stateNum*sizeof(unsigned long*));
+	huffmanTree->code = (uint64_t**)malloc(huffmanTree->stateNum*sizeof(uint64_t*));
 	huffmanTree->cout = (unsigned char *)malloc(huffmanTree->stateNum*sizeof(unsigned char));
 
 	memset(huffmanTree->pool, 0, huffmanTree->allNodes*2*sizeof(struct node_t));
 	memset(huffmanTree->qqq, 0, huffmanTree->allNodes*2*sizeof(node));
-    memset(huffmanTree->code, 0, huffmanTree->stateNum*sizeof(unsigned long*));
+    memset(huffmanTree->code, 0, huffmanTree->stateNum*sizeof(uint64_t*));
     memset(huffmanTree->cout, 0, huffmanTree->stateNum*sizeof(unsigned char));
 	huffmanTree->qq = huffmanTree->qqq - 1;
 	huffmanTree->n_nodes = 0;
@@ -119,10 +119,10 @@ node qremove(HuffmanTree* huffmanTree)
  * @out2 should be 0 as well.
  * @index: the index of the byte
  * */
-void build_code(HuffmanTree *huffmanTree, node n, int len, unsigned long out1, unsigned long out2)
+void build_code(HuffmanTree *huffmanTree, node n, int len, uint64_t out1, uint64_t out2)
 {
 	if (n->t) {
-		huffmanTree->code[n->c] = (unsigned long*)malloc(2*sizeof(unsigned long));
+		huffmanTree->code[n->c] = (uint64_t*)malloc(2*sizeof(uint64_t));
 		if(len<=64)
 		{
 			(huffmanTree->code[n->c])[0] = out1 << (64 - len);
@@ -209,7 +209,7 @@ void encode(HuffmanTree *huffmanTree, int *s, size_t length, unsigned char *out,
 	int state;
 	unsigned char *p = out;
 	int lackBits = 0;
-	//long totalBitSize = 0, maxBitSize = 0, bitSize21 = 0, bitSize32 = 0;
+	//int64_t totalBitSize = 0, maxBitSize = 0, bitSize21 = 0, bitSize32 = 0;
 	for (i = 0;i<length;i++)
 	{
 		state = s[i];
@@ -251,7 +251,7 @@ void encode(HuffmanTree *huffmanTree, int *s, size_t length, unsigned char *out,
 			{
 				p++;
 				//(*outSize)++;
-				long newCode = (huffmanTree->code[state])[0] << lackBits;
+				int64_t newCode = (huffmanTree->code[state])[0] << lackBits;
 				longToBytes_bigEndian(p, newCode);
 
 				if(bitSize<=64)
@@ -362,7 +362,7 @@ void decode_MSST19(unsigned char *s, size_t targetLength, node t, int *out, int 
     int* valueTable = (int*)malloc(tableSize * sizeof(int));
     uint8_t* lengthTable = (uint8_t*)malloc(tableSize * sizeof(int));
     node* nodeTable = (node*)malloc(tableSize * sizeof(node));
-    uint32_t maskTable[maxBits+8];
+    uint32_t* maskTable = (uint32_t*) malloc((maxBits+8) * sizeof(uint32_t));
     int j;
     for(uint32_t i=0; i<tableSize; i++){
         n = t;
@@ -437,6 +437,7 @@ void decode_MSST19(unsigned char *s, size_t targetLength, node t, int *out, int 
     free(valueTable);
     free(lengthTable);
     free(nodeTable);
+    free(maskTable);
 	return;
 }
 void pad_tree_uchar(HuffmanTree* huffmanTree, unsigned char* L, unsigned char* R, unsigned int* C, unsigned char* t, unsigned int i, node root)
@@ -870,7 +871,7 @@ void decode_withTree(HuffmanTree* huffmanTree, unsigned char *s, size_t targetLe
 	//sdi: Debug
 /*	build_code(root, 0, 0, 0);
 	int i;
-	unsigned long code_1, code_2;
+	uint64_t code_1, code_2;
 	for (i = 0; i < stateNum; i++)
 		if (code[i])
 		{
@@ -896,7 +897,7 @@ void decode_withTree_MSST19(HuffmanTree* huffmanTree, unsigned char *s, size_t t
 	//sdi: Debug
 /*	build_code(root, 0, 0, 0);
 	int i;
-	unsigned long code_1, code_2;
+	uint64_t code_1, code_2;
 	for (i = 0; i < stateNum; i++)
 		if (code[i])
 		{

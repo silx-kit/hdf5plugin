@@ -75,7 +75,7 @@ unsigned int optimize_intervals_float_1D(float *oriData, size_t dataLength, doub
 			//pred_value = 2*oriData[i-1] - oriData[i-2];
 			pred_value = oriData[i-1];
 			pred_err = fabs(pred_value - oriData[i]);
-			radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+			radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 			if(radiusIndex>=confparams_cpr->maxRangeRadius)
 				radiusIndex = confparams_cpr->maxRangeRadius - 1;
 			intervals[radiusIndex]++;
@@ -125,7 +125,7 @@ unsigned int optimize_intervals_float_2D(float *oriData, size_t r1, size_t r2, d
 				index = i*r2+j;
 				pred_value = oriData[index-1] + oriData[index-r2] - oriData[index-r2-1];
 				pred_err = fabs(pred_value - oriData[index]);
-				radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+				radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 				if(radiusIndex>=confparams_cpr->maxRangeRadius)
 					radiusIndex = confparams_cpr->maxRangeRadius - 1;
 				intervals[radiusIndex]++;
@@ -319,7 +319,7 @@ unsigned int optimize_intervals_float_4D(float *oriData, size_t r1, size_t r2, s
 						pred_value = oriData[index-1] + oriData[index-r3] + oriData[index-r34]
 								- oriData[index-1-r34] - oriData[index-r4-1] - oriData[index-r4-r34] + oriData[index-r4-r34-1];
 						pred_err = fabs(pred_value - oriData[index]);
-						radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+						radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 						if(radiusIndex>=confparams_cpr->maxRangeRadius)
 							radiusIndex = confparams_cpr->maxRangeRadius - 1;
 						intervals[radiusIndex]++;
@@ -1923,7 +1923,8 @@ size_t dataLength, double realPrecision, float valueRangeSize, float medianValue
 	uint64_t* const buffer = (uint64_t*)&predRelErrRatio;
 	const int shift = 52-bits;
 	uint64_t expoIndex, mantiIndex;
-	uint16_t* tables[range+1];
+	/* uint16_t* tables[range+1]; */
+    uint16_t** tables =  (uint16_t**) malloc((range + 1) * sizeof(uint16_t*));
 	for(int i=0; i<=range; i++){
 		tables[i] = levelTable.subTables[i].table;
 	}
@@ -1987,6 +1988,7 @@ size_t dataLength, double realPrecision, float valueRangeSize, float medianValue
 	free(exactMidByteArray); //exactMidByteArray->array has been released in free_TightDataPointStorageF(tdps);
 	free(precisionTable);
 	freeTopLevelTableWideInterval(&levelTable);
+	free(tables);
 	return tdps;
 }
 
@@ -2068,7 +2070,8 @@ TightDataPointStorageF* SZ_compress_float_2D_MDQ_MSST19(float *oriData, size_t r
     uint64_t* const buffer = (uint64_t*)&predRelErrRatio;
     const int shift = 52-bits;
     uint64_t expoIndex, mantiIndex;
-    uint16_t* tables[range+1];
+    /* uint16_t* tables[range+1]; */
+    uint16_t** tables =  (uint16_t**) malloc((range + 1) * sizeof(uint16_t*));
     for(int i=0; i<=range; i++){
         tables[i] = levelTable.subTables[i].table;
     }
@@ -2260,6 +2263,7 @@ TightDataPointStorageF* SZ_compress_float_2D_MDQ_MSST19(float *oriData, size_t r
 	free(exactMidByteArray); //exactMidByteArray->array has been released in free_TightDataPointStorageF(tdps);
 	free(precisionTable);
 	freeTopLevelTableWideInterval(&levelTable);
+	free(tables);
 	return tdps;
 }
 
@@ -2337,7 +2341,8 @@ TightDataPointStorageF* SZ_compress_float_3D_MDQ_MSST19(float *oriData, size_t r
     uint64_t* const buffer = (uint64_t*)&predRelErrRatio;
     const int shift = 52-bits;
     uint64_t expoIndex, mantiIndex;
-    uint16_t* tables[range+1];
+    /* uint16_t* tables[range+1]; */
+    uint16_t** tables =  (uint16_t**) malloc((range + 1) * sizeof(uint16_t*));
     for(int i=0; i<=range; i++){
         tables[i] = levelTable.subTables[i].table;
     }
@@ -2715,6 +2720,7 @@ TightDataPointStorageF* SZ_compress_float_3D_MDQ_MSST19(float *oriData, size_t r
 	free(exactMidByteArray); //exactMidByteArray->array has been released in free_TightDataPointStorageF(tdps);
 	free(precisionTable);
 	freeTopLevelTableWideInterval(&levelTable);
+	free(tables);
 	return tdps;
 }
 
@@ -3228,7 +3234,7 @@ unsigned int optimize_intervals_float_1D_subblock(float *oriData, double realPre
 	oriData = oriData + s1;
 
 	size_t i = 0;
-	unsigned long radiusIndex;
+	uint64_t radiusIndex;
 	float pred_value = 0, pred_err;
 	int *intervals = (int*)malloc(confparams_cpr->maxRangeRadius*sizeof(int));
 	memset(intervals, 0, confparams_cpr->maxRangeRadius*sizeof(int));
@@ -3240,7 +3246,7 @@ unsigned int optimize_intervals_float_1D_subblock(float *oriData, double realPre
 			pred_value = 2*oriData[i-1] - oriData[i-2];
 			//pred_value = oriData[i-1];
 			pred_err = fabs(pred_value - oriData[i]);
-			radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+			radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 			if(radiusIndex>=confparams_cpr->maxRangeRadius)
 				radiusIndex = confparams_cpr->maxRangeRadius - 1;
 			intervals[radiusIndex]++;
@@ -3275,7 +3281,7 @@ unsigned int optimize_intervals_float_2D_subblock(float *oriData, double realPre
 	size_t R2 = e2 - s2 + 1;
 
 	size_t i,j, index;
-	unsigned long radiusIndex;
+	uint64_t radiusIndex;
 	float pred_value = 0, pred_err;
 	int *intervals = (int*)malloc(confparams_cpr->maxRangeRadius*sizeof(int));
 	memset(intervals, 0, confparams_cpr->maxRangeRadius*sizeof(int));
@@ -3289,7 +3295,7 @@ unsigned int optimize_intervals_float_2D_subblock(float *oriData, double realPre
 				index = i*r2+j;
 				pred_value = oriData[index-1] + oriData[index-r2] - oriData[index-r2-1];
 				pred_err = fabs(pred_value - oriData[index]);
-				radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+				radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 				if(radiusIndex>=confparams_cpr->maxRangeRadius)
 					radiusIndex = confparams_cpr->maxRangeRadius - 1;
 				intervals[radiusIndex]++;
@@ -3327,7 +3333,7 @@ unsigned int optimize_intervals_float_3D_subblock(float *oriData, double realPre
 	size_t r23 = r2*r3;
 
 	size_t i,j,k, index;
-	unsigned long radiusIndex;
+	uint64_t radiusIndex;
 	float pred_value = 0, pred_err;
 	int *intervals = (int*)malloc(confparams_cpr->maxRangeRadius*sizeof(int));
 	memset(intervals, 0, confparams_cpr->maxRangeRadius*sizeof(int));
@@ -3344,7 +3350,7 @@ unsigned int optimize_intervals_float_3D_subblock(float *oriData, double realPre
 					pred_value = oriData[index-1] + oriData[index-r3] + oriData[index-r23]
 					- oriData[index-1-r23] - oriData[index-r3-1] - oriData[index-r3-r23] + oriData[index-r3-r23-1];
 					pred_err = fabs(pred_value - oriData[index]);
-					radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+					radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 					if(radiusIndex>=confparams_cpr->maxRangeRadius)
 						radiusIndex = confparams_cpr->maxRangeRadius - 1;
 					intervals[radiusIndex]++;
@@ -3385,7 +3391,7 @@ size_t r1, size_t r2, size_t r3, size_t r4, size_t s1, size_t s2, size_t s3, siz
 	size_t r234 = r2*r3*r4;
 
 	size_t i,j,k,l, index;
-	unsigned long radiusIndex;
+	uint64_t radiusIndex;
 	float pred_value = 0, pred_err;
 	int *intervals = (int*)malloc(confparams_cpr->maxRangeRadius*sizeof(int));
 	memset(intervals, 0, confparams_cpr->maxRangeRadius*sizeof(int));
@@ -3404,7 +3410,7 @@ size_t r1, size_t r2, size_t r3, size_t r4, size_t s1, size_t s2, size_t s3, siz
 						pred_value = oriData[index-1] + oriData[index-r4] + oriData[index-r34]
 									- oriData[index-1-r34] - oriData[index-r4-1] - oriData[index-r4-r34] + oriData[index-r4-r34-1];
 						pred_err = fabs(pred_value - oriData[index]);
-						radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+						radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 						if(radiusIndex>=confparams_cpr->maxRangeRadius)
 							radiusIndex = confparams_cpr->maxRangeRadius - 1;
 						intervals[radiusIndex]++;
@@ -4480,7 +4486,7 @@ unsigned int optimize_intervals_float_1D_opt_MSST19(float *oriData, size_t dataL
 		totalSampleSize++;
 		pred_value = data_pos[-1];
 		pred_err = fabs((double)*data_pos / pred_value);
-		radiusIndex = (unsigned long)fabs(log2(pred_err)/divider+0.5);
+		radiusIndex = (uint64_t)fabs(log2(pred_err)/divider+0.5);
 		if(radiusIndex>=confparams_cpr->maxRangeRadius)
 			radiusIndex = confparams_cpr->maxRangeRadius - 1;
 		intervals[radiusIndex]++;
@@ -4532,7 +4538,7 @@ unsigned int optimize_intervals_float_2D_opt_MSST19(float *oriData, size_t r1, s
 		totalSampleSize++;
 		pred_value = data_pos[-1] + data_pos[-r2] - data_pos[-r2-1];
 		pred_err = fabs(pred_value / *data_pos);
-		radiusIndex = (unsigned long)fabs(log2(pred_err)/divider+0.5);
+		radiusIndex = (uint64_t)fabs(log2(pred_err)/divider+0.5);
 		if(radiusIndex>=confparams_cpr->maxRangeRadius)
 			radiusIndex = confparams_cpr->maxRangeRadius - 1;
 		intervals[radiusIndex]++;
@@ -5024,7 +5030,7 @@ unsigned int optimize_intervals_float_2D_opt(float *oriData, size_t r1, size_t r
 		totalSampleSize++;
 		pred_value = data_pos[-1] + data_pos[-r2] - data_pos[-r2-1];
 		pred_err = fabs(pred_value - *data_pos);
-		radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+		radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 		if(radiusIndex>=confparams_cpr->maxRangeRadius)
 			radiusIndex = confparams_cpr->maxRangeRadius - 1;
 		intervals[radiusIndex]++;
@@ -5074,7 +5080,7 @@ unsigned int optimize_intervals_float_1D_opt(float *oriData, size_t dataLength, 
 		totalSampleSize++;
 		pred_value = data_pos[-1];
 		pred_err = fabs(pred_value - *data_pos);
-		radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+		radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 		if(radiusIndex>=confparams_cpr->maxRangeRadius)
 			radiusIndex = confparams_cpr->maxRangeRadius - 1;
 		intervals[radiusIndex]++;
@@ -5336,7 +5342,7 @@ static unsigned int optimize_intervals_float_1D_with_freq_and_dense_pos(float *o
 		pred_value = data_pos[-1];
 		pred_err = fabs(pred_value - *data_pos);
 		if(pred_err < realPrecision) freq_count ++;
-		radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+		radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 		if(radiusIndex>=maxRangeRadius)
 			radiusIndex = maxRangeRadius - 1;
 		intervals[radiusIndex]++;
@@ -5437,7 +5443,7 @@ unsigned int optimize_intervals_float_2D_with_freq_and_dense_pos(float *oriData,
 		pred_value = data_pos[-1] + data_pos[-r2] - data_pos[-r2-1];
 		pred_err = fabs(pred_value - *data_pos);
 		if(pred_err < realPrecision) freq_count ++;
-		radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+		radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 		if(radiusIndex>=maxRangeRadius)
 			radiusIndex = maxRangeRadius - 1;
 		intervals[radiusIndex]++;

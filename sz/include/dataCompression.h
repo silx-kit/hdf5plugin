@@ -30,8 +30,8 @@ extern "C" {
 
 
 //dataCompression.c
-int computeByteSizePerIntValue(long valueRangeSize);
-long computeRangeSize_int(void* oriData, int dataType, size_t size, int64_t* valueRangeSize);
+int computeByteSizePerIntValue(int64_t valueRangeSize);
+int64_t computeRangeSize_int(void* oriData, int dataType, size_t size, int64_t* valueRangeSize);
 double computeRangeSize_double(double* oriData, size_t size, double* valueRangeSize, double* medianValue);
 float computeRangeSize_float(float* oriData, size_t size, float* valueRangeSize, float* medianValue);
 float computeRangeSize_float_MSST19(float* oriData, size_t size, float* valueRangeSize, float* medianValue, unsigned char * signs, bool* positive, float* nearZero);
@@ -51,7 +51,7 @@ float min_f(float a, float b);
 float max_f(float a, float b);
 double getRealPrecision_double(double valueRangeSize, int errBoundMode, double absErrBound, double relBoundRatio, int *status);
 double getRealPrecision_float(float valueRangeSize, int errBoundMode, double absErrBound, double relBoundRatio, int *status);
-double getRealPrecision_int(long valueRangeSize, int errBoundMode, double absErrBound, double relBoundRatio, int *status);
+double getRealPrecision_int(int64_t valueRangeSize, int errBoundMode, double absErrBound, double relBoundRatio, int *status);
 extern void symTransform_8bytes(unsigned char data[8]);
 extern void symTransform_2bytes(unsigned char data[2]);
 extern void symTransform_4bytes(unsigned char data[4]);

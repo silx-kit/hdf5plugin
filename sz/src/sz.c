@@ -180,10 +180,10 @@ int filterDimension(size_t r5, size_t r4, size_t r3, size_t r2, size_t r1, size_
 		{
 			c[1]= 0;
 			dimensionCorrected = 1;
-		}	
+		}
 		if(r1==1) //remove this dimension
 		{
-			c[0] = c[1]; 
+			c[0] = c[1];
 			c[1] = c[2];
 			dimensionCorrected = 1;
 		}
@@ -194,7 +194,7 @@ int filterDimension(size_t r5, size_t r4, size_t r3, size_t r2, size_t r1, size_
 		{
 			c[2] = 0;
 			dimensionCorrected = 1;
-		}	
+		}
 		if(r2==1)
 		{
 			c[1] = c[2];
@@ -276,9 +276,9 @@ int filterDimension(size_t r5, size_t r4, size_t r3, size_t r2, size_t r1, size_
 			dimensionCorrected = 1;
 		}
 	}
-	
+
 	return dimensionCorrected;
-	
+
 }
 
 /*-------------------------------------------------------------------------*/

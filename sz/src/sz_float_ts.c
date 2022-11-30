@@ -38,7 +38,7 @@ unsigned int optimize_intervals_float_1D_ts(float *oriData, size_t dataLength, f
 		{
 			pred_value = preData[i];
 			pred_err = fabs(pred_value - oriData[i]);
-			radiusIndex = (unsigned long)((pred_err/realPrecision+1)/2);
+			radiusIndex = (uint64_t)((pred_err/realPrecision+1)/2);
 			if(radiusIndex>=confparams_cpr->maxRangeRadius)
 				radiusIndex = confparams_cpr->maxRangeRadius - 1;
 			intervals[radiusIndex]++;

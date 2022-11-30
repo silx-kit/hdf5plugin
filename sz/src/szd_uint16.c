@@ -49,7 +49,7 @@ int SZ_decompress_args_uint16(uint16_t** newData, size_t r5, size_t r4, size_t r
 		{
 			if(targetUncompressSize<MIN_ZLIB_DEC_ALLOMEM_BYTES) //Considering the minimum size
 				targetUncompressSize = MIN_ZLIB_DEC_ALLOMEM_BYTES; 
-			tmpSize = sz_lossless_decompress(confparams_dec->losslessCompressor, cmpBytes, (unsigned long)cmpSize, &szTmpBytes, (unsigned long)targetUncompressSize+4+MetaDataByteLength+exe_params->SZ_SIZE_TYPE);//		(unsigned long)targetUncompressSize+8: consider the total length under lossless compression mode is actually 3+4+1+targetUncompressSize
+			tmpSize = sz_lossless_decompress(confparams_dec->losslessCompressor, cmpBytes, (uint64_t)cmpSize, &szTmpBytes, (uint64_t)targetUncompressSize+4+MetaDataByteLength+exe_params->SZ_SIZE_TYPE);//		(uint64_t)targetUncompressSize+8: consider the total length under lossless compression mode is actually 3+4+1+targetUncompressSize
 			//szTmpBytes = (unsigned char*)malloc(sizeof(unsigned char)*tmpSize);
 			//memcpy(szTmpBytes, tmpBytes, tmpSize);
 			//free(tmpBytes); //release useless memory		
@@ -129,7 +129,7 @@ void decompressDataSeries_uint16_1D(uint16_t** data, size_t dataSeriesLength, Ti
 	//sdi:Debug
 	//writeUShortData(type, dataSeriesLength, "decompressStateBytes.sb");
 	
-	long predValue, tmp;
+	int64_t predValue, tmp;
 	uint16_t minValue, exactData;
 	
 	minValue = tdps->minValue;
@@ -204,7 +204,7 @@ void decompressDataSeries_uint16_2D(uint16_t** data, size_t r1, size_t r2, Tight
 	
 	int rightShiftBits = computeRightShiftBits(exactByteSize, SZ_UINT16);	
 	
-	long pred1D, pred2D, tmp;
+	int64_t pred1D, pred2D, tmp;
 	size_t ii, jj;
 
 	/* Process Row-0, data 0 */
@@ -354,7 +354,7 @@ void decompressDataSeries_uint16_3D(uint16_t** data, size_t r1, size_t r2, size_
 	
 	int rightShiftBits = computeRightShiftBits(exactByteSize, SZ_UINT16);	
 	
-	long pred1D, pred2D, pred3D, tmp;
+	int64_t pred1D, pred2D, pred3D, tmp;
 	size_t ii, jj, kk;
 
 	///////////////////////////	Process layer-0 ///////////////////////////
@@ -616,7 +616,7 @@ void decompressDataSeries_uint16_4D(uint16_t** data, size_t r1, size_t r2, size_
 	
 	int type_;
 
-	long pred1D, pred2D, pred3D, tmp;
+	int64_t pred1D, pred2D, pred3D, tmp;
 	size_t ii, jj, kk, ll;
 	size_t index;
 
