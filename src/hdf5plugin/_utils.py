@@ -100,10 +100,25 @@ def register_filter(name):
     registered_filters.pop(name, None)
 
     # Load DLL
-    filename = glob.glob(os.path.join(
+    filenames = glob.glob(os.path.join(
         PLUGIN_PATH, f"libh5{name}*{build_config.filter_file_extension}"))
-    if len(filename):
-        filename = filename[0]
+    if len(filenames):
+        if name == 'blosc':  # Handle name prefix conflict with blosc2
+            for filename in filenames:
+                if not os.path.basename(filename).startswith('libh5blosc2'):
+                    break  # That's the blosc(1) filename
+            else:
+                _logger.error("Cannot initialize filter %s: File not found", name)
+                return False
+        elif name == 'sz':  # Handle name prefix conflict with sz3
+            for filename in filenames:
+                if not os.path.basename(filename).startswith('libh5sz3'):
+                    break  # That's the sz filename
+            else:
+                _logger.error("Cannot initialize filter %s: File not found", name)
+                return False
+        else:        
+            filename = filenames[0]
     else:
         logger.error(f"Cannot initialize filter {name}: File not found")
         return False
