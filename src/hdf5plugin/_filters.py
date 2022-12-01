@@ -532,7 +532,7 @@ class SZ3(_FilterRefClass):
     filter_id = SZ3_ID
 
     def __init__(self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None):
-        if (absolute, relative, norm2, peak_signal_to_noise_ratio, peak_signal_to_noise_ratio).count(None) < 2:
+        if (absolute, relative, norm2, peak_signal_to_noise_ratio).count(None) < 3:
             raise TypeError("hdf5plugin.SZ3() takes at most one not None argument")
 
         # Get SZ3 encoding options: range [0, 5]
