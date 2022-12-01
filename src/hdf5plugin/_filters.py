@@ -506,27 +506,17 @@ class SZ(_FilterRefClass):
 class SZ3(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ3 filter.
 
-    void usage()
-    {
-            printf("Usage: print_h5repack_args <options>\n");
-            printf("Options:\n");
-            printf("	-M <error bound mode> : 10 options as follows. \n");
-            printf("		ABS (absolute error bound)\n");
-            printf("		REL (value range based error bound, so a.k.a., VR_REL)\n");
-            printf("		PSNR (peak signal-to-noise ratio)\n");
-            printf("		NORM2 (norm2)\n");
-            printf("	-A <absolute error bound>: specifying absolute error bound\n");
-            printf("	-R <value_range based relative error bound>: specifying relative error bound\n");
-            printf("	-N <norm2>: specifying norm2 error bound\n");
-            printf("	-S <PSNR>: specifying PSNR\n");
-            printf("* examples: \n");
-            printf("	print_h5repack_args -M ABS -A 1E-3 (output: -f UD=32024,0,9,0,1062232653,3539053052,0,0,0,0,0,0)\n");
-            printf("	print_h5repack_args -M REL -R 1E-4 (output: -f UD=32024,0,9,1,0,0,1058682594,3944497965,0,0,0,0)\n");
-            exit(0);
-    }
+    It can be passed as keyword arguments:
 
+    - **Absolute** mode: To use, set the ``absolute`` argument.
+      It ensures that the resulting values will be within the provided absolute tolerance.
+      .. code-block:: python
+          f.create_dataset(
+              'sz3_absolute',
+              data=numpy.random.random(100),
+              **hdf5plugin.SZ3(absolute=0.1))
 
-    For more details about the compressor `SZ <https://szcompressor.org/>`_.
+    For more details about the compressor, see `SZ3 <https://szcompressor.org/>`_.
     """
     filter_name = "sz3"
     filter_id = SZ3_ID
