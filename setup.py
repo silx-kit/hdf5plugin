@@ -490,19 +490,9 @@ class HDF5PluginExtension(Extension):
         Extension.__init__(self, name, **kwargs)
 
         if sys.platform.startswith('win'):
-            self.sources.append(os.path.join('src', 'register_win32.c'))
             self.export_symbols.append('register_filter')
-            self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
-
         else:
-            if name.endswith("h5sz3") and sys.platform.startswith('darwin'):
-                # MacOS does not like to mix C and C++ code and next line
-                # does not work for the macro CALL
-                #self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
-                pass
-            else:
-                self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
@@ -1045,6 +1035,45 @@ libraries, extensions = apply_filter_strip(
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
+
+
+# hdf5 dynamic loading lib
+def get_hdf5_dl_clib():
+    cflags = []
+    include_dirs = []
+    sources = []
+    macros = []
+
+    hdf5_dir = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
+    if hdf5_dir is None:
+        hdf5_dir = "src/hdf5"
+        if sys.platform.startswith('win'):
+            folder = 'windows'
+        elif sys.platform.startswith('darwin'):
+            folder = 'darwin'
+        else:
+            folder = 'linux'
+        include_dirs.append(f"{hdf5_dir}/include/{folder}")
+    include_dirs.append(f"{hdf5_dir}/include")
+
+    macros.append(('H5_USE_18_API', None))
+
+    if sys.platform.startswith('win'):
+        sources.append('src/register_win32.c')
+        macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
+    else:
+        sources.append('src/hdf5_dl.c')
+
+    return ('hdf5_dl', {
+        'sources': sources,
+        'include_dirs': include_dirs,
+        'macros': macros,
+        'cflags': cflags,
+    })
+
+
+if extensions:
+    libraries.append(get_hdf5_dl_clib())
 
 
 # setup
