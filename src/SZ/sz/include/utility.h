@@ -32,9 +32,9 @@ void write_reordered_tofile(SZ_VarSet* curVar, size_t dataLen);
 float calculate_delta_t(size_t size);//sihuan added
 
 int is_lossless_compressed_data(unsigned char* compressedBytes, size_t cmpSize);
-unsigned long sz_lossless_compress(int losslessCompressor, int level, unsigned char* data, unsigned long dataLength, unsigned char** compressBytes);
-unsigned long sz_lossless_decompress(int losslessCompressor, unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize);
-unsigned long sz_lossless_decompress65536bytes(int losslessCompressor, unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData);
+uint64_t sz_lossless_compress(int losslessCompressor, int level, unsigned char* data, uint64_t dataLength, unsigned char** compressBytes);
+uint64_t sz_lossless_decompress(int losslessCompressor, unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize);
+uint64_t sz_lossless_decompress65536bytes(int losslessCompressor, unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData);
 void* detransposeData(void* data, int dataType, size_t r5, size_t r4, size_t r3, size_t r2, size_t r1);
 void* transposeData(void* data, int dataType, size_t r5, size_t r4, size_t r3, size_t r2, size_t r1);
 

@@ -128,7 +128,7 @@ void MultiLevelCacheTableBuild(struct TopLevelTable* topTable, float* precisionT
     }
 
     /*
-    long lastIndexInExpoRange = count-1;
+    int64_t lastIndexInExpoRange = count-1;
     bool trigger = false;
     float preRange = 0.0;
     uint32_t preIndex = 0;
@@ -145,7 +145,7 @@ void MultiLevelCacheTableBuild(struct TopLevelTable* topTable, float* precisionT
             }
             trigger = false;
         }
-        long firstIndexInExpoRange = expoBoundary[i];
+        int64_t firstIndexInExpoRange = expoBoundary[i];
         uint8_t expoInRange = MLCT_GetExpoIndex(precisionTable[firstIndexInExpoRange]);
         for(int j=lastIndexInExpoRange; j>=firstIndexInExpoRange; j--){
             float test = precisionTable[j];

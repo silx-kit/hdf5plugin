@@ -9,7 +9,7 @@
 
 #ifndef _TightDataPointStorageF_H
 #define _TightDataPointStorageF_H
-
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -22,19 +22,19 @@ extern "C" {
 int isZlibFormat(unsigned char magic1, unsigned char magic2);
 
 //callZlib.c
-unsigned long zlib_compress(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level);
-unsigned long zlib_compress2(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level);
-unsigned long zlib_compress3(unsigned char* data, unsigned long dataLength, unsigned char* compressBytes, int level);
-unsigned long zlib_compress4(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level);
-unsigned long zlib_compress5(unsigned char* data, unsigned long dataLength, unsigned char** compressBytes, int level);
+uint64_t zlib_compress(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level);
+uint64_t zlib_compress2(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level);
+uint64_t zlib_compress3(unsigned char* data, uint64_t dataLength, unsigned char* compressBytes, int level);
+uint64_t zlib_compress4(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level);
+uint64_t zlib_compress5(unsigned char* data, uint64_t dataLength, unsigned char** compressBytes, int level);
 
-unsigned long zlib_uncompress4(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize);
-unsigned long zlib_uncompress5(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize);
-unsigned long zlib_uncompress(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize);
-unsigned long zlib_uncompress2(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize);
-unsigned long zlib_uncompress3(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData, unsigned long targetOriSize);
+uint64_t zlib_uncompress4(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize);
+uint64_t zlib_uncompress5(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize);
+uint64_t zlib_uncompress(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize);
+uint64_t zlib_uncompress2(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize);
+uint64_t zlib_uncompress3(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData, uint64_t targetOriSize);
 
-unsigned long zlib_uncompress65536bytes(unsigned char* compressBytes, unsigned long cmpSize, unsigned char** oriData);
+uint64_t zlib_uncompress65536bytes(unsigned char* compressBytes, uint64_t cmpSize, unsigned char** oriData);
 
 #ifdef __cplusplus
 }

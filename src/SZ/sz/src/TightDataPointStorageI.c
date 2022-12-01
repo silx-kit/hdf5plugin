@@ -231,7 +231,7 @@ int new_TightDataPointStorageI_fromFlatBytes(TightDataPointStorageI **this, unsi
 void new_TightDataPointStorageI(TightDataPointStorageI **this,
 		size_t dataSeriesLength, size_t exactDataNum, int byteSize, 
 		int* type, unsigned char* exactDataBytes, size_t exactDataBytes_size,
-		double realPrecision, long minValue, int intervals, int dataType) 
+		double realPrecision, int64_t minValue, int intervals, int dataType) 
 {
 	//int i = 0;
 	*this = (TightDataPointStorageI *)malloc(sizeof(TightDataPointStorageI));
