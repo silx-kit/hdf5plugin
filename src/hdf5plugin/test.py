@@ -143,6 +143,8 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
 
         # Specify options
         for cname in ('none', 'lz4', 'zstd'):
+            if cname != "none" and not should_test(cname):
+                continue
             for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
                 for nelems in (1024, 2048):
                     with self.subTest(cname=cname, dtype=dtype, nelems=nelems):
