@@ -130,24 +130,35 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                         filter_ = self._test('bshuf', dtype, compressed=lz4, nelems=nelems, lz4=lz4)
                         self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
 
+    def _get_bitshuffle_version(self):
+        filename = os.path.join(self.tempdir, "get_bitshuffle_version.h5")
+        with h5py.File(filename, "w") as h5f:
+            h5f.create_dataset("data", numpy.arange(10), **hdf5plugin.Bitshuffle())
+            plist = h5f["data"].id.get_create_plist()
+            assert plist.get_nfilters() == 1
+            filter_ = plist.get_filter(0)
+            assert filter_[0] == hdf5plugin.BSHUF_ID
+            return tuple(filter_[2][:2])
+
     @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
     def testBitshuffle(self):
         """Write/read test with bitshuffle filter plugin"""
         self._test('bshuf')  # Default options
 
-        compression_ids = {
+        compressions = {  # Compressor name: Compressor ID
             'none': 0,
             'lz4': 2,
-            'zstd': 3
         }
+        if self._get_bitshuffle_version() >= (0, 4):
+            compressions['zstd'] = 3
 
         # Specify options
-        for cname in ('none', 'lz4', 'zstd'):
+        for cname, compression_id in compressions.items():
             for dtype in (numpy.int8, numpy.int16, numpy.int32, numpy.int64):
                 for nelems in (1024, 2048):
                     with self.subTest(cname=cname, dtype=dtype, nelems=nelems):
                         filter_ = self._test('bshuf', dtype, compressed=cname != 'none', nelems=nelems, cname=cname)
-                        self.assertEqual(filter_[2][3:5], (nelems, compression_ids[cname]))
+                        self.assertEqual(filter_[2][3:5], (nelems, compression_id))
 
     @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
     def testBlosc(self):
