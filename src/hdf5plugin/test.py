@@ -132,7 +132,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
 
     def _get_bitshuffle_version(self):
         filename = os.path.join(self.tempdir, "get_bitshuffle_version.h5")
-        with h5py.File(filename, "w") as h5f:
+        with h5py.File(filename, "w", driver="core", backing_store=False) as h5f:
             h5f.create_dataset("data", numpy.arange(10), **hdf5plugin.Bitshuffle())
             plist = h5f["data"].id.get_create_plist()
             assert plist.get_nfilters() == 1
