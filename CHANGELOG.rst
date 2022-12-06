@@ -6,7 +6,7 @@ This is a bug-fix release:
 - Updated embedded version of `SZ` to fix a compression issue under Windows (PR #231)
 - Updated tests to pass with older versions of `bitshuffle` (PR #235)
 - Improved HDF5 function wrapper (PR #228)
-- Fixed and updated documentation (PR #223, #232, #237)
+- Fixed and updated documentation (PR #223, #232, #238)
 
 4.0.0: 2022/11/28
 -----------------
