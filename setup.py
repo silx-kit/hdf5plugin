@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2021 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2022 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "15/12/2020"
+__date__ = "05/12/2022"
 
 
 from glob import glob
@@ -496,7 +496,13 @@ class HDF5PluginExtension(Extension):
             self.libraries.append('hdf5')
 
         else:
-            self.sources.append(os.path.join('src', 'hdf5_dl.c'))
+            if name.endswith("h5sz3") and sys.platform.startswith('darwin'):
+                # MacOS does not like to mix C and C++ code and next line
+                # does not work for the macro CALL
+                #self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
+                pass
+            else:
+                self.sources.append(os.path.join('src', 'hdf5_dl.c'))
             self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
@@ -869,6 +875,130 @@ sz_plugin = HDF5PluginExtension(
     extra_objects=zstd_extra_objects,
 )
 
+# SZ3 library and its hdf5 filter
+sz3_dir = os.path.join("src", "SZ3")
+sz3_sources = [] #glob(os.path.join(sz3_dir, "tools", "sz3", "sz3.*pp"))
+sz3_include_dirs = [os.path.join(sz3_dir, "include"),
+                    os.path.join(sz3_dir, "include", "SZ3"),
+                    os.path.join(sz3_dir, "include", "SZ3", "api"),
+                    os.path.join(sz3_dir, "include", "SZ3", "compressor"),
+                    os.path.join(sz3_dir, "include", "SZ3", "encoder"),
+                    os.path.join(sz3_dir, "include", "SZ3", "frontend"),
+                    os.path.join(sz3_dir, "include", "SZ3", "lossless"),
+                    os.path.join(sz3_dir, "include", "SZ3", "predictor"),
+                    os.path.join(sz3_dir, "include", "SZ3", "preprocessor"),
+                    os.path.join(sz3_dir, "include", "SZ3", "quantizer"),
+                    os.path.join(sz3_dir, "include", "SZ3", "utils"),
+                    os.path.join(sz3_dir, "include", "SZ3", "utils", "inih"),
+                    os.path.join(sz3_dir, "include", "SZ3", "utils", "ska_hash"),
+                    ]
+#add version.hpp
+sz3_include_dirs.append(os.path.join("src", "SZ3_extra"))
+if sys.platform.startswith('darwin'):
+    # provide dummy omp.h
+    sz3_include_dirs.append(os.path.join("src", "SZ3_extra", "darwin"))
+
+sz3_hdf5_dir = os.path.join(sz3_dir, "tools", "H5Z-SZ3")
+
+# I have issues with the BMI on linux and Mac because of compiling Zstd separately
+
+if sys.platform.startswith('darwin'):
+    HDF5PLUGIN_ZSTD_FROM_BLOSC = False
+else:
+    HDF5PLUGIN_ZSTD_FROM_BLOSC = True
+
+if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
+    sz3_zstd_cmake_list = [
+        './common/entropy_common.c',
+        './common/pool.c',
+        './common/threading.c',
+        './common/debug.c',
+        './common/xxhash.c',
+        './common/fse_decompress.c',
+        './common/zstd_common.c',
+        './common/error_private.c',
+        './compress/zstd_ldm.c',
+        './compress/zstd_lazy.c',
+        './compress/huf_compress.c',
+        './compress/zstd_opt.c',
+        './compress/zstd_double_fast.c',
+        './compress/zstd_compress.c',
+        './compress/zstd_compress_superblock.c',
+        './compress/zstd_compress_sequences.c',
+        './compress/zstd_compress_literals.c',
+        './compress/zstd_fast.c',
+        './compress/fse_compress.c',
+        './compress/zstdmt_compress.c',
+        './compress/hist.c',
+        './decompress/zstd_decompress.c',
+        './decompress/huf_decompress.c',
+        './decompress/zstd_ddict.c',
+        './decompress/zstd_decompress.c',
+        './decompress/zstd_decompress_block.c',
+        './deprecated/zbuff_common.c',
+        './deprecated/zbuff_compress.c',
+        './deprecated/zbuff_decompress.c',
+        './legacy/zstd_v05.c',
+        './legacy/zstd_v04.c',
+        './legacy/zstd_v06.c',
+        './legacy/zstd_v07.c',
+        './legacy/zstd_v03.c',
+        './legacy/zstd_v02.c',
+        './legacy/zstd_v01.c',
+        './dictBuilder/cover.c',
+        './dictBuilder/divsufsort.c',
+        './dictBuilder/zdict.c',
+        './dictBuilder/fastcover.c',
+        ]
+
+    zstd_extra_objects = []
+    zstd_define_macros = []
+    zstd_sources = []
+    zstd_depends = []
+    zstd_include_dirs = [os.path.join(sz3_dir, "tools", "zstd")]
+    sz3_zstd_sources = []
+    for src in sz3_zstd_cmake_list:
+        items = src.split('/')
+        sz3_zstd_sources.append(os.path.join(sz3_dir, "tools", "zstd", items[1], items[2]))
+        zstd_include_dirs.append(os.path.join(sz3_dir, "tools", "zstd", items[1]))
+else:
+    sz3_zstd_sources = zstd_sources
+
+sz3_extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
+sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+sz3_extra_link_args = ['-fopenmp', '/openmp', "-lm"]
+
+sz3_hdf5_plugin_source = os.path.join(sz3_hdf5_dir, "src", "H5Z_SZ3.cpp")
+
+
+sz3_plugin = HDF5PluginExtension(
+    "hdf5plugin.plugins.libh5sz3",
+    sources=[sz3_hdf5_plugin_source] + sz3_sources + zstd_sources,
+    extra_objects=zstd_extra_objects,
+    depends= zstd_depends + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
+    include_dirs=sz3_include_dirs + zstd_include_dirs + [os.path.join(sz3_hdf5_dir, "include")],
+    define_macros=zstd_define_macros,
+    extra_compile_args=sz3_extra_compile_args,
+    extra_link_args=sz3_extra_link_args,
+    cpp11_required=True,
+    )
+
+if sys.platform.startswith('darwin'):
+    # this should be taken from the output of HDF5PluginExtension
+    sz3_zstd_sources += [os.path.join('src', 'hdf5_dl.c')]
+    zstd_include_dirs += [os.path.join('src', 'hdf5', 'include'), os.path.join('src', 'hdf5', 'include', 'darwin')]
+
+sz3_lib = ("sz3", {
+    "sources": sz3_zstd_sources,
+    "include_dirs": zstd_include_dirs,
+    #"cflags": ["-lzstd"],
+    #sse2=sse2_kwargs,
+    #avx2=avx2_kwargs,
+    #cpp11=cpp11_kwargs,
+})
+
+PLUGIN_LIB_DEPENDENCIES['sz3'] = 'sz3'
+
 
 def apply_filter_strip(libraries, extensions, dependencies):
     """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
@@ -897,9 +1027,11 @@ def apply_filter_strip(libraries, extensions, dependencies):
     ]
     return libraries, extensions
 
-
+library_list = [snappy_lib, charls_lib, zfp_lib]
+if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
+    library_list.append(sz3_lib)
 libraries, extensions = apply_filter_strip(
-    libraries=[snappy_lib, charls_lib, zfp_lib],
+    libraries=library_list,
     extensions=[
         bzip2_plugin,
         lz4_plugin,
@@ -909,6 +1041,7 @@ libraries, extensions = apply_filter_strip(
         h5zfp_plugin,
         zstandard_plugin,
         sz_plugin,
+        sz3_plugin,
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
