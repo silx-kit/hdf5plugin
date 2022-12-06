@@ -522,8 +522,12 @@ class SZ3(_FilterRefClass):
     filter_id = SZ3_ID
 
     def __init__(self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None):
-        if (absolute, relative, norm2, peak_signal_to_noise_ratio).count(None) < 3:
+        n_nones = (absolute, relative, norm2, peak_signal_to_noise_ratio).count(None)
+        if  n_nones < 3:
             raise TypeError("hdf5plugin.SZ3() takes at most one not None argument")
+        elif n_nones == 4:
+            absolute = 0.0001
+            logger.warning(f"Defaulting to absolute={absolute}. This default might not be kept in future releases")
 
         # Get SZ3 encoding options: range [0, 5]
         if absolute is not None:
@@ -534,11 +538,8 @@ class SZ3(_FilterRefClass):
             sz_mode = 2
         elif peak_signal_to_noise_ratio is not None:
             sz_mode = 3
-        else:
-            absolute = 0.001
-            sz_mode = 0
         if sz_mode not in [0]:
-            raise NotImplementedError()
+            logger.warning("Only absolute mode properly tested")
 
         compression_opts = (
             sz_mode,
