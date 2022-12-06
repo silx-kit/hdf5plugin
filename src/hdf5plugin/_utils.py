@@ -67,7 +67,10 @@ def H5Zregister(filter_struct_p):
     :return: A non-negative value if successful, else a negative value
     :rtype: int
     """
-    libhdf5 = ctypes.CDLL(h5py.h5z.__file__)
+    if sys.platform.startswith("win"):
+        libhdf5 = ctypes.cdll.LoadLibrary("hdf5")
+    else:
+        libhdf5 = ctypes.CDLL(h5py.h5z.__file__)
     libhdf5.H5Zregister.argtypes = [ctypes.c_void_p]
     libhdf5.H5Zregister.restype = ctypes.c_int
     return libhdf5.H5Zregister(filter_struct_p)
