@@ -489,21 +489,13 @@ class HDF5PluginExtension(Extension):
     def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
+        self.export_symbols.append('H5PLget_plugin_info')
+        if not sys.platform.startswith('win'):
+            self.export_symbols.append('init_filter')
+
         if sys.platform.startswith('win'):
-            self.sources.append(os.path.join('src', 'register_win32.c'))
-            self.export_symbols.append('register_filter')
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
-
-        else:
-            if name.endswith("h5sz3") and sys.platform.startswith('darwin'):
-                # MacOS does not like to mix C and C++ code and next line
-                # does not work for the macro CALL
-                #self.sources.append(os.path.join('src', 'hdf5_dl.cpp'))
-                pass
-            else:
-                self.sources.append(os.path.join('src', 'hdf5_dl.c'))
-            self.export_symbols.append('init_filter')
 
         self.define_macros.append(('H5_USE_18_API', None))
 
@@ -985,7 +977,6 @@ sz3_plugin = HDF5PluginExtension(
 
 if sys.platform.startswith('darwin'):
     # this should be taken from the output of HDF5PluginExtension
-    sz3_zstd_sources += [os.path.join('src', 'hdf5_dl.c')]
     zstd_include_dirs += [os.path.join('src', 'hdf5', 'include'), os.path.join('src', 'hdf5', 'include', 'darwin')]
 
 sz3_lib = ("sz3", {
@@ -1045,6 +1036,33 @@ libraries, extensions = apply_filter_strip(
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
+
+
+# hdf5 dynamic loading lib
+def get_hdf5_dl_clib():
+    include_dirs = []
+    hdf5_dir = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
+    if hdf5_dir is None:
+        hdf5_dir = "src/hdf5"
+        if sys.platform.startswith('win'):
+            folder = 'windows'
+        elif sys.platform.startswith('darwin'):
+            folder = 'darwin'
+        else:
+            folder = 'linux'
+        include_dirs.append(f"{hdf5_dir}/include/{folder}")
+    include_dirs.append(f"{hdf5_dir}/include")
+
+    return ('hdf5_dl', {
+        'sources': ['src/hdf5_dl.c'],
+        'include_dirs': include_dirs,
+        'macros': [('H5_USE_18_API', None)],
+        'cflags': [],
+    })
+
+
+if extensions and not sys.platform.startswith('win'):
+    libraries.append(get_hdf5_dl_clib())
 
 
 # setup
