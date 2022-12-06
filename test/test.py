@@ -237,8 +237,8 @@ class TestHDF5PluginRead(unittest.TestCase):
                 output_data = h5o["/data"][()]
             self.assertFalse(numpy.alltrue(original == output_data),
                              "Values should not be identical")
-            self.assertTrue(numpy.alltrue(compressed == output_data),
-                             "Compressed data should be identical")
+            self.assertTrue(numpy.allclose(compressed, output_data),
+                             "Compressed data should be almost identical")
             h5.close()
 
 
