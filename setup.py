@@ -964,7 +964,6 @@ if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
 else:
     sz3_zstd_sources = zstd_sources
 
-#TODO: Probably OpenMP should not be the default for this filter (sz3.config)
 sz3_extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
 sz3_extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
 sz3_extra_link_args = ['-fopenmp', '/openmp', "-lm"]
