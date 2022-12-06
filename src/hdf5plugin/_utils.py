@@ -60,6 +60,19 @@ def is_filter_available(name):
     return h5py.h5z.filter_avail(filter_id) > 0
 
 
+def H5Zregister(filter_struct_p):
+    """Register a new filter with libHDF5.
+
+    :param ctypes.c_void_p filter_struct_p: Pointer to filter definition struct
+    :return: A non-negative value if successful, else a negative value
+    :rtype: int
+    """
+    libhdf5 = ctypes.CDLL(h5py.h5z.__file__)
+    libhdf5.H5Zregister.argtypes = [ctypes.c_void_p]
+    libhdf5.H5Zregister.restype = ctypes.c_int
+    return libhdf5.H5Zregister(filter_struct_p)
+
+
 registered_filters = {}
 """Store hdf5plugin registered filters as a mapping: name: (filename, ctypes.CDLL)"""
 
@@ -129,19 +142,26 @@ def register_filter(name):
         logger.error(traceback.format_exc())
         return False
 
-    if sys.platform.startswith('win'):
-        # Use register_filter function to register filter
-        lib.register_filter.restype = ctypes.c_int
-        retval = lib.register_filter()
-    else:
-        # Use init_filter function to initialize DLL and register filter
-        lib.init_filter.argtypes = [ctypes.c_char_p]
-        lib.init_filter.restype = ctypes.c_int
-        retval = lib.init_filter(
-            bytes(h5py.h5z.__file__, encoding='utf-8'))
+    if not sys.platform.startswith('win'):
+        # Use init_filter function to initialize DLL
+        try:
+            init_filter = lib.init_filter
+        except AttributeError:
+            logger.debug(f"init_filter not found for filter {name}: Init phase skipped.")
+        else:
+            init_filter.argtypes = [ctypes.c_char_p]
+            init_filter.restype = ctypes.c_int
 
+            retval = init_filter(bytes(h5py.h5z.__file__, encoding='utf-8'))
+            if retval < 0:
+                logger.error(f"Cannot initialize filter {name}: {retval}")
+                return False
+
+    # Register through H5Zregister
+    lib.H5PLget_plugin_info.restype = ctypes.c_void_p
+    retval = H5Zregister(lib.H5PLget_plugin_info())
     if retval < 0:
-        logger.error(f"Cannot initialize filter {name}: {retval}")
+        logger.error(f"Cannot register filter {name}: {retval}")
         return False
 
     logger.debug(f"Registered filter: {name} ({filename})")

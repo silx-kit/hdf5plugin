@@ -175,9 +175,6 @@ DEF_DEFAULT_VARIABLE(H5T_STD_U64BE_g);
 DEF_DEFAULT_VARIABLE(H5T_STD_U64LE_g);
 
 
-static bool is_init = false;
-
-
 /* Initialize the dynamic loading of symbols and register the plugin
  *
  * libname: Name of the DLL from which to load libHDF5 symbols
@@ -185,83 +182,78 @@ static bool is_init = false;
  */
 int init_filter(const char* libname)
 {
-    int retval = -1;
   	void * handle;
 
     handle = dlopen(libname, RTLD_LAZY | RTLD_LOCAL);
-
-    if (handle != NULL) {
-        /*H5*/
-        DL_H5Functions.H5open = (DL_func_H5open)dlsym(handle, "H5open");
-        /*H5E*/
-        DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)dlsym(handle, "H5Epush1");
-        DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)dlsym(handle, "H5Epush2");
-        DL_H5Functions.H5Eprint2 = (DL_func_H5Eprint2)dlsym(handle, "H5Eprint2");
-
-        /*H5P*/
-        DL_H5Functions.H5Pexist = (DL_func_H5Pexist)dlsym(handle, "H5Pexist");
-        DL_H5Functions.H5Pget = (DL_func_H5Pget)dlsym(handle, "H5Pget");
-        DL_H5Functions.H5Pget_filter2 = (DL_func_H5Pget_filter2)dlsym(handle, "H5Pget_filter2");
-        DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)dlsym(handle, "H5Pget_filter_by_id2");
-        DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)dlsym(handle, "H5Pget_chunk");
-        DL_H5Functions.H5Pget_nfilters = (DL_func_H5Pget_nfilters)dlsym(handle, "H5Pget_nfilters");
-        DL_H5Functions.H5Pinsert2 = (DL_func_H5Pinsert2)dlsym(handle, "H5Pinsert2");
-        DL_H5Functions.H5Pisa_class = (DL_func_H5Pisa_class)dlsym(handle, "H5Pisa_class");
-        DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)dlsym(handle, "H5Pmodify_filter");
-        DL_H5Functions.H5Premove_filter = (DL_func_H5Premove_filter)dlsym(handle, "H5Premove_filter");
-        DL_H5Functions.H5Pset = (DL_func_H5Pset)dlsym(handle, "H5Pset");
-        DL_H5Functions.H5Pset_filter = (DL_func_H5Pset_filter)dlsym(handle, "H5Pset_filter");
-        /*H5S*/
-        DL_H5Functions.H5Sget_simple_extent_dims = (DL_func_H5Sget_simple_extent_dims) \
-                                        dlsym(handle, "H5Sget_simple_extent_dims");
-        DL_H5Functions.H5Sget_simple_extent_ndims = (DL_func_H5Sget_simple_extent_ndims) \
-                                        dlsym(handle, "H5Sget_simple_extent_ndims");
-        DL_H5Functions.H5Sis_simple = (DL_func_H5Sis_simple) dlsym(handle, "H5Sis_simple");
-        /*H5T*/
-        DL_H5Functions.H5Tconvert = (DL_func_H5Tconvert)dlsym(handle, "H5Tconvert");
-        DL_H5Functions.H5Tget_native_type = (DL_func_H5Tget_native_type)dlsym(handle, "H5Tget_native_type");
-        DL_H5Functions.H5Tget_sign = (DL_func_H5Tget_sign)dlsym(handle, "H5Tget_sign");
-        DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
-        DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
-        DL_H5Functions.H5Tget_order = (DL_func_H5Tget_order)dlsym(handle, "H5Tget_order");
-        DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_super");
-        DL_H5Functions.H5Tclose = (DL_func_H5Tclose)dlsym(handle, "H5Tclose");
-        /*H5Z*/
-        DL_H5Functions.H5Zregister = (DL_func_H5Zregister)dlsym(handle, "H5Zregister");
-        DL_H5Functions.H5Zunregister = (DL_func_H5Zunregister)dlsym(handle, "H5Zunregister");
-
-        /*Variables*/
-        DEF_DLSYM_VARIABLE(H5E_ARGS_g);
-        DEF_DLSYM_VARIABLE(H5E_BADTYPE_g);
-        DEF_DLSYM_VARIABLE(H5E_BADVALUE_g);
-        DEF_DLSYM_VARIABLE(H5E_CANTGET_g);
-        DEF_DLSYM_VARIABLE(H5E_CANTINIT_g);
-        DEF_DLSYM_VARIABLE(H5E_CANTFILTER_g);
-        DEF_DLSYM_VARIABLE(H5E_CANTREGISTER_g);
-        DEF_DLSYM_VARIABLE(H5E_CALLBACK_g);
-        DEF_DLSYM_VARIABLE(H5E_ERR_CLS_g);
-        DEF_DLSYM_VARIABLE(H5E_NOSPACE_g);
-        DEF_DLSYM_VARIABLE(H5E_OVERFLOW_g);
-        DEF_DLSYM_VARIABLE(H5E_PLINE_g);
-        DEF_DLSYM_VARIABLE(H5E_RESOURCE_g);
-
-        DEF_DLSYM_VARIABLE(H5P_CLS_DATASET_CREATE_ID_g);
-
-        DEF_DLSYM_VARIABLE(H5T_NATIVE_UINT_g);
-        DEF_DLSYM_VARIABLE(H5T_NATIVE_UINT32_g);
-        DEF_DLSYM_VARIABLE(H5T_NATIVE_UINT64_g);
-        DEF_DLSYM_VARIABLE(H5T_STD_U32BE_g);
-        DEF_DLSYM_VARIABLE(H5T_STD_U32LE_g);
-        DEF_DLSYM_VARIABLE(H5T_STD_U64BE_g);
-        DEF_DLSYM_VARIABLE(H5T_STD_U64LE_g);
-
-        /*Register plugin*/
-        retval = H5Zregister(H5PLget_plugin_info());
-
-        is_init = true;
+    if (handle == NULL) {
+        return -1;
     }
 
-    return retval;
+    /*H5*/
+    DL_H5Functions.H5open = (DL_func_H5open)dlsym(handle, "H5open");
+    /*H5E*/
+    DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)dlsym(handle, "H5Epush1");
+    DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)dlsym(handle, "H5Epush2");
+    DL_H5Functions.H5Eprint2 = (DL_func_H5Eprint2)dlsym(handle, "H5Eprint2");
+
+    /*H5P*/
+    DL_H5Functions.H5Pexist = (DL_func_H5Pexist)dlsym(handle, "H5Pexist");
+    DL_H5Functions.H5Pget = (DL_func_H5Pget)dlsym(handle, "H5Pget");
+    DL_H5Functions.H5Pget_filter2 = (DL_func_H5Pget_filter2)dlsym(handle, "H5Pget_filter2");
+    DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)dlsym(handle, "H5Pget_filter_by_id2");
+    DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)dlsym(handle, "H5Pget_chunk");
+    DL_H5Functions.H5Pget_nfilters = (DL_func_H5Pget_nfilters)dlsym(handle, "H5Pget_nfilters");
+    DL_H5Functions.H5Pinsert2 = (DL_func_H5Pinsert2)dlsym(handle, "H5Pinsert2");
+    DL_H5Functions.H5Pisa_class = (DL_func_H5Pisa_class)dlsym(handle, "H5Pisa_class");
+    DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)dlsym(handle, "H5Pmodify_filter");
+    DL_H5Functions.H5Premove_filter = (DL_func_H5Premove_filter)dlsym(handle, "H5Premove_filter");
+    DL_H5Functions.H5Pset = (DL_func_H5Pset)dlsym(handle, "H5Pset");
+    DL_H5Functions.H5Pset_filter = (DL_func_H5Pset_filter)dlsym(handle, "H5Pset_filter");
+    /*H5S*/
+    DL_H5Functions.H5Sget_simple_extent_dims = (DL_func_H5Sget_simple_extent_dims) \
+                                    dlsym(handle, "H5Sget_simple_extent_dims");
+    DL_H5Functions.H5Sget_simple_extent_ndims = (DL_func_H5Sget_simple_extent_ndims) \
+                                    dlsym(handle, "H5Sget_simple_extent_ndims");
+    DL_H5Functions.H5Sis_simple = (DL_func_H5Sis_simple) dlsym(handle, "H5Sis_simple");
+    /*H5T*/
+    DL_H5Functions.H5Tconvert = (DL_func_H5Tconvert)dlsym(handle, "H5Tconvert");
+    DL_H5Functions.H5Tget_native_type = (DL_func_H5Tget_native_type)dlsym(handle, "H5Tget_native_type");
+    DL_H5Functions.H5Tget_sign = (DL_func_H5Tget_sign)dlsym(handle, "H5Tget_sign");
+    DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
+    DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
+    DL_H5Functions.H5Tget_order = (DL_func_H5Tget_order)dlsym(handle, "H5Tget_order");
+    DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_super");
+    DL_H5Functions.H5Tclose = (DL_func_H5Tclose)dlsym(handle, "H5Tclose");
+    /*H5Z*/
+    DL_H5Functions.H5Zregister = (DL_func_H5Zregister)dlsym(handle, "H5Zregister");
+    DL_H5Functions.H5Zunregister = (DL_func_H5Zunregister)dlsym(handle, "H5Zunregister");
+
+    /*Variables*/
+    DEF_DLSYM_VARIABLE(H5E_ARGS_g);
+    DEF_DLSYM_VARIABLE(H5E_BADTYPE_g);
+    DEF_DLSYM_VARIABLE(H5E_BADVALUE_g);
+    DEF_DLSYM_VARIABLE(H5E_CANTGET_g);
+    DEF_DLSYM_VARIABLE(H5E_CANTINIT_g);
+    DEF_DLSYM_VARIABLE(H5E_CANTFILTER_g);
+    DEF_DLSYM_VARIABLE(H5E_CANTREGISTER_g);
+    DEF_DLSYM_VARIABLE(H5E_CALLBACK_g);
+    DEF_DLSYM_VARIABLE(H5E_ERR_CLS_g);
+    DEF_DLSYM_VARIABLE(H5E_NOSPACE_g);
+    DEF_DLSYM_VARIABLE(H5E_OVERFLOW_g);
+    DEF_DLSYM_VARIABLE(H5E_PLINE_g);
+    DEF_DLSYM_VARIABLE(H5E_RESOURCE_g);
+
+    DEF_DLSYM_VARIABLE(H5P_CLS_DATASET_CREATE_ID_g);
+
+    DEF_DLSYM_VARIABLE(H5T_NATIVE_UINT_g);
+    DEF_DLSYM_VARIABLE(H5T_NATIVE_UINT32_g);
+    DEF_DLSYM_VARIABLE(H5T_NATIVE_UINT64_g);
+    DEF_DLSYM_VARIABLE(H5T_STD_U32BE_g);
+    DEF_DLSYM_VARIABLE(H5T_STD_U32LE_g);
+    DEF_DLSYM_VARIABLE(H5T_STD_U64BE_g);
+    DEF_DLSYM_VARIABLE(H5T_STD_U64LE_g);
+
+    return 1;
 };
 
 
