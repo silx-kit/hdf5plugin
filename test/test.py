@@ -24,11 +24,13 @@
 # ###########################################################################*/
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
-__date__ = "22/11/2022"
+__date__ = "06/12/2022"
 
 
 import os
 import unittest
+import tempfile
+import shutil
 
 import numpy
 import h5py
@@ -38,6 +40,14 @@ from hdf5plugin.test import suite as hdf5plugin_suite
 
 class TestHDF5PluginRead(unittest.TestCase):
     """Test reading existing files with compressed data"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tempdir = tempfile.mkdtemp()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir)
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.BLOSC_ID),
                          "Blosc filter not available")
@@ -170,6 +180,67 @@ class TestHDF5PluginRead(unittest.TestCase):
                             "Incorrect dtype")
             self.assertTrue(numpy.alltrue(original[0:8] == compressed[0, 0, :8]),
                                       "Values should not be identical")
+
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SZ3_ID),
+                         "SZ3 filter not available")
+    def testSZ3(self):
+        """Test reading and witing SZ3 compressed data"""
+        # the file contains original data and data compressed using hdf5plugin under linux
+        # the floating point data have been checked against data compressed using h5repack
+        # for absolute mode and value 1E-3
+        # h5repack -v -f UD=32024,1,9,0,1062232653,3539053052,0,0,0,0,0,0
+        # for relative move and value 1E-4
+        # h5repack -v -f UD=32024,1,9,1,0,0,1058682594,3944497965,0,0,0,0
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        fname = os.path.join(dirname, "sz3.h5")
+        self.assertTrue(os.path.exists(fname),
+                        "Cannot find %s file" % fname)
+        for dname in ["testfloat_8_8_128", "testdouble_8_8_128"]:
+            h5 = h5py.File(fname, "r")
+            original = h5[dname][()]
+            # absolute 1E-3
+            value = 1E-3
+            compressed_name = dname + "_absolute_sz3" 
+            compressed = h5[compressed_name][()]
+            self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
+            self.assertFalse(numpy.alltrue(original == compressed),
+                             "Values should not be identical")
+            self.assertTrue(numpy.allclose(original, compressed, atol=1e-3),
+                             "Values should be within tolerance")
+
+            # create a compressed file
+            output_file = os.path.join(self.tempdir, compressed_name + ".h5")
+            with h5py.File(output_file, "w", driver="core", backing_store=False) as h5o:
+                h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
+                               **hdf5plugin.SZ3(absolute=value))
+                output_data = h5o["/data"][()]
+            self.assertFalse(numpy.alltrue(original == output_data),
+                             "Values should not be identical")
+            self.assertTrue(numpy.allclose(original, output_data, atol=value),
+                             "Values should be within tolerance")
+            self.assertTrue(numpy.alltrue(compressed == output_data),
+                             "Compressed data should be identical")
+
+            # relative 1E-4
+            value = 1E-4
+            compressed_name = dname + "_relative_sz3" 
+            compressed = h5[compressed_name][()]
+            self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
+            self.assertFalse(numpy.alltrue(original == compressed),
+                             "Values should not be identical")
+
+            # create a compressed file
+            output_file = os.path.join(self.tempdir, compressed_name + ".h5")
+            with h5py.File(output_file, "w", driver="core", backing_store=False) as h5o:
+                h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
+                               **hdf5plugin.SZ3(relative=value))
+                output_data = h5o["/data"][()]
+            self.assertFalse(numpy.alltrue(original == output_data),
+                             "Values should not be identical")
+            self.assertTrue(numpy.alltrue(compressed == output_data),
+                             "Compressed data should be identical")
+            h5.close()
+
 
 def suite():
     testSuite = unittest.TestSuite()
