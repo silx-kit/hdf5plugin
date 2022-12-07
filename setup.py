@@ -411,11 +411,15 @@ class BuildCLib(build_clib):
     def build_libraries(self, libraries):
         updated_libraries = []
         for (lib_name, build_info) in libraries:
+            config = self.distribution.get_command_obj("build").hdf5plugin_config
+
             cflags = list(build_info.get('cflags', []))
 
             # Add flags from build config
-            config = self.distribution.get_command_obj("build").hdf5plugin_config
             cflags.extend(config.compile_args)
+
+            if not config.use_openmp:  # Remove OpenMP flags
+                cflags = [f for f in cflags if not f.endswith('openmp')]
 
             prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
             build_info['cflags'] = [
@@ -597,7 +601,7 @@ def get_snappy_clib(field=None):
 
 def get_zfp_clib():
     """ZFP static lib build config"""
-    cflags = ['-O3', '-ffast-math', '-std=c99']  # TODO, '-fopenmp']
+    cflags = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     cflags += ['/Ox', '/fp:fast', '/openmp']
 
     zfp_dir = os.path.join("src", "zfp")
