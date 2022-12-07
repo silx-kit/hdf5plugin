@@ -551,6 +551,17 @@ PLUGIN_LIB_DEPENDENCIES = dict()
 
 # compression libs
 
+def get_charls_clib():
+    """CharLS static lib build config"""
+    charls_dir = "src/charls/src"
+    charls_sources = glob(charls_dir + '/*.cpp')
+    charls_include_dirs = [charls_dir]
+    return ('charls', {
+        'sources': charls_sources,
+        'include_dirs': charls_include_dirs,
+        'cflags': ['-std=c++11']})
+
+
 def get_lz4_clib(field=None):
     """LZ4 static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
@@ -563,6 +574,24 @@ def get_lz4_clib(field=None):
     }
     if field is None:
         return 'lz4', config
+    return config[field]
+
+
+def get_snappy_clib(field=None):
+    """snappy static lib build config"""
+    snappy_dir = 'src/snappy'
+    config = {
+        'sources': prefix(snappy_dir, [
+            'snappy-c.cc',
+            'snappy-sinksource.cc',
+            'snappy-stubs-internal.cc',
+            'snappy.cc',
+        ]),
+        'include_dirs': glob(snappy_dir),
+        'cflags': ['-std=c++11'],
+    }
+    if field is None:
+        return 'snappy', config
     return config[field]
 
 
@@ -602,22 +631,7 @@ def get_zstd_clib(field=None):
     return config[field]
 
 
-def get_snappy_clib(field=None):
-    """snappy static lib build config"""
-    snappy_dir = 'src/snappy'
-    config = {
-        'sources': prefix(snappy_dir, [
-            'snappy-c.cc',
-            'snappy-sinksource.cc',
-            'snappy-stubs-internal.cc',
-            'snappy.cc',
-        ]),
-        'include_dirs': glob(snappy_dir),
-        'cflags': ['-std=c++11'],
-    }
-    if field is None:
-        return 'snappy', config
-    return config[field]
+# compression filter plugins
 
 
 def get_blosc_plugin():
@@ -838,17 +852,6 @@ def get_fcidecomp_plugin():
 
 
 PLUGIN_LIB_DEPENDENCIES['fcidecomp'] = ('charls',)
-
-
-def get_charls_clib():
-    """CharLS static lib build config"""
-    charls_dir = "src/charls/src"
-    charls_sources = glob(charls_dir + '/*.cpp')
-    charls_include_dirs = [charls_dir]
-    return ('charls', {
-        'sources': charls_sources,
-        'include_dirs': charls_include_dirs,
-        'cflags': ['-std=c++11']})
 
 
 # TODO not needed!
