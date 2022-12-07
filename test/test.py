@@ -255,12 +255,8 @@ class TestHDF5PluginRead(unittest.TestCase):
             difference.shape = -1
             rtol = abs(difference[idx] / original.flatten()[idx])
 
-            # TODO: Check why on windows one needs to have much larger tolerance when
-            # working with relative data
-            if sys.platform.startswith("win"):
-                rtol = rtol * 5
-            else:
-                rtol = rtol * 3
+            # TODO: Check why one needs to have such large tolerance
+            rtol = rtol * 5
             self.assertTrue(numpy.allclose(original, output_data, rtol=rtol),
                              "Newly compressed data should match original compression quality")
             self.assertTrue(numpy.allclose(compressed_back, output_data, rtol=1.5 * rtol),
