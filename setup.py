@@ -555,15 +555,18 @@ PLUGIN_LIB_DEPENDENCIES = dict()
 
 # compression libs
 
-def get_charls_clib():
+def get_charls_clib(field=None):
     """CharLS static lib build config"""
     charls_dir = "src/charls/src"
-    charls_sources = glob(charls_dir + '/*.cpp')
-    charls_include_dirs = [charls_dir]
-    return ('charls', {
-        'sources': charls_sources,
-        'include_dirs': charls_include_dirs,
-        'cflags': ['-std=c++11']})
+    config = {
+        'sources': glob(f'{charls_dir}/*.cpp'),
+        'include_dirs': [charls_dir],
+        'cflags': ['-std=c++11'],
+    }
+
+    if field is None:
+        return 'charls', config
+    return config[field]
 
 
 def get_lz4_clib(field=None):
@@ -852,7 +855,7 @@ def get_fcidecomp_plugin():
     for item in fcidecomp_additional_dirs:
         sources += glob(fcidecomp_dir + "/" + item + "/src/*.c")
         depends += glob(fcidecomp_dir + "/" + item + "/include/*.h")
-        include_dirs += [fcidecomp_dir + "/" + item + "/include", "src/charls/src"]
+        include_dirs += [fcidecomp_dir + "/" + item + "/include"]
         # include_dirs += ["src/hdf5"]
     cpp11_kwargs = {
         'extra_link_args': ['-lstdc++'],
@@ -861,7 +864,7 @@ def get_fcidecomp_plugin():
         "hdf5plugin.plugins.libh5fcidecomp",
         sources=sources,
         depends=depends,
-        include_dirs=include_dirs,
+        include_dirs=include_dirs + get_charls_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         # export_symbols=['init_filter'],
@@ -872,13 +875,6 @@ def get_fcidecomp_plugin():
 
 
 PLUGIN_LIB_DEPENDENCIES['fcidecomp'] = ('charls',)
-
-
-# TODO not needed!
-cpp11_kwargs = {
-    'include_dirs': glob('charls_dir/src'),
-    'extra_link_args': ['-lstdc++'],
-}
 
 
 def get_h5zfp_plugin():
