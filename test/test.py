@@ -259,6 +259,8 @@ class TestHDF5PluginRead(unittest.TestCase):
             # working with relative data
             if sys.platform.startswith("win"):
                 rtol = rtol * 5
+            else:
+                rtol = rtol * 2
             self.assertTrue(numpy.allclose(original, output_data, rtol=rtol),
                              "Newly compressed data should match original compression quality")
             self.assertTrue(numpy.allclose(compressed_back, output_data, rtol=1.5 * rtol),
@@ -287,7 +289,6 @@ class TestHDF5PluginRead(unittest.TestCase):
             self.assertTrue(numpy.alltrue(compressed_back==output_data),
                              "Newly L2 norm read back values should be identical to compressed data")
             h5.close()
-
 
 def suite():
     testSuite = unittest.TestSuite()
