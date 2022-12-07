@@ -124,16 +124,16 @@ def register_filter(name):
                 if not os.path.basename(filename).startswith('libh5blosc2'):
                     break  # That's the blosc(1) filename
             else:
-                _logger.error("Cannot initialize filter %s: File not found", name)
+                logger.error("Cannot initialize filter %s: File not found", name)
                 return False
         elif name == 'sz':  # Handle name prefix conflict with sz3
             for filename in filenames:
                 if not os.path.basename(filename).startswith('libh5sz3'):
                     break  # That's the sz filename
             else:
-                _logger.error("Cannot initialize filter %s: File not found", name)
+                logger.error("Cannot initialize filter %s: File not found", name)
                 return False
-        else:        
+        else:
             filename = filenames[0]
     else:
         logger.error(f"Cannot initialize filter {name}: File not found")
