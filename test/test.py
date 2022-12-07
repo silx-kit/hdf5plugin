@@ -282,7 +282,7 @@ class TestHDF5PluginRead(unittest.TestCase):
                              "Values should not be identical")
             self.assertTrue(numpy.alltrue(compressed == output_data),
                              "Compressed data should be identical")
-            self.assertTrue(numpy.alltrue(compressed_back==output_data),
+            self.assertTrue(numpy.allclose(compressed_back, output_data),
                              "Newly L2 norm read back values should be identical to compressed data")
             h5.close()
 
