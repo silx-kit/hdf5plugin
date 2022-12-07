@@ -581,20 +581,27 @@ def get_zlib_clib(field=None):
     return config[field]
 
 
-# zstd
-ZSTD_SOURCES = glob('src/c-blosc/internal-complibs/zstd*/*/*.c')
-if os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True' and (sys.platform.startswith('linux') or sys.platform.startswith('macos')):
-    ZSTD_EXTRA_OBJECTS = glob('src/c-blosc/internal-complibs/zstd*/*/*.S')
-    ZSTD_DEFINE_MACROS = []
-else:
-    ZSTD_EXTRA_OBJECTS = []
-    ZSTD_DEFINE_MACROS = [('ZSTD_DISABLE_ASM', 1)]
-ZSTD_DEPENDS = glob('src/c-blosc/internal-complibs/zstd*/*/*.h')
-ZSTD_INCLUDE_DIRS = glob('src/c-blosc/internal-complibs/zstd*')
-ZSTD_INCLUDE_DIRS += glob('src/c-blosc/internal-complibs/zstd*/common')
+def get_zstd_clib(field=None):
+    """zstd static lib build config"""
+    cflags = ['-O3', '-ffast-math', '-std=gnu99']
+    cflags += ['/Ox', '/fp:fast']
+
+    use_bmi2 = os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True' and sys.platform in ('linux', 'darwin')
+
+    config = {
+        'sources': glob('src/c-blosc/internal-complibs/zstd*/*/*.c'),
+        'include_dirs': glob('src/c-blosc/internal-complibs/zstd*') + glob('src/c-blosc/internal-complibs/zstd*/common'),
+        'macros': [] if use_bmi2 else [('ZSTD_DISABLE_ASM', 1)],
+        'cflags': cflags,
+    }
+
+    if field is None:
+        return 'zstd', config
+    if field == 'extra_objects':
+        return glob('src/c-blosc/internal-complibs/zstd*/*/*.S') if use_bmi2 else []
+    return config[field]
 
 
-# snappy
 def get_snappy_clib(field=None):
     """snappy static lib build config"""
     snappy_dir = 'src/snappy'
@@ -660,10 +667,7 @@ def get_blosc_plugin():
     define_macros.append(('HAVE_ZLIB', 1))
 
     # zstd
-    sources += ZSTD_SOURCES
-    depends += ZSTD_DEPENDS
-    include_dirs += ZSTD_INCLUDE_DIRS
-    define_macros += ZSTD_DEFINE_MACROS
+    include_dirs += get_zstd_clib('include_dirs')
     define_macros.append(('HAVE_ZSTD', 1))
 
     extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
@@ -676,7 +680,7 @@ def get_blosc_plugin():
         "hdf5plugin.plugins.libh5blosc",
         sources=sources + prefix(
             hdf5_blosc_dir, ['blosc_filter.c', 'blosc_plugin.c']),
-        extra_objects=ZSTD_EXTRA_OBJECTS,
+        extra_objects=get_zstd_clib('extra_objects'),
         depends=depends + prefix(
             hdf5_blosc_dir, ['blosc_filter.h', 'blosc_plugin.h']),
         include_dirs=include_dirs + [hdf5_blosc_dir],
@@ -689,26 +693,24 @@ def get_blosc_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib'
+PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib', 'zstd'
 
 
 def get_zstandard_plugin():
     """HDF5Plugin-Zstandard plugin build config"""
-    zstandard_dir = os.path.join("src", "HDF5Plugin-Zstandard")
-    zstandard_sources = [os.path.join(zstandard_dir, 'zstd_h5plugin.c')]
-    zstandard_sources += ZSTD_SOURCES
-    zstandard_depends = [os.path.join(zstandard_dir, 'zstd_h5plugin.h')]
-    zstandard_depends += ZSTD_DEPENDS
+    folder = 'src/HDF5Plugin-Zstandard'
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zstd",
-        sources=zstandard_sources,
-        extra_objects=ZSTD_EXTRA_OBJECTS,
-        depends=zstandard_depends,
-        include_dirs=ZSTD_INCLUDE_DIRS,
-        define_macros=ZSTD_DEFINE_MACROS,
+        sources=[f'{folder}/zstd_h5plugin.c'],
+        extra_objects=get_zstd_clib('extra_objects'),
+        include_dirs=[folder] + get_zstd_clib('include_dirs'),
     )
 
 
+PLUGIN_LIB_DEPENDENCIES['zstd'] = ('zstd',)
+
+
+# TODO use lz4 clib for bitshuffle
 def get_bitshuffle_plugin():
     """bitshuffle (+lz4 or zstd) plugin build config
 
@@ -733,19 +735,22 @@ def get_bitshuffle_plugin():
             "src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
             "src/bitshuffle.c", "src/bitshuffle_core.c",
             "src/iochain.c", "lz4/lz4.c"
-        ]) + ZSTD_SOURCES,
-        extra_objects=ZSTD_EXTRA_OBJECTS,
+        ]),
+        extra_objects=get_zstd_clib('extra_objects'),
         depends=prefix(bithsuffle_dir, [
             "src/bitshuffle.h", "src/bitshuffle_core.h",
             "src/iochain.h", 'src/bshuf_h5filter.h',
             "lz4/lz4.h"
-        ]) + ZSTD_DEPENDS,
-        include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']) + ZSTD_INCLUDE_DIRS,
-        define_macros=define_macros + ZSTD_DEFINE_MACROS,
+        ]),
+        include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']) + get_zstd_clib('include_dirs'),
+        define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         sse2=sse2_options,
     )
+
+
+PLUGIN_LIB_DEPENDENCIES['bshuf'] = ('zstd',)
 
 
 def get_lz4_plugin():
@@ -901,9 +906,7 @@ def get_sz_plugin():
     sz_include_dirs += get_zlib_clib('include_dirs')
 
     # zstd
-    sz_sources += ZSTD_SOURCES
-    sz_include_dirs += ZSTD_INCLUDE_DIRS
-    sz_depends += ZSTD_DEPENDS
+    sz_include_dirs += get_zstd_clib('include_dirs')
 
     h5zsz_dir = os.path.join("src", "SZ", "hdf5-filter", "H5Z-SZ")
     sources = glob(h5zsz_dir + "/src/*.c")
@@ -923,12 +926,11 @@ def get_sz_plugin():
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        define_macros=ZSTD_DEFINE_MACROS,
-        extra_objects=ZSTD_EXTRA_OBJECTS,
+        extra_objects=get_zstd_clib('extra_objects'),
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['sz'] = ('zlib',)
+PLUGIN_LIB_DEPENDENCIES['sz'] = ('zlib', 'zstd')
 
 
 # SZ3 library and its hdf5 filter
@@ -1010,7 +1012,6 @@ if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
     ZSTD_EXTRA_OBJECTS = []
     ZSTD_DEFINE_MACROS = []
     ZSTD_SOURCES = []
-    ZSTD_DEPENDS = []
     ZSTD_INCLUDE_DIRS = [os.path.join(sz3_dir, "tools", "zstd")]
     sz3_zstd_sources = []
     for src in sz3_zstd_cmake_list:
@@ -1018,6 +1019,10 @@ if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
         sz3_zstd_sources.append(os.path.join(sz3_dir, "tools", "zstd", items[1], items[2]))
         ZSTD_INCLUDE_DIRS.append(os.path.join(sz3_dir, "tools", "zstd", items[1]))
 else:
+    ZSTD_EXTRA_OBJECTS = get_zstd_clib('extra_objects')
+    ZSTD_DEFINE_MACROS = get_zstd_clib('macros')
+    ZSTD_SOURCES = get_zstd_clib('sources')
+    ZSTD_INCLUDE_DIRS = get_zstd_clib('include_dirs')
     sz3_zstd_sources = ZSTD_SOURCES
 
 sz3_extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
@@ -1031,7 +1036,7 @@ sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
     sources=[sz3_hdf5_plugin_source] + sz3_sources + ZSTD_SOURCES,
     extra_objects=ZSTD_EXTRA_OBJECTS,
-    depends= ZSTD_DEPENDS + [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
+    depends= [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + ZSTD_INCLUDE_DIRS + [os.path.join(sz3_hdf5_dir, "include")],
     define_macros=ZSTD_DEFINE_MACROS,
     extra_compile_args=sz3_extra_compile_args,
@@ -1052,7 +1057,7 @@ sz3_lib = ("sz3", {
     #cpp11=cpp11_kwargs,
 })
 
-PLUGIN_LIB_DEPENDENCIES['sz3'] = ('sz3',)
+PLUGIN_LIB_DEPENDENCIES['sz3'] = ('sz3', 'zstd')
 
 
 def apply_filter_strip(libraries, extensions, dependencies):
@@ -1086,11 +1091,12 @@ def apply_filter_strip(libraries, extensions, dependencies):
     return libraries, extensions
 
 library_list = [
-    get_lz4_clib(),
-    get_zlib_clib(),
-    get_snappy_clib(),
     get_charls_clib(),
+    get_lz4_clib(),
+    get_snappy_clib(),
     get_zfp_clib(),
+    get_zlib_clib(),
+    get_zstd_clib(),
 ]
 if not HDF5PLUGIN_ZSTD_FROM_BLOSC:
     library_list.append(sz3_lib)
