@@ -1043,13 +1043,13 @@ sz3_plugin = HDF5PluginExtension(
     "hdf5plugin.plugins.libh5sz3",
     sources=[sz3_hdf5_plugin_source] + sz3_sources + ZSTD_SOURCES,
     extra_objects=ZSTD_EXTRA_OBJECTS,
-    depends= [os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
+    depends=[os.path.join(sz3_hdf5_dir, "include", "H5Z_SZ3.hpp")],
     include_dirs=sz3_include_dirs + ZSTD_INCLUDE_DIRS + [os.path.join(sz3_hdf5_dir, "include")],
     define_macros=ZSTD_DEFINE_MACROS,
     extra_compile_args=sz3_extra_compile_args,
     extra_link_args=sz3_extra_link_args,
     cpp11_required=True,
-    )
+)
 
 if sys.platform.startswith('darwin'):
     # this should be taken from the output of HDF5PluginExtension
@@ -1058,10 +1058,10 @@ if sys.platform.startswith('darwin'):
 sz3_lib = ("sz3", {
     "sources": sz3_zstd_sources,
     "include_dirs": ZSTD_INCLUDE_DIRS,
-    #"cflags": ["-lzstd"],
-    #sse2=sse2_kwargs,
-    #avx2=avx2_kwargs,
-    #cpp11=cpp11_kwargs,
+    # "cflags": ["-lzstd"],
+    # sse2=sse2_kwargs,
+    # avx2=avx2_kwargs,
+    # cpp11=cpp11_kwargs,
 })
 
 PLUGIN_LIB_DEPENDENCIES['sz3'] = ('sz3', 'zstd')
@@ -1096,6 +1096,7 @@ def apply_filter_strip(libraries, extensions, dependencies):
         if isinstance(ext, HDF5PluginExtension) and ext.hdf5_plugin_name not in stripped_filters
     ]
     return libraries, extensions
+
 
 library_list = [
     get_charls_clib(),
