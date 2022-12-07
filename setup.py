@@ -595,6 +595,22 @@ def get_snappy_clib(field=None):
     return config[field]
 
 
+def get_zfp_clib():
+    """ZFP static lib build config"""
+    cflags = ['-O3', '-ffast-math', '-std=c99']  # TODO, '-fopenmp']
+    cflags += ['/Ox', '/fp:fast', '/openmp']
+
+    zfp_dir = os.path.join("src", "zfp")
+    zfp_sources = glob(os.path.join(zfp_dir, 'src', '*.c'))
+    zfp_include_dirs = [os.path.join(zfp_dir, 'include')]
+    return ('zfp', {
+        'sources': zfp_sources,
+        'include_dirs': zfp_include_dirs,
+        'macros': [('BIT_STREAM_WORD_TYPE', 'uint8')],
+        'cflags': cflags,
+    })
+
+
 def get_zlib_clib(field=None):
     """ZLib static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
@@ -879,18 +895,6 @@ def get_h5zfp_plugin():
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
     )
-
-
-def get_zfp_clib():
-    """ZFP static lib build config"""
-    zfp_dir = os.path.join("src", "zfp")
-    zfp_sources = glob(os.path.join(zfp_dir, 'src', '*.c'))
-    zfp_include_dirs = [os.path.join(zfp_dir, 'include')]
-    return ('zfp', {
-        'sources': zfp_sources,
-        'include_dirs': zfp_include_dirs,
-        'cflags': ['-DBIT_STREAM_WORD_TYPE=uint8'],
-    })
 
 
 PLUGIN_LIB_DEPENDENCIES['zfp'] = ('zfp',)
