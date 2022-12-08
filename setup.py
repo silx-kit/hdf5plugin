@@ -765,13 +765,12 @@ def get_zstandard_plugin():
 PLUGIN_LIB_DEPENDENCIES['zstd'] = ('zstd',)
 
 
-# TODO use lz4 clib for bitshuffle
 def get_bitshuffle_plugin():
     """bitshuffle (+lz4 or zstd) plugin build config
 
     Plugins from https://github.com/kiyo-masui/bitshuffle
     """
-    bithsuffle_dir = 'src/bitshuffle'
+    bithsuffle_dir = 'src/bitshuffle/src'
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
@@ -784,12 +783,14 @@ def get_bitshuffle_plugin():
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bshuf",
         sources=prefix(bithsuffle_dir, [
-            "src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-            "src/bitshuffle.c", "src/bitshuffle_core.c",
-            "src/iochain.c", "lz4/lz4.c"
+            "bshuf_h5plugin.c",
+            "bshuf_h5filter.c",
+            "bitshuffle.c",
+            "bitshuffle_core.c",
+            "iochain.c",
         ]),
         extra_objects=get_zstd_clib('extra_objects'),
-        include_dirs=prefix(bithsuffle_dir, ['src/', 'lz4/']) + get_zstd_clib('include_dirs'),
+        include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
         define_macros=[("ZSTD_SUPPORT", 1)],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
@@ -797,7 +798,7 @@ def get_bitshuffle_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['bshuf'] = ('zstd',)
+PLUGIN_LIB_DEPENDENCIES['bshuf'] = ('lz4', 'zstd')
 
 
 def get_lz4_plugin():
