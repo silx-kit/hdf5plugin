@@ -299,6 +299,7 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(config.build_config.sse2, bool)
         self.assertIsInstance(config.build_config.avx2, bool)
         self.assertIsInstance(config.build_config.cpp11, bool)
+        self.assertIsInstance(config.build_config.cpp14, bool)
         self.assertIsInstance(config.build_config.embedded_filters, tuple)
         self.assertIsInstance(config.registered_filters, dict)
 
@@ -310,6 +311,7 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(config.sse2, bool)
         self.assertIsInstance(config.avx2, bool)
         self.assertIsInstance(config.cpp11, bool)
+        self.assertIsInstance(config.cpp14, bool)
         self.assertIsInstance(config.embedded_filters, tuple)
 
     def testVersion(self):
