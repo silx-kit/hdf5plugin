@@ -177,7 +177,7 @@ class HostConfig:
     def has_cpp14(self) -> bool:
         """Check C++14 availability on host"""
         if self.__compiler.compiler_type == 'msvc':
-            return True  # TODO check if correct
+            return True
         return check_compile_flags(self.__compiler, '-std=c++14', extension='.cc')
 
     def has_sse2(self) -> bool:
