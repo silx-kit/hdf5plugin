@@ -174,6 +174,12 @@ class HostConfig:
             return sys.version_info[:2] >= (3, 5)
         return check_compile_flags(self.__compiler, '-std=c++11', extension='.cc')
 
+    def has_cpp14(self) -> bool:
+        """Check C++14 availability on host"""
+        if self.__compiler.compiler_type == 'msvc':
+            return True  # TODO check if correct
+        return check_compile_flags(self.__compiler, '-std=c++14', extension='.cc')
+
     def has_sse2(self) -> bool:
         """Check SSE2 availability on host"""
         if self.arch in ('X86_32', 'X86_64'):
@@ -239,6 +245,10 @@ class BuildConfig:
             use_cpp11 = host_config.has_cpp11() if env_cpp11 is None else env_cpp11 == "True"
         self.__use_cpp11 = bool(use_cpp11)
 
+        env_cpp14 = os.environ.get("HDF5PLUGIN_CPP14", None)
+        use_cpp14 = host_config.has_cpp14() if env_cpp14 is None else env_cpp14 == "True"
+        self.__use_cpp14 = bool(use_cpp14)
+
         if use_sse2 is None:
             env_sse2 = os.environ.get("HDF5PLUGIN_SSE2", None)
             use_sse2 = host_config.has_sse2() if env_sse2 is None else env_sse2 == "True"
@@ -277,6 +287,7 @@ class BuildConfig:
     hdf5_dir = property(lambda self: self.__hdf5_dir)
     filter_file_extension = property(lambda self: self.__filter_file_extension)
     use_cpp11 = property(lambda self: self.__use_cpp11)
+    use_cpp14 = property(lambda self: self.__use_cpp14)
     use_sse2 = property(lambda self: self.__use_sse2)
     use_avx2 = property(lambda self: self.__use_avx2)
     use_openmp = property(lambda self: self.__use_openmp)
@@ -296,6 +307,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'sse2': self.use_sse2,
             'avx2': self.use_avx2,
             'cpp11': self.use_cpp11,
+            'cpp14': self.use_cpp14,
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
@@ -375,6 +387,19 @@ class Build(build):
             self.distribution.ext_modules = [
                 ext for ext in self.distribution.ext_modules
                 if not (isinstance(ext, HDF5PluginExtension) and ext.cpp11_required)]
+
+        if not self.hdf5plugin_config.use_cpp14:
+            # Filter out C++14 libraries
+            self.distribution.libraries = [
+                (name, info) for name, info in self.distribution.libraries
+                if '-std=c++14' not in info.get('cflags', [])
+            ]
+
+            # Filter out C++14-only extensions
+            self.distribution.ext_modules = [
+                ext for ext in self.distribution.ext_modules
+                if '-std=c++14' not in ext.extra_compile_args
+            ]
 
         self.hdf5plugin_config.embedded_filters = [
             ext.hdf5_plugin_name for ext in self.distribution.ext_modules
