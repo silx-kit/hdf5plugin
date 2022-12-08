@@ -523,7 +523,7 @@ class SZ3(_FilterRefClass):
 
     def __init__(self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None):
         n_nones = (absolute, relative, norm2, peak_signal_to_noise_ratio).count(None)
-        if  n_nones < 3:
+        if n_nones < 3:
             raise TypeError("hdf5plugin.SZ3() takes at most one not None argument")
         elif n_nones == 4:
             absolute = 0.0001
@@ -562,6 +562,7 @@ class SZ3(_FilterRefClass):
         high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
         low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
         return high, low
+
 
 class Zstd(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.

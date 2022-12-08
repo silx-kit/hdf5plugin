@@ -233,7 +233,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         """Write/read test with SZ3 filter plugin"""
         # TODO: Options mission
         tests = [{'lossless': False, 'absolute': 0.001},
-                 #{'lossless': False, 'relative': 0.0001},
+                 # {'lossless': False, 'relative': 0.0001},
                  ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
