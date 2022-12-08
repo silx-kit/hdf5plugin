@@ -159,11 +159,11 @@ class HostConfig:
 
     def get_shared_lib_extension(self) -> str:
         """Returns shared library file extension"""
-        if sys.platform.startswith('win'):
+        if sys.platform == 'win32':
             return '.dll'
-        elif sys.platform.startswith('linux'):
+        elif sys.platform == 'linux':
             return '.so'
-        elif sys.platform.startswith('darwin'):
+        elif sys.platform == 'darwin':
             return '.dylib'
         else:  # Return same value as used by build_ext.get_ext_filename
             return sysconfig.get_config_var('EXT_SUFFIX')
@@ -198,7 +198,7 @@ class HostConfig:
 
     def has_openmp(self) -> bool:
         """Check OpenMP availability on host"""
-        if sys.platform.startswith('darwin'):
+        if sys.platform == 'darwin':
             return False
         prefix = '/' if self.__compiler.compiler_type == 'msvc' else '-f'
         return check_compile_flags(self.__compiler, prefix + 'openmp')
@@ -502,10 +502,10 @@ class HDF5PluginExtension(Extension):
                 glob(f"{self.include_dirs}/*.hpp")))
 
         self.export_symbols.append('H5PLget_plugin_info')
-        if not sys.platform.startswith('win'):
+        if not sys.platform == 'win32':
             self.export_symbols.append('init_filter')
 
-        if sys.platform.startswith('win'):
+        if sys.platform == 'win32':
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
 
@@ -527,13 +527,13 @@ class HDF5PluginExtension(Extension):
         if hdf5_dir is None:
             hdf5_dir = os.path.join('src', 'hdf5')
             # Add folder containing H5pubconf.h
-            if sys.platform.startswith('win'):
+            if sys.platform == 'win32':
                 folder = 'windows'
             else:
-                folder = 'darwin' if sys.platform.startswith('darwin') else 'linux'
+                folder = 'darwin' if sys.platform == 'darwin' else 'linux'
             self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include', folder))
 
-        if sys.platform.startswith('win'):
+        if sys.platform == 'win32':
             self.library_dirs.insert(0, os.path.join(hdf5_dir, 'lib'))
         self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include'))
 
@@ -805,7 +805,7 @@ def get_lz4_plugin():
 
     Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
     """
-    if sys.platform.startswith('darwin'):
+    if sys.platform == 'darwin':
         extra_compile_args = ['-Wno-error=implicit-function-declaration']
     else:
         extra_compile_args = []
@@ -815,7 +815,7 @@ def get_lz4_plugin():
         sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'],
         include_dirs=get_lz4_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
-        libraries=['Ws2_32'] if sys.platform.startswith('win') else [],
+        libraries=['Ws2_32'] if sys.platform == 'win32' else [],
     )
 
 
@@ -935,7 +935,7 @@ def get_sz3_plugin():
     include_dirs += glob(f"{sz3_dir}/include/SZ3/utils/*/")
     # add version.hpp
     include_dirs.append("src/SZ3_extra")
-    if sys.platform.startswith('darwin'):
+    if sys.platform == 'darwin':
         # provide dummy omp.h
         include_dirs.append("src/SZ3_extra/darwin")
     include_dirs.append(f"{h5z_sz3_dir}/include")
@@ -1021,9 +1021,9 @@ def get_hdf5_dl_clib():
     hdf5_dir = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
     if hdf5_dir is None:
         hdf5_dir = "src/hdf5"
-        if sys.platform.startswith('win'):
+        if sys.platform == 'win32':
             folder = 'windows'
-        elif sys.platform.startswith('darwin'):
+        elif sys.platform == 'darwin':
             folder = 'darwin'
         else:
             folder = 'linux'
@@ -1038,7 +1038,7 @@ def get_hdf5_dl_clib():
     })
 
 
-if extensions and not sys.platform.startswith('win'):
+if extensions and not sys.platform == 'win32':
     libraries.append(get_hdf5_dl_clib())
 
 
