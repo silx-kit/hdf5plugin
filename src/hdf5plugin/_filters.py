@@ -538,8 +538,8 @@ class SZ3(_FilterRefClass):
             sz_mode = 2
         elif peak_signal_to_noise_ratio is not None:
             sz_mode = 3
-        if sz_mode not in [0]:
-            logger.warning("Only absolute mode properly tested")
+        if sz_mode not in [0, 2]:
+            logger.warning("Only absolute and norm2 modes properly tested")
 
         compression_opts = (
             sz_mode,
