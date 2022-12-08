@@ -59,6 +59,9 @@ Available options
    * - ``HDF5PLUGIN_CPP11``
      - Whether or not to compile C++11 code if available.
        Default: True if probed.
+   * - ``HDF5PLUGIN_CPP14``
+     - Whether or not to compile C++14 code if available.
+       Default: True if probed.
 
 Note: Boolean options are passed as ``True`` or ``False``.
 
