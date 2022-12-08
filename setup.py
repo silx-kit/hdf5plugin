@@ -171,7 +171,7 @@ class HostConfig:
     def has_cpp11(self) -> bool:
         """Check C++11 availability on host"""
         if self.__compiler.compiler_type == 'msvc':
-            return sys.version_info[:2] >= (3, 5)
+            return True
         return check_compile_flags(self.__compiler, '-std=c++11', extension='.cc')
 
     def has_cpp14(self) -> bool:
@@ -198,7 +198,7 @@ class HostConfig:
             if not has_cpu_flag('avx2'):
                 return False  # AVX2 not available on host
             if self.__compiler.compiler_type == 'msvc':
-                return sys.version_info[:2] >= (3, 5)
+                return True
             return check_compile_flags(self.__compiler, '-mavx2')
         return False  # Disabled by default
 
