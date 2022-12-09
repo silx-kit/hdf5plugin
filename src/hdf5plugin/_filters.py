@@ -302,8 +302,8 @@ class FciDecomp(h5py.filters.FilterRefBase):
     filter_name = "fcidecomp"
     filter_id = FCIDECOMP_ID
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
         if not build_config.cpp11:
             logger.error(
                 "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
