@@ -268,8 +268,8 @@ class Blosc2(_FilterRefClass):
         'blosclz': 0,
         'lz4': 1,
         'lz4hc': 2,
-        'zlib': 3,
-        'zstd': 4,
+        'zlib': 4,
+        'zstd': 5,
     }
 
     def __init__(self, cname='blosclz', clevel=5, filters=SHUFFLE):

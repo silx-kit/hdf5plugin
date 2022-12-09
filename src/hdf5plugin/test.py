@@ -200,8 +200,10 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         tested_filters = (hdf5plugin.Blosc2.NOFILTER,
                     hdf5plugin.Blosc2.SHUFFLE,
                     hdf5plugin.Blosc2.BITSHUFFLE)
-        compress = 'blosclz', 'lz4', 'lz4hc', 'zlib', 'zstd'
+        compress = 'blosclz', 'lz4', 'lz4hc', 'unused', 'zlib', 'zstd'
         for compression_id, cname in enumerate(compress):
+            if cname == 'unused':
+                continue
             for filters in tested_filters:
                 for clevel in range(10):
                     with self.subTest(compression=cname,

@@ -155,8 +155,9 @@ compression_opts: (0, 0, 0, 0, **compression level**, **filter**, **compression*
   * 0: blosclz (default)
   * 1: lz4
   * 2: lz4hc
-  * 3: zlib
-  * 4: zstd
+  * 3: unused
+  * 4: zlib
+  * 5: zstd
 
 By default the filter uses byte shuffle and blosclz.
 
