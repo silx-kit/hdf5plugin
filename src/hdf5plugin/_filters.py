@@ -576,7 +576,9 @@ class SZ3(_FilterRefClass):
 
     - **Absolute** mode: To use, set the ``absolute`` argument.
       It ensures that the resulting values will be within the provided absolute tolerance.
+
       .. code-block:: python
+
           f.create_dataset(
               'sz3_absolute',
               data=numpy.random.random(100),
