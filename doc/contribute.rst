@@ -177,6 +177,20 @@ The `set_local` function prepends:
 
   (**dim size**, **data type**, **r1 most-significant bytes**, **r1 least-significant bytes**)
 
+sz3
+...
+
+compression_opts:
+
+- **mode**
+- **abs_error high** (big endian float64)
+- **abs_error low**
+- **rel_error high** (big endian float64)
+- **rel_error low**
+- **norm2 high** (big endian float64)
+- **norm2 low**
+- **psnr high** (big endian float64)
+- **psnr low**
 
 zfp
 ...
