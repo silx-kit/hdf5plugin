@@ -62,6 +62,13 @@ Blosc
    :members:
    :undoc-members:
 
+Blosc2
+======
+
+.. autoclass:: Blosc2
+   :members:
+   :undoc-members:
+
 BZip2
 =====
 

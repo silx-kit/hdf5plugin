@@ -1,0 +1,6 @@
+bench/bench
+build*
+.idea
+cmake-build-*
+/doc/doxygen/xml/
+/doc/xml

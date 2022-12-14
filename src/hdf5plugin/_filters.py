@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 BLOSC_ID = 32001
 """Blosc filter ID"""
 
+BLOSC2_ID = 32026
+"""Blosc 2 filter ID"""
+
 BZIP2_ID = 307
 """Bzip2 filter ID"""
 
@@ -212,6 +215,69 @@ class Blosc(_FilterRefClass):
         assert 0 <= clevel <= 9
         assert shuffle in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE)
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
+
+
+class Blosc2(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using blosc2 filter.
+
+    WARNING: This is a pre-release version of the HDF5 filter, only for testing purpose.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'blosc2_byte_shuffle_blosclz',
+            data=numpy.arange(100),
+            **hdf5plugin.Blosc2(cname='blosclz', clevel=9, shuffle=hdf5plugin.Blosc2.SHUFFLE))
+        f.close()
+
+    :param str cname:
+        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
+    :param int clevel:
+        Compression level from 0 (no compression) to 9 (maximum compression).
+        Default: 5.
+    :param int filters: One of:
+        - Blosc2.NOFILTER (0): No pre-compression filter
+        - Blosc2.SHUFFLE (1): Byte-wise shuffle (default)
+        - Blosc2.BITSHUFFLE (2): Bit-wise shuffle
+        - Blosc2.DELTA (3): Stores diff'ed blocks
+        - Blosc3.TRUNC_PREC (4): Zeroes the least significant bits of the mantissa
+    """
+
+    NOFILTER = 0
+    """Flag to disable pre-compression filter"""
+
+    SHUFFLE = 1
+    """Flag to enable byte-wise shuffle pre-compression filter"""
+
+    BITSHUFFLE = 2
+    """Flag to enable bit-wise shuffle pre-compression filter"""
+
+    DELTA = 3
+    """Flag to store blocks inside a chunk diff'ed with respect to first block in the chunk"""
+
+    TRUNC_PREC = 4
+    """Flag to zeroes the least significant bits of the mantissa of float32 and float64 types"""
+
+    filter_id = BLOSC2_ID
+    filter_name = "blosc2"
+
+    __COMPRESSIONS = {
+        'blosclz': 0,
+        'lz4': 1,
+        'lz4hc': 2,
+        'zlib': 4,
+        'zstd': 5,
+    }
+
+    def __init__(self, cname='blosclz', clevel=5, filters=SHUFFLE):
+        compression = self.__COMPRESSIONS[cname]
+        clevel = int(clevel)
+        assert 0 <= clevel <= 9
+        assert filters in (self.NOFILTER, self.SHUFFLE, self.BITSHUFFLE, self.DELTA, self.TRUNC_PREC)
+        self.filter_options = (0, 0, 0, 0, clevel, filters, compression)
 
 
 class BZip2(_FilterRefClass):
@@ -600,7 +666,7 @@ class Zstd(_FilterRefClass):
         self.filter_options = (clevel,)
 
 
-FILTER_CLASSES = Bitshuffle, Blosc, BZip2, FciDecomp, LZ4, SZ, SZ3, Zfp, Zstd
+FILTER_CLASSES = Bitshuffle, Blosc, Blosc2, BZip2, FciDecomp, LZ4, SZ, SZ3, Zfp, Zstd
 
 
 FILTERS = dict((cls.filter_name, cls.filter_id) for cls in FILTER_CLASSES)
