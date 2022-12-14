@@ -776,26 +776,27 @@ PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib', 'zstd'
 
 
 def get_blosc2_plugin():
-    # blosc2 plugin from PyTables and c-blosc2
-    hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src/'
-    blosc2_dir = 'src/c-blosc2/'
+    """blosc2 plugin build config
+
+    Source from PyTables and c-blosc2
+    """
+    hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src'
+    blosc2_dir = 'src/c-blosc2'
 
     # blosc sources
-    sources = [f for f in glob(blosc2_dir + 'blosc/*.c')
+    sources = [f for f in glob(f'{blosc2_dir}/blosc/*.c')
             if 'avx2' not in f and 'sse2' not in f and 'altivec' not in f and 'neon' not in f]
-    # TODO win32/ ?
-    depends = [f for f in glob(blosc2_dir + 'blosc/*.h')]
-    include_dirs = [blosc2_dir, blosc2_dir + 'blosc', blosc2_dir + 'include']
+    include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
     define_macros = []
 
-    # TODO enable sse2/avx2/altivec/neon
+    # TODO enable altivec/neon
     sse2_kwargs = {
-        'sources': [f for f in glob(blosc2_dir + 'blosc/*.c') if 'sse2' in f],
+        'sources': glob(f'{blosc2_dir}/blosc/*-sse2.c'),
         'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
         }
 
     avx2_kwargs = {
-        'sources': [f for f in glob(blosc2_dir + 'blosc/*.c') if 'avx2' in f],
+        'sources': glob(f'{blosc2_dir}/blosc/*-avx2.c'),
         'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)],
         }
 
@@ -805,16 +806,13 @@ def get_blosc2_plugin():
     define_macros.append(('HAVE_LZ4', 1))
 
     # zlib
-    # TODO zlib-ng
     include_dirs += get_zlib_clib('include_dirs')
     define_macros.append(('HAVE_ZLIB', 1))
-    # define_macros.append(('HAVE_ZLIB_NG', 1))
 
     # zstd
     include_dirs += get_zstd_clib('include_dirs')
     define_macros.append(('HAVE_ZSTD', 1))
 
-    # TODO check if appropriate
     extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
@@ -824,7 +822,7 @@ def get_blosc2_plugin():
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc2",
         sources=sources + \
-            prefix(hdf5_blosc2_dir,['blosc2_filter.c', 'blosc2_plugin.c']),
+            prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
         extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc2_dir],
         define_macros=define_macros,
@@ -832,7 +830,6 @@ def get_blosc2_plugin():
         extra_link_args=extra_link_args,
         sse2=sse2_kwargs,
         avx2=avx2_kwargs,
-        # TODO cpp11=cpp11_kwargs,
         )
 
 
