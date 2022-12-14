@@ -789,7 +789,7 @@ def get_blosc2_plugin():
     include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
     define_macros = []
 
-    # TODO enable altivec/neon
+    # TODO enable neon
     sse2_kwargs = {
         'sources': glob(f'{blosc2_dir}/blosc/*-sse2.c'),
         'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
@@ -799,6 +799,11 @@ def get_blosc2_plugin():
         'sources': glob(f'{blosc2_dir}/blosc/*-avx2.c'),
         'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)],
         }
+
+    if platform.machine() == "ppc64le":  # altivec
+        sources += glob(f'{blosc2_dir}/blosc/*-altivec.c')
+        define_macros += [('SHUFFLE_ALTIVEC_ENABLED', 1)]
+
 
     # compression libs
     # lz4
