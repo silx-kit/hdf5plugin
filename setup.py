@@ -294,6 +294,12 @@ class BuildConfig:
     use_native = property(lambda self: self.__use_native)
     compile_args = property(lambda self: self.__compile_args)
 
+    USE_BMI2 = bool(
+            os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True'
+            and sys.platform in ('linux', 'darwin')
+        )
+    """Whether to build with BMI2 instruction set or not (bool)"""
+
     CONFIG_PY_TEMPLATE = """from collections import namedtuple
 
 HDF5PluginBuildConfig = namedtuple('HDF5PluginBuildConfig', {field_names})
@@ -304,6 +310,7 @@ build_config = HDF5PluginBuildConfig(**{config})
         build_config = {
             'openmp': self.use_openmp,
             'native': self.use_native,
+            'bmi2': self.USE_BMI2,
             'sse2': self.use_sse2,
             'avx2': self.use_avx2,
             'cpp11': self.use_cpp11,
@@ -681,21 +688,19 @@ def get_zstd_clib(field=None):
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
-    use_bmi2 = os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True' and sys.platform in ('linux', 'darwin')
-
     zstd_dir = glob('src/c-blosc/internal-complibs/zstd*')[0]
 
     config = dict(
         sources=glob(f'{zstd_dir}/*/*.c'),
         include_dirs=[zstd_dir, f'{zstd_dir}/common'],
-        macros=[] if use_bmi2 else [('ZSTD_DISABLE_ASM', 1)],
+        macros=[] if BuildConfig.USE_BMI2 else [('ZSTD_DISABLE_ASM', 1)],
         cflags=cflags,
     )
 
     if field is None:
         return 'zstd', config
     if field == 'extra_objects':
-        return glob(f'{zstd_dir}/*/*.S') if use_bmi2 else []
+        return glob(f'{zstd_dir}/*/*.S') if BuildConfig.USE_BMI2 else []
     return config[field]
 
 
