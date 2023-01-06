@@ -622,7 +622,7 @@ def get_lz4_clib(field=None):
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
-    lz4_dir = glob('src/c-blosc/internal-complibs/lz4*')[0]
+    lz4_dir = glob('src/c-blosc2/internal-complibs/lz4*')[0]
 
     config = dict(
         sources=glob(f'{lz4_dir}/*.c'),
@@ -697,7 +697,7 @@ def get_zstd_clib(field=None):
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
-    zstd_dir = glob('src/c-blosc/internal-complibs/zstd*')[0]
+    zstd_dir = glob('src/c-blosc2/internal-complibs/zstd*')[0]
 
     config = dict(
         sources=glob(f'{zstd_dir}/*/*.c'),
