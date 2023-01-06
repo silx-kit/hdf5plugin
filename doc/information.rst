@@ -49,18 +49,18 @@ HDF5 filters and compression libraries
 
 HDF5 compression filters and compression libraries sources were obtained from:
 
-* **LZ4 plugin** (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_) and **lz4** (v1.9.3): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/lz4-1.9.3
-* **bitshuffle plugin** (0.5.1) and **zstd** (v1.5.2): https://github.com/kiyo-masui/bitshuffle and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2
+* **LZ4 plugin** (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_) and **lz4** (v1.9.4): https://github.com/nexusformat/HDF5-External-Filter-Plugins and https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/lz4-1.9.4
+* **bitshuffle plugin** (0.5.1) and **zstd** (v1.5.2): https://github.com/kiyo-masui/bitshuffle, https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/lz4-1.9.4 and https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/zstd-1.5.2
 * **bzip2 plugin** (from PyTables v3.7.0) and **bzip2** (v1.0.8): https://github.com/PyTables/PyTables/, https://sourceware.org/git/bzip2.git
 * **hdf5-blosc plugin** (v1.0.0), **c-blosc** (v1.21.2) and **snappy** (v1.1.9): https://github.com/Blosc/hdf5-blosc, https://github.com/Blosc/c-blosc and https://github.com/google/snappy
 * **hdf5-blosc2 plugin** (from PyTables commit `8b8c7bc <https://github.com/PyTables/PyTables/commit/8b8c7bc7b1ff7f0a17bdd8b9f07198ab1bb4666d>`_), **c-blosc2** (`v2.6.1 <https://github.com/Blosc/c-blosc2/releases/tag/v2.6.1>`_): https://github.com/PyTables/PyTables/, https://github.com/Blosc/c-blosc2
 * **FCIDECOMP plugin** (v1.0.2) and **CharLS** (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_):
   ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2 and
   https://github.com/team-charls/charls
-* **SZ plugin** (commit `c25805c12b3 <https://github.com/szcompressor/SZ/commit/c25805c12b339d2cb2f406f95293b9a7313c4fb1>`_), `SZ <https://github.com/szcompressor/SZ>`_, `zlib <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zlib-1.2.11>`_ (v1.2.11) and `zstd <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2>`_ (v1.5.2)
-* **SZ3 plugin** (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_), `SZ3 <https://github.com/szcompressor/SZ3>`_ and `zstd <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2>`_ (v1.5.2)
+* **SZ plugin** (commit `c25805c12b3 <https://github.com/szcompressor/SZ/commit/c25805c12b339d2cb2f406f95293b9a7313c4fb1>`_), `SZ <https://github.com/szcompressor/SZ>`_, `zlib <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zlib-1.2.11>`_ (v1.2.11) and `zstd <https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/zstd-1.5.2>`_ (v1.5.2)
+* **SZ3 plugin** (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_), `SZ3 <https://github.com/szcompressor/SZ3>`_ and `zstd <https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/zstd-1.5.2>`_ (v1.5.2)
 * **HDF5-ZFP plugin** (commit `cd5422c <https://github.com/LLNL/H5Z-ZFP/tree/cd5422c146836e17c7a0380bfb05cf52d0c4467c>`_) and **zfp** (v1.0.0): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
-* **HDF5Plugin-Zstandard** (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) and **zstd** (v1.5.2): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zstd-1.5.2
+* **HDF5Plugin-Zstandard** (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) and **zstd** (v1.5.2): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/zstd-1.5.2
 
 License
 -------
