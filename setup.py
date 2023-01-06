@@ -880,10 +880,6 @@ def get_bitshuffle_plugin():
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
     extra_link_args = ['-fopenmp', '/openmp']
-    if platform.machine() == "ppc64le":
-        sse2_options = {'extra_compile_args': ['-DUSESSE2']}
-    else:
-        sse2_options = {}
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bshuf",
@@ -899,7 +895,6 @@ def get_bitshuffle_plugin():
         define_macros=[("ZSTD_SUPPORT", 1)],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        sse2=sse2_options,
     )
 
 
