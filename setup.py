@@ -40,12 +40,15 @@ from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
 from setuptools.command.build_py import build_py
 from setuptools.command.build_clib import build_clib
-try:  # setuptools >=62.4.0
+try:  # setuptools >= 62.4.0
     from setuptools.command.build import build
 except ImportError:
     from distutils.command.build import build
+try:  # setuptools >= 59.0.0
+    from setuptools.errors import CompileError
+except ImportError:
+    from distutils.errors import CompileError
 import distutils.ccompiler
-import distutils.errors
 import distutils.sysconfig
 
 logging.basicConfig(level=logging.INFO)
@@ -111,7 +114,7 @@ def check_compile_flags(compiler, *flags, extension='.c'):
 
         try:
             compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=list(flags))
-        except distutils.errors.CompileError:
+        except CompileError:
             return False
         else:
             return True
