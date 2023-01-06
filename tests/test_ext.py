@@ -34,7 +34,7 @@ class TestProfile(unittest.TestCase):
         if TIME:
             n *= TIME
         # Almost random bits, but now quite. All bits exercised (to fully test
-        # transpose) but still slightly compresible.
+        # transpose) but still slightly compressible.
         self.data = random.randint(0, 200, n).astype(np.uint8)
         self.fun = ext.copy
         self.check = None
@@ -57,6 +57,8 @@ class TestProfile(unittest.TestCase):
             if len(err.args) > 1 and (err.args[1] == -11) and not ext.using_SSE2():
                 return
             if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
+                return
+            if len(err.args) > 1 and (err.args[1] == -14) and not ext.using_AVX512():
                 return
             else:
                 raise
@@ -171,6 +173,18 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_bit_byte_AVX
         self.check = trans_bit_byte
 
+    def test_03h_trans_bit_byte_AVX512(self):
+        self.case = "bit T byte AVX512 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_byte_AVX512
+        self.check = trans_bit_byte
+
+    def test_03g_trans_bit_byte_AVX512_32(self):
+        self.case = "bit T byte AVX512 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.trans_bit_byte_AVX512
+        self.check = trans_bit_byte
+
     def test_04a_trans_bit_elem_AVX(self):
         self.case = "bit T elem AVX 64"
         self.data = self.data.view(np.float64)
@@ -211,6 +225,30 @@ class TestProfile(unittest.TestCase):
         self.case = "bit T elem SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_elem_SSE
+        self.check = trans_bit_elem
+
+    def test_04h_trans_bit_elem_AVX512(self):
+        self.case = "bit T elem AVX512 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_elem_AVX512
+        self.check = trans_bit_elem
+
+    def test_04i_trans_bit_elem_AVX512(self):
+        self.case = "bit T elem AVX 128"
+        self.data = self.data.view(np.complex128)
+        self.fun = ext.trans_bit_elem_AVX512
+        self.check = trans_bit_elem
+
+    def test_04j_trans_bit_elem_AVX512_32(self):
+        self.case = "bit T elem AVX512 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.trans_bit_elem_AVX512
+        self.check = trans_bit_elem
+
+    def test_04k_trans_bit_elem_AVX512_16(self):
+        self.case = "bit T elem AVX512 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.trans_bit_elem_AVX512
         self.check = trans_bit_elem
 
     def test_06a_untrans_bit_elem_16(self):
@@ -260,6 +298,20 @@ class TestProfile(unittest.TestCase):
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_scal
+        self.check_data = pre_trans
+
+    def test_06h_untrans_bit_elem_32(self):
+        self.case = "bit U elem AVX512 32"
+        pre_trans = self.data.view(np.float32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX512
+        self.check_data = pre_trans
+
+    def test_06i_untrans_bit_elem_64(self):
+        self.case = "bit U elem AVX512 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX512
         self.check_data = pre_trans
 
     def test_07a_trans_byte_bitrow_64(self):
@@ -314,6 +366,30 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.shuffle_bit_eightelem_AVX
         self.check = ext.shuffle_bit_eightelem_scal
 
+    def test_08g_shuffle_bit_eight_AVX512_32(self):
+        self.case = "bit S eight AVX 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08h_shuffle_bit_eight_AVX512_64(self):
+        self.case = "bit S eight AVX512 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08i_shuffle_bit_eight_AVX512_16(self):
+        self.case = "bit S eight AVX512 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08i_shuffle_bit_eight_AVX512_128(self):
+        self.case = "bit S eight AVX512 128"
+        self.data = self.data.view(np.complex128)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
     def test_09a_trans_bit_elem_scal_64(self):
         self.case = "bit T elem scal 64"
         self.data = self.data.view(np.float64)
@@ -351,6 +427,13 @@ class TestProfile(unittest.TestCase):
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_AVX
+        self.check_data = pre_trans
+
+    def test_09g_untrans_bit_elem_AVX_64(self):
+        self.case = "bit U elem AVX512 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX512
         self.check_data = pre_trans
 
     def test_10a_bitshuffle_64(self):
@@ -481,7 +564,15 @@ class TestOddLengths(unittest.TestCase):
         self.fun = ext.trans_bit_elem_AVX
         self.check = trans_bit_elem
 
+    def test_trans_bit_elem_AVX512(self):
+        self.fun = ext.trans_bit_elem_AVX512
+        self.check = trans_bit_elem
+
     def test_untrans_bit_elem_AVX(self):
+        self.fun = lambda x: ext.untrans_bit_elem_SSE(ext.trans_bit_elem(x))
+        self.check = lambda x: x
+
+    def test_untrans_bit_elem_AVX512(self):
         self.fun = lambda x: ext.untrans_bit_elem_SSE(ext.trans_bit_elem(x))
         self.check = lambda x: x
 
@@ -515,12 +606,14 @@ class TestOddLengths(unittest.TestCase):
                 return
             if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
                 return
+            if len(err.args) > 1 and (err.args[1] == -14) and not ext.using_AVX512():
+                return
             else:
                 raise
 
 
 class TestBitShuffleCircle(unittest.TestCase):
-    """Ensure that final filter is circularly consistant for any data type and
+    """Ensure that final filter is circularly consistent for any data type and
     any length buffer."""
 
     def test_circle(self):
