@@ -336,6 +336,9 @@ class BuildConfig:
         )
     """Whether to build with BMI2 instruction set or not (bool)"""
 
+    IPP_DIR = os.environ.get("HDF5PLUGIN_IPP_DIR", None)
+    """Root directory of Intel IPP or None to disable"""
+
     CONFIG_PY_TEMPLATE = """from collections import namedtuple
 
 HDF5PluginBuildConfig = namedtuple('HDF5PluginBuildConfig', {field_names})
@@ -352,6 +355,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
             'cpp14': self.use_cpp14,
+            'ipp': self.IPP_DIR is not None,
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
@@ -635,8 +639,42 @@ def get_charls_clib(field=None):
     return config[field]
 
 
+def _get_lz4_ipp_clib(field=None):
+    """LZ4 static lib using Intel IPP build config"""
+    assert BuildConfig.IPP_DIR is not None
+
+    cflags = ['-O3', '-ffast-math', '-std=gnu99']
+    cflags += ['/Ox', '/fp:fast']
+
+    lz4_dir = 'src/lz4_ipp'
+
+    config = dict(
+        sources=glob(f'{lz4_dir}/*.c'),
+        include_dirs=[lz4_dir, f'{BuildConfig.IPP_DIR}/include'],
+        macros=[('WITH_IPP', 1)],
+        cflags=cflags,
+    )
+
+    if field is None:
+        return 'lz4', config
+    if field == 'extra_link_args':
+        arch = 'intel64'  # TODO ia32/intel64
+        return [f'-L{BuildConfig.IPP_DIR}/lib/{arch}', '-lippcore', '-lippdc', '-lipps']  # TODO MSVC
+    if field == 'extra_objects':
+        arch = 'intel64'  # TODO ia32/intel64
+        return [] # TODO not working prefix(f'{BuildConfig.IPP_DIR}/lib/{arch}', ('libippcore.a', 'libippdc.a', 'libipps.a'))  # TODO MSVC
+
+    return config[field]
+
+
 def get_lz4_clib(field=None):
-    """LZ4 static lib build config"""
+    """LZ4 static lib build config
+
+    If HDFPLUGIN_IPP_DIR is set, it will use a patched LZ4 library to use Intel IPP.
+    """
+    if BuildConfig.IPP_DIR is not None:
+        return _get_lz4_ipp_clib(field)
+
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
@@ -650,6 +688,10 @@ def get_lz4_clib(field=None):
 
     if field is None:
         return 'lz4', config
+    if field == 'extra_link_args':
+        return []
+    if field == 'extra_objects':
+        return []
     return config[field]
 
 
@@ -750,10 +792,12 @@ def get_blosc_plugin():
         ('SHUFFLE_SSE2_ENABLED', 1),
         ('SHUFFLE_AVX2_ENABLED', 1),
     ]
+    extra_link_args = []
 
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
+    extra_link_args += get_lz4_clib('extra_link_args')
     define_macros.append(('HAVE_LZ4', 1))
 
     # snappy
@@ -775,13 +819,13 @@ def get_blosc_plugin():
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
-    extra_link_args = ['-pthread']
+    extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc",
         sources=sources + prefix(
             hdf5_blosc_dir, ['blosc_filter.c', 'blosc_plugin.c']),
-        extra_objects=get_zstd_clib('extra_objects'),
+        extra_objects=get_zstd_clib('extra_objects') + get_lz4_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -810,11 +854,14 @@ def get_blosc2_plugin():
         ('SHUFFLE_NEON_ENABLED', 1),
         ('SHUFFLE_ALTIVEC_ENABLED', 1),
     ]
+    extra_link_args = []
 
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
-    define_macros.append(('HAVE_LZ4', 1))
+    extra_link_args += get_lz4_clib('extra_link_args')
+    if BuildConfig.IPP_DIR is not None:
+        define_macros.append(('HAVE_IPP', 1))
 
     # zlib
     include_dirs += get_zlib_clib('include_dirs')
@@ -828,13 +875,13 @@ def get_blosc2_plugin():
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
-    extra_link_args = ['-pthread']
+    extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc2",
         sources=sources + \
             prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
-        extra_objects=get_zstd_clib('extra_objects'),
+        extra_objects=get_zstd_clib('extra_objects') + get_lz4_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc2_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -880,11 +927,11 @@ def get_bitshuffle_plugin():
             "bitshuffle_core.c",
             "iochain.c",
         ]),
-        extra_objects=get_zstd_clib('extra_objects'),
+        extra_objects=get_zstd_clib('extra_objects') + get_lz4_clib('extra_objects'),
         include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
         define_macros=[("ZSTD_SUPPORT", 1)],
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
+        extra_link_args=extra_link_args + get_lz4_clib('extra_link_args'),
     )
 
 
@@ -906,6 +953,8 @@ def get_lz4_plugin():
         sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'],
         include_dirs=get_lz4_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
+        extra_link_args=get_lz4_clib('extra_link_args'),
+        extra_objects=get_lz4_clib('extra_objects'),
         libraries=['Ws2_32'] if sys.platform == 'win32' else [],
     )
 
