@@ -35,6 +35,7 @@ jobs:
             python-version: 3.8
             BUILD_COMMAND: sdist
             H5PY_OLDER_VERSION: 2.10.0
+            NUMPY_OLDER_VERSION: 1.23.5
 
           - name-suffix: "sdist-h5py_3.6.0"
             os: ubuntu-latest
