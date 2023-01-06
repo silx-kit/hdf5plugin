@@ -166,6 +166,11 @@ class HostConfig:
         else:
             self.avx2_compile_args = ()
 
+        if self.arch in ('X86_32', 'X86_64'):
+            self.avx512_compile_args = ('-mavx512f', '-mavx512bw', '/arch:AVX512')
+        else:
+            self.avx512_compile_args = ()
+
     def get_shared_lib_extension(self) -> str:
         """Returns shared library file extension"""
         if sys.platform == 'win32':
@@ -194,9 +199,9 @@ class HostConfig:
         if self.arch in ('X86_32', 'X86_64'):
             if not has_cpu_flag('sse2'):
                 return False  # SSE2 not available on host
-            return self.__compiler.compiler_type == "msvc" or check_compile_flags(
-                self.__compiler, "-msse2"
-            )
+            if self.__compiler.compiler_type == "msvc":
+                return True
+            return check_compile_flags(self.__compiler, "-msse2")
         if self.machine == 'ppc64le':
             return True
         return False  # Disabled by default
@@ -209,6 +214,16 @@ class HostConfig:
             if self.__compiler.compiler_type == 'msvc':
                 return True
             return check_compile_flags(self.__compiler, '-mavx2')
+        return False  # Disabled by default
+
+    def has_avx512(self) -> bool:
+        """Check AVX512 "F" and "BW" instruction sets availability on host"""
+        if self.arch in ('X86_32', 'X86_64'):
+            if not (has_cpu_flag('avx512f') and has_cpu_flag('avx512bw')):
+                return False  # AVX512 F and/or BW not available on host
+            if self.__compiler.compiler_type == 'msvc':
+                return True
+            return check_compile_flags(self.__compiler, '-mavx512f', '-mavx512bw')
         return False  # Disabled by default
 
     def has_openmp(self) -> bool:
@@ -261,6 +276,8 @@ class BuildConfig:
         if use_sse2 is None:
             env_sse2 = os.environ.get("HDF5PLUGIN_SSE2", None)
             use_sse2 = host_config.has_sse2() if env_sse2 is None else env_sse2 == "True"
+        self.__use_sse2 = bool(use_sse2)
+
         if use_avx2 is None:
             env_avx2 = os.environ.get("HDF5PLUGIN_AVX2", None)
             use_avx2 = host_config.has_avx2() if env_avx2 is None else env_avx2 == "True"
@@ -268,8 +285,15 @@ class BuildConfig:
             logger.error(
                 "use_avx2=True disabled: incompatible with use_sse2=False")
             use_avx2 = False
-        self.__use_sse2 = bool(use_sse2)
         self.__use_avx2 = bool(use_avx2)
+
+        env_avx512 = os.environ.get("HDF5PLUGIN_AVX512", None)
+        use_avx512 = host_config.has_avx512() if env_avx512 is None else env_avx512 == "True"
+        if use_avx512 and not (use_sse2 and use_avx2):
+            logger.error(
+                "use_avx512=True disabled: incompatible with use_sse2=False or use_avx2=False")
+            use_avx512 = False
+        self.__use_avx512 = bool(use_avx512)
 
         if use_openmp is None:
             env_openmp = os.environ.get("HDF5PLUGIN_OPENMP", None)
@@ -287,6 +311,8 @@ class BuildConfig:
             compile_args.extend(host_config.sse2_compile_args)
         if self.__use_avx2:
             compile_args.extend(host_config.avx2_compile_args)
+        if self.__use_avx512:
+            compile_args.extend(host_config.avx512_compile_args)
         if self.__use_native:
             compile_args.extend(host_config.native_compile_args)
         self.__compile_args = tuple(compile_args)
@@ -299,6 +325,7 @@ class BuildConfig:
     use_cpp14 = property(lambda self: self.__use_cpp14)
     use_sse2 = property(lambda self: self.__use_sse2)
     use_avx2 = property(lambda self: self.__use_avx2)
+    use_avx512 = property(lambda self: self.__use_avx512)
     use_openmp = property(lambda self: self.__use_openmp)
     use_native = property(lambda self: self.__use_native)
     compile_args = property(lambda self: self.__compile_args)
@@ -322,6 +349,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'bmi2': self.USE_BMI2,
             'sse2': self.use_sse2,
             'avx2': self.use_avx2,
+            'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
             'cpp14': self.use_cpp14,
             'filter_file_extension': self.filter_file_extension,
