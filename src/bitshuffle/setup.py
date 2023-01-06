@@ -18,8 +18,8 @@ import platform
 
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 4
-VERSION_POINT = 2
+VERSION_MINOR = 5
+VERSION_POINT = 1
 # Define ZSTD macro for cython compilation
 default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 
@@ -45,13 +45,20 @@ MACROS = [
 
 
 H5PLUGINS_DEFAULT = "/usr/local/hdf5/lib/plugin"
-MARCH_DEFAULT = "native"
 
-# OSX's clang compliler does not support OpenMP.
+# OSX's clang compiler does not support OpenMP.
 if sys.platform == "darwin":
     OMP_DEFAULT = False
 else:
     OMP_DEFAULT = True
+
+# Build against the native architecture unless overridden by an environment variable
+# This can also be overridden by a direct command line argument, or a `setup.cfg` entry
+# This option is needed for the cibuildwheel action
+if "BITSHUFFLE_ARCH" in os.environ:
+    MARCH_DEFAULT = os.environ["BITSHUFFLE_ARCH"]
+else:
+    MARCH_DEFAULT = "native"
 
 FALLBACK_CONFIG = {
     "include_dirs": [],
@@ -201,9 +208,32 @@ lzf_plugin = Extension(
 )
 
 
-EXTENSIONS = [ext_bshuf, h5filter]
+EXTENSIONS = [
+    ext_bshuf,
+]
+
+# Check for HDF5 support
+HDF5_FILTER_SUPPORT = False
+CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
+for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
+    if os.path.exists(os.path.join(p, "hdf5.h")):
+        HDF5_FILTER_SUPPORT = True
+
+if HDF5_FILTER_SUPPORT:
+    EXTENSIONS.append(h5filter)
+
+# Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
+HDF5_PLUGIN_SUPPORT = False
+CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
+for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
+    if os.path.exists(os.path.join(p, "H5PLextern.h")):
+        HDF5_PLUGIN_SUPPORT = True
+
+if HDF5_PLUGIN_SUPPORT:
+    EXTENSIONS.extend([filter_plugin, lzf_plugin])
 
 # For enabling ZSTD support when building wheels
+# This needs to be done after all Extensions have been added to EXTENSIONS
 if "ENABLE_ZSTD" in os.environ:
     default_options["compile_time_env"] = {"ZSTD_SUPPORT": True}
     for ext in EXTENSIONS:
@@ -216,16 +246,6 @@ if "ENABLE_ZSTD" in os.environ:
             ext.include_dirs += zstd_lib
             ext.depends += zstd_headers
             ext.define_macros += [("ZSTD_SUPPORT", 1)]
-
-# Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
-HDF5_PLUGIN_SUPPORT = False
-CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
-for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
-    if os.path.exists(os.path.join(p, "H5PLextern.h")):
-        HDF5_PLUGIN_SUPPORT = True
-
-if HDF5_PLUGIN_SUPPORT:
-    EXTENSIONS.extend([filter_plugin, lzf_plugin])
 
 
 class develop(develop_):
@@ -344,10 +364,25 @@ class build_ext(build_ext_):
     def build_extensions(self):
         c = self.compiler.compiler_type
 
+        # Set compiler flags including architecture
+        if self.compiler.compiler_type == "msvc":
+            openmpflag = "/openmp"
+            compileflags = COMPILE_FLAGS_MSVC
+        else:
+            openmpflag = "-fopenmp"
+            archi = platform.machine()
+            if archi in ("i386", "x86_64"):
+                compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
+            else:
+                compileflags = COMPILE_FLAGS + ["-mcpu=%s" % self.march]
+                if archi == "ppc64le":
+                    compileflags = COMPILE_FLAGS + ["-DNO_WARN_X86_INTRINSICS"]
+
         if self.omp not in ("0", "1", True, False):
             raise ValueError("Invalid omp argument. Mut be '0' or '1'.")
         self.omp = int(self.omp)
 
+        # Add the appropriate OpenMP flags if needed
         if self.omp:
             if not hasattr(self, "_printed_omp_message"):
                 self._printed_omp_message = True
@@ -356,26 +391,15 @@ class build_ext(build_ext_):
                 print("#################################\n")
             # More portable to pass -fopenmp to linker.
             # self.libraries += ['gomp']
-            if self.compiler.compiler_type == "msvc":
-                openmpflag = "/openmp"
-                compileflags = COMPILE_FLAGS_MSVC
-            else:
-                openmpflag = "-fopenmp"
-                archi = platform.machine()
-                if archi in ("i386", "x86_64"):
-                    compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
-                else:
-                    compileflags = COMPILE_FLAGS + ["-mcpu=%s" % self.march]
-                    if archi == "ppc64le":
-                        compileflags = COMPILE_FLAGS + ["-DNO_WARN_X86_INTRINSICS"]
-            for e in self.extensions:
-                e.extra_compile_args = list(
-                    set(e.extra_compile_args).union(compileflags)
-                )
-                if openmpflag not in e.extra_compile_args:
-                    e.extra_compile_args += [openmpflag]
-                if openmpflag not in e.extra_link_args:
-                    e.extra_link_args += [openmpflag]
+            compileflags += [openmpflag]
+            linkflags = [openmpflag]
+        else:
+            linkflags = []
+
+        # Add the compile/link options to each extension
+        for e in self.extensions:
+            e.extra_compile_args = list(set(e.extra_compile_args).union(compileflags))
+            e.extra_link_args = list(set(e.extra_link_args).union(linkflags))
 
         build_ext_.build_extensions(self)
 
