@@ -134,39 +134,36 @@ class HostConfig:
     For differences in native build option across architectures, see
     https://gcc.gnu.org/onlinedocs/gcc/Submodel-Options.html#Submodel-Options
     """
+
+    ARCH = cpuinfo_parse_arch(platform.machine().lower())[0] if cpuinfo_parse_arch is not None else None
+    """Machine architecture description from cpuinfo parser"""
+
     def __init__(self, compiler=None):
         compiler = distutils.ccompiler.new_compiler(compiler, force=True)
         distutils.sysconfig.customize_compiler(compiler)
         self.__compiler = compiler
 
-        # Get machine architecture description
-        self.machine = platform.machine().lower()
-        if cpuinfo_parse_arch is not None:
-            self.arch = cpuinfo_parse_arch(self.machine)[0]
-        else:
-            self.arch = None
-
         # Set architecture specific compile args
-        if self.arch in ('X86_32', 'X86_64', 'MIPS_64'):
+        if self.ARCH in ('X86_32', 'X86_64', 'MIPS_64'):
             self.native_compile_args = ("-march=native",)
-        elif self.arch in ('ARM_7', 'ARM_8', 'PPC_64'):
+        elif self.ARCH in ('ARM_7', 'ARM_8', 'PPC_64'):
             self.native_compile_args = ("-mcpu=native",)
         else:
             self.native_compile_args = ()
 
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.sse2_compile_args = ('-msse2',)  # /arch:SSE2 is on by default
-        elif self.machine == 'ppc64le':
+        elif platform.machine() == 'ppc64le':
             self.sse2_compile_args = ('-DNO_WARN_X86_INTRINSICS',)  # P9 way to enable SSE2
         else:
             self.sse2_compile_args = ()
 
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.avx2_compile_args = ('-mavx2', '/arch:AVX2')
         else:
             self.avx2_compile_args = ()
 
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.avx512_compile_args = ('-mavx512f', '-mavx512bw', '/arch:AVX512')
         else:
             self.avx512_compile_args = ()
@@ -196,19 +193,19 @@ class HostConfig:
 
     def has_sse2(self) -> bool:
         """Check SSE2 availability on host"""
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             if not has_cpu_flag('sse2'):
                 return False  # SSE2 not available on host
             if self.__compiler.compiler_type == "msvc":
                 return True
             return check_compile_flags(self.__compiler, "-msse2")
-        if self.machine == 'ppc64le':
+        if platform.machine() == 'ppc64le':
             return True
         return False  # Disabled by default
 
     def has_avx2(self) -> bool:
         """Check AVX2 availability on host"""
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             if not has_cpu_flag('avx2'):
                 return False  # AVX2 not available on host
             if self.__compiler.compiler_type == 'msvc':
@@ -218,7 +215,7 @@ class HostConfig:
 
     def has_avx512(self) -> bool:
         """Check AVX512 "F" and "BW" instruction sets availability on host"""
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             if not (has_cpu_flag('avx512f') and has_cpu_flag('avx512bw')):
                 return False  # AVX512 F and/or BW not available on host
             if self.__compiler.compiler_type == 'msvc':
@@ -658,7 +655,7 @@ def _get_lz4_ipp_clib(field=None):
     if field is None:
         return 'lz4', config
     if field == 'extra_link_args':
-        arch = 'intel64'  # TODO ia32/intel64
+        arch = 'ia32' if HostConfig.ARCH == 'X86_32' else 'intel64'
         return [f'-L{BuildConfig.INTEL_IPP_DIR}/lib/{arch}', '-lippdc', '-lipps', '-lippvm', '-lippcore']  # TODO MSVC
     return config[field]
 
