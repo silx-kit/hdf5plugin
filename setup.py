@@ -659,11 +659,7 @@ def _get_lz4_ipp_clib(field=None):
         return 'lz4', config
     if field == 'extra_link_args':
         arch = 'intel64'  # TODO ia32/intel64
-        return [f'-L{BuildConfig.INTEL_IPP_DIR}/lib/{arch}', '-lippcore', '-lippdc', '-lipps']  # TODO MSVC
-    if field == 'extra_objects':
-        arch = 'intel64'  # TODO ia32/intel64
-        return [] # TODO not working prefix(f'{BuildConfig.IPP_DIR}/lib/{arch}', ('libippcore.a', 'libippdc.a', 'libipps.a'))  # TODO MSVC
-
+        return [f'-L{BuildConfig.INTEL_IPP_DIR}/lib/{arch}', '-lippdc', '-lipps', '-lippvm', '-lippcore']  # TODO MSVC
     return config[field]
 
 
@@ -689,8 +685,6 @@ def get_lz4_clib(field=None):
     if field is None:
         return 'lz4', config
     if field == 'extra_link_args':
-        return []
-    if field == 'extra_objects':
         return []
     return config[field]
 
@@ -825,7 +819,7 @@ def get_blosc_plugin():
         "hdf5plugin.plugins.libh5blosc",
         sources=sources + prefix(
             hdf5_blosc_dir, ['blosc_filter.c', 'blosc_plugin.c']),
-        extra_objects=get_zstd_clib('extra_objects') + get_lz4_clib('extra_objects'),
+        extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -881,7 +875,7 @@ def get_blosc2_plugin():
         "hdf5plugin.plugins.libh5blosc2",
         sources=sources + \
             prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
-        extra_objects=get_zstd_clib('extra_objects') + get_lz4_clib('extra_objects'),
+        extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc2_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -927,7 +921,7 @@ def get_bitshuffle_plugin():
             "bitshuffle_core.c",
             "iochain.c",
         ]),
-        extra_objects=get_zstd_clib('extra_objects') + get_lz4_clib('extra_objects'),
+        extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
         define_macros=[("ZSTD_SUPPORT", 1)],
         extra_compile_args=extra_compile_args,
@@ -954,7 +948,6 @@ def get_lz4_plugin():
         include_dirs=get_lz4_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
         extra_link_args=get_lz4_clib('extra_link_args'),
-        extra_objects=get_lz4_clib('extra_objects'),
         libraries=['Ws2_32'] if sys.platform == 'win32' else [],
     )
 
