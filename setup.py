@@ -336,7 +336,7 @@ class BuildConfig:
         )
     """Whether to build with BMI2 instruction set or not (bool)"""
 
-    IPP_DIR = os.environ.get("HDF5PLUGIN_IPP_DIR", None)
+    INTEL_IPP_DIR = os.environ.get("HDF5PLUGIN_INTEL_IPP_DIR", None)
     """Root directory of Intel IPP or None to disable"""
 
     CONFIG_PY_TEMPLATE = """from collections import namedtuple
@@ -355,7 +355,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
             'cpp14': self.use_cpp14,
-            'ipp': self.IPP_DIR is not None,
+            'ipp': self.INTEL_IPP_DIR is not None,
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
@@ -641,7 +641,7 @@ def get_charls_clib(field=None):
 
 def _get_lz4_ipp_clib(field=None):
     """LZ4 static lib using Intel IPP build config"""
-    assert BuildConfig.IPP_DIR is not None
+    assert BuildConfig.INTEL_IPP_DIR is not None
 
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
@@ -650,7 +650,7 @@ def _get_lz4_ipp_clib(field=None):
 
     config = dict(
         sources=glob(f'{lz4_dir}/*.c'),
-        include_dirs=[lz4_dir, f'{BuildConfig.IPP_DIR}/include'],
+        include_dirs=[lz4_dir, f'{BuildConfig.INTEL_IPP_DIR}/include'],
         macros=[('WITH_IPP', 1)],
         cflags=cflags,
     )
@@ -659,7 +659,7 @@ def _get_lz4_ipp_clib(field=None):
         return 'lz4', config
     if field == 'extra_link_args':
         arch = 'intel64'  # TODO ia32/intel64
-        return [f'-L{BuildConfig.IPP_DIR}/lib/{arch}', '-lippcore', '-lippdc', '-lipps']  # TODO MSVC
+        return [f'-L{BuildConfig.INTEL_IPP_DIR}/lib/{arch}', '-lippcore', '-lippdc', '-lipps']  # TODO MSVC
     if field == 'extra_objects':
         arch = 'intel64'  # TODO ia32/intel64
         return [] # TODO not working prefix(f'{BuildConfig.IPP_DIR}/lib/{arch}', ('libippcore.a', 'libippdc.a', 'libipps.a'))  # TODO MSVC
@@ -672,7 +672,7 @@ def get_lz4_clib(field=None):
 
     If HDFPLUGIN_IPP_DIR is set, it will use a patched LZ4 library to use Intel IPP.
     """
-    if BuildConfig.IPP_DIR is not None:
+    if BuildConfig.INTEL_IPP_DIR is not None:
         return _get_lz4_ipp_clib(field)
 
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
@@ -860,7 +860,7 @@ def get_blosc2_plugin():
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
     extra_link_args += get_lz4_clib('extra_link_args')
-    if BuildConfig.IPP_DIR is not None:
+    if BuildConfig.INTEL_IPP_DIR is not None:
         define_macros.append(('HAVE_IPP', 1))
 
     # zlib
