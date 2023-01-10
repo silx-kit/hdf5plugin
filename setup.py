@@ -639,15 +639,16 @@ def get_charls_clib(field=None):
 # Define compilation arguments for Intel IPP
 INTEL_IPP_INCLUDE_DIRS = []  # Intel IPP include directories
 INTEL_IPP_EXTRA_LINK_ARGS = []  # Intel IPP extra link arguments
+INTEL_IPP_LIBRARIES = []  # Intel IPP libraries to link
 if BuildConfig.INTEL_IPP_DIR is not None:
     INTEL_IPP_INCLUDE_DIRS.append(f'{BuildConfig.INTEL_IPP_DIR}/include')
     arch = 'ia32' if HostConfig.ARCH == 'X86_32' else 'intel64'
     ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib/{arch}'
     if not os.path.isdir(ipp_lib_dir):  # Happens on macos as only intel64 is available
         ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib'
-    INTEL_IPP_EXTRA_LINK_ARGS.extend(
-        [f'-L{ipp_lib_dir}', '-lippdc', '-lipps', '-lippvm', '-lippcore'] # TODO MSVC
-    )
+    INTEL_IPP_EXTRA_LINK_ARGS.append(f'-L{ipp_lib_dir}')
+    INTEL_IPP_EXTRA_LINK_ARGS.append(f'/LIBPATH:{ipp_lib_dir}')
+    INTEL_IPP_LIBRARIES.extend(['ippdc', 'ipps', 'ippvm', 'ippcore'])
 
 
 def _get_lz4_ipp_clib(field=None):
@@ -670,6 +671,8 @@ def _get_lz4_ipp_clib(field=None):
         return 'lz4', config
     if field == 'extra_link_args':
         return INTEL_IPP_EXTRA_LINK_ARGS
+    if field == 'libraries':
+        return INTEL_IPP_LIBRARIES
     return config[field]
 
 
@@ -695,6 +698,8 @@ def get_lz4_clib(field=None):
     if field is None:
         return 'lz4', config
     if field == 'extra_link_args':
+        return []
+    if field == 'libraries':
         return []
     return config[field]
 
@@ -797,11 +802,14 @@ def get_blosc_plugin():
         ('SHUFFLE_AVX2_ENABLED', 1),
     ]
     extra_link_args = []
+    libraries = []
 
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
     extra_link_args += get_lz4_clib('extra_link_args')
+    libraries += get_lz4_clib('libraries')
+
     define_macros.append(('HAVE_LZ4', 1))
 
     # snappy
@@ -834,6 +842,7 @@ def get_blosc_plugin():
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
+        libraries=libraries,
         cpp11=cpp11_kwargs,
     )
 
@@ -859,15 +868,18 @@ def get_blosc2_plugin():
         ('SHUFFLE_ALTIVEC_ENABLED', 1),
     ]
     extra_link_args = []
+    libraries = []
 
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
     if BuildConfig.INTEL_IPP_DIR is None:
         extra_link_args += get_lz4_clib('extra_link_args')
+        libraries += get_lz4_clib('libraries')
     else:
         include_dirs += INTEL_IPP_INCLUDE_DIRS
         extra_link_args += INTEL_IPP_EXTRA_LINK_ARGS
+        libraries += INTEL_IPP_LIBRARIES
         define_macros.append(('HAVE_IPP', 1))
 
     # zlib
@@ -893,6 +905,7 @@ def get_blosc2_plugin():
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
+        libraries=libraries,
     )
 
 
@@ -939,6 +952,7 @@ def get_bitshuffle_plugin():
         define_macros=[("ZSTD_SUPPORT", 1)],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args + get_lz4_clib('extra_link_args'),
+        libraries=get_lz4_clib('libraries')
     )
 
 
@@ -955,13 +969,16 @@ def get_lz4_plugin():
     else:
         extra_compile_args = []
 
+    libraries = ['Ws2_32'] if sys.platform == 'win32' else []
+    libraries.extend(get_lz4_clib('libraries'))
+
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5lz4",
         sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'],
         include_dirs=get_lz4_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
         extra_link_args=get_lz4_clib('extra_link_args'),
-        libraries=['Ws2_32'] if sys.platform == 'win32' else [],
+        libraries=libraries,
     )
 
 
