@@ -656,7 +656,10 @@ def _get_lz4_ipp_clib(field=None):
         return 'lz4', config
     if field == 'extra_link_args':
         arch = 'ia32' if HostConfig.ARCH == 'X86_32' else 'intel64'
-        return [f'-L{BuildConfig.INTEL_IPP_DIR}/lib/{arch}', '-lippdc', '-lipps', '-lippvm', '-lippcore']  # TODO MSVC
+        ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib/{arch}'
+        if not os.path.isdir(ipp_lib_dir):  # Happens on macos as only intel64 is available
+            ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib'
+        return [f'-L{ipp_lib_dir}', '-lippdc', '-lipps', '-lippvm', '-lippcore']  # TODO MSVC
     return config[field]
 
 
