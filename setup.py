@@ -636,6 +636,20 @@ def get_charls_clib(field=None):
     return config[field]
 
 
+# Define compilation arguments for Intel IPP
+INTEL_IPP_INCLUDE_DIRS = []  # Intel IPP include directories
+INTEL_IPP_EXTRA_LINK_ARGS = []  # Intel IPP extra link arguments
+if BuildConfig.INTEL_IPP_DIR is not None:
+    INTEL_IPP_INCLUDE_DIRS.append(f'{BuildConfig.INTEL_IPP_DIR}/include')
+    arch = 'ia32' if HostConfig.ARCH == 'X86_32' else 'intel64'
+    ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib/{arch}'
+    if not os.path.isdir(ipp_lib_dir):  # Happens on macos as only intel64 is available
+        ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib'
+    INTEL_IPP_EXTRA_LINK_ARGS.extend(
+        [f'-L{ipp_lib_dir}', '-lippdc', '-lipps', '-lippvm', '-lippcore'] # TODO MSVC
+    )
+
+
 def _get_lz4_ipp_clib(field=None):
     """LZ4 static lib using Intel IPP build config"""
     assert BuildConfig.INTEL_IPP_DIR is not None
@@ -647,7 +661,7 @@ def _get_lz4_ipp_clib(field=None):
 
     config = dict(
         sources=glob(f'{lz4_dir}/*.c'),
-        include_dirs=[lz4_dir, f'{BuildConfig.INTEL_IPP_DIR}/include'],
+        include_dirs=[lz4_dir] + INTEL_IPP_INCLUDE_DIRS,
         macros=[('WITH_IPP', 1)],
         cflags=cflags,
     )
@@ -655,11 +669,7 @@ def _get_lz4_ipp_clib(field=None):
     if field is None:
         return 'lz4', config
     if field == 'extra_link_args':
-        arch = 'ia32' if HostConfig.ARCH == 'X86_32' else 'intel64'
-        ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib/{arch}'
-        if not os.path.isdir(ipp_lib_dir):  # Happens on macos as only intel64 is available
-            ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib'
-        return [f'-L{ipp_lib_dir}', '-lippdc', '-lipps', '-lippvm', '-lippcore']  # TODO MSVC
+        return INTEL_IPP_EXTRA_LINK_ARGS
     return config[field]
 
 
@@ -853,8 +863,11 @@ def get_blosc2_plugin():
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
-    extra_link_args += get_lz4_clib('extra_link_args')
-    if BuildConfig.INTEL_IPP_DIR is not None:
+    if BuildConfig.INTEL_IPP_DIR is None:
+        extra_link_args += get_lz4_clib('extra_link_args')
+    else:
+        include_dirs += INTEL_IPP_INCLUDE_DIRS
+        extra_link_args += INTEL_IPP_EXTRA_LINK_ARGS
         define_macros.append(('HAVE_IPP', 1))
 
     # zlib
