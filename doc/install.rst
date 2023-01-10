@@ -68,7 +68,7 @@ Available options
      - Whether or not to compile C++14 code if available.
        Default: True if probed.
    * - ``HDF5PLUGIN_INTEL_IPP_DIR``
-     - Path to Intel `IPP`_ root directory.
+     - Experimental feature: Path to Intel `IPP`_ root directory.
        Default: Do not use INTEL `IPP`_ libraries.
 
 Note: Boolean options are passed as ``True`` or ``False``.
