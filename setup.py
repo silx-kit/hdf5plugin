@@ -134,39 +134,36 @@ class HostConfig:
     For differences in native build option across architectures, see
     https://gcc.gnu.org/onlinedocs/gcc/Submodel-Options.html#Submodel-Options
     """
+
+    ARCH = cpuinfo_parse_arch(platform.machine().lower())[0] if cpuinfo_parse_arch is not None else None
+    """Machine architecture description from cpuinfo parser"""
+
     def __init__(self, compiler=None):
         compiler = distutils.ccompiler.new_compiler(compiler, force=True)
         distutils.sysconfig.customize_compiler(compiler)
         self.__compiler = compiler
 
-        # Get machine architecture description
-        self.machine = platform.machine().lower()
-        if cpuinfo_parse_arch is not None:
-            self.arch = cpuinfo_parse_arch(self.machine)[0]
-        else:
-            self.arch = None
-
         # Set architecture specific compile args
-        if self.arch in ('X86_32', 'X86_64', 'MIPS_64'):
+        if self.ARCH in ('X86_32', 'X86_64', 'MIPS_64'):
             self.native_compile_args = ("-march=native",)
-        elif self.arch in ('ARM_7', 'ARM_8', 'PPC_64'):
+        elif self.ARCH in ('ARM_7', 'ARM_8', 'PPC_64'):
             self.native_compile_args = ("-mcpu=native",)
         else:
             self.native_compile_args = ()
 
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.sse2_compile_args = ('-msse2',)  # /arch:SSE2 is on by default
-        elif self.machine == 'ppc64le':
+        elif platform.machine() == 'ppc64le':
             self.sse2_compile_args = ('-DNO_WARN_X86_INTRINSICS',)  # P9 way to enable SSE2
         else:
             self.sse2_compile_args = ()
 
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.avx2_compile_args = ('-mavx2', '/arch:AVX2')
         else:
             self.avx2_compile_args = ()
 
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.avx512_compile_args = ('-mavx512f', '-mavx512bw', '/arch:AVX512')
         else:
             self.avx512_compile_args = ()
@@ -196,19 +193,19 @@ class HostConfig:
 
     def has_sse2(self) -> bool:
         """Check SSE2 availability on host"""
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             if not has_cpu_flag('sse2'):
                 return False  # SSE2 not available on host
             if self.__compiler.compiler_type == "msvc":
                 return True
             return check_compile_flags(self.__compiler, "-msse2")
-        if self.machine == 'ppc64le':
+        if platform.machine() == 'ppc64le':
             return True
         return False  # Disabled by default
 
     def has_avx2(self) -> bool:
         """Check AVX2 availability on host"""
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             if not has_cpu_flag('avx2'):
                 return False  # AVX2 not available on host
             if self.__compiler.compiler_type == 'msvc':
@@ -218,7 +215,7 @@ class HostConfig:
 
     def has_avx512(self) -> bool:
         """Check AVX512 "F" and "BW" instruction sets availability on host"""
-        if self.arch in ('X86_32', 'X86_64'):
+        if self.ARCH in ('X86_32', 'X86_64'):
             if not (has_cpu_flag('avx512f') and has_cpu_flag('avx512bw')):
                 return False  # AVX512 F and/or BW not available on host
             if self.__compiler.compiler_type == 'msvc':
@@ -336,6 +333,9 @@ class BuildConfig:
         )
     """Whether to build with BMI2 instruction set or not (bool)"""
 
+    INTEL_IPP_DIR = os.environ.get("HDF5PLUGIN_INTEL_IPP_DIR", None)
+    """Root directory of Intel IPP or None to disable"""
+
     CONFIG_PY_TEMPLATE = """from collections import namedtuple
 
 HDF5PluginBuildConfig = namedtuple('HDF5PluginBuildConfig', {field_names})
@@ -352,6 +352,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
             'cpp14': self.use_cpp14,
+            'ipp': self.INTEL_IPP_DIR is not None,
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
@@ -635,8 +636,54 @@ def get_charls_clib(field=None):
     return config[field]
 
 
+# Define compilation arguments for Intel IPP
+INTEL_IPP_INCLUDE_DIRS = []  # Intel IPP include directories
+INTEL_IPP_EXTRA_LINK_ARGS = []  # Intel IPP extra link arguments
+INTEL_IPP_LIBRARIES = []  # Intel IPP libraries to link
+if BuildConfig.INTEL_IPP_DIR is not None:
+    INTEL_IPP_INCLUDE_DIRS.append(f'{BuildConfig.INTEL_IPP_DIR}/include')
+    arch = 'ia32' if HostConfig.ARCH == 'X86_32' else 'intel64'
+    ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib/{arch}'
+    if not os.path.isdir(ipp_lib_dir):  # Happens on macos as only intel64 is available
+        ipp_lib_dir = f'{BuildConfig.INTEL_IPP_DIR}/lib'
+    INTEL_IPP_EXTRA_LINK_ARGS.append(f'-L{ipp_lib_dir}')
+    INTEL_IPP_EXTRA_LINK_ARGS.append(f'/LIBPATH:{ipp_lib_dir}')
+    INTEL_IPP_LIBRARIES.extend(['ippdc', 'ipps', 'ippvm', 'ippcore'])
+
+
+def _get_lz4_ipp_clib(field=None):
+    """LZ4 static lib using Intel IPP build config"""
+    assert BuildConfig.INTEL_IPP_DIR is not None
+
+    cflags = ['-O3', '-ffast-math', '-std=gnu99']
+    cflags += ['/Ox', '/fp:fast']
+
+    lz4_dir = 'src/lz4_ipp'
+
+    config = dict(
+        sources=glob(f'{lz4_dir}/*.c'),
+        include_dirs=[lz4_dir] + INTEL_IPP_INCLUDE_DIRS,
+        macros=[('WITH_IPP', 1)],
+        cflags=cflags,
+    )
+
+    if field is None:
+        return 'lz4', config
+    if field == 'extra_link_args':
+        return INTEL_IPP_EXTRA_LINK_ARGS
+    if field == 'libraries':
+        return INTEL_IPP_LIBRARIES
+    return config[field]
+
+
 def get_lz4_clib(field=None):
-    """LZ4 static lib build config"""
+    """LZ4 static lib build config
+
+    If HDFPLUGIN_IPP_DIR is set, it will use a patched LZ4 library to use Intel IPP.
+    """
+    if BuildConfig.INTEL_IPP_DIR is not None:
+        return _get_lz4_ipp_clib(field)
+
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
@@ -650,6 +697,10 @@ def get_lz4_clib(field=None):
 
     if field is None:
         return 'lz4', config
+    if field == 'extra_link_args':
+        return []
+    if field == 'libraries':
+        return []
     return config[field]
 
 
@@ -750,10 +801,15 @@ def get_blosc_plugin():
         ('SHUFFLE_SSE2_ENABLED', 1),
         ('SHUFFLE_AVX2_ENABLED', 1),
     ]
+    extra_link_args = []
+    libraries = []
 
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
+    extra_link_args += get_lz4_clib('extra_link_args')
+    libraries += get_lz4_clib('libraries')
+
     define_macros.append(('HAVE_LZ4', 1))
 
     # snappy
@@ -775,7 +831,7 @@ def get_blosc_plugin():
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
-    extra_link_args = ['-pthread']
+    extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc",
@@ -786,6 +842,7 @@ def get_blosc_plugin():
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
+        libraries=libraries,
         cpp11=cpp11_kwargs,
     )
 
@@ -810,11 +867,20 @@ def get_blosc2_plugin():
         ('SHUFFLE_NEON_ENABLED', 1),
         ('SHUFFLE_ALTIVEC_ENABLED', 1),
     ]
+    extra_link_args = []
+    libraries = []
 
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
-    define_macros.append(('HAVE_LZ4', 1))
+    if BuildConfig.INTEL_IPP_DIR is None:
+        extra_link_args += get_lz4_clib('extra_link_args')
+        libraries += get_lz4_clib('libraries')
+    else:
+        include_dirs += INTEL_IPP_INCLUDE_DIRS
+        extra_link_args += INTEL_IPP_EXTRA_LINK_ARGS
+        libraries += INTEL_IPP_LIBRARIES
+        define_macros.append(('HAVE_IPP', 1))
 
     # zlib
     include_dirs += get_zlib_clib('include_dirs')
@@ -828,7 +894,7 @@ def get_blosc2_plugin():
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
-    extra_link_args = ['-pthread']
+    extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc2",
@@ -839,6 +905,7 @@ def get_blosc2_plugin():
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
+        libraries=libraries,
     )
 
 
@@ -884,7 +951,8 @@ def get_bitshuffle_plugin():
         include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
         define_macros=[("ZSTD_SUPPORT", 1)],
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
+        extra_link_args=extra_link_args + get_lz4_clib('extra_link_args'),
+        libraries=get_lz4_clib('libraries')
     )
 
 
@@ -901,12 +969,16 @@ def get_lz4_plugin():
     else:
         extra_compile_args = []
 
+    libraries = ['Ws2_32'] if sys.platform == 'win32' else []
+    libraries.extend(get_lz4_clib('libraries'))
+
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5lz4",
         sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'],
         include_dirs=get_lz4_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
-        libraries=['Ws2_32'] if sys.platform == 'win32' else [],
+        extra_link_args=get_lz4_clib('extra_link_args'),
+        libraries=libraries,
     )
 
 

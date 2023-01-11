@@ -67,6 +67,10 @@ Available options
    * - ``HDF5PLUGIN_CPP14``
      - Whether or not to compile C++14 code if available.
        Default: True if probed.
+   * - ``HDF5PLUGIN_INTEL_IPP_DIR``
+     - Experimental feature: Path to Intel `IPP`_ root directory.
+       If provided, the LZ4 compression library and Blosc2 are set to use Intel `IPP`_.
+       Default: Do not use INTEL `IPP`_ libraries.
 
 Note: Boolean options are passed as ``True`` or ``False``.
 
@@ -74,5 +78,6 @@ Note: Boolean options are passed as ``True`` or ``False``.
 .. _AVX2: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#Advanced_Vector_Extensions_2
 .. _AVX512: https://en.wikipedia.org/wiki/AVX-512
 .. _BMI2: https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set
+.. _IPP: https://en.wikipedia.org/wiki/Integrated_Performance_Primitives
 .. _SSE2: https://en.wikipedia.org/wiki/SSE2
 .. _OpenMP: https://www.openmp.org/

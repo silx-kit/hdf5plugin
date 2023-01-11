@@ -62,6 +62,8 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * **HDF5-ZFP plugin** (commit `cd5422c <https://github.com/LLNL/H5Z-ZFP/tree/cd5422c146836e17c7a0380bfb05cf52d0c4467c>`_) and **zfp** (v1.0.0): https://github.com/LLNL/H5Z-ZFP and https://github.com/LLNL/zfp
 * **HDF5Plugin-Zstandard** (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) and **zstd** (v1.5.2): https://github.com/aparamon/HDF5Plugin-Zstandard and https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/zstd-1.5.2
 
+When compiled with Intel IPP, the LZ4 compression library is replaced with `LZ4 v1.9.3 <https://github.com/lz4/lz4/releases/tag/v1.9.3>`_ patched with a patch from Intel IPP 2021.7.0.
+
 License
 -------
 
