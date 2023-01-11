@@ -826,26 +826,14 @@ def get_blosc2_plugin():
     blosc2_dir = 'src/c-blosc2'
 
     # blosc sources
-    sources = [f for f in glob(f'{blosc2_dir}/blosc/*.c')
-            if 'avx2' not in f and 'sse2' not in f and 'altivec' not in f and 'neon' not in f]
+    sources = glob(f'{blosc2_dir}/blosc/*.c')
     include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
-    define_macros = []
-
-    # TODO enable neon
-    sse2_kwargs = {
-        'sources': glob(f'{blosc2_dir}/blosc/*-sse2.c'),
-        'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
-        }
-
-    avx2_kwargs = {
-        'sources': glob(f'{blosc2_dir}/blosc/*-avx2.c'),
-        'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)],
-        }
-
-    if platform.machine() == "ppc64le":  # altivec
-        sources += glob(f'{blosc2_dir}/blosc/*-altivec.c')
-        define_macros += [('SHUFFLE_ALTIVEC_ENABLED', 1)]
-
+    define_macros = [
+        ('SHUFFLE_SSE2_ENABLED', 1),
+        ('SHUFFLE_AVX2_ENABLED', 1),
+        ('SHUFFLE_NEON_ENABLED', 1),
+        ('SHUFFLE_ALTIVEC_ENABLED', 1),
+    ]
 
     # compression libs
     # lz4
@@ -875,9 +863,7 @@ def get_blosc2_plugin():
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        sse2=sse2_kwargs,
-        avx2=avx2_kwargs,
-        )
+    )
 
 
 PLUGIN_LIB_DEPENDENCIES['blosc2'] = 'lz4', 'zlib', 'zstd'
