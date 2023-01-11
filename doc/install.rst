@@ -69,6 +69,7 @@ Available options
        Default: True if probed.
    * - ``HDF5PLUGIN_INTEL_IPP_DIR``
      - Experimental feature: Path to Intel `IPP`_ root directory.
+       If provided, the LZ4 compression library and Blosc2 are set to use Intel `IPP`_.
        Default: Do not use INTEL `IPP`_ libraries.
 
 Note: Boolean options are passed as ``True`` or ``False``.
