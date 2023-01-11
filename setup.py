@@ -754,24 +754,12 @@ def get_blosc_plugin():
     hdf5_blosc_dir = 'src/hdf5-blosc/src'
 
     # blosc sources
-    sources = [f for f in glob(f'{blosc_dir}/*.c')
-               if 'avx2' not in f and 'sse2' not in f]
+    sources = glob(f'{blosc_dir}/*.c')
     include_dirs = ['src/c-blosc', blosc_dir]
-    define_macros = []
-
-    if platform.machine() == 'ppc64le':
-        # SSE2 support in blosc uses x86 assembly code in shuffle
-        sse2_kwargs = {}
-    else:
-        sse2_kwargs = {
-            'sources': glob(f'{blosc_dir}/*-sse2.c'),
-            'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)],
-        }
-
-    avx2_kwargs = {
-        'sources': glob(f'{blosc_dir}/*-avx2.c'),
-        'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)],
-    }
+    define_macros = [
+        ('SHUFFLE_SSE2_ENABLED', 1),
+        ('SHUFFLE_AVX2_ENABLED', 1),
+    ]
 
     # compression libs
     # lz4
@@ -808,8 +796,6 @@ def get_blosc_plugin():
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        sse2=sse2_kwargs,
-        avx2=avx2_kwargs,
         cpp11=cpp11_kwargs,
     )
 
