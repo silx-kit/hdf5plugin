@@ -866,12 +866,13 @@ def get_blosc2_plugin():
     # blosc sources
     sources = glob(f'{blosc2_dir}/blosc/*.c')
     include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
-    define_macros = [
-        ('SHUFFLE_NEON_ENABLED', 1),
-        ('SHUFFLE_ALTIVEC_ENABLED', 1),
-    ]
+    define_macros = [('SHUFFLE_NEON_ENABLED', 1)]
     extra_link_args = []
     libraries = []
+
+    if platform.machine() == 'ppc64le':
+        define_macros.append(('SHUFFLE_ALTIVEC_ENABLED', 1))
+        define_macros.append(('NO_WARN_X86_INTRINSICS', None))
 
     # compression libs
     # lz4
@@ -897,8 +898,6 @@ def get_blosc2_plugin():
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
-    if platform.machine() == 'ppc64le':
-        extra_compile_args.append('-DNO_WARN_X86_INTRINSICS')  # P9 way to enable SSE2
     extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
@@ -943,9 +942,11 @@ def get_bitshuffle_plugin():
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    if platform.machine() == 'ppc64le':
-        extra_compile_args.append('-DNO_WARN_X86_INTRINSICS')  # P9 way to enable SSE2
     extra_link_args = ['-fopenmp', '/openmp']
+
+    define_macros=[("ZSTD_SUPPORT", 1)]
+    if platform.machine() == 'ppc64le':
+        define_macros.append(('NO_WARN_X86_INTRINSICS', None))  # P9 way to enable SSE2
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bshuf",
@@ -958,7 +959,7 @@ def get_bitshuffle_plugin():
         ]),
         extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
-        define_macros=[("ZSTD_SUPPORT", 1)],
+        define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args + get_lz4_clib('extra_link_args'),
         libraries=get_lz4_clib('libraries')
