@@ -153,8 +153,6 @@ class HostConfig:
 
         if self.ARCH in ('X86_32', 'X86_64'):
             self.sse2_compile_args = ('-msse2',)  # /arch:SSE2 is on by default
-        elif platform.machine() == 'ppc64le':
-            self.sse2_compile_args = ('-DNO_WARN_X86_INTRINSICS',)  # P9 way to enable SSE2
         else:
             self.sse2_compile_args = ()
 
@@ -199,8 +197,6 @@ class HostConfig:
             if self.__compiler.compiler_type == "msvc":
                 return True
             return check_compile_flags(self.__compiler, "-msse2")
-        if platform.machine() == 'ppc64le':
-            return True
         return False  # Disabled by default
 
     def has_avx2(self) -> bool:
@@ -811,14 +807,6 @@ def get_blosc_plugin():
     extra_link_args = []
     libraries = []
 
-    if platform.machine() == 'ppc64le':
-        # SSE2 support in blosc uses x86 assembly code in shuffle
-        sse2_kwargs = {}
-    else:
-        sse2_kwargs = {'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]}
-
-    avx2_kwargs = {'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]}
-
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
@@ -858,8 +846,8 @@ def get_blosc_plugin():
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         libraries=libraries,
-        sse2=sse2_kwargs,
-        avx2=avx2_kwargs,
+        sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
+        avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
         cpp11=cpp11_kwargs,
     )
 
@@ -885,12 +873,6 @@ def get_blosc2_plugin():
     extra_link_args = []
     libraries = []
 
-    if platform.machine() == 'ppc64le':
-        sse2_kwargs = {}
-    else:
-        sse2_kwargs = {'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]}
-    avx2_kwargs = {'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]}
-
     # compression libs
     # lz4
     include_dirs += get_lz4_clib('include_dirs')
@@ -915,6 +897,8 @@ def get_blosc2_plugin():
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
+    if platform.machine() == 'ppc64le':
+        extra_compile_args.append('-DNO_WARN_X86_INTRINSICS')  # P9 way to enable SSE2
     extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
@@ -927,8 +911,8 @@ def get_blosc2_plugin():
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         libraries=libraries,
-        sse2=sse2_kwargs,
-        avx2=avx2_kwargs,
+        sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
+        avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
     )
 
 
@@ -959,6 +943,8 @@ def get_bitshuffle_plugin():
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+    if platform.machine() == 'ppc64le':
+        extra_compile_args.append('-DNO_WARN_X86_INTRINSICS')  # P9 way to enable SSE2
     extra_link_args = ['-fopenmp', '/openmp']
 
     return HDF5PluginExtension(
