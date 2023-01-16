@@ -153,8 +153,6 @@ class HostConfig:
 
         if self.ARCH in ('X86_32', 'X86_64'):
             self.sse2_compile_args = ('-msse2',)  # /arch:SSE2 is on by default
-        elif platform.machine() == 'ppc64le':
-            self.sse2_compile_args = ('-DNO_WARN_X86_INTRINSICS',)  # P9 way to enable SSE2
         else:
             self.sse2_compile_args = ()
 
@@ -199,8 +197,6 @@ class HostConfig:
             if self.__compiler.compiler_type == "msvc":
                 return True
             return check_compile_flags(self.__compiler, "-msse2")
-        if platform.machine() == 'ppc64le':
-            return True
         return False  # Disabled by default
 
     def has_avx2(self) -> bool:
@@ -534,6 +530,14 @@ class PluginBuildExt(build_ext):
                     for name, value in e.cpp11.items():
                         attribute = getattr(e, name)
                         attribute += value
+                if config.use_sse2:
+                    for name, value in e.sse2.items():
+                        attribute = getattr(e, name)
+                        attribute += value
+                if config.use_avx2:
+                    for name, value in e.avx2.items():
+                        attribute = getattr(e, name)
+                        attribute += value
 
             if not config.use_openmp:  # Remove OpenMP flags
                 e.extra_compile_args = [
@@ -554,7 +558,7 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, cpp11=None, cpp11_required=False, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
         if not self.depends:
@@ -573,6 +577,8 @@ class HDF5PluginExtension(Extension):
 
         self.define_macros.append(('H5_USE_18_API', None))
 
+        self.sse2 = sse2 if sse2 is not None else {}
+        self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
         self.cpp11_required = cpp11_required
 
@@ -672,7 +678,8 @@ def _get_lz4_ipp_clib(field=None):
     if field == 'extra_link_args':
         return INTEL_IPP_EXTRA_LINK_ARGS
     if field == 'libraries':
-        return INTEL_IPP_LIBRARIES
+        # Adding LZ4 here for it to be placed before IPP libs for gcc
+        return ['lz4'] + INTEL_IPP_LIBRARIES
     return config[field]
 
 
@@ -797,10 +804,7 @@ def get_blosc_plugin():
     # blosc sources
     sources = glob(f'{blosc_dir}/*.c')
     include_dirs = ['src/c-blosc', blosc_dir]
-    define_macros = [
-        ('SHUFFLE_SSE2_ENABLED', 1),
-        ('SHUFFLE_AVX2_ENABLED', 1),
-    ]
+    define_macros = []
     extra_link_args = []
     libraries = []
 
@@ -843,6 +847,8 @@ def get_blosc_plugin():
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         libraries=libraries,
+        sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
+        avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
         cpp11=cpp11_kwargs,
     )
 
@@ -861,14 +867,13 @@ def get_blosc2_plugin():
     # blosc sources
     sources = glob(f'{blosc2_dir}/blosc/*.c')
     include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
-    define_macros = [
-        ('SHUFFLE_SSE2_ENABLED', 1),
-        ('SHUFFLE_AVX2_ENABLED', 1),
-        ('SHUFFLE_NEON_ENABLED', 1),
-        ('SHUFFLE_ALTIVEC_ENABLED', 1),
-    ]
+    define_macros = [('SHUFFLE_NEON_ENABLED', 1)]
     extra_link_args = []
     libraries = []
+
+    if platform.machine() == 'ppc64le':
+        define_macros.append(('SHUFFLE_ALTIVEC_ENABLED', 1))
+        define_macros.append(('NO_WARN_X86_INTRINSICS', None))
 
     # compression libs
     # lz4
@@ -906,6 +911,8 @@ def get_blosc2_plugin():
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         libraries=libraries,
+        sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
+        avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
     )
 
 
@@ -938,6 +945,10 @@ def get_bitshuffle_plugin():
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
     extra_link_args = ['-fopenmp', '/openmp']
 
+    define_macros=[("ZSTD_SUPPORT", 1)]
+    if platform.machine() == 'ppc64le':
+        define_macros.append(('NO_WARN_X86_INTRINSICS', None))  # P9 way to enable SSE2
+
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bshuf",
         sources=prefix(bithsuffle_dir, [
@@ -949,7 +960,7 @@ def get_bitshuffle_plugin():
         ]),
         extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
-        define_macros=[("ZSTD_SUPPORT", 1)],
+        define_macros=define_macros,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args + get_lz4_clib('extra_link_args'),
         libraries=get_lz4_clib('libraries')
