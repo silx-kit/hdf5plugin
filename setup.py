@@ -885,7 +885,10 @@ def get_blosc2_plugin():
     extra_link_args = []
     libraries = []
 
-    sse2_kwargs = {'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]}
+    if platform.machine() == 'ppc64le':
+        sse2_kwargs = {}
+    else:
+        sse2_kwargs = {'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]}
     avx2_kwargs = {'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]}
 
     # compression libs
