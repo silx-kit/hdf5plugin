@@ -53,11 +53,11 @@ HDF5 compression filters and compression libraries sources were obtained from:
   (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_)
   using LZ4.
 * `bitshuffle plugin <https://github.com/kiyo-masui/bitshuffle>`_ (v0.5.1) using LZ4 and ZStd.
-* bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.7.0)
+* bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.8.0)
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.0)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.2), LZ4, Snappy, ZLib and ZStd.
-* hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ commit `8b8c7bc <https://github.com/PyTables/PyTables/commit/8b8c7bc7b1ff7f0a17bdd8b9f07198ab1bb4666d>`_)
+* hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.8.0)
   using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.6.1 + `patch <https://github.com/Blosc/c-blosc2/pull/436>`_),
   LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2>`_ (v1.0.2)
