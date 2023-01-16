@@ -678,7 +678,8 @@ def _get_lz4_ipp_clib(field=None):
     if field == 'extra_link_args':
         return INTEL_IPP_EXTRA_LINK_ARGS
     if field == 'libraries':
-        return INTEL_IPP_LIBRARIES
+        # Adding LZ4 here for it to be placed before IPP libs for gcc
+        return ['lz4'] + INTEL_IPP_LIBRARIES
     return config[field]
 
 
