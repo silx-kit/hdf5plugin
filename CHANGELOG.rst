@@ -1,3 +1,33 @@
+4.1.0: 17/01/2023
+-----------------
+
+This version of ``hdf5plugin`` provides 2 new filters: **Blosc2** and **SZ3**.
+
+- New compression filters:
+
+  * Added **SZ3** filter (PR #224, #241, #242, #243, #246)
+  * Added **Blosc2** filter (PR #201, #249, #253, #255)
+
+- Updated filters:
+
+  * Updated **bitshuffle** (v0.5.1) (PR #251)
+  * Updated **c-blosc** (v1.21.2) and **LZ4** compression library (v1.9.4) (PR #250)
+
+- Build:
+
+  * Added build configuration environment variables:
+
+    * ``HDF5PLUGIN_CPP14`` for SZ3 (PR #242)
+    * ``HDF5PLUGIN_BMI2`` for Zstd compression library (PR #247)
+    * ``HDF5PLUGIN_INTEL_IPP_DIR`` for Blosc2 filter and LZ4 compression library (PR #252)
+
+  * Added Intel IPP optional support for LZ4 compression (PR #252)
+  * Refactored build (PR #233, #240, #248, #255, #257)
+
+- Misc.:
+
+  * Updated documentation (PR #256, #259)
+
 4.0.1: 2022/12/06
 -----------------
 
