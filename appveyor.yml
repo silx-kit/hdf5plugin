@@ -12,7 +12,7 @@ environment:
         WIN_SDK_ROOT: "C:\\Program Files\\Microsoft SDKs\\Windows"
 
     matrix:
-        # Python 3.10
+        # Python 3.11
         - BUILD_PY_PATH: "C:\\Python311-x64;C:\\Python311-x64\\Scripts"
           TEST_PY_PATH: "C:\\Python311-x64;C:\\Python311-x64\\Scripts"
           INSTALL_CMD: "python -m pip install --upgrade --pre"
