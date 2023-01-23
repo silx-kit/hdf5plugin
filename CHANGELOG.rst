@@ -1,3 +1,11 @@
+4.1.1: 23/01/2023
+-----------------
+
+This is a bug fix release:
+
+- Fixed **c-blosc2** compilation on ARM architecture (PR #262)
+- Updated continuous integration tests (PR #261)
+
 4.1.0: 17/01/2023
 -----------------
 
