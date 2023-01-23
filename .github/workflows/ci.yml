@@ -37,11 +37,11 @@ jobs:
             H5PY_OLDER_VERSION: 2.10.0
             NUMPY_OLDER_VERSION: 1.23.5
 
-          - name-suffix: "sdist-h5py_3.6.0"
+          - name-suffix: "sdist-h5py_3.8.0"
             os: ubuntu-latest
             python-version: 3.10.8
             BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 3.6.0
+            H5PY_OLDER_VERSION: 3.8.0
 
           - name-suffix: "bdist_wheel-h5py_2.10.0"
             os: macos-latest
@@ -49,11 +49,11 @@ jobs:
             BUILD_COMMAND: bdist_wheel
             H5PY_OLDER_VERSION: 2.10.0
 
-          - name-suffix: "bdist_wheel-h5py_3.0.0"
+          - name-suffix: "bdist_wheel-h5py_3.8.0"
             os: macos-latest
             python-version: 3.10.8
             BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 3.6.0
+            H5PY_OLDER_VERSION: 3.8.0
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
