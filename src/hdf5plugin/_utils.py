@@ -60,8 +60,8 @@ def is_filter_available(name):
     return h5py.h5z.filter_avail(filter_id) > 0
 
 
-def H5Zregister(filter_struct_p):
-    """Register a new filter with libHDF5.
+def H5Zregister_ctypes(filter_struct_p):
+    """Register a new filter with libHDF5 using ctypes wrapping.
 
     :param ctypes.c_void_p filter_struct_p: Pointer to filter definition struct
     :return: A non-negative value if successful, else a negative value
@@ -162,10 +162,18 @@ def register_filter(name):
 
     # Register through H5Zregister
     lib.H5PLget_plugin_info.restype = ctypes.c_void_p
-    retval = H5Zregister(lib.H5PLget_plugin_info())
-    if retval < 0:
-        logger.error(f"Cannot register filter {name}: {retval}")
-        return False
+    if h5py.version.version_tuple[:3] > (3, 8, 0):
+        try:
+            h5py.h5z.register_filter(lib.H5PLget_plugin_info())
+        except:
+            logger.error(f"Cannot register filter {name}: {retval}")
+            logger.error(traceback.format_exc())
+            return False
+    else:
+        retval = H5Zregister_ctypes(lib.H5PLget_plugin_info())
+        if retval < 0:
+            logger.error(f"Cannot register filter {name}: {retval}")
+            return False
 
     logger.debug(f"Registered filter: {name} ({filename})")
     registered_filters[name] = filename, lib
