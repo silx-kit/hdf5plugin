@@ -31,7 +31,7 @@ The header contains information needed to decompress the Blosc chunks contained 
       |   |       |                           |
       |   |       |                           +--[msgpack] int32
       |   |       +---magic number, currently "b2frame"
-      |   +------[msgpack] str with 8 elements
+      |   +------[msgpack] str with X=8 elements
       +---[msgpack] fixarray with X=0xE (14) elements
 
     |-18|-19|-1A|-1B|-1C|-1D|-1E|-1F|-20|-21|-22|-23|-24|-25|-26|-27|-28|-29|-2A|-2B|-2C|-2D|-2E|
@@ -76,8 +76,8 @@ possible filter meta-info in `filter_meta`::
       +--[msgpack] fixext 16
 
 The last section of the header is for the *metalayers*, which contain meta-information about the data in the
-frame.  It is up to the user to store whatever data they want with the only (strong) suggestion that they be stored
-using the msgpack format. Here it is the format for the *metalayers*::
+frame.  It is mandatory the use of the msgpack format for storing them, although the user may use another format
+(e.g. json) encoded as msgpack (in this case as a string). Here it is the format for the *metalayers*::
 
     |-57|-58|-59|-5A|-5B|-5C|-5D|====================|---|---|---|================|
     | 93| cd| idx   | de| size  | meta keys/values   | dc|  idy  | meta content   |
@@ -207,6 +207,34 @@ using the msgpack format. Here it is the format for the *metalayers*::
     the names of the metalayers, followed by an int32 (0xd2) for the *offset* of the value of this metalayer.  The
     actual value will be encoded as a bin32 (0xc6) value later in header.
 
+Dumping info in metalayers
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Note:** The method in this section only works for Unix.
+
+Here it is a trick for printing the content of metalayers using the nice set of
+`msgpack-tools <https://github.com/ludocode/msgpack-tools>`_ command line utilities.  After installing the package we
+can do e.g.::
+
+    $ msgpack2json -Bi plugins/test_data/example_day_month_temp.b2nd
+    ["b2frame\u0000",166,3947,"\u0012\u0000P\u0003",5472,3682,4,684,1368,1,1,false,
+     "ext:6:base64:AAAAAAABAAAAAAAAAAAAAA==",[17,{"b2nd":107},
+     ["lgACktMAAAAAAAABkNMAAAAAAAAAA5LSAAAAbtIAAAADktIAAAA50gAAAAPbAAAABXVpbnQ4"]]]
+
+Here we see that we have a `b2nd` metalayer that starts at position 107; but as there is a msgpack `bin32` there, we
+must add 5 bytes (4 bytes for an int32 and 1 byte for the msgpack `bin32` header), so the actual starting position is
+112 (107 + 5).  Also, although we don't know the length of the `b2nd` metalayer, it is typically less than 100 bytes,
+so let's err on the safe side and dump the first 1000 bytes, just in case::
+
+    $ dd bs=1 skip=112 count=1000 <  plugins/test_data/example_day_month_temp.b2nd | msgpack2json -B
+    <snip>
+    [0,2,[400,3],[110,3],[57,3],0,"|u1"]
+
+By having a look at the
+`Blosc2 NDim metalayer format <https://github.com/Blosc/c-blosc2/blob/main/README_B2ND_METALAYER.rst>`_
+one may note that the number of dimensions is 2, `shape` is [400, 3], `chunkshape` is [110, 3], blockshape is
+[57, 3], dtype format is 0 (NumPy) and dtype is "|u1", which is a NumPy shortcut for `np.uint8`.
+
 Chunks
 ------
 
@@ -217,7 +245,7 @@ The chunks section is composed of one or more Blosc data chunks followed by an i
     +========+========+========+========+===========+
 
 Each chunk is stored contiguously one after the other, and each follows the format described in the
-`chunk format <README_CHUNK_FORMAT.rst>`_ document.
+`chunk format <https://github.com/Blosc/c-blosc2/blob/main/README_CHUNK_FORMAT.rst>`_ document.
 
 The `chunk idx` is a Blosc2 chunk containing the offsets (starting from the beginning of the header)
 to each chunk in this section.  The data in the chunk is a list of offsets (they can be 32-bit, 64-bit
@@ -292,7 +320,7 @@ a fingerprint.::
 
 The *vlmetalayers* object which stores the variable-length user meta data can change in size during the lifetime of the frame.
 This is an important feature and the reason why the *vlmetalayers* are stored in the trailer and not in the header.
-However, the *vlmetalayers* follows the same format than the metalayers stored in the header.
+However, the *vlmetalayers* follows the same format as the ones stored in the header.
 
 
 :trailer_len:

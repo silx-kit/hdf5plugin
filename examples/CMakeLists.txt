@@ -3,6 +3,8 @@ set(EXAMPLES contexts instrument_codec delta_schunk_ex multithread simple frame_
     noinit find_roots schunk_simple frame_simple schunk_postfilter urcodecs urfilters frame_vlmetalayers
     sframe_simple frame_backed_schunk compress_file frame_offset frame_roundtrip get_set_slice)
 
+add_subdirectory(b2nd)
+
 if(NOT DEACTIVATE_ZSTD)
     set(EXAMPLES ${EXAMPLES} zstd_dict)
 endif()
@@ -10,10 +12,6 @@ endif()
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
     # frame_big uses containers of more than 4 GB and cannot run on 32-bit platforms
     list(APPEND EXAMPLES frame_big)
-endif()
-
-if(EXISTS btune_schunk.c)
-    list(APPEND EXAMPLES btune_schunk)
 endif()
 
 # targets

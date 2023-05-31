@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -24,6 +24,7 @@
 #endif
 
 #include "blosc2.h"
+#include "b2nd.h"
 
 #if defined(HAVE_ZSTD)
   #include "zstd.h"
@@ -73,8 +74,10 @@ struct blosc2_context_s {
   blosc2_schunk* schunk;  /* Associated super-chunk (if available) */
   struct thread_context* serial_context;  /* Cache for temporaries for serial operation */
   int do_compress;  /* 1 if we are compressing, 0 if decompressing */
-  void *btune;  /* Entry point for BTune persistence between runs */
-  blosc2_btune *udbtune;  /* User-defined BTune parameters */
+  void *tuner_params;  /* Entry point for tuner persistence between runs */
+  int tuner_id;  /* User-defined tuner id */
+  void *codec_params; /* User defined parameters for the codec */
+  void *filter_params[BLOSC2_MAX_FILTERS]; /* User defined parameters for the filters */
   /* Threading */
   int16_t nthreads;
   int16_t new_nthreads;
@@ -100,6 +103,28 @@ struct blosc2_context_s {
   int dref_not_init;  /* data ref in delta not initialized */
   pthread_mutex_t delta_mutex;
   pthread_cond_t delta_cv;
+  // Add new fields here to avoid breaking the ABI.
+};
+
+struct b2nd_context_s {
+  int8_t ndim;
+  //!< The array dimensions.
+  int64_t shape[B2ND_MAX_DIM];
+  //!< The array shape.
+  int32_t chunkshape[B2ND_MAX_DIM];
+  //!< The shape of each chunk of Blosc.
+  int32_t blockshape[B2ND_MAX_DIM];
+  //!< The shape of each block of Blosc.
+  char *dtype;
+  //!< Data type. Different formats can be supported (see dtype_format).
+  int8_t dtype_format;
+  //!< The format of the data type.  Default is 0 (NumPy).
+  blosc2_storage *b2_storage;
+  //!< The Blosc storage properties
+  blosc2_metalayer metalayers[B2ND_MAX_METALAYERS];
+  //!< List with the metalayers desired.
+  int32_t nmetalayers;
+  //!< The number of metalayers.
 };
 
 struct thread_context {

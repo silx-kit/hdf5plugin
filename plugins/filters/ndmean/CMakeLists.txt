@@ -1,5 +1,5 @@
 # sources
-set(SOURCES ${SOURCES} ../plugins/filters/ndmean/ndmean.c ../plugins/filters/ndmean/ndmean.h PARENT_SCOPE)
+set(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/plugins/filters/ndmean/ndmean.c PARENT_SCOPE)
 
 if(BUILD_TESTS)
     # targets
@@ -23,10 +23,4 @@ if(BUILD_TESTS)
     add_test(NAME test_plugin_ndmean_mean
         COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:test_ndmean_mean>)
 
-    # Copy test files
-    file(GLOB TESTS_DATA *.caterva)
-    foreach (data ${TESTS_DATA})
-        file(COPY ${data}
-                DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
-    endforeach(data)
 endif()

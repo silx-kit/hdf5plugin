@@ -1,3 +1,11 @@
+# Blosc - Blocked Shuffling and Compression Library
+#
+# Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+# https://blosc.org
+# License: BSD 3-Clause (see LICENSE.txt)
+#
+# See LICENSE.txt for details about copyright and rights to use.
+
 # sources for main bench
 set(SOURCES b2bench.c)
 # other benchmarks
@@ -7,6 +15,8 @@ set(SOURCES_SUM_OPENMP sum_openmp.c)
 set(SOURCES_ZERO_RUNLEN zero_runlen.c)
 set(SOURCES_CFRAME create_frame.c)
 set(SOURCES_SFRAME sframe_bench.c)
+
+add_subdirectory(b2nd)
 
 # targets
 add_executable(b2bench ${SOURCES})

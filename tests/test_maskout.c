@@ -3,7 +3,7 @@
 
   Unit tests for BLOSC_COMPRESSOR environment variable in Blosc.
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -162,6 +162,8 @@ static char *all_tests(void) {
 #define BUFFER_ALIGN_SIZE   32
 
 int main(void) {
+  blosc2_init();
+
   char *result;
 
   nblocks = bytesize / blocksize;
@@ -230,5 +232,6 @@ int main(void) {
   blosc_test_free(maskout);
   blosc_test_free(maskout2);
 
+  blosc2_destroy();
   return result != 0;
 }

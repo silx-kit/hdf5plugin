@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 */
@@ -213,6 +213,8 @@ static char *all_tests(void) {
 
 
 int main(void) {
+  blosc2_init();
+
   /* Initialize inputs */
   for (int i = 0; i < SIZE; i++) {
     data[i] = i;
@@ -238,5 +240,6 @@ int main(void) {
   }
   printf("\tTests run: %d\n", tests_run);
 
+  blosc2_destroy();
   return result != 0;
 }

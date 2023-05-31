@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -28,6 +28,8 @@
 
 
 int main(void) {
+  blosc2_init();
+
   static float data[SIZE];
   static float data_out[SIZE];
   static float data_dest[SIZE];
@@ -108,6 +110,8 @@ int main(void) {
     }
   }
   printf("Successful roundtrip!\n");
+
+  blosc2_destroy();
 
   return 0;
 }

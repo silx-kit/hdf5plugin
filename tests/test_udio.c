@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 */
@@ -79,7 +79,7 @@ int test_truncate(void *stream, int64_t size) {
 typedef struct {
   bool contiguous;
   char *urlpath;
-}test_udio_backend;
+} test_udio_backend;
 
 CUTEST_TEST_DATA(udio) {
   blosc2_cparams cparams;

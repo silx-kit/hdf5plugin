@@ -1,3 +1,11 @@
+# Blosc - Blocked Shuffling and Compression Library
+#
+# Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+# https://blosc.org
+# License: BSD 3-Clause (see LICENSE.txt)
+#
+# See LICENSE.txt for details about copyright and rights to use.
+
 # CMake build system for Blosc
 # ============================
 #
@@ -167,7 +175,7 @@ if(NOT DEACTIVATE_ZLIB)
         message(STATUS "Using ZLIB-NG internal sources for ZLIB support.")
         set(HAVE_ZLIB_NG TRUE)
         add_definitions(-DZLIB_COMPAT)
-        set(ZLIB_NG_DIR "zlib-ng-2.0.6")  # update to the actual included version
+        set(ZLIB_NG_DIR "zlib-ng-2.0.7")  # update to the actual included version
         set(ZLIB_COMPAT TRUE)
         set(SKIP_INSTALL_ALL TRUE)
         set(BUILD_SHARED_LIBS FALSE)

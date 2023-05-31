@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -18,8 +18,9 @@
     * Support for SSE2/AVX2 copy instructions for these routines
 **********************************************************************/
 
-#include <assert.h>
 #include "blosc2/blosc2-common.h"
+
+#include <assert.h>
 
 /*
  * Use inlined functions for supported systems.

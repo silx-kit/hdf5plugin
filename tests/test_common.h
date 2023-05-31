@@ -3,8 +3,9 @@
 
   Unit tests for basic features in Blosc.
 
-  Creation date: 2010-06-07
-  Author: The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2010  The Blosc Development Team <blosc@blosc.org>
+  https://blosc.org
+  License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
@@ -12,20 +13,20 @@
 #ifndef BLOSC_TEST_COMMON_H
 #define BLOSC_TEST_COMMON_H
 
+#include "blosc2.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <math.h>
-#include "blosc2.h"
 #if defined(_WIN32) && !defined(__MINGW32__)
   #include <time.h>
-  #include "win32/stdint-windows.h"
 #else
-  #include <stdint.h>
   #include <sys/time.h>
 #endif
 
@@ -35,7 +36,7 @@
 #endif
 
 
-/* This is MinUnit in action (http://www.jera.com/techinfo/jtns/jtn002.html) */
+/* This is MinUnit in action (https://jera.com/techinfo/jtns/jtn002) */
 #define mu_assert(message, test) do { if (!(test)) return message; } while (0)
 #define mu_run_test(test) do \
     { char *message = test(); tests_run++;                          \
@@ -47,6 +48,8 @@ extern int tests_run;
 #define KB  1024
 #define MB  (1024*KB)
 #define GB  (1024*MB)
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 /*
   Memory functions.

@@ -1,7 +1,18 @@
+# Blosc - Blocked Shuffling and Compression Library
+#
+# Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+# https://blosc.org
+# License: BSD 3-Clause (see LICENSE.txt)
+#
+# See LICENSE.txt for details about copyright and rights to use.
+
 # sources
-set(SOURCES ${SOURCES} ../plugins/codecs/ndlz/ndlz.c ../plugins/codecs/ndlz/ndlz.h ../plugins/codecs/ndlz/ndlz-private.h
-    ../plugins/codecs/ndlz/ndlz4x4.c ../plugins/codecs/ndlz/ndlz4x4.h ../plugins/codecs/ndlz/ndlz8x8.c
-    ../plugins/codecs/ndlz/ndlz8x8.h ../plugins/codecs/ndlz/xxhash.c ../plugins/codecs/ndlz/xxhash.h PARENT_SCOPE)
+set(SOURCES ${SOURCES}
+        ${PROJECT_SOURCE_DIR}/plugins/codecs/ndlz/ndlz.c
+        ${PROJECT_SOURCE_DIR}/plugins/codecs/ndlz/ndlz4x4.c
+        ${PROJECT_SOURCE_DIR}/plugins/codecs/ndlz/ndlz8x8.c
+        ${PROJECT_SOURCE_DIR}/plugins/codecs/ndlz/xxhash.c
+        PARENT_SCOPE)
 
 # targets
 if(BUILD_TESTS)
@@ -19,7 +30,7 @@ if(BUILD_TESTS)
             COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:test_ndlz>)
 
     # Copy test files
-    file(GLOB TESTS_DATA ../../test_data/example_s*.caterva)
+    file(GLOB TESTS_DATA ../../test_data/example_s*.b2nd)
     foreach (data ${TESTS_DATA})
         file(COPY ${data}
                 DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)

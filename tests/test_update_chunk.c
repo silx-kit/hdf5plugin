@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -41,7 +41,7 @@ test_ndata tndata[] = {
 typedef struct {
   bool contiguous;
   char *urlpath;
-}test_storage;
+} test_storage;
 
 test_storage tstorage[] = {
     {false, NULL},  // memory - schunk
@@ -150,8 +150,8 @@ static char* test_update_chunk(void) {
 }
 
 static char *all_tests(void) {
-  for (int i = 0; i < (int) (sizeof(tstorage) / sizeof(test_storage)); ++i) {
-    for (int j = 0; j < (int) (sizeof(tndata) / sizeof(test_ndata)); ++j) {
+  for (int i = 0; i < (int) ARRAY_SIZE(tstorage); ++i) {
+    for (int j = 0; j < (int) ARRAY_SIZE(tndata); ++j) {
       tdata.contiguous = tstorage[i].contiguous;
       tdata.urlpath = tstorage[i].urlpath;
       tdata.nchunks = tndata[j].nchunks;
@@ -169,8 +169,8 @@ static char *all_tests(void) {
 int main(void) {
   char *result;
 
-  install_blosc_callback_test(); /* optionally install callback test */
   blosc2_init();
+  install_blosc_callback_test(); /* optionally install callback test */
 
   data = blosc_test_malloc(BUFFER_ALIGN_SIZE, CHUNKSIZE * sizeof(int64_t));
   data_dest = blosc_test_malloc(BUFFER_ALIGN_SIZE, CHUNKSIZE * sizeof(int64_t));
