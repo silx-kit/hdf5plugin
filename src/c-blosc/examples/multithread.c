@@ -1,7 +1,7 @@
 /*
-    Copyright (C) 2014  Francesc Alted
-    http://blosc.org
-    License: MIT (see LICENSE.txt)
+    Copyright (c) 2014  Francesc Alted
+    https://blosc.org
+    License: BSD 3-Clause (see LICENSE.txt)
 
     Example program demonstrating use of the Blosc filter from C code.
 

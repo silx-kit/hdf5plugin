@@ -4,7 +4,7 @@
   Author: Francesc Alted <francesc@blosc.org>
   Creation date: 2009-05-20
 
-  See LICENSES/BLOSC.txt for details about copyright and rights to use.
+  See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
 #include "shuffle.h"
@@ -182,8 +182,6 @@ blosc_internal_cpuidex(int32_t cpuInfo[4], int32_t function_id, int32_t subfunct
 
 #define _XCR_XFEATURE_ENABLED_MASK 0
 
-#if !(defined(_IMMINTRIN_H_INCLUDED) && (BLOSC_GCC_VERSION >= 900))
-
 /* Reads the content of an extended control register.
    https://software.intel.com/en-us/articles/how-to-detect-new-instruction-support-in-the-4th-generation-intel-core-processor-family
 */
@@ -203,11 +201,6 @@ blosc_internal_xgetbv(uint32_t xcr) {
   return ((uint64_t)edx << 32) | eax;
 }
 
-#else
-
-#define blosc_internal_xgetbv _xgetbv
-
-#endif  // !(defined(_IMMINTRIN_H_INCLUDED) && (BLOSC_GCC_VERSION >= 900))
 #endif  /* defined(_MSC_FULL_VER) */
 
 #ifndef _XCR_XFEATURE_ENABLED_MASK

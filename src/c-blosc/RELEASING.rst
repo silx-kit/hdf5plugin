@@ -22,6 +22,7 @@ Preliminaries
 - Commit the changes::
 
     $ git commit -a -m"Getting ready for X.Y.Z release"
+    $ git push
 
 
 Testing
@@ -35,7 +36,7 @@ Create a new build/ directory, change into it and issue::
 
 To actually test Blosc the hard way, look at the end of:
 
-http://blosc.org/synthetic-benchmarks.html
+https://www.blosc.org/pages/synthetic-benchmarks/
 
 where instructions on how to intensively test (and benchmark) Blosc
 are given.
@@ -76,7 +77,7 @@ zlib and zstd).
 Tagging
 -------
 
-- Create a tag ``X.Y.Z`` from ``master``::
+- Create a tag ``X.Y.Z`` from ``main``::
 
     $ git tag -a vX.Y.Z -m "Tagging version X.Y.Z"
 
@@ -97,7 +98,7 @@ Announcing
 Post-release actions
 --------------------
 
-- Edit *VERSION* symbols in blosc/blosc.h in master to increment the
+- Edit *VERSION* symbols in blosc/blosc.h in main to increment the
   version to the next minor one (i.e. X.Y.Z --> X.Y.(Z+1).dev).
 
 - Create new headers for adding new features in ``RELEASE_NOTES.rst``

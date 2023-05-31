@@ -13,7 +13,7 @@ if(NOT DEACTIVATE_LZ4)
     if (LZ4_FOUND)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${LZ4_INCLUDE_DIR})
     else(LZ4_FOUND)
-        set(LZ4_LOCAL_DIR ${INTERNAL_LIBS}/lz4-1.9.3)
+        set(LZ4_LOCAL_DIR ${INTERNAL_LIBS}/lz4-1.9.4)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${LZ4_LOCAL_DIR})
     endif(LZ4_FOUND)
 endif(NOT DEACTIVATE_LZ4)
@@ -31,7 +31,7 @@ if(NOT DEACTIVATE_ZLIB)
     if (ZLIB_FOUND)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIR})
     else(ZLIB_FOUND)
-        set(ZLIB_LOCAL_DIR ${INTERNAL_LIBS}/zlib-1.2.11)
+        set(ZLIB_LOCAL_DIR ${INTERNAL_LIBS}/zlib-1.2.13)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZLIB_LOCAL_DIR})
     endif(ZLIB_FOUND)
 endif(NOT DEACTIVATE_ZLIB)
@@ -40,7 +40,7 @@ if (NOT DEACTIVATE_ZSTD)
     if (ZSTD_FOUND)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_INCLUDE_DIR})
     else (ZSTD_FOUND)
-        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.2)
+        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.5)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_LOCAL_DIR} ${ZSTD_LOCAL_DIR}/common)
     endif (ZSTD_FOUND)
 endif (NOT DEACTIVATE_ZSTD)
@@ -162,9 +162,15 @@ if(COMPILER_SUPPORT_SSE2)
         # MSVC targets SSE2 by default on 64-bit configurations, but not 32-bit configurations.
         if (${CMAKE_SIZEOF_VOID_P} EQUAL 4)
             set_source_files_properties(shuffle-sse2.c bitshuffle-sse2.c PROPERTIES COMPILE_FLAGS "/arch:SSE2")
+            set_property(
+                    SOURCE shuffle.c
+                    APPEND PROPERTY COMPILE_OPTIONS "/arch:SSE2")
         endif (${CMAKE_SIZEOF_VOID_P} EQUAL 4)
     else (MSVC)
         set_source_files_properties(shuffle-sse2.c bitshuffle-sse2.c PROPERTIES COMPILE_FLAGS -msse2)
+        set_property(
+                SOURCE shuffle.c
+                APPEND PROPERTY COMPILE_OPTIONS -msse2)
     endif (MSVC)
 
     # Define a symbol for the shuffle-dispatch implementation
@@ -178,9 +184,15 @@ if(COMPILER_SUPPORT_AVX2)
     if (MSVC)
         set_source_files_properties(shuffle-avx2.c bitshuffle-avx2.c
                 PROPERTIES COMPILE_FLAGS "/arch:AVX2")
+        set_property(
+                SOURCE shuffle.c
+                APPEND PROPERTY COMPILE_OPTIONS "/arch:AVX2")
     else (MSVC)
         set_source_files_properties(shuffle-avx2.c bitshuffle-avx2.c
                 PROPERTIES COMPILE_FLAGS -mavx2)
+        set_property(
+                SOURCE shuffle.c
+                APPEND PROPERTY COMPILE_OPTIONS -mavx2)
     endif (MSVC)
 
     # Define a symbol for the shuffle-dispatch implementation
