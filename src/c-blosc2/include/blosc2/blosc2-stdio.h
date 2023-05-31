@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -13,29 +13,17 @@
 #define BLOSC_BLOSC2_STDIO_H
 
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "blosc2-export.h"
 
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-
-/* stdint.h only available in VS2010 (VC++ 16.0) and newer */
-   #if defined(_MSC_VER) && _MSC_VER < 1600
-     #include "win32/stdint-windows.h"
-   #else
-     #include <stdint.h>
-   #endif
-
-#else
-#include <stdint.h>
-#endif
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1400)
+#if defined(_MSC_VER)
 #include <io.h>
 #else
 #include <unistd.h>
 #endif
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 typedef struct {
   FILE *file;

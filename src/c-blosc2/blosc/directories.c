@@ -1,18 +1,19 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#include <stdio.h>
 #include "blosc2.h"
+
+#include <stdio.h>
 #include <sys/stat.h>
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__MINGW32__)
   #include <windows.h>
   #include <malloc.h>
   #include <io.h>
@@ -155,4 +156,3 @@ int blosc2_rename_urlpath(char* old_urlpath, char* new_urlpath){
   }
   return BLOSC2_ERROR_SUCCESS;
 }
-

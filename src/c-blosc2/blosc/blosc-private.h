@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -30,14 +30,6 @@ extern "C" {
 #define from_little(dest, src, itemsize)  endian_handler(true, dest, src, itemsize)
 #define to_big(dest, src, itemsize)       endian_handler(false, dest, src, itemsize)
 #define from_big(dest, src, itemsize)     endian_handler(false, dest, src, itemsize)
-
-#define BLOSC_ERROR_NULL(pointer, rc)                           \
-    do {                                                        \
-        if ((pointer) == NULL) {                                \
-            BLOSC_TRACE_ERROR("Pointer is NULL");               \
-            return rc;                                          \
-        }                                                       \
-    } while (0)
 
 
 // Return true if platform is little endian; else false
@@ -175,6 +167,20 @@ int register_filter_private(blosc2_filter *filter);
  */
 int register_codec_private(blosc2_codec *codec);
 
+
+/**
+ * @brief Register a tune in Blosc.
+ *
+ * @param tune The tune to register.
+ *
+ * @return 0 if succeeds. Else a negative code is returned.
+ */
+int register_tuner_private(blosc2_tuner *tuner);
+
+int fill_tuner(blosc2_tuner *tuner);
+
+extern blosc2_tuner g_tuners[256];
+extern int g_ntuners;
 #ifdef __cplusplus
 }
 #endif

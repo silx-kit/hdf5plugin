@@ -1,16 +1,17 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#include "stune.h"
+
 #include <stdbool.h>
 #include <stdio.h>
-#include "stune.h"
 
 
 /* Whether a codec is meant for High Compression Ratios
@@ -21,7 +22,9 @@ static bool is_HCR(blosc2_context * context) {
     case BLOSC_BLOSCLZ :
       return false;
     case BLOSC_LZ4 :
-      return (context->filter_flags & BLOSC_DOBITSHUFFLE) ? true : false;
+      // return (context->filter_flags & BLOSC_DOBITSHUFFLE) ? true : false;
+      // Do not treat LZ4 differently than BloscLZ here
+      return false;
     case BLOSC_LZ4HC :
     case BLOSC_ZLIB :
     case BLOSC_ZSTD :

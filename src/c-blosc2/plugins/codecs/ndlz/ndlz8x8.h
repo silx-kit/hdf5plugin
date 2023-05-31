@@ -1,22 +1,22 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-
-
 #ifndef NDLZ8_H
 #define NDLZ8_H
+
 #include "context.h"
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
 #include "ndlz.h"
 #include "ndlz-private.h"
 

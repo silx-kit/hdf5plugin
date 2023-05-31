@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -9,32 +9,26 @@
 **********************************************************************/
 
 
+#include "blosc-private.h"
+#include "blosc2/tuners-registry.h"
+#include "frame.h"
+#include "stune.h"
+#include "blosc2.h"
+
+#if defined(_WIN32)
+#include <windows.h>
+#include <direct.h>
+#include <malloc.h>
+
+#define mkdir(D, M) _mkdir(D)
+#endif  /* _WIN32 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <sys/stat.h>
-#include "blosc2.h"
-#include "frame.h"
-#include "stune.h"
 #include <inttypes.h>
-#include "blosc-private.h"
-
-#if defined(_WIN32)
-  #include <windows.h>
-  #include <direct.h>
-  #include <malloc.h>
-
-  #define mkdir(D, M) _mkdir(D)
-
-/* stdint.h only available in VS2010 (VC++ 16.0) and newer */
-  #if defined(_MSC_VER) && _MSC_VER < 1600
-    #include "win32/stdint-windows.h"
-  #else
-    #include <stdint.h>
-  #endif
-
-#endif  /* _WIN32 */
-
 
 /* If C11 is supported, use it's built-in aligned allocation. */
 #if __STDC_VERSION__ >= 201112L
@@ -95,6 +89,8 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   schunk->typesize = cparams->typesize;
   schunk->blocksize = cparams->blocksize;
   schunk->chunksize = -1;
+  schunk->tuner_params = cparams->tuner_params;
+  schunk->tuner_id = cparams->tuner_id;
 
   /* The compression context */
   if (schunk->cctx != NULL) {
@@ -128,18 +124,34 @@ blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
   // Update the (local variable) storage
   storage = schunk->storage;
 
-  schunk->udbtune = malloc(sizeof(blosc2_btune));
-  if (schunk->storage->cparams->udbtune == NULL) {
-    memcpy(schunk->udbtune, &BTUNE_DEFAULTS, sizeof(blosc2_btune));
-  } else {
-    memcpy(schunk->udbtune, schunk->storage->cparams->udbtune, sizeof(blosc2_btune));
+  char* btune_balance = getenv("BTUNE_BALANCE");
+  if (btune_balance != NULL) {
+    // If BTUNE_BALANCE passed, automatically use btune
+    storage->cparams->tuner_id = BLOSC_BTUNE;
   }
-  schunk->storage->cparams->udbtune = schunk->udbtune;
 
   // ...and update internal properties
   update_schunk_properties(schunk);
 
-  schunk->cctx->udbtune->btune_init(schunk->udbtune->btune_config, schunk->cctx, schunk->dctx);
+  if (schunk->cctx->tuner_id < BLOSC_LAST_TUNER && schunk->cctx->tuner_id == BLOSC_STUNE) {
+    blosc_stune_init(schunk->storage->cparams->tuner_params, schunk->cctx, schunk->dctx);
+  } else {
+    for (int i = 0; i < g_ntuners; ++i) {
+      if (g_tuners[i].id == schunk->cctx->tuner_id) {
+        if (g_tuners[i].init == NULL) {
+          if (fill_tuner(&g_tuners[i]) < 0) {
+            BLOSC_TRACE_ERROR("Could not load tuner %d.", g_tuners[i].id);
+            return NULL;
+          }
+        }
+        g_tuners[i].init(schunk->storage->cparams->tuner_params, schunk->cctx, schunk->dctx);
+        goto urtunersuccess;
+      }
+    }
+    BLOSC_TRACE_ERROR("User-defined tuner %d not found\n", schunk->cctx->tuner_id);
+    return NULL;
+  }
+  urtunersuccess:;
 
   if (!storage->contiguous && storage->urlpath != NULL){
     char* urlpath;
@@ -540,9 +552,6 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
     }
   }
 
-  if (schunk->udbtune != NULL) {
-    free(schunk->udbtune);
-  }
   free(schunk);
 
   return 0;
@@ -1376,29 +1385,6 @@ int blosc2_schunk_set_slice_buffer(blosc2_schunk *schunk, int64_t start, int64_t
 }
 
 
-/* Find whether the schunk has a metalayer or not.
- *
- * If successful, return the index of the metalayer.  Else, return a negative value.
- */
-int blosc2_meta_exists(blosc2_schunk *schunk, const char *name) {
-  if (strlen(name) > BLOSC2_METALAYER_NAME_MAXLEN) {
-    BLOSC_TRACE_ERROR("Metalayers cannot be larger than %d chars.", BLOSC2_METALAYER_NAME_MAXLEN);
-    return BLOSC2_ERROR_INVALID_PARAM;
-  }
-
-  if (schunk == NULL) {
-    BLOSC_TRACE_ERROR("Schunk must not be NUll.");
-    return BLOSC2_ERROR_INVALID_PARAM;
-  }
-
-  for (int nmetalayer = 0; nmetalayer < schunk->nmetalayers; nmetalayer++) {
-    if (strcmp(name, schunk->metalayers[nmetalayer]->name) == 0) {
-      return nmetalayer;
-    }
-  }
-  return BLOSC2_ERROR_NOT_FOUND;
-}
-
 /* Reorder the chunk offsets of an existing super-chunk. */
 int blosc2_schunk_reorder_offsets(blosc2_schunk *schunk, int64_t *offsets_order) {
   // Check that the offsets order are correct
@@ -1552,25 +1538,6 @@ int blosc2_meta_update(blosc2_schunk *schunk, const char *name, uint8_t *content
   return nmetalayer;
 }
 
-
-/* Get the content out of a metalayer.
- *
- * The `**content` receives a malloc'ed copy of the content.  The user is responsible of freeing it.
- *
- * If successful, return the index of the new metalayer.  Else, return a negative value.
- */
-int blosc2_meta_get(blosc2_schunk *schunk, const char *name, uint8_t **content,
-                    int32_t *content_len) {
-  int nmetalayer = blosc2_meta_exists(schunk, name);
-  if (nmetalayer < 0) {
-    BLOSC_TRACE_ERROR("Metalayer \"%s\" not found.", name);
-    return nmetalayer;
-  }
-  *content_len = schunk->metalayers[nmetalayer]->content_len;
-  *content = malloc((size_t)*content_len);
-  memcpy(*content, schunk->metalayers[nmetalayer]->content, (size_t)*content_len);
-  return nmetalayer;
-}
 
 /* Find whether the schunk has a variable-length metalayer or not.
  *

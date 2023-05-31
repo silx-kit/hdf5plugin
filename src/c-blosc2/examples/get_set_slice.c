@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -33,6 +33,8 @@
 #define NTHREADS 4
 
 int main(void) {
+  blosc2_init();
+
   static int32_t data[CHUNKSIZE];
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
   int64_t nbytes, cbytes;
@@ -118,6 +120,8 @@ int main(void) {
   blosc2_schunk_free(schunk);
   free(buffer);
   free(res);
+
+  blosc2_destroy();
 
   return 0;
 }

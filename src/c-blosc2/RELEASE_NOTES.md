@@ -1,15 +1,99 @@
-Release notes for C-Blosc2 2.6.1
-================================
+Release notes for C-Blosc2
+==========================
 
-Changes from 2.6.1 to 2.6.2
+Changes from 2.9.1 to 2.9.2
 ===========================
 
-#XXX version-specific blurb XXX#
+* Now is possible to register the same plugin (as long as they have the same
+  ID *and* name) without errors.  This is useful for registering the same
+  plugin without worrying on whether it has been registered already.
+
+* Improved detection of dynamic plugin locations.  Now they must implement
+  `plugin_module.print_libpath()` as the canonical way to find the path for
+  the dynamic library plugin.
+
+* The `blosc2_static` has gained the cmake POSITION_INDEPENDENT_CODE property.
+  This should allow to use the static library in more situations.
+
+* `BLOSC_STUNE` is defined in `blosc2.h` now.  Fixes #481.  Thanks to
+  @DimitriPapadopoulos.
+
+* Fixed an issue when having incompressible data in combination with lazy_chunks.
+
+* Fix linking with static -DBUILD_STATIC=0. Fixes #480.
+
+* Visual Studio 2010 (version 10.0) has been deprecated.  Now, users will
+  need to use Visual Studio 2012 (version 11.0) or later.
+
+* Many small fixes and code improvements.  Thanks to @DimitriPapadopoulos,
+  @bnavigator.
+
+
+Changes from 2.9.0 to 2.9.1
+===========================
+
+* Allow the use of BTUNE by detecting the ``BTUNE_BALANCE`` environment
+  variable.
+
+
+Changes from 2.8.0 to 2.9.0
+===========================
+
+* Dynamic plugins as Python wheels are supported now!
+  This new feature allows for creating plugins in C, distribute
+  them as wheels, and load them dynamically in runtime.
+  Small example at https://github.com/Blosc/blosc2_plugin_example
+
+* BloscLZ can achieve more speed in clevel 1 now.
+
+* Internal Zstd sources updated to latest 1.5.5 version.
+
+* Copyright notice updated.  Thanks to @DimitriPapadopoulos.
+
+
+Changes from 2.7.1 to 2.8.0
+===========================
+
+* New bytedelta filter added.  SIMD support for Intel and ARM platforms is there.
+  We have blogged about this: https://www.blosc.org/posts/bytedelta-enhance-compression-toolset.rst
+  Thanks to Aras Pranckevičius for inspiration and initial implementation.
+
+* Minor improvements in BloscLZ, leading to better compression ratios in general.
+  BLoscLZ version bumped to 2.5.2.
+
+* Updated internal zlib-ng to 2.0.7.
+
+* Used `const` qualifier where possible in b2nd.  Thanks to @cf-natali.
+
+
+Changes from 2.6.1 to 2.7.1
+===========================
+
+* Caterva has been merged and carefully integrated in C-Blosc2 in the new b2nd interface.
+  For more info on the new interface, see https://www.blosc.org/c-blosc2/reference/b2nd.html.
+  Thanks to Marta Iborra, Oscar Guiñón, J. David Ibáñez and Francesc Alted.  Also thanks to
+  Aleix Alcacer for his great work in the Caterva project.
+
+  We have a blog about this: https://www.blosc.org/posts/blosc2-ndim-intro
+
+* Updated internal zstd sources to 1.5.4.  Thanks to Dimitri Papadopoulos.
+
+* `blosc2_schunk_avoid_cframe_free` and `blosc2_schunk_append_file` are exported as public functions now.
+  Thanks to @bnavigator.
+
+* BloscLZ codec is now treated exactly the same as LZ4.  Before BloscLZ was considered less capable of reaching
+ decent compression ratios, but this has changed quite a bit lately, so there is no point in treating both differently.
+
+* Fixed some leaks, mainly on the test suite.
+
+* Fixed quite a bit of compiler warnings.
+
 
 Changes from 2.6.0 to 2.6.1
 ===========================
 
 * Add support for macos universal2 binaries (arm64+x86_64 build). Thanks to Thomas Vincent.
+
 
 Changes from 2.5.0 to 2.6.0
 ===========================
@@ -26,7 +110,7 @@ Changes from 2.5.0 to 2.6.0
 Changes from 2.4.3 to 2.5.0
 ===========================
 
-* Fixed a nasty bug that prevented retriving data correctly with large super-chunks (> 2^31 elements).
+* Fixed a nasty bug that prevented retrieving data correctly with large super-chunks (> 2^31 elements).
 
 * Fixed an issue in `blosc2_schunk_get_slice_buffer()` in the interpretation of the `stop` param.
   Now `stop` is not part of the selected slice (as advertised).
@@ -519,7 +603,7 @@ Changes from 2.0.0a2 to 2.0.0a3
 * Added support for new Zstd codec (https://github.com/Cyan4973/zstd).
   This is a new compressor by Yann Collet, the author of LZ4 and
   LZ4HC.  For details on Zstd, see this nice intro:
-  http://fastcompression.blogspot.com.es/2015/01/zstd-stronger-compression-algorithm.html.
+  https://fastcompression.blogspot.com/2015/01/zstd-stronger-compression-algorithm.html.
 
 * The blosc2_append_chunk() has been removed.  This is this because an
   existing chunk may not fulfill the sequence of filters in super

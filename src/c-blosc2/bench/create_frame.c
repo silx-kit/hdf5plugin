@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -180,6 +180,8 @@ int create_cframe(const char* compname, bool contiguous) {
 
 
 int main(void) {
+  blosc2_init();
+
 #ifdef CREATE_ZEROS
   printf("\n   ***  Creating zeros   ***\n");
 #else
@@ -197,4 +199,6 @@ int main(void) {
   create_cframe("blosclz", false);
   create_cframe("lz4", true);
   create_cframe("lz4", false);
+
+  blosc2_destroy();
 }

@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -11,8 +11,11 @@
 #ifndef BLOSC_FRAME_H
 #define BLOSC_FRAME_H
 
+#include "blosc2.h"
+
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // Different types of frames
 #define FRAME_CONTIGUOUS_TYPE 0

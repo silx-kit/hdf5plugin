@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2022  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2022  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -30,6 +30,8 @@
 
 
 int main(void) {
+  blosc2_init();
+
   float *data = malloc(SIZE * sizeof(float));
   float *data_out = malloc(SIZE * sizeof(float));
   float *data_dest = malloc(SIZE * sizeof(float));
@@ -101,6 +103,8 @@ int main(void) {
   free(data);
   free(data_out);
   free(data_dest);
+
+  blosc2_destroy();
 
   return 0;
 }

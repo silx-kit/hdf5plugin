@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -9,9 +9,11 @@
 **********************************************************************/
 
 #include "shuffle.h"
+#include "blosc2.h"
 #include "blosc2/blosc2-common.h"
 #include "shuffle-generic.h"
 #include "bitshuffle-generic.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -433,7 +435,7 @@ bitshuffle(const int32_t bytesoftype, const int32_t blocksize,
                                              size, bytesoftype, (void *) _tmp);
   if (ret < 0) {
     // Some error in bitshuffle (should not happen)
-    fprintf(stderr, "the impossible happened: the bitshuffle filter failed!");
+    BLOSC_TRACE_ERROR("the impossible happened: the bitshuffle filter failed!");
     return ret;
   }
 
@@ -463,7 +465,7 @@ int32_t bitunshuffle(const int32_t bytesoftype, const int32_t blocksize,
                                                    bytesoftype, (void *) _tmp);
       if (ret < 0) {
         // Some error in bitshuffle (should not happen)
-        fprintf(stderr, "the impossible happened: the bitunshuffle filter failed!");
+        BLOSC_TRACE_ERROR("the impossible happened: the bitunshuffle filter failed!");
         return ret;
       }
       /* Copy the leftovers (we do so starting from c-blosc 1.18 on) */
@@ -480,7 +482,7 @@ int32_t bitunshuffle(const int32_t bytesoftype, const int32_t blocksize,
     int ret = (int) (host_implementation.bitunshuffle)((void *) _src, (void *) _dest,
                                                  size, bytesoftype, (void *) _tmp);
     if (ret < 0) {
-      fprintf(stderr, "the impossible happened: the bitunshuffle filter failed!");
+      BLOSC_TRACE_ERROR("the impossible happened: the bitunshuffle filter failed!");
       return ret;
     }
 

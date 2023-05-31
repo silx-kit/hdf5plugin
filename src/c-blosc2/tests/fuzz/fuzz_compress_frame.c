@@ -5,12 +5,14 @@
 
 #include <blosc2.h>
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-  const char *compressors[] = { "blosclz", "lz4", "lz4hc", "zlib", "zstd" };
+  const char *const compressors[] = { "blosclz", "lz4", "lz4hc", "zlib", "zstd" };
   int32_t i = 0, dsize = 0, filter = BLOSC_BITSHUFFLE;
   int32_t nchunk = 0, max_chunksize = 512;
   int64_t nchunks = 0;
@@ -28,6 +30,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     /* No compressors available */
     blosc2_destroy();
     return 0;
+  }
+  if (size > INT32_MAX) {
+      printf("Conversion error: size_t does not fit in int32_t\n");
+      return 0;
   }
   if (size > 0) {
     /* Variable size compression level and max chunksize */

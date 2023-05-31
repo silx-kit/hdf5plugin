@@ -1,18 +1,19 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#include "frame.h"
+#include "blosc2.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "blosc2.h"
-#include "frame.h"
 
 
 /* If C11 is supported, use it's built-in aligned allocation. */
@@ -33,6 +34,8 @@ void* sframe_open_index(const char* urlpath, const char* mode, const blosc2_io *
       return NULL;
     }
     fp = io_cb->open(index_path, mode, io->params);
+    if (fp == NULL)
+      BLOSC_TRACE_ERROR("Error creating index path in: %s", index_path);
     free(index_path);
   }
   return fp;
@@ -50,6 +53,8 @@ void* sframe_open_chunk(const char* urlpath, int64_t nchunk, const char* mode, c
       return NULL;
     }
     fp = io_cb->open(chunk_path, mode, io->params);
+    if (fp == NULL)
+      BLOSC_TRACE_ERROR("Error opening chunk path in: %s", chunk_path);
     free(chunk_path);
   }
   return fp;

@@ -1,13 +1,11 @@
 """
-Copyright (C) 2021  The Blosc developers <blosc@blosc.org>
+Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
 https://blosc.org
 License: BSD 3-Clause (see LICENSE.txt)
 
 Script for plotting the results of the 'suite' benchmark.
 Invoke without parameters for usage hints.
 """
-from __future__ import print_function
-
 import matplotlib as mpl
 from pylab import *
 
