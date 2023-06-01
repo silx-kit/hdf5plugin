@@ -1,15 +1,15 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#include "shuffle-generic.h"
 #include "shuffle-avx2.h"
+#include "shuffle-generic.h"
 
 /* Make sure AVX2 is available for the compilation target and compiler. */
 #if defined(__AVX2__)

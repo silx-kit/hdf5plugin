@@ -1,5 +1,5 @@
 # sources
-set(SOURCES ${SOURCES} ../plugins/filters/ndcell/ndcell.c ../plugins/filters/ndcell/ndcell.h PARENT_SCOPE)
+set(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/plugins/filters/ndcell/ndcell.c PARENT_SCOPE)
 
 if(BUILD_TESTS)
 
@@ -18,7 +18,7 @@ if(BUILD_TESTS)
         COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:test_ndcell>)
 
     # Copy test files
-    file(GLOB TESTS_DATA ../../test_data/*.caterva)
+    file(GLOB TESTS_DATA ../../test_data/*.b2nd)
     foreach (data ${TESTS_DATA})
         file(COPY ${data}
                 DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)

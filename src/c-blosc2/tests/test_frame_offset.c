@@ -1,15 +1,14 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 */
 
 #include <stdio.h>
-#include <stdint.h>
-#include <assert.h>
 
 #include "blosc2.h"
 #include "cutest.h"
+
 
 #define KB  1024.
 #define MB  (1024*KB)
@@ -26,7 +25,7 @@ enum {
 typedef struct {
   bool contiguous;
   char *urlpath;
-}test_fill_special_backend;
+} test_fill_special_backend;
 
 CUTEST_TEST_DATA(fill_special) {
   blosc2_cparams cparams;
@@ -56,7 +55,6 @@ CUTEST_TEST_SETUP(fill_special) {
   data->schunk_write_append = blosc2_schunk_new(&storage);
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
   int i, nchunk;
-  int64_t nchunks;
 
   // Add some data
   for (nchunk = 0; nchunk < NCHUNKS; nchunk++) {
@@ -64,8 +62,7 @@ CUTEST_TEST_SETUP(fill_special) {
       data->data1[i] = i * nchunk;
       data->data2[i] = 2 * i * nchunk;
     }
-    nchunks = blosc2_schunk_append_buffer(data->schunk_write_start, data->data1, isize);
-    assert(nchunks == nchunk + 1);
+    blosc2_schunk_append_buffer(data->schunk_write_start, data->data1, isize);
     blosc2_schunk_append_buffer(data->schunk_write_append, data->data2, isize);
   }
 }
@@ -131,8 +128,8 @@ CUTEST_TEST_TEST(fill_special) {
   blosc2_schunk* schunk_read_offset = blosc2_schunk_open_offset("file:///frame_simple.b2frame", offset);
   blosc_set_timestamp(&current);
   ttotal = blosc_elapsed_secs(last, current);
-  printf("Time for fileframe (%s) + offset %lld -> frame_offset : %.3g s, %.1f GB/s\n",
-         schunk_read_offset->storage->urlpath, offset, ttotal, (double)schunk_read_offset->nbytes / (ttotal * GB));
+  printf("Time for fileframe (%s) + offset %ld -> frame_offset : %.3g s, %.1f GB/s\n",
+         schunk_read_offset->storage->urlpath, (long)offset, ttotal, (double)schunk_read_offset->nbytes / (ttotal * GB));
 
   uint8_t* cframe_read_start, *cframe_read_offset;
   bool cframe_needs_free2, cframe_needs_free3;

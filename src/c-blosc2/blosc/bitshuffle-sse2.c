@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -12,7 +12,7 @@
   Bitshuffle - Filter for improving compression of typed binary data.
 
   Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
-  Website: http://www.github.com/kiyo-masui/bitshuffle
+  Website: https://github.com/kiyo-masui/bitshuffle
 
   Note: Adapted for c-blosc by Francesc Alted.
 
@@ -21,8 +21,8 @@
 **********************************************************************/
 
 
-#include "bitshuffle-generic.h"
 #include "bitshuffle-sse2.h"
+#include "bitshuffle-generic.h"
 
 /* Make sure SSE2 is available for the compilation target and compiler. */
 #if defined(__SSE2__)

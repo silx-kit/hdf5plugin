@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -46,7 +46,7 @@ int filter_forward(const uint8_t* src, uint8_t* dest, int32_t size, uint8_t meta
         ((int16_t *) dest)[i] = (int16_t)(((int16_t *) src)[i] + 1);
         break;
       default:
-        BLOSC_TRACE_ERROR("Item size %d not supported", schunk->typesize);
+        fprintf(stderr, "Item size %d not supported", schunk->typesize);
         return BLOSC2_ERROR_FAILURE;
     }
   }
@@ -71,7 +71,7 @@ int filter_backward(const uint8_t* src, uint8_t* dest, int32_t size, uint8_t met
         ((int16_t *) dest)[i] = (int16_t)(((int16_t *) src)[i] - 1);
         break;
       default:
-        BLOSC_TRACE_ERROR("Item size %d not supported", schunk->typesize);
+        fprintf(stderr, "Item size %d not supported", schunk->typesize);
         return BLOSC2_ERROR_FAILURE;
     }
   }
@@ -79,6 +79,8 @@ int filter_backward(const uint8_t* src, uint8_t* dest, int32_t size, uint8_t met
 }
 
 int main(void) {
+  blosc2_init();
+
   static int32_t data[CHUNKSIZE];
   static int32_t data_dest[CHUNKSIZE];
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
@@ -87,6 +89,8 @@ int main(void) {
 
   blosc2_filter urfilter;
   urfilter.id = 250;
+  urfilter.name = "urfilter_example";
+  urfilter.version = 1;
   urfilter.forward = filter_forward;
   urfilter.backward = filter_backward;
 
@@ -161,6 +165,8 @@ int main(void) {
   /* Free resources */
   /* Destroy the super-chunk */
   blosc2_schunk_free(schunk);
+
+  blosc2_destroy();
 
   return 0;
 }

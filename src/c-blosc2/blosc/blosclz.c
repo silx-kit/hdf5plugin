@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -14,17 +14,19 @@
 **********************************************************************/
 
 
-#include <stdio.h>
-#include <stdbool.h>
 #include "blosclz.h"
 #include "fastcopy.h"
 #include "blosc2/blosc2-common.h"
 
+#include <stdio.h>
+#include <stdbool.h>
+
 
 /*
  * Give hints to the compiler for branch prediction optimization.
+ * This is not necessary anymore with modern CPUs.
  */
-#if defined(__GNUC__) && (__GNUC__ > 2)
+#if 0 && defined(__GNUC__) && (__GNUC__ > 2)
 #define BLOSCLZ_LIKELY(c)    (__builtin_expect((c), 1))
 #define BLOSCLZ_UNLIKELY(c)  (__builtin_expect((c), 0))
 #else
@@ -52,7 +54,6 @@
 #endif
 
 #define HASH_LOG (14U)
-#define HASH_LOG2 (12U)
 
 // This is used in LZ4 and seems to work pretty well here too
 #define HASH_FUNCTION(v, s, h) {      \
@@ -315,11 +316,10 @@ static uint8_t* get_run_or_match(uint8_t* ip, uint8_t* ip_bound, const uint8_t* 
 
 
 // Get a guess for the compressed size of a buffer
-static double get_cratio(uint8_t* ibase, int maxlen, int minlen, int ipshift) {
+static double get_cratio(uint8_t* ibase, int maxlen, int minlen, int ipshift, uint32_t htab[], int8_t hashlog) {
   uint8_t* ip = ibase;
   int32_t oc = 0;
-  const uint16_t hashlen = (1U << (uint8_t)HASH_LOG2);
-  uint16_t htab[1U << (uint8_t)HASH_LOG2];
+  const uint16_t hashlen = (1U << (uint8_t)hashlog);
   uint32_t hval;
   uint32_t seq;
   uint8_t copy;
@@ -329,7 +329,7 @@ static double get_cratio(uint8_t* ibase, int maxlen, int minlen, int ipshift) {
   uint8_t* ip_limit = ibase + limit - 12;
 
   // Initialize the hash table to distances of 0
-  memset(htab, 0, hashlen * sizeof(uint16_t));
+  memset(htab, 0, hashlen * sizeof(uint32_t));
 
   /* we start with literal copy */
   copy = 4;
@@ -343,14 +343,14 @@ static double get_cratio(uint8_t* ibase, int maxlen, int minlen, int ipshift) {
 
     /* find potential match */
     seq = BLOSCLZ_READU32(ip);
-    HASH_FUNCTION(hval, seq, HASH_LOG2)
+    HASH_FUNCTION(hval, seq, hashlog)
     ref = ibase + htab[hval];
 
     /* calculate distance to the match */
     distance = (unsigned int)(anchor - ref);
 
     /* update hash table */
-    htab[hval] = (uint16_t) (anchor - ibase);
+    htab[hval] = (uint32_t) (anchor - ibase);
 
     if (distance == 0 || (distance >= MAX_FARDISTANCE)) {
       LITERAL2(ip, anchor, copy)
@@ -406,8 +406,8 @@ static double get_cratio(uint8_t* ibase, int maxlen, int minlen, int ipshift) {
 
     /* update the hash at match boundary */
     seq = BLOSCLZ_READU32(ip);
-    HASH_FUNCTION(hval, seq, HASH_LOG2)
-    htab[hval] = (uint16_t)(ip++ - ibase);
+    HASH_FUNCTION(hval, seq, hashlog)
+    htab[hval] = (uint32_t)(ip++ - ibase);
     ip++;
     /* assuming literal copy */
     oc++;
@@ -420,46 +420,50 @@ static double get_cratio(uint8_t* ibase, int maxlen, int minlen, int ipshift) {
 
 int blosclz_compress(const int clevel, const void* input, int length,
                      void* output, int maxout, blosc2_context* ctx) {
+  BLOSC_UNUSED_PARAM(ctx);
   uint8_t* ibase = (uint8_t*)input;
-
-  // Experiments say that checking 1/4 of the buffer is enough to figure out approx cratio
-  int maxlen = length / 4;
-  // Start probing somewhere inside the buffer
-  int shift = length - maxlen;
-  // Actual entropy probing!
-  double cratio = get_cratio(ibase + shift, maxlen, 3, 3);
-  // discard probes with small compression ratios (too expensive)
-  double cratio_[10] = {0, 2, 1.5, 1.2, 1.2, 1.2, 1.2, 1.15, 1.1, 1.0};
-  if (cratio < cratio_[clevel]) {
-      goto out;
-  }
+  uint32_t htab[1U << (uint8_t)HASH_LOG];
 
   /* When we go back in a match (shift), we obtain quite different compression properties.
    * It looks like 4 is more useful in combination with bitshuffle and small typesizes
    * Fallback to 4 because it provides more consistent results for large cratios.
+   * UPDATE: new experiments show that using a value of 3 is a bit better, at least for ERA5.
    *
    * In this block we also check cratios for the beginning of the buffers and
    * eventually discard those that are small (take too long to decompress).
    * This process is called _entropy probing_.
    */
-  unsigned ipshift = 4;
-  // Compute optimal shift and minimum lengths for encoding
-  // Use 4 by default, except for low entropy data, where we should do a best effort
-  unsigned minlen = 4;
-  // BloscLZ works better with splits mostly, so when data is not split, do a best effort
-  const int split_block = !((ctx->header_flags & 0x10) >> 4);
-  // Why using cratio < 4 is based in experiments with low and high entropy
-  if (!split_block || cratio < 4) {
-    ipshift = 3;
-    minlen = 3;
-  }
-  else {
-    minlen = 4;
-  }
+  unsigned ipshift = 3;
+  // Minimum lengths for encoding (normally it is good to match the shift value)
+  unsigned minlen = 3;
 
-  uint8_t hashlog_[10] = {0, HASH_LOG - 2, HASH_LOG - 1, HASH_LOG, HASH_LOG,
+  uint8_t hashlog_[10] = {0, HASH_LOG - 1, HASH_LOG - 1, HASH_LOG, HASH_LOG,
                           HASH_LOG, HASH_LOG, HASH_LOG, HASH_LOG, HASH_LOG};
   uint8_t hashlog = hashlog_[clevel];
+
+  // Experiments say that checking 1/4 of the buffer is enough to figure out approx cratio
+  // UPDATE: new experiments with ERA5 datasets (float32) say that checking the whole buffer
+  // is better (specially when combined with bitshuffle).
+  // The loss in speed for checking the whole buffer is pretty negligible too.
+  int maxlen = length;
+  if (clevel < 2) {
+    maxlen /= 8;
+  }
+  else if (clevel < 4) {
+    maxlen /= 4;
+  }
+  else if (clevel < 7) {
+    maxlen /= 2;
+  }
+  // Start probing somewhere inside the buffer
+  int shift = length - maxlen;
+  // Actual entropy probing!
+  double cratio = get_cratio(ibase + shift, maxlen, minlen, ipshift, htab, hashlog);
+  // discard probes with small compression ratios (too expensive)
+  double cratio_[10] = {0, 2, 1.5, 1.2, 1.2, 1.2, 1.2, 1.15, 1.1, 1.0};
+  if (cratio < cratio_[clevel]) {
+      goto out;
+  }
 
   uint8_t* ip = ibase;
   uint8_t* ip_bound = ibase + length - 1;
@@ -476,7 +480,6 @@ int blosclz_compress(const int clevel, const void* input, int length,
   }
 
   // Initialize the hash table
-  uint32_t htab[1U << (uint8_t)HASH_LOG];
   memset(htab, 0, (1U << hashlog) * sizeof(uint32_t));
 
   /* we start with literal copy */
@@ -569,7 +572,7 @@ int blosclz_compress(const int clevel, const void* input, int length,
     seq = BLOSCLZ_READU32(ip);
     HASH_FUNCTION(hval, seq, hashlog)
     htab[hval] = (uint32_t) (ip++ - ibase);
-    if (ctx->clevel == 9) {
+    if (clevel == 9) {
       // In some situations, including a second hash proves to be useful,
       // but not in others.  Activating here in max clevel only.
       seq >>= 8U;
@@ -750,16 +753,16 @@ int blosclz_decompress(const void* input, int length, void* output, int maxout) 
       }
       else {
         // general copy with any overlap
-#if defined(__AVX2__)
+#if 0 && defined(__AVX2__)
         if (op - ref <= 16) {
           // This is not faster on a combination of compilers (clang, gcc, icc) or machines, but
-          // it is not slower either.  Let's activate here for experimentation.
+          // it is not too slower either.
           op = copy_match_16(op, ref, len);
         }
         else {
 #endif
           op = copy_match(op, ref, (unsigned) len);
-#if defined(__AVX2__)
+#if 0 && defined(__AVX2__)
         }
 #endif
       }

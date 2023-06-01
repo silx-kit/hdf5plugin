@@ -56,10 +56,9 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.8.0)
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.0)
-  using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.2), LZ4, Snappy, ZLib and ZStd.
+  using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.4), LZ4, Snappy, ZLib and ZStd.
 * hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.8.0)
-  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.6.1 + `patch <https://github.com/Blosc/c-blosc2/pull/436>`_),
-  LZ4, ZLib and ZStd.
+  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.9.2), LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2>`_ (v1.0.2)
   using `CharLS <https://github.com/team-charls/charls>`_
   (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_).
@@ -77,10 +76,10 @@ HDF5 compression filters and compression libraries sources were obtained from:
 
 Sources of compression libraries shared accross multiple filters were obtained from:
 
-* `LZ4 v1.9.4 <https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/lz4-1.9.4>`_
-* `Snappy v1.1.9 <https://github.com/google/snappy>`_
-* `ZStd v1.5.2 <https://github.com/Blosc/c-blosc2/tree/v2.6.1/internal-complibs/zstd-1.5.2>`_
-* `ZLib v1.2.11 <https://github.com/Blosc/c-blosc/tree/9dc93b1de7c1ff6265d0ae554bd79077840849d8/internal-complibs/zlib-1.2.11>`_
+* `LZ4 v1.9.4 <https://github.com/Blosc/c-blosc2/tree/v2.9.2/internal-complibs/lz4-1.9.4>`_
+* `Snappy v1.1.10 <https://github.com/google/snappy>`_
+* `ZStd v1.5.5 <https://github.com/Blosc/c-blosc2/tree/v2.9.2/internal-complibs/zstd-1.5.5>`_
+* `ZLib v1.2.13 <https://github.com/Blosc/c-blosc/tree/v1.21.4/internal-complibs/zlib-1.2.13>`_
 
 When compiled with Intel IPP, the LZ4 compression library is replaced with `LZ4 v1.9.3 <https://github.com/lz4/lz4/releases/tag/v1.9.3>`_ patched with a patch from Intel IPP 2021.7.0.
 

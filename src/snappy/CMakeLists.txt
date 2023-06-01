@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.1)
-project(Snappy VERSION 1.1.9 LANGUAGES C CXX)
+project(Snappy VERSION 1.1.10 LANGUAGES C CXX)
 
 # C++ standard can be overridden when this is used as a sub-project.
 if(NOT CMAKE_CXX_STANDARD)
@@ -175,8 +175,30 @@ int main() {
 check_cxx_source_compiles("
 #include <immintrin.h>
 int main() {
+  return _mm_crc32_u32(0, 1);
+}" SNAPPY_HAVE_X86_CRC32)
+
+check_cxx_source_compiles("
+#include <arm_neon.h>
+#include <arm_acle.h>
+int main() {
+  return __crc32cw(0, 1);
+}" SNAPPY_HAVE_NEON_CRC32)
+
+check_cxx_source_compiles("
+#include <immintrin.h>
+int main() {
   return _bzhi_u32(0, 1);
 }" SNAPPY_HAVE_BMI2)
+
+check_cxx_source_compiles("
+#include <arm_neon.h>
+int main() {
+  uint8_t val = 3, dup[8];
+  uint8x16_t v = vld1q_dup_u8(&val);
+  vst1q_u8(dup, v);
+  return 0;
+}" SNAPPY_HAVE_NEON)
 
 include(CheckSymbolExists)
 check_symbol_exists("mmap" "sys/mman.h" HAVE_FUNC_MMAP)

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -36,7 +36,7 @@ int codec_encoder(const uint8_t* input, int32_t input_len,
     return -1;
   }
   if (cparams->typesize != 4) {
-    BLOSC_TRACE_ERROR("Itemsize %d != 4", cparams->typesize);
+    fprintf(stderr, "Itemsize %d != 4", cparams->typesize);
     return BLOSC2_ERROR_FAILURE;
   }
 
@@ -49,7 +49,7 @@ int codec_encoder(const uint8_t* input, int32_t input_len,
   int32_t step = in_[1] - start;
   for (int i = 1; i < nelem - 1; ++i) {
     if (in_[i + 1] - in_[i] != step) {
-      BLOSC_TRACE_ERROR("Buffer is not an arange");
+      fprintf(stderr, "Buffer is not an arange");
       return BLOSC2_ERROR_FAILURE;
     }
   }
@@ -90,6 +90,8 @@ int codec_decoder(const uint8_t* input, int32_t input_len,
 
 
 int main(void) {
+  blosc2_init();
+
   static int32_t data[CHUNKSIZE];
   static int32_t data_dest[CHUNKSIZE];
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
@@ -98,13 +100,17 @@ int main(void) {
 
   blosc2_codec udcodec;
   udcodec.compcode = 244;
-  udcodec.compver = 1;
+  udcodec.version = 1;
   udcodec.complib = 1;
   udcodec.compname = "udcodec";
   udcodec.encoder = codec_encoder;
   udcodec.decoder = codec_decoder;
 
-  blosc2_register_codec(&udcodec);
+  int rc = blosc2_register_codec(&udcodec);
+  if (rc < 0) {
+    printf("Cannot register codec!");
+    return -1;
+  }
 
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
   cparams.compcode = 244;
@@ -177,6 +183,8 @@ int main(void) {
   /* Free resources */
   /* Destroy the super-chunk */
   blosc2_schunk_free(schunk);
+
+  blosc2_destroy();
 
   return 0;
 }

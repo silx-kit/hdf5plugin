@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -129,8 +129,8 @@ int main(void) {
   blosc2_schunk* schunk3o = blosc2_schunk_open_offset("file:///frame_simple.b2frame", offset);
   blosc_set_timestamp(&current);
   ttotal = blosc_elapsed_secs(last, current);
-  printf("Time for fileframe (%s) + offset %lld -> frame3 : %.3g s, %.1f GB/s\n",
-         schunk3o->storage->urlpath, offset, ttotal, (double)schunk3o->nbytes / (ttotal * GB));
+  printf("Time for fileframe (%s) + offset -> frame3 : %.3g s, %.1f GB/s\n",
+         schunk3o->storage->urlpath, ttotal, (double)schunk3o->nbytes / (ttotal * GB));
 
   uint8_t* cframe2, *cframe3;
   bool cframe_needs_free2, cframe_needs_free3;

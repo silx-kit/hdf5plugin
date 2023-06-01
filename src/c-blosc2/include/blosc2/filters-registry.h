@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -11,6 +11,13 @@
 enum {
     BLOSC_FILTER_NDCELL = 32,
     BLOSC_FILTER_NDMEAN = 33,
+    BLOSC_FILTER_BYTEDELTA = 34,
 };
 
 void register_filters(void);
+
+// For dynamically loaded filters
+typedef struct {
+    char *forward;
+    char *backward;
+} filter_info;

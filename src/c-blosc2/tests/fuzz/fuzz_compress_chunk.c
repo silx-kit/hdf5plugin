@@ -3,13 +3,15 @@
 
 #include <blosc2.h>
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int LLVMFuzzerTestOneInput(const uint8_t *data, int32_t size) {
-  const char *compressors[] = { "blosclz", "lz4", "lz4hc", "zlib", "zstd" };
-  int num_comp = sizeof(compressors) / sizeof(char*);
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  const char *const compressors[] = { "blosclz", "lz4", "lz4hc", "zlib", "zstd" };
+  const int num_comp = ARRAY_SIZE(compressors);
   int level = 9, filter = BLOSC_BITSHUFFLE, cindex = 0, i = 0;
   size_t nbytes, cbytes, blocksize;
   void *output, *input;
@@ -39,7 +41,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, int32_t size) {
   if (output == NULL)
     return 0;
 
-  if (blosc2_compress(level, filter, 1, data, size, output, size) == 0) {
+  int csize = blosc2_compress(level, filter, 1, data, size, output, size);
+  if (csize <= 0) {
     /* Cannot compress src buffer into dest */
     free(output);
     return 0;

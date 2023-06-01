@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -72,6 +72,8 @@
 
 
 int main(void) {
+  blosc2_init();
+
   static DTYPE udata[N];
   DTYPE chunk_buf[CHUNKSIZE];
   int32_t isize = CHUNKSIZE * sizeof(DTYPE);
@@ -103,7 +105,10 @@ int main(void) {
 
     FILE *f = fopen(filegrid, "rb");
     size_t blocks_read = fread(cdata, info.st_size, 1, f);
-    assert(blocks_read == 1);
+    if (blocks_read != 1) {
+      printf("Error reading file!\n");
+      exit(1);
+    }
     fclose(f);
 
     int dsize = blosc1_getitem(cdata, 0, CHUNKSIZE, chunk_buf);
@@ -238,6 +243,8 @@ int main(void) {
   }
   /* Free resources */
   blosc2_schunk_free(schunk);
+
+  blosc2_destroy();
 
   return 0;
 }

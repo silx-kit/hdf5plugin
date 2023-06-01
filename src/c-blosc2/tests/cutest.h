@@ -1,11 +1,12 @@
-/*
-  Copyright (C) 2021 Aleix Alcacer
-  Copyright (C) 2021 The Blosc Developers
-  http://blosc.org
-  License: BSD (see LICENSE.txt)
+/*********************************************************************
+  Blosc - Blocked Shuffling and Compression Library
+
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  https://blosc.org
+  License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
-*/
+**********************************************************************/
 
 #ifndef CUTEST_CUTEST_H
 #define CUTEST_CUTEST_H
@@ -174,11 +175,9 @@ int _cutest_run(int (*test)(void *), void *test_data, char *name) {
       snprintf(test_name, MAXLEN_TESTNAME, "%s%s[%" PRId8 "], ", aux, cutest_params[i].name,
                cutest_params_ind[i]);
     }
-    test_name[strlen(test_name) - 1] = 0;
-    strncpy(&test_name[strlen(test_name) - 1], ")", 1);
-    if (nparams == 0) {
-      test_name[strlen(test_name) - 1] = 0;
-    }
+    if (nparams > 0)
+      test_name[strlen(test_name) - 2] = ')';
+    test_name[strlen(test_name) - 1] = '\0';
     printf("%s ", test_name);
 
     cutest_total++;

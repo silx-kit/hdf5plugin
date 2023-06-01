@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -33,7 +33,7 @@ enum {
 typedef struct {
   bool contiguous;
   char *urlpath;
-}test_copy_backend;
+} test_copy_backend;
 
 
 CUTEST_TEST_DATA(copy) {

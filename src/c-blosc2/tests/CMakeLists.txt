@@ -1,5 +1,13 @@
+# Blosc - Blocked Shuffling and Compression Library
+#
+# Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+# https://blosc.org
+# License: BSD 3-Clause (see LICENSE.txt)
+#
+# See LICENSE.txt for details about copyright and rights to use.
+
 # sources
-file(GLOB SOURCES test_*.c fuzz/generate_inputs_corpus.c)
+file(GLOB SOURCES test_*.c b2nd/test_*.c fuzz/generate_inputs_corpus.c)
 
 # flags
 link_directories(${PROJECT_BINARY_DIR}/blosc)

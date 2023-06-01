@@ -9,7 +9,7 @@ SOURCES := $(wildcard *.c)
 EXECUTABLES := $(patsubst %.c, %.exe, $(SOURCES))
 
 # Support for internal LZ4 and LZ4HC
-LZ4_DIR = ../internal-complibs/lz4-1.9.3
+LZ4_DIR = ../internal-complibs/lz4-1.9.4
 CFLAGS += -DHAVE_LZ4 -I$(LZ4_DIR)
 BLOSC_LIB += $(wildcard $(LZ4_DIR)/*.c)
 
@@ -34,7 +34,7 @@ LDFLAGS += -DHAVE_ZLIB -lz
 
 
 # Support for internal Zstd
-ZSTD_DIR = ../internal-complibs/zstd-1.5.2
+ZSTD_DIR = ../internal-complibs/zstd-1.5.4
 CFLAGS += -DHAVE_ZSTD -I$(ZSTD_DIR) -I$(ZSTD_DIR)/common
 BLOSC_LIB += $(wildcard $(ZSTD_DIR)/*/*.c)
 

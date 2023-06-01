@@ -1,4 +1,12 @@
-# a simple way to detect that we are using CMAKE
+# Blosc - Blocked Shuffling and Compression Library
+#
+# Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+# https://blosc.org
+# License: BSD 3-Clause (see LICENSE.txt)
+#
+# See LICENSE.txt for details about copyright and rights to use.
+
+# A simple way to detect that we are using CMAKE
 add_definitions(-DUSING_CMAKE)
 
 set(INTERNAL_LIBS ${PROJECT_SOURCE_DIR}/internal-complibs)
@@ -32,7 +40,7 @@ if(NOT DEACTIVATE_ZSTD)
     if(ZSTD_FOUND)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_INCLUDE_DIR})
     else()
-        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.2)
+        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.5)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_LOCAL_DIR}
                 ${ZSTD_LOCAL_DIR}/common)
     endif()
@@ -43,7 +51,8 @@ include_directories(${BLOSC_INCLUDE_DIRS})
 # library sources
 set(SOURCES ${SOURCES} blosc2.c blosclz.c fastcopy.c fastcopy.h schunk.c frame.c stune.c stune.h
         context.h delta.c delta.h shuffle-generic.c bitshuffle-generic.c trunc-prec.c trunc-prec.h
-        timestamp.c sframe.c directories.c blosc2-stdio.c)
+        timestamp.c sframe.c directories.c blosc2-stdio.c
+        b2nd.c b2nd_utils.c)
 if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
     if(COMPILER_SUPPORT_SSE2)
         message(STATUS "Adding run-time support for SSE2")
@@ -183,6 +192,10 @@ if(COMPILER_SUPPORT_SSE2)
         set_property(
                 SOURCE shuffle.c
                 APPEND PROPERTY COMPILE_OPTIONS -msse2)
+        # Add SIMD flags for the bytedelta filter and Intel (it seems that ARM64 does not need these)
+        set_source_files_properties(
+                ${PROJECT_SOURCE_DIR}/plugins/filters/bytedelta/bytedelta.c
+                PROPERTIES COMPILE_OPTIONS "-mssse3")
     endif()
 
     # Define a symbol for the shuffle-dispatch implementation
@@ -191,6 +204,7 @@ if(COMPILER_SUPPORT_SSE2)
     set_property(
             SOURCE shuffle.c
             APPEND PROPERTY COMPILE_DEFINITIONS SHUFFLE_SSE2_ENABLED)
+
 endif()
 if(COMPILER_SUPPORT_AVX2)
     if(MSVC)
@@ -285,6 +299,7 @@ endif()
 if(BUILD_STATIC)
     add_library(blosc2_static STATIC ${SOURCES})
     set_target_properties(blosc2_static PROPERTIES OUTPUT_NAME blosc2)
+    set_target_properties(blosc2_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
     if(MSVC OR MINGW)
         set_target_properties(blosc2_static PROPERTIES PREFIX lib)
     endif()
@@ -295,6 +310,7 @@ endif()
 # install
 if(BLOSC_INSTALL)
     install(FILES ${PROJECT_SOURCE_DIR}/include/blosc2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT DEV)
+    install(FILES ${PROJECT_SOURCE_DIR}/include/b2nd.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT DEV)
     install(FILES
             ${PROJECT_SOURCE_DIR}/include/blosc2/blosc2-export.h
             ${PROJECT_SOURCE_DIR}/include/blosc2/blosc2-common.h
@@ -304,6 +320,8 @@ if(BLOSC_INSTALL)
         install(FILES
                 ${PROJECT_SOURCE_DIR}/include/blosc2/filters-registry.h
                 ${PROJECT_SOURCE_DIR}/include/blosc2/codecs-registry.h
+                ${PROJECT_SOURCE_DIR}/include/blosc2/plugins-utils.h
+                ${PROJECT_SOURCE_DIR}/include/blosc2/tuners-registry.h
                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/blosc2 COMPONENT DEV)
     endif()
 
