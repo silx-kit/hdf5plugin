@@ -116,13 +116,13 @@ jobs:
           python test/test.py
 
   build_wheels_macos:
-    name: Build ARM64 wheels on macos-10.15
-    runs-on: macos-10.15
+    name: Build ARM64 wheels on macos-11
+    runs-on: macos-11
     steps:
       - uses: actions/checkout@v2
 
       - name: Build wheels
-        uses: joerick/cibuildwheel@v1.11.0
+        uses: pypa/cibuildwheel@v2.13.0
         env:
           CIBW_BUILD: cp39-macosx_*
           CIBW_ARCHS_MACOS: arm64
