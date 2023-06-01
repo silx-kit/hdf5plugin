@@ -2,6 +2,7 @@
 -----------------
 
 - Updated libraries: **c-blosc** (v1.12.4), **c-blosc2** (v2.9.2), snappy (v1.1.10) **zstd** (v1.5.5), **zlib** (v1.2.13) (PR #266)
+- Updated filter registration (PR #264)
 
 4.1.1: 23/01/2023
 -----------------
