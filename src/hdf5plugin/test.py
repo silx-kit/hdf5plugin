@@ -444,18 +444,16 @@ class TestSZ(unittest.TestCase):
 
         compression = hdf5plugin.SZ(absolute=tolerance)
 
-        with tempfile.NamedTemporaryFile() as tmp_file:
-            # Create compressed file
-            with h5py.File(tmp_file.name, 'w') as f:
+        with tempfile.TemporaryDirectory() as tempdir:
+            with h5py.File(os.path.join(tempdir, "testsz.h5"), 'w') as f:
                 f.create_dataset('var', data=data, chunks=data.shape, **compression)
+                f.flush()
 
-            # Open compressed file
-            with h5py.File(tmp_file.name, 'r') as f:
                 recovered_data = f["var"][:]
 
         self.assertTrue(
             numpy.allclose(data, recovered_data, atol=tolerance),
-            f"Condition not fulfilled for {tolerance=} -> {numpy.max(numpy.abs(recovered_data - data))=}"
+            f"Condition not fulfilled for {tolerance} -> {numpy.max(numpy.abs(recovered_data - data))}"
         )
 
 
