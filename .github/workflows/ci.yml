@@ -48,6 +48,8 @@ jobs:
             python-version: 3.7
             BUILD_COMMAND: bdist_wheel
             H5PY_OLDER_VERSION: 2.10.0
+            env:
+              MACOSX_DEPLOYMENT_TARGET: 10.15
 
           - name-suffix: "bdist_wheel-h5py_3.8.0"
             os: macos-latest
