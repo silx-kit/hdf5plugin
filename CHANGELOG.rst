@@ -1,3 +1,10 @@
+4.1.3: 16/06/2023
+-----------------
+
+This is a bug fix release:
+
+- Fixed **SZ** compression filter build option that was leading to errors higher than the required tolerance (PR #268, #269)
+
 4.1.2: 01/06/2023
 -----------------
 
