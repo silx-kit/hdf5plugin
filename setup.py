@@ -1081,8 +1081,8 @@ def get_sz_plugin():
     sz_dir = "src/SZ/sz"
     h5zsz_dir = "src/SZ/hdf5-filter/H5Z-SZ"
 
-    extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
-    extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
+    extra_compile_args = ['-O3', '-std=c99', '-fopenmp']
+    extra_compile_args += ['/Ox', '/openmp']
     extra_link_args = ['-fopenmp', '/openmp', "-lm"]
 
     include_dirs = [f'{h5zsz_dir}/include']

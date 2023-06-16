@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2019-2022 European Synchrotron Radiation Facility
+# Copyright (c) 2019-2023 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -429,9 +429,38 @@ class TestGetFilters(unittest.TestCase):
                 self.assertEqual(hdf5plugin.get_filters(filters), ref)
 
 
+class TestSZ(unittest.TestCase):
+    """Specific tests for SZ compression"""
+
+    def testAbsoluteMode(self):
+        """Test SZ's absolute mode is within required tolerance
+
+        See https://github.com/silx-kit/hdf5plugin/issues/267
+        """
+        tolerance = 0.01
+
+        numpy.random.seed(0)
+        data = numpy.random.random(size=(1000, 25, 25)).astype(numpy.float32)
+
+        compression = hdf5plugin.SZ(absolute=tolerance)
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, "testsz.h5")
+            with h5py.File(filename, 'w', driver="core", backing_store=False) as f:
+                f.create_dataset('var', data=data, chunks=data.shape, **compression)
+                f.flush()
+
+                recovered_data = f["var"][:]
+
+        self.assertTrue(
+            numpy.allclose(data, recovered_data, atol=tolerance),
+            f"Condition not fulfilled for {tolerance} -> {numpy.max(numpy.abs(recovered_data - data))}"
+        )
+
+
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter, TestGetFilters):
+    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter, TestGetFilters, TestSZ):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 
