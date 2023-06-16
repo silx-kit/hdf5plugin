@@ -445,7 +445,8 @@ class TestSZ(unittest.TestCase):
         compression = hdf5plugin.SZ(absolute=tolerance)
 
         with tempfile.TemporaryDirectory() as tempdir:
-            with h5py.File(os.path.join(tempdir, "testsz.h5"), 'w') as f:
+            filename = os.path.join(tempdir, "testsz.h5")
+            with h5py.File(filename, 'w', driver="core", backing_store=False) as f:
                 f.create_dataset('var', data=data, chunks=data.shape, **compression)
                 f.flush()
 
