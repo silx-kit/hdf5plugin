@@ -17,26 +17,26 @@ PROGRAM main
   INTEGER :: i
   INTEGER(hsize_t) :: j
 
-  ! sinusoid data generation variables 
+  ! sinusoid data generation variables
   INTEGER(hsize_t) :: npoints
 
   ! compression parameters (defaults taken from ZFP header)
-  integer(C_INT) :: zfpmode = 3 !1=rate, 2=prec, 3=acc, 4=expert
+  INTEGER(C_INT) :: zfpmode = 3 !1=rate, 2=prec, 3=acc, 4=expert
   REAL(dp) :: rate = 4_c_double
   REAL(dp) :: acc = 0_c_double
-  integer(C_INT) :: prec = 11
-  integer(C_INT) :: dim = 0
-  integer(C_INT), PARAMETER :: minbits = 0
-  integer(C_INT), PARAMETER :: maxbits = 4171
-  integer(C_INT), PARAMETER :: maxprec = 64
-  integer(C_INT), PARAMETER :: minexp = -1074
+  INTEGER(C_INT) :: prec = 11
+  INTEGER(C_INT) :: dim = 0
+  INTEGER(C_INT), PARAMETER :: minbits = 0
+  INTEGER(C_INT), PARAMETER :: maxbits = 4171
+  INTEGER(C_INT), PARAMETER :: maxprec = 64
+  INTEGER(C_INT), PARAMETER :: minexp = -1074
 
   ! HDF5 related variables
   INTEGER(hid_t) fid, dsid, sid, cpid, dcpl_id, space_id
   INTEGER(C_INT), DIMENSION(1:H5Z_ZFP_CD_NELMTS_MEM) :: cd_values
   INTEGER(C_SIZE_T) :: cd_nelmts = H5Z_ZFP_CD_NELMTS_MEM
 
-  ! compressed/uncompressed difference stat variables 
+  ! compressed/uncompressed difference stat variables
   REAL(dp) :: max_absdiff = 1.e-8_dp
   REAL(dp) :: max_reldiff = 1.e-8_dp
   INTEGER(C_INT) :: num_diffs = 0
@@ -67,13 +67,13 @@ PROGRAM main
      END FUNCTION real_eq
   END INTERFACE
 
-  CHARACTER(LEN=10)  :: arg
+  CHARACTER(LEN=180)  :: arg
   INTEGER :: len
   LOGICAL :: write_only = .FALSE., avail
   INTEGER     :: config_flag = 0   ! for h5zget_filter_info_f
   INTEGER     :: config_flag_both = 0   ! for h5zget_filter_info_f
   INTEGER :: nerr = 0
-  
+
   DO i = 1, COMMAND_ARGUMENT_COUNT()
      CALL GET_COMMAND_ARGUMENT(i,arg,len,status)
      IF (status .NE. 0) THEN
@@ -115,6 +115,13 @@ PROGRAM main
            STOP 1
         END IF
         READ(arg(1:len), *) prec
+     ELSE IF (arg(1:len).EQ.'ofile')THEN
+        CALL GET_COMMAND_ARGUMENT(i+1,arg,len,status)
+        IF (status .NE. 0) THEN
+           WRITE (ERROR_UNIT,*) 'get_command_argument failed: status = ', status, ' arg = ', i
+           STOP 1
+        END IF
+        READ(arg(1:len), *) ofile
      ELSE IF (arg(1:len).EQ.'write')THEN
         write_only = .TRUE.
 
@@ -125,14 +132,15 @@ PROGRAM main
         PRINT*,"acc <val>     - set accuracy for accuracy mode of filter"
         PRINT*,"prec <val>    - set PRECISION for PRECISION mode of zfp filter"
         PRINT*,"dim <val>     - set size of 1D dataset used"
+        PRINT*,"ofile <val>   - set the output file"
         PRINT*,"write         - only write the file"
         STOP 1
      ENDIF
-      
+
   END DO
 
-  ! create data to write if we're not reading from an existing file 
- 
+  ! create data to write if we're not reading from an existing file
+
   IF (dim .EQ. 0) THEN
      CALL gen_data(INT(dim1*dim0, c_size_t), noise, amp, wdata)
   ELSE
@@ -146,10 +154,10 @@ PROGRAM main
   status = H5Z_zfp_initialize()
   CALL check("H5Z_zfp_initialize", status, nerr)
 
-  ! create HDF5 file 
+  ! create HDF5 file
   CALL h5fcreate_f(ofile, H5F_ACC_TRUNC_F, fid, status)
   CALL check("h5fcreate_f", status, nerr)
-  
+
   ! setup dataset compression via cd_values
 
   CALL h5pcreate_f(H5P_DATASET_CREATE_F, cpid, status)
@@ -193,7 +201,7 @@ PROGRAM main
      CALL check("h5screate_simple_f", status, nerr)
   END IF
 
-  ! write the data WITHOUT compression 
+  ! write the data WITHOUT compression
   CALL h5dcreate_f(fid, "original", H5T_NATIVE_DOUBLE, sid, dsid, status)
   CALL check("h5dcreate_f", status, nerr)
   f_ptr = C_LOC(wdata(1,1))
@@ -206,7 +214,7 @@ PROGRAM main
   cd_nelmts = 0
   CALL H5Pset_filter_f(cpid, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY, cd_nelmts, cd_values, status)
   CALL check("H5Pset_filter_f", status, nerr)
-  
+
   CALL h5dcreate_f(fid, "compressed-default", H5T_NATIVE_DOUBLE, sid, dsid, status, dcpl_id=cpid)
   CALL check("h5dcreate_f", status, nerr)
   f_ptr = C_LOC(wdata(1,1))
@@ -302,12 +310,12 @@ PROGRAM main
 
   CALL h5fopen_f(ofile, H5F_ACC_RDONLY_F, fid, status)
   CALL check("h5fopen_f", status, nerr)
-  
-  ! read the original dataset 
+
+  ! read the original dataset
   CALL h5dopen_f (fid, "original", dsid, status)
   CALL check("h5dopen_f", status, nerr)
 
-  CALL h5dget_space_f(dsid, space_id,status) 
+  CALL h5dget_space_f(dsid, space_id,status)
   CALL check("h5dget_space_f", status, nerr)
   CALL H5Sget_simple_extent_npoints_f(space_id, npoints, status)
   CALL check("H5Sget_simple_extent_npoints_f", status, nerr)
@@ -369,7 +377,7 @@ PROGRAM main
      IF(absdiff > max_absdiff) THEN
          reldiff = 0
          IF (obuf(j) .NE. 0) reldiff = absdiff / obuf(j)
-         
+
          IF (absdiff > max_absdiff) max_absdiff = absdiff
          IF (reldiff > max_reldiff) max_reldiff = reldiff
          IF( .NOT.real_eq(obuf(j), cbuf(j), 100) ) THEN

@@ -22,14 +22,15 @@ code that does this, have a look at...
 In particular, look for the line using ``H5Dchunk_write`` in place of ``H5Dwrite``. In all
 other respects, the code looks the same.
 
+
 The test case for this code writes uncompressed data as a dataset named ``zfparr_original``,
 the compressed dataset named ``zfparr_compressed`` using the filter and then the compressed
-data a second time named ``zfparr_direct`` using a direct write. Then, the ``h5diff`` tool
-is used to compare the data in the original and direct datasets.
+data a second time named ``zfparr_direct`` using a direct_ write. Then, the ``h5diff`` tool
+is used to compare the data in the original and the direct_ write datasets.
 
 Note that in order for consumers to work as normal, the producer must set dataset *creation*
 properties as it ordinarily would using the H5Z-ZFP_ filter. In the call to ``H5Dchunk_write``,
 the caller indicates to the HDF5 library not to invoke the filter via the ``filters`` mask
 argument.
 
-.. _direct: https://portal.hdfgroup.org/display/HDF5/H5D_WRITE_CHUNK
+.. _direct: https://docs.hdfgroup.org/hdf5/develop/group___h5_d.html#title38

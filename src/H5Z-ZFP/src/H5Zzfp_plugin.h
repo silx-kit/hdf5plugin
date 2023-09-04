@@ -25,15 +25,14 @@ CD[0]=CD[1]=CD[2]=CD[3]=0;                       \
 CD[0]=H5Z_ZFP_MODE_RATE; *p=R; N=4;}} while(0)
 
 #define H5Pget_zfp_rate_cdata(N, CD) \
-((double)(((N>=4)&&(CD[0]==H5Z_ZFP_MODE_RATE))?*((double *) &CD[2]):-1))
+((double)(((N>=4)&&(CD[0]==H5Z_ZFP_MODE_RATE))?*((double *) &CD[2]):0))
 
 #define H5Pset_zfp_precision_cdata(P, N, CD)  \
-do { if (N>=3) {CD[0]=CD[1]=CD[2];            \
-CD[0]=H5Z_ZFP_MODE_PRECISION;                 \
-CD[2]=P; N=3;}} while(0)
+do { if (N>=3) {CD[0]=H5Z_ZFP_MODE_PRECISION; \
+CD[1]=0; CD[2]=P; N=3;}} while(0)
 
 #define H5Pget_zfp_precision_cdata(N, CD) \
-((double)(((N>=3)&&(CD[0]==H5Z_ZFP_MODE_ACCURACY))?CD[2]:-1))
+((double)(((N>=3)&&(CD[0]==H5Z_ZFP_MODE_PRECISION))?CD[2]:0))
 
 #define H5Pset_zfp_accuracy_cdata(A, N, CD)      \
 do { if (N>=4) {double *p = (double *) &CD[2];   \
@@ -41,7 +40,7 @@ CD[0]=CD[1]=CD[2]=CD[3]=0;                       \
 CD[0]=H5Z_ZFP_MODE_ACCURACY; *p=A; N=4;}} while(0)
 
 #define H5Pget_zfp_accuracy_cdata(N, CD) \
-((double)(((N>=4)&&(CD[0]==H5Z_ZFP_MODE_ACCURACY))?*((double *) &CD[2]):-1))
+((double)(((N>=4)&&(CD[0]==H5Z_ZFP_MODE_ACCURACY))?*((double *) &CD[2]):0))
 
 #define H5Pset_zfp_expert_cdata(MiB, MaB, MaP, MiE, N, CD) \
 do { if (N>=6) { CD[0]=CD[1]=CD[2]=CD[3]=CD[4]=CD[5]=0;    \
@@ -66,6 +65,6 @@ do { if (N>=1) {                                 \
 CD[0]=H5Z_ZFP_MODE_REVERSIBLE; N=1;}} while(0)
 
 #define H5Pget_zfp_reversible_cdata(N, CD) \
-((int)(((N>=1)&&(CD[0]==H5Z_ZFP_MODE_REVERSIBLE))?1:-1))
+((int)(((N>=1)&&(CD[0]==H5Z_ZFP_MODE_REVERSIBLE))?1:0))
 
 #endif

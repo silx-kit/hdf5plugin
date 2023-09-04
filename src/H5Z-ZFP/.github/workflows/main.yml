@@ -2,11 +2,18 @@ name: h5z-zfp
 
 # Controls when the action will run. 
 #Triggers the workflow on push or pull requests.
+
+# TODO: REMOVE feat-cmake_tests before merging
 on: 
   push:
-    branches: [ master ]
+    branches: [ master ] 
   pull_request:
     branches: [ master ]
+
+# Using concurrency to cancel any in-progress job or run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha || github.event.pull_request.number }}
+  cancel-in-progress: true
 
 # A workflow run is made up of one or more jobs that
 # can run sequentially or in parallel
@@ -32,9 +39,10 @@ jobs:
     - name: Install Dependencies (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
+        sudo apt-get update
         sudo apt-get install -qq libhdf5-dev
         sudo apt-get install -qq hdf5-tools
-        echo  "HDF5_HOME=/usr/include/hdf5/serial,/usr/lib/x86_64-linux-gnu/hdf5/serial,/usr/bin" >> $GITHUB_ENV
+        echo "HDF5_HOME=/usr/include/hdf5/serial,/usr/lib/x86_64-linux-gnu/hdf5/serial,/usr/bin" >> $GITHUB_ENV
         # Set env vars
         echo "CC=gcc" >> $GITHUB_ENV
         echo "FC=gfortran" >> $GITHUB_ENV
@@ -42,7 +50,7 @@ jobs:
         
  # Checks-out the repository under $GITHUB_WORKSPACE so the job can access it.
     - name: Get Sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
 ##################################
 # INSTALL ZFP
@@ -71,11 +79,12 @@ jobs:
         make check
       shell: bash
 
-    - name: build (cmake)
+    - name: build (cmake) and test
       run: |
         mkdir build; cd build
-        cmake -D FORTRAN_INTERFACE=ON -D CMAKE_BUILD_TYPE=Release ..
-        make
+        cmake -D FORTRAN_INTERFACE=ON -D CMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON ..
+        sudo cmake --build . --target install
+        ctest -C Release .
       shell: bash
 
     
@@ -87,7 +96,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: install prerequisites
         run: |
           choco install \
@@ -98,10 +107,10 @@ jobs:
       - name: download HDF5 for Windows
         run: |
           wget --quiet \
-            https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.1/bin/windows/hdf5-1.12.1-Std-win10_64-vs16.zip
-          unzip hdf5-1.12.1-Std-win10_64-vs16.zip
+            https://support.hdfgroup.org//ftp/HDF5/releases/hdf5-1.14/hdf5-1.14.1/bin/windows/hdf5-1.14.1-2-Std-win10_64-vs16-clang.zip
+          unzip hdf5-1.14.1-2-Std-win10_64-vs16-clang.zip
       - name: Install HDF5 for Windows
-        run: msiexec /i "hdf\HDF5-1.12.1-win64.msi" /qn
+        run: msiexec /i "hdf\HDF5-1.14.1-win64.msi" /qn
         shell: cmd
       - name: Download and install ZFP
         run: |
@@ -111,23 +120,33 @@ jobs:
           mkdir -p build
           cd build
           cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
+            -G "Visual Studio 16 2019" -A "x64" \
+            -DCMAKE_CONFIGURATION_TYPES=Release \
             -DBUILD_UTILITIES=OFF \
             -DBUILD_TESTING=OFF \
             -DBUILD_CFP=ON \
             -DZFP_BIT_STREAM_WORD_SIZE=8
-          cmake --build . -j 3
-          cmake --build . --target install
-      - name: update PATH
+          cmake --build . --config Release -j 3
+          cmake --build . --config Release --target install
+      - name: Set build and test variables
         run: |
-          echo "C:/Program Files/HDF_Group/HDF5/1.12.1/bin" >> $GITHUB_PATH
-      - name: configure cmake
+          echo "C:/Program Files/H5Z_ZFP/plugin" >> $GITHUB_PATH
+          echo "C:/Program Files/ZFP/bin" >> $GITHUB_PATH
+          echo "C:/Program Files/ZFP/lib" >> $GITHUB_PATH
+          echo "C:/Program Files/HDF_Group/HDF5/1.14.1/bin" >> $GITHUB_PATH
+          echo "HDF5_PLUGIN_PATH=C:/Program Files/H5Z_ZFP/plugin" >> $GITHUB_ENV
+          echo "HDF5_DIR=C:/Program Files/HDF_Group/HDF5/1.14.1" >> $GITHUB_ENV
+          echo "HDF5_ROOT=C:/Program Files/HDF_Group/HDF5/1.14.1" >> $GITHUB_ENV
+          echo "ZFP_DIR=C:/Program Files/ZFP" >> $GITHUB_ENV
+      - name: Build H5Z-ZFP (CMake) and test
         run: |
           mkdir build
           cd build
           cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
+            -G "Visual Studio 16 2019" -A "x64" \
+            -DCMAKE_CONFIGURATION_TYPES=Release \
+            -DBUILD_TESTING=ON \
             -DFORTRAN_INTERFACE=OFF \
             -TClangCL
-          cmake --build . -j 3
-          cmake --build . --target install
+          cmake --build . --config Release --target install
+          ctest -C Release .

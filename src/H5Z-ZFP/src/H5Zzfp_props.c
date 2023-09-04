@@ -5,6 +5,7 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define H5Z_ZFP_PUSH_AND_GOTO(MAJ, MIN, RET, MSG)     \
 do                                                    \
@@ -18,14 +19,14 @@ do                                                    \
 static herr_t H5Pset_zfp(hid_t plist, int mode, ...)
 {
     static char const *_funcname_ = "H5Pset_zfp";
-    static size_t ctrls_sz = sizeof(h5z_zfp_controls_t);
+    static size_t const ctrls_sz = sizeof(h5z_zfp_controls_t);
     unsigned int flags;
     size_t cd_nelmts = 0;
     unsigned int cd_values[1];
     h5z_zfp_controls_t *ctrls_p = 0;
     int i;
     va_list ap;
-    herr_t retval;
+    herr_t retval = 0;
 
     if (0 >= H5Pisa_class(plist, H5P_DATASET_CREATE))
         H5Z_ZFP_PUSH_AND_GOTO(H5E_ARGS, H5E_BADTYPE, -1, "not a dataset creation property list class");
@@ -100,6 +101,9 @@ static herr_t H5Pset_zfp(hid_t plist, int mode, ...)
     {
         retval = H5Pset(plist, "zfp_controls", ctrls_p);
     }
+
+    /* HDF5 copies the memory we gave it */
+    free(ctrls_p);
 
     return retval;
 

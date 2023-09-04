@@ -13,7 +13,7 @@ of the filter as an explicitly linked library. By default, these test a simple
 1D array with and without ZFP_ compression using either the :ref:`generic-interface` (for plugin)
 or the :ref:`properties-interface` (for library).  You can use the code there as an
 example of using the ZFP_ filter either as a plugin or as a library. However, these
-also include some advanced usages for 4D and 6D, time-varying (e.g. *extendible*)
+also include some advanced usages for 4D and 6D, time-varying (e.g. *extendable*)
 datasets.  The command ``test_write_lib help`` or ``test_write_plugin help`` will print a
 list of the example's options and how to use them.
 
@@ -34,7 +34,7 @@ Write Test Options
         chunk=256                      set chunk size for 1D dataset
         doint=0                              also do integer 1D data
     
-    ZFP compression paramaters...
+    ZFP compression parameters...
         zfpmode=3        (1=rate,2=prec,3=acc,4=expert,5=reversible)
         rate=4                      set rate for rate mode of filter
         acc=0               set accuracy for accuracy mode of filter
@@ -56,7 +56,7 @@ on a 4D dataset where two of the 4 dimensions are not correlated.
 This tests the plugin's ability to properly set chunking for
 HDF5 such that chunks span **only** correlated dimensions and
 have non-unity sizes in 3 or fewer dimensions. The ``sixd``
-test runs a test on a 6D, extendible dataset representing an
+test runs a test on a 6D, extendable dataset representing an
 example of using ZFP_ for compression along the *time* axis.
 
 There is a companion, `test_read.c <https://github.com/LLNL/H5Z-ZFP/blob/master/test/test_read.c>`_

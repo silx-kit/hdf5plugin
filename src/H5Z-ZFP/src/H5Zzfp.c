@@ -461,11 +461,6 @@ get_zfp_info_from_cd_values(size_t cd_nelmts, unsigned int const *cd_values,
 
     /* Do a read of *just* magic to detect possible codec version mismatch */
     if (0 == (Z zfp_read_header(zstr, zfld, ZFP_HEADER_MAGIC)))
-        H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0, "ZFP codec version mismatch");
-    Z zfp_stream_rewind(zstr);
-
-    /* Now, read ZFP *full* header */
-    if (0 == (Z zfp_read_header(zstr, zfld, ZFP_HEADER_FULL)))
     {
         herr_t conv;
 
@@ -479,9 +474,14 @@ get_zfp_info_from_cd_values(size_t cd_nelmts, unsigned int const *cd_values,
             H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_BADVALUE, 0, "header endian-swap failed");
 
         Z zfp_stream_rewind(zstr);
-        if (0 == (Z zfp_read_header(zstr, zfld, ZFP_HEADER_FULL)))
-            H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_CANTGET, 0, "reading header failed");
+        if (0 == (Z zfp_read_header(zstr, zfld, ZFP_HEADER_MAGIC)))
+            H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_CANTGET, 0, "ZFP codec version mismatch");
     }
+    Z zfp_stream_rewind(zstr);
+
+    /* Now, read ZFP *full* header */
+    if (0 == (Z zfp_read_header(zstr, zfld, ZFP_HEADER_FULL)))
+        H5Z_ZFP_PUSH_AND_GOTO(H5E_PLINE, H5E_CANTGET, 0, "reading header failed");
 
     /* Get ZFP stream mode and field meta */
     *zfp_mode = Z zfp_stream_mode(zstr);
