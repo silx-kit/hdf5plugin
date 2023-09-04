@@ -1,6 +1,63 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.10.1 to 2.10.2
+=============================
+
+* Several fixes for the CMake system.  Thanks to Axel Huebl. See PR #541 and #542.
+
+* Several fixes for mingw plaform.  Thanks to Biswapriyo Nath.  See PR #540 and #543.
+
+
+Changes from 2.10.0 to 2.10.1
+=============================
+
+* `blosc2_remove_urlpath(const char *urlpath)` does not return an error
+  when path does not exist.
+
+* Changes in CMake installer to conserve targets and properties
+  on install, so CMake users do not need to write `FindBlosc2.cmake`
+  files anymore.  This also helps to preserve transitive dependencies on
+  CMake targets, especially useful for fully static builds, e.g., for
+  Python wheels.  Thanks to @ax3l (Axel Huebl). See PR #537.
+
+* Fix new typos.  Thanks to @DimitriPapadopoulos. See PR #538.
+
+
+Changes from 2.9.3 to 2.10.0
+============================
+
+* bytedelta filter has been fixed. For backward compatibility, the old
+  bytedelta filter is still available as `BLOSC_FILTER_BYTEDELTA_BUGGY`
+  symbol, with the same ID (34) than before.  The new, fixed bytedelta
+  filter has received a new ID (35) and it can be used via the usual
+  `BLOSC_FILTER_BYTEDELTA` symbol. That means that old data written with
+  the buggy bytedelta filter should be decompressed without issues.
+  Thanks to @foody (Tom Birch) for the fix. See #531, #532 for more info.
+
+* Filter buffers are correctly cycled now.  Now it is possible to use e.g.
+  shuffle and bitshuffle filters in the pipeline.  Thanks to @foody (Tom Birch)
+  for the fix.  See #528 and PR #530.
+
+* Assorted fixes for allowing better inclusion in external projects.
+  Thanks to @ax3l (Axel Huebel). See #525, #527 and #529.
+
+* Minor fixes in the documentation.  Thanks to @ivilata (Ivan Vilata).
+  See #523.
+
+
+Changes from 2.9.2 to 2.9.3
+===========================
+
+* Thanks to Dimitri Papadopoulos for an extensive set of improvements in
+  documentation and code.
+
+* `load_lib` is now a private function. Before was public, but
+  never meant to be.
+
+* Several fixes for bugs discovered by the fuzzer.
+
+
 Changes from 2.9.1 to 2.9.2
 ===========================
 

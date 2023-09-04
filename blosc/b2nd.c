@@ -9,12 +9,15 @@
 **********************************************************************/
 
 #include "b2nd.h"
-#include "context.h"
 #include "b2nd_utils.h"
-#include "blosc2.h"
+#include "context.h"
 #include "blosc2/blosc2-common.h"
+#include "blosc2.h"
 
 #include <inttypes.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
 
 int b2nd_serialize_meta(int8_t ndim, const int64_t *shape, const int32_t *chunkshape,
@@ -266,6 +269,10 @@ int array_new(b2nd_context_t *ctx, int special_value, b2nd_array_t **array) {
     }
   }
 
+  if ((*array)->extchunknitems * sc->typesize > BLOSC2_MAX_BUFFERSIZE){
+    BLOSC_TRACE_ERROR("Chunksize exceeds maximum of %d", BLOSC2_MAX_BUFFERSIZE);
+    return BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED;
+  }
   // Fill schunk with uninit values
   if ((*array)->nitems != 0) {
     int32_t chunksize = (int32_t) (*array)->extchunknitems * sc->typesize;
@@ -1093,7 +1100,7 @@ int b2nd_print_meta(const b2nd_array_t *array) {
                                     &dtype, &dtype_format));
   free(smeta);
 
-  printf("b2nd metalayer parameters: \n Ndim:       %d", ndim);
+  printf("b2nd metalayer parameters:\n Ndim:       %d", ndim);
   printf("\n shape:      %" PRId64 "", shape[0]);
   for (int i = 1; i < ndim; ++i) {
     printf(", %" PRId64 "", shape[i]);

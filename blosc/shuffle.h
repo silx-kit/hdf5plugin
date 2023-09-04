@@ -16,11 +16,12 @@
   these are cross-platform and future-proof.
 **********************************************************************/
 
-
-#ifndef SHUFFLE_H
-#define SHUFFLE_H
+#ifndef BLOSC_SHUFFLE_H
+#define BLOSC_SHUFFLE_H
 
 #include "blosc2/blosc2-common.h"
+
+#include <stdint.h>
 
 /* Toggle hardware-accelerated routines based on SHUFFLE_*_ENABLED macros
    and availability on the target architecture.
@@ -39,10 +40,6 @@
 
 #if defined(SHUFFLE_NEON_ENABLED) && defined(__ARM_NEON)
 #define SHUFFLE_USE_NEON
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 /**
@@ -84,8 +81,4 @@ BLOSC_NO_EXPORT int32_t
                  const uint8_t *_src, const uint8_t *_dest,
                  const uint8_t *_tmp, const uint8_t format_version);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* SHUFFLE_H */
+#endif /* BLOSC_SHUFFLE_H */

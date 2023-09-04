@@ -8,31 +8,34 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#ifndef CONTEXT_H
-#define CONTEXT_H
+#ifndef BLOSC_CONTEXT_H
+#define BLOSC_CONTEXT_H
+
+#include "b2nd.h"
+#include "blosc2.h"
+
+#if defined(HAVE_ZSTD)
+#include "zstd.h"
+#endif
+
+#ifdef HAVE_IPP
+#include <ipps.h>
+#endif
 
 #if defined(_WIN32) && !defined(__GNUC__)
-  #include "win32/pthread.h"
+#include "win32/pthread.h"
 #else
-  #include <pthread.h>
+#include <pthread.h>
 #endif
+
+#include <stddef.h>
+#include <stdint.h>
 
 /* Have problems using posix barriers when symbol value is 200112L */
 /* Requires more investigation, but this will work for the moment */
 #if defined(_POSIX_BARRIERS) && ( (_POSIX_BARRIERS - 20012L) >= 0 && _POSIX_BARRIERS != 200112L)
 #define BLOSC_POSIX_BARRIERS
 #endif
-
-#include "blosc2.h"
-#include "b2nd.h"
-
-#if defined(HAVE_ZSTD)
-  #include "zstd.h"
-#endif /*  HAVE_ZSTD */
-
-#ifdef HAVE_IPP
-  #include <ipps.h>
-#endif /* HAVE_IPP */
 
 struct blosc2_context_s {
   const uint8_t* src;  /* The source buffer */
@@ -148,5 +151,4 @@ struct thread_context {
 #endif
 };
 
-
-#endif  /* CONTEXT_H */
+#endif  /* BLOSC_CONTEXT_H */
