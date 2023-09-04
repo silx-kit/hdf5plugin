@@ -8,18 +8,12 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#ifndef BLOSC_PLUGINS_CODECS_ZFP_BLOSC2_ZFP_H
+#define BLOSC_PLUGINS_CODECS_ZFP_BLOSC2_ZFP_H
 
+#include "blosc2.h"
 
-#ifndef BLOSC2_ZFP_H
-#define BLOSC2_ZFP_H
-
-#include "zfp-private.h"
-#include "../plugins/plugin_utils.h"
-
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
+#include <stdint.h>
 
 int zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                      uint8_t meta, blosc2_cparams *cparams, const void *chunk);
@@ -41,9 +35,4 @@ int zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output
 
 int zfp_getcell(void *thread_context, const uint8_t *block, int32_t cbytes, uint8_t *dest, int32_t destsize);
 
-
-#if defined (__cplusplus)
-}
-#endif
-
-#endif /* BLOSC2_ZFP_H */
+#endif /* BLOSC_PLUGINS_CODECS_ZFP_BLOSC2_ZFP_H */

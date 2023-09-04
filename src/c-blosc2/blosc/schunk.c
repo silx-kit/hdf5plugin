@@ -8,27 +8,26 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-
-#include "blosc-private.h"
-#include "blosc2/tuners-registry.h"
 #include "frame.h"
 #include "stune.h"
+#include "blosc-private.h"
+#include "blosc2/tuners-registry.h"
 #include "blosc2.h"
 
 #if defined(_WIN32)
 #include <windows.h>
 #include <direct.h>
 #include <malloc.h>
-
 #define mkdir(D, M) _mkdir(D)
 #endif  /* _WIN32 */
 
+#include <sys/stat.h>
+
+#include <inttypes.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <sys/stat.h>
-#include <inttypes.h>
 
 /* If C11 is supported, use it's built-in aligned allocation. */
 #if __STDC_VERSION__ >= 201112L
@@ -38,7 +37,7 @@
 
 /* Get the cparams associated with a super-chunk */
 int blosc2_schunk_get_cparams(blosc2_schunk *schunk, blosc2_cparams **cparams) {
-  *cparams = calloc(sizeof(blosc2_cparams), 1);
+  *cparams = calloc(1, sizeof(blosc2_cparams));
   (*cparams)->schunk = schunk;
   for (int i = 0; i < BLOSC2_MAX_FILTERS; i++) {
     (*cparams)->filters[i] = schunk->filters[i];
@@ -62,7 +61,7 @@ int blosc2_schunk_get_cparams(blosc2_schunk *schunk, blosc2_cparams **cparams) {
 
 /* Get the dparams associated with a super-chunk */
 int blosc2_schunk_get_dparams(blosc2_schunk *schunk, blosc2_dparams **dparams) {
-  *dparams = calloc(sizeof(blosc2_dparams), 1);
+  *dparams = calloc(1, sizeof(blosc2_dparams));
   (*dparams)->schunk = schunk;
   if (schunk->dctx == NULL) {
     (*dparams)->nthreads = blosc2_get_nthreads();
@@ -91,7 +90,9 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   schunk->chunksize = -1;
   schunk->tuner_params = cparams->tuner_params;
   schunk->tuner_id = cparams->tuner_id;
-
+  if (cparams->tuner_id == BLOSC_BTUNE) {
+    cparams->use_dict = 0;
+  }
   /* The compression context */
   if (schunk->cctx != NULL) {
     blosc2_free_ctx(schunk->cctx);
@@ -124,9 +125,9 @@ blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
   // Update the (local variable) storage
   storage = schunk->storage;
 
-  char* btune_balance = getenv("BTUNE_BALANCE");
-  if (btune_balance != NULL) {
-    // If BTUNE_BALANCE passed, automatically use btune
+  char* tradeoff = getenv("BTUNE_TRADEOFF");
+  if (tradeoff != NULL) {
+    // If BTUNE_TRADEOFF passed, automatically use btune
     storage->cparams->tuner_id = BLOSC_BTUNE;
   }
 
@@ -343,7 +344,7 @@ blosc2_schunk* blosc2_schunk_open(const char* urlpath) {
   return blosc2_schunk_open_udio(urlpath, &BLOSC2_IO_DEFAULTS);
 }
 
-BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64_t offset) {
+blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64_t offset) {
   if (urlpath == NULL) {
     BLOSC_TRACE_ERROR("You need to supply a urlpath.");
     return NULL;

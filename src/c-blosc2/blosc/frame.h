@@ -13,9 +13,8 @@
 
 #include "blosc2.h"
 
-#include <stdio.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // Different types of frames
 #define FRAME_CONTIGUOUS_TYPE 0
@@ -168,4 +167,4 @@ int frame_update_trailer(blosc2_frame_s* frame, blosc2_schunk* schunk);
 int64_t frame_fill_special(blosc2_frame_s* frame, int64_t nitems, int special_value,
                        int32_t chunksize, blosc2_schunk* schunk);
 
-#endif //BLOSC_FRAME_H
+#endif /* BLOSC_FRAME_H */

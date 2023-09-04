@@ -16,19 +16,12 @@
   @author The Blosc Development Team <blosc@blosc.org>
 **********************************************************************/
 
+#ifndef BLOSC_BLOSC2_H
+#define BLOSC_BLOSC2_H
 
-#ifndef BLOSC2_H
-#define BLOSC2_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include "blosc2/blosc2-export.h"
 #include "blosc2/blosc2-common.h"
 #include "blosc2/blosc2-stdio.h"
-#ifdef __cplusplus
-}
-#endif
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <windows.h>
@@ -89,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    9    /* for minor interface/format changes  */
+#define BLOSC2_VERSION_MINOR    10   /* for minor interface/format changes  */
 #define BLOSC2_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.9.2"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2023-05-18 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.10.2"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2023-08-19 #$"    /* date version */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -103,6 +96,7 @@ extern "C" {
 /* Tracing macros */
 #define BLOSC_TRACE_ERROR(msg, ...) BLOSC_TRACE(error, msg, ##__VA_ARGS__)
 #define BLOSC_TRACE_WARNING(msg, ...) BLOSC_TRACE(warning, msg, ##__VA_ARGS__)
+#define BLOSC_TRACE_INFO(msg, ...) BLOSC_TRACE(info, msg, ##__VA_ARGS__)
 #define BLOSC_TRACE(cat, msg, ...)                  \
     do {                                            \
         const char *__e = getenv("BLOSC_TRACE");    \
@@ -225,7 +219,7 @@ enum {
   BLOSC2_GLOBAL_REGISTERED_FILTERS_START = 32,
   BLOSC2_GLOBAL_REGISTERED_FILTERS_STOP = 159,
   //!< Blosc-registered filters must be between 32 - 159.
-  BLOSC2_GLOBAL_REGISTERED_FILTERS = 3,
+  BLOSC2_GLOBAL_REGISTERED_FILTERS = 4,
   //!< Number of Blosc-registered filters at the moment.
   BLOSC2_USER_REGISTERED_FILTERS_START = 160,
   BLOSC2_USER_REGISTERED_FILTERS_STOP = 255,
@@ -428,6 +422,8 @@ enum {
 
 /**
  * @brief Error codes
+ * Each time an error code is added here, its corresponding message error should be added in
+ * print_error()
  */
 enum {
   BLOSC2_ERROR_SUCCESS = 0,           //<! Success
@@ -465,7 +461,7 @@ enum {
   BLOSC2_ERROR_NULL_POINTER = -32,    //!< Pointer is null
   BLOSC2_ERROR_INVALID_INDEX = -33,   //!< Invalid index
   BLOSC2_ERROR_METALAYER_NOT_FOUND = -34,   //!< Metalayer has not been found
-  BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED = -35,  //!< Max buffer size excceded
+  BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED = -35,  //!< Max buffer size exceeded
 };
 
 
@@ -546,6 +542,8 @@ static char *print_error(int rc) {
       return (char *) "Invalid index";
     case BLOSC2_ERROR_METALAYER_NOT_FOUND:
       return (char *) "Metalayer has not been found";
+    case BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED:
+      return (char *) "Maximum buffersize exceeded";
     default:
       return (char *) "Unknown error";
   }
@@ -1055,9 +1053,9 @@ typedef struct {
 } blosc2_io;
 
 static const blosc2_io BLOSC2_IO_DEFAULTS = {
-    .id = BLOSC2_IO_FILESYSTEM,
-    .name = "filesystem",
-    .params = NULL,
+  /* .id = */ BLOSC2_IO_FILESYSTEM,
+  /* .name = */ "filesystem",
+  /* .params = */ NULL,
 };
 
 
@@ -1245,7 +1243,7 @@ static const blosc2_dparams BLOSC2_DPARAMS_DEFAULTS = {1, NULL, NULL, NULL};
  *
  * @return A pointer to the new context. NULL is returned if this fails.
  *
- * @note This support the same environment variables than #blosc2_compress
+ * @note This supports the same environment variables than #blosc2_compress
  * for overriding the programmatic compression values.
  *
  * @sa #blosc2_compress
@@ -1259,7 +1257,7 @@ BLOSC_EXPORT blosc2_context* blosc2_create_cctx(blosc2_cparams cparams);
  *
  * @return A pointer to the new context. NULL is returned if this fails.
  *
- * @note This support the same environment variables than #blosc2_decompress
+ * @note This supports the same environment variables than #blosc2_decompress
  * for overriding the programmatic decompression values.
  *
  * @sa #blosc2_decompress
@@ -1835,7 +1833,7 @@ BLOSC_EXPORT int64_t blosc2_schunk_append_file(blosc2_schunk* schunk, const char
  *
  * @param schunk The super-chunk to be freed.
  *
- * @remark All the memory resources attached to the super-frame are freed.
+ * @remark All the memory resources attached to the super-chunk are freed.
  * If the super-chunk is on-disk, the data continues there for a later
  * re-opening.
  *
@@ -1918,7 +1916,7 @@ BLOSC_EXPORT int64_t blosc2_schunk_append_buffer(blosc2_schunk *schunk, void *sr
  * @param dest The buffer where the decompressed data will be put.
  * @param nbytes The size of the area pointed by @p *dest.
  *
- * @warning You must make sure that you have space enough to store the
+ * @warning You must make sure that you have enough space to store the
  * uncompressed data.
  *
  * @return The size of the decompressed chunk or 0 if it is non-initialized. If some problem is
@@ -1982,7 +1980,7 @@ BLOSC_EXPORT int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchu
  * @param stop The first index (0-based) that is not in the selected slice.
  * @param buffer The buffer where the data will be stored.
  *
- * @warning You must make sure that you have space enough in buffer to store the
+ * @warning You must make sure that you have enough space in buffer to store the
  * uncompressed data.
  *
  * @return An error code.
@@ -2484,5 +2482,4 @@ BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, c
 }
 #endif
 
-
-#endif  /* BLOSC2_H */
+#endif /* BLOSC_BLOSC2_H */

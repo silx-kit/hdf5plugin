@@ -8,8 +8,8 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#ifndef CUTEST_CUTEST_H
-#define CUTEST_CUTEST_H
+#ifndef BLOSC_TESTS_CUTEST_H
+#define BLOSC_TESTS_CUTEST_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,18 +28,17 @@
 
 #define CUTEST_DATA(...) __VA_ARGS__
 
-
-#define CUTEST_PARAMETRIZE(name, type, ...)                                      \
-    do {                                                                         \
-        type cutest_##name[] = {__VA_ARGS__};                                    \
-        _cutest_parametrize(#name, cutest_##name,                                \
-                            sizeof(cutest_##name) / sizeof(type), sizeof(type)); \
+#define CUTEST_PARAMETRIZE(name, type, ...)                                       \
+    do {                                                                          \
+        type cutest_##name[] = {__VA_ARGS__};                                     \
+        _cutest_parametrize(#name, cutest_##name,                                 \
+                            sizeof(cutest_##name) / sizeof(type), sizeof(type));  \
     } while(0)
 
-#define CUTEST_PARAMETRIZE2(name, type, params_len, params)                                      \
-    do {                                                                         \
-        (type) *cutest_##name = params;                                    \
-        _cutest_parametrize(#name, cutest_##name, params_len, sizeof(type)); \
+#define CUTEST_PARAMETRIZE2(name, type, params_len, params)                       \
+    do {                                                                          \
+        (type) *cutest_##name = params;                                           \
+        _cutest_parametrize(#name, cutest_##name, params_len, sizeof(type));      \
     } while(0)
 
 #define CUTEST_GET_PARAMETER(name, type) \
@@ -54,23 +53,25 @@
 #define CUTEST_TEST_TEARDOWN(sname) \
     void sname##_teardown(struct sname##_data *data)
 
-#define CUTEST_TEST_TEST(sname)                           \
+#define CUTEST_TEST_TEST(sname)                      \
     static struct sname##_data test_##sname##_data;  \
     CUTEST_TEST_SETUP(sname);                        \
     CUTEST_TEST_TEARDOWN(sname);                     \
     int sname##_test(struct sname##_data* data);     \
-    int sname##_test(struct sname##_data* data)      \
+    int sname##_test(struct sname##_data* data)
 
 
 #define CUTEST_TEST_RUN(sname)                           \
-    _cutest_setup();                                     \
-    sname##_setup(&test_##sname##_data);                 \
-    int rc = _cutest_run((int (*)(void *)) sname##_test, \
-                         (void *) &test_##sname##_data,  \
-                         #sname);                        \
-    sname##_teardown(&test_##sname##_data);              \
-    _cutest_teardown();                                  \
-    return rc;
+        do {                                                                            \
+          _cutest_setup();                                     \
+          sname##_setup(&test_##sname##_data);                 \
+          int rc = _cutest_run((int (*)(void *)) sname##_test, \
+                               (void *) &test_##sname##_data,  \
+                               #sname);                        \
+          sname##_teardown(&test_##sname##_data);              \
+          _cutest_teardown();                                  \
+          return rc;                                           \
+    } while(0)
 
 
 #define CUTEST_ASSERT(msg, cond)                                                    \
@@ -202,5 +203,4 @@ int _cutest_run(int (*test)(void *), void *test_data, char *name) {
   return cutest_failed;
 }
 
-
-#endif //CUTEST_CUTEST_H
+#endif /* BLOSC_TESTS_CUTEST_H */

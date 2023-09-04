@@ -11,7 +11,6 @@
 #ifndef BLOSC_DELTA_H
 #define BLOSC_DELTA_H
 
-#include <stdio.h>
 #include <stdint.h>
 
 void delta_encoder(const uint8_t* dref, int32_t offset, int32_t nbytes,
@@ -20,4 +19,4 @@ void delta_encoder(const uint8_t* dref, int32_t offset, int32_t nbytes,
 void delta_decoder(const uint8_t* dref, int32_t offset, int32_t nbytes,
                    int32_t typesize, uint8_t* dest);
 
-#endif //BLOSC_DELTA_H
+#endif /* BLOSC_DELTA_H */

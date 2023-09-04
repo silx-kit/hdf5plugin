@@ -240,7 +240,7 @@ endif()
 
 # Propagate CMAKE_OSX_ARCHITECTURES env variable into CMAKE_SYSTEM_PROCESSOR
 if(DEFINED ENV{CMAKE_OSX_ARCHITECTURES})
-    if($ENV{CMAKE_OSX_ARCHITECTURES} STREQUAL "arm64")
+    if("$ENV{CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
         set(CMAKE_SYSTEM_PROCESSOR arm64)
     endif()
 endif()
@@ -385,23 +385,6 @@ if(NOT DEFINED BLOSC_INSTALL)
     endif()
 endif()
 
-# uninstall target
-if(BLOSC_INSTALL)
-    include(GNUInstallDirs)
-    configure_file(
-         "${CMAKE_CURRENT_SOURCE_DIR}/blosc2.pc.in"
-         "${CMAKE_CURRENT_BINARY_DIR}/blosc2.pc"
-         @ONLY)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/blosc2.pc"
-            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig" COMPONENT DEV)
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-        @ONLY)
-    add_custom_target(uninstall
-        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-endif()
-
 # include directories
 include_directories(include)
 if(BUILD_PLUGINS)
@@ -438,6 +421,126 @@ endif()
 
 if(BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+# collecting SOURCES is now complete
+if(BUILD_SHARED)
+    target_sources(blosc2_shared PRIVATE ${SOURCES})
+endif()
+if(BUILD_STATIC)
+    target_sources(blosc2_static PRIVATE ${SOURCES})
+endif()
+if(BUILD_TESTS)
+    target_sources(blosc_testing PRIVATE ${SOURCES})
+endif()
+
+# install targets
+if(BLOSC_INSTALL)
+    include(GNUInstallDirs)
+
+    # C++ files
+    install(FILES ${PROJECT_SOURCE_DIR}/include/blosc2.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT DEV)
+    install(FILES ${PROJECT_SOURCE_DIR}/include/b2nd.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT DEV)
+    install(FILES
+            ${PROJECT_SOURCE_DIR}/include/blosc2/blosc2-export.h
+            ${PROJECT_SOURCE_DIR}/include/blosc2/blosc2-common.h
+            ${PROJECT_SOURCE_DIR}/include/blosc2/blosc2-stdio.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/blosc2 COMPONENT DEV)
+    if(BUILD_PLUGINS)
+        install(FILES
+                ${PROJECT_SOURCE_DIR}/include/blosc2/filters-registry.h
+                ${PROJECT_SOURCE_DIR}/include/blosc2/codecs-registry.h
+                ${PROJECT_SOURCE_DIR}/include/blosc2/tuners-registry.h
+                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/blosc2 COMPONENT DEV)
+    endif()
+
+    if(BUILD_SHARED)
+        install(TARGETS blosc2_shared
+                LIBRARY COMPONENT LIB
+                ARCHIVE COMPONENT DEV
+                RUNTIME COMPONENT LIB)
+    endif()
+    if(BUILD_STATIC)
+        install(TARGETS blosc2_static COMPONENT DEV)
+    endif()
+
+    # config files
+    include(CMakePackageConfigHelpers)
+
+    # we need a general location for Unix and Windows to install our
+    # Blosc2Config.cmake files to. This is defined in CMake:
+    # https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
+    if(NOT Blosc2_INSTALL_CMAKEDIR)
+        if(CMAKE_INSTALL_CMAKEDIR)
+            set(Blosc2_INSTALL_CMAKEDIR "${CMAKE_INSTALL_CMAKEDIR}/Blosc2")
+        else()
+            if(WIN32 AND NOT MINGW)
+                set(Blosc2_INSTALL_CMAKEDIR "cmake")
+            else()
+                set(Blosc2_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/Blosc2")
+            endif()
+        endif()
+    endif()
+
+    # CMake config file
+    # This stores our targets and find and populates the targets we depend on,
+    # including third party interface libraries that we added.
+    set(Blosc2_INSTALL_TARGET_NAMES)
+    if(BUILD_SHARED)
+        list(APPEND Blosc2_INSTALL_TARGET_NAMES blosc2_shared)
+    endif()
+    if(BUILD_STATIC)
+        list(APPEND Blosc2_INSTALL_TARGET_NAMES blosc2_static)
+    endif()
+    configure_file(
+        ${PROJECT_SOURCE_DIR}/Blosc2Config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Blosc2Config.cmake
+        @ONLY
+    )
+    install(TARGETS ${Blosc2_INSTALL_TARGET_NAMES}
+        EXPORT Blosc2Targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    install(EXPORT Blosc2Targets
+        FILE Blosc2Targets.cmake
+        NAMESPACE Blosc2::
+        DESTINATION ${Blosc2_INSTALL_CMAKEDIR}
+    )
+    write_basic_package_version_file("Blosc2ConfigVersion.cmake"
+        VERSION ${BLOSC2_VERSION_STRING}
+        COMPATIBILITY SameMajorVersion
+    )
+    install(
+        FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/Blosc2Config.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/Blosc2ConfigVersion.cmake
+        DESTINATION ${Blosc2_INSTALL_CMAKEDIR}
+    )
+
+    # CMake Find*.cmake files used in Blosc2Config.cmake
+    install(
+        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cmake/
+        DESTINATION ${Blosc2_INSTALL_CMAKEDIR}/Modules
+    )
+
+    # pkg-config .pc file
+    configure_file(
+         "${CMAKE_CURRENT_SOURCE_DIR}/blosc2.pc.in"
+         "${CMAKE_CURRENT_BINARY_DIR}/blosc2.pc"
+         @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/blosc2.pc"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig" COMPONENT DEV)
+
+    # uninstaller
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        @ONLY)
+    add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
 
 

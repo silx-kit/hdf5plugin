@@ -12,7 +12,6 @@
 #include "blosc2.h"
 #include "blosc-private.h"
 #include "../plugins/codecs/zfp/blosc2-zfp.h"
-#include "blosc2/plugins-utils.h"
 #include "frame.h"
 
 #if defined(USING_CMAKE)
@@ -108,46 +107,54 @@ int release_threadpool(blosc2_context *context);
 
 /* Wait until all threads are initialized */
 #ifdef BLOSC_POSIX_BARRIERS
-#define WAIT_INIT(RET_VAL, CONTEXT_PTR)  \
-  rc = pthread_barrier_wait(&(CONTEXT_PTR)->barr_init); \
-  if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) { \
-    BLOSC_TRACE_ERROR("Could not wait on barrier (init): %d", rc); \
-    return((RET_VAL));                            \
-  }
+#define WAIT_INIT(RET_VAL, CONTEXT_PTR)                                \
+  do {                                                                 \
+    rc = pthread_barrier_wait(&(CONTEXT_PTR)->barr_init);              \
+    if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {              \
+      BLOSC_TRACE_ERROR("Could not wait on barrier (init): %d", rc);   \
+      return((RET_VAL));                                               \
+    }                                                                  \
+  } while (0)
 #else
-#define WAIT_INIT(RET_VAL, CONTEXT_PTR)   \
-  pthread_mutex_lock(&(CONTEXT_PTR)->count_threads_mutex); \
-  if ((CONTEXT_PTR)->count_threads < (CONTEXT_PTR)->nthreads) { \
-    (CONTEXT_PTR)->count_threads++;  \
-    pthread_cond_wait(&(CONTEXT_PTR)->count_threads_cv, \
-                      &(CONTEXT_PTR)->count_threads_mutex); \
-  } \
-  else { \
-    pthread_cond_broadcast(&(CONTEXT_PTR)->count_threads_cv); \
-  } \
-  pthread_mutex_unlock(&(CONTEXT_PTR)->count_threads_mutex);
+#define WAIT_INIT(RET_VAL, CONTEXT_PTR)                                \
+  do {                                                                 \
+    pthread_mutex_lock(&(CONTEXT_PTR)->count_threads_mutex);           \
+    if ((CONTEXT_PTR)->count_threads < (CONTEXT_PTR)->nthreads) {      \
+      (CONTEXT_PTR)->count_threads++;                                  \
+      pthread_cond_wait(&(CONTEXT_PTR)->count_threads_cv,              \
+                        &(CONTEXT_PTR)->count_threads_mutex);          \
+    }                                                                  \
+    else {                                                             \
+      pthread_cond_broadcast(&(CONTEXT_PTR)->count_threads_cv);        \
+    }                                                                  \
+    pthread_mutex_unlock(&(CONTEXT_PTR)->count_threads_mutex);         \
+  } while (0)
 #endif
 
 /* Wait for all threads to finish */
 #ifdef BLOSC_POSIX_BARRIERS
-#define WAIT_FINISH(RET_VAL, CONTEXT_PTR)   \
-  rc = pthread_barrier_wait(&(CONTEXT_PTR)->barr_finish); \
-  if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) { \
-    BLOSC_TRACE_ERROR("Could not wait on barrier (finish)"); \
-    return((RET_VAL));                              \
-  }
+#define WAIT_FINISH(RET_VAL, CONTEXT_PTR)                              \
+  do {                                                                 \
+    rc = pthread_barrier_wait(&(CONTEXT_PTR)->barr_finish);            \
+    if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {              \
+      BLOSC_TRACE_ERROR("Could not wait on barrier (finish)");         \
+      return((RET_VAL));                                               \
+    }                                                                  \
+  } while (0)
 #else
-#define WAIT_FINISH(RET_VAL, CONTEXT_PTR)                           \
-  pthread_mutex_lock(&(CONTEXT_PTR)->count_threads_mutex); \
-  if ((CONTEXT_PTR)->count_threads > 0) { \
-    (CONTEXT_PTR)->count_threads--; \
-    pthread_cond_wait(&(CONTEXT_PTR)->count_threads_cv, \
-                      &(CONTEXT_PTR)->count_threads_mutex); \
-  } \
-  else { \
-    pthread_cond_broadcast(&(CONTEXT_PTR)->count_threads_cv); \
-  } \
-  pthread_mutex_unlock(&(CONTEXT_PTR)->count_threads_mutex);
+#define WAIT_FINISH(RET_VAL, CONTEXT_PTR)                              \
+  do {                                                                 \
+    pthread_mutex_lock(&(CONTEXT_PTR)->count_threads_mutex);           \
+    if ((CONTEXT_PTR)->count_threads > 0) {                            \
+      (CONTEXT_PTR)->count_threads--;                                  \
+      pthread_cond_wait(&(CONTEXT_PTR)->count_threads_cv,              \
+                        &(CONTEXT_PTR)->count_threads_mutex);          \
+    }                                                                  \
+    else {                                                             \
+      pthread_cond_broadcast(&(CONTEXT_PTR)->count_threads_cv);        \
+    }                                                                  \
+    pthread_mutex_unlock(&(CONTEXT_PTR)->count_threads_mutex);         \
+  } while (0)
 #endif
 
 
@@ -816,16 +823,21 @@ int fill_codec(blosc2_codec *codec) {
   char libpath[PATH_MAX];
   void *lib = load_lib(codec->compname, libpath);
   if(lib == NULL) {
-    BLOSC_TRACE_ERROR("Error while loading the library");
+    BLOSC_TRACE_ERROR("Error while loading the library for codec `%s`", codec->compname);
     return BLOSC2_ERROR_FAILURE;
   }
 
   codec_info *info = dlsym(lib, "info");
+  if (info == NULL) {
+    BLOSC_TRACE_ERROR("`info` symbol cannot be loaded from plugin `%s`", codec->compname);
+    dlclose(lib);
+    return BLOSC2_ERROR_FAILURE;
+  }
+
   codec->encoder = dlsym(lib, info->encoder);
   codec->decoder = dlsym(lib, info->decoder);
-
-  if (codec->encoder == NULL || codec->decoder == NULL){
-    BLOSC_TRACE_ERROR("Wrong library loaded");
+  if (codec->encoder == NULL || codec->decoder == NULL) {
+    BLOSC_TRACE_ERROR("encoder or decoder cannot be loaded from plugin `%s`", codec->compname);
     dlclose(lib);
     return BLOSC2_ERROR_FAILURE;
   }
@@ -900,6 +912,12 @@ static int blosc2_intialize_header_from_context(blosc2_context* context, blosc_h
   return 0;
 }
 
+void _cycle_buffers(uint8_t **src, uint8_t **dest, uint8_t **tmp) {
+  uint8_t *tmp2 = *src;
+  *src = *dest;
+  *dest = *tmp;
+  *tmp = tmp2;
+}
 
 uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t bsize,
                           const uint8_t* src, const int32_t offset,
@@ -941,10 +959,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
       // No more filters are required
       return _dest;
     }
-    // Cycle buffers
-    _src = _dest;
-    _dest = _tmp;
-    _tmp = _src;
+    _cycle_buffers(&_src, &_dest, &_tmp);
   }
 
   /* Process the filter pipeline */
@@ -957,9 +972,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
             shuffle(typesize, bsize, _src, _dest);
             // Cycle filters when required
             if (j < filters_meta[i]) {
-              _src = _dest;
-              _dest = _tmp;
-              _tmp = _src;
+              _cycle_buffers(&_src, &_dest, &_tmp);
             }
           }
           break;
@@ -990,7 +1003,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
           if (g_filters[j].forward == NULL) {
             // Dynamically load library
             if (fill_filter(&g_filters[j]) < 0) {
-              BLOSC_TRACE_ERROR("Could not load filter %d \n", g_filters[j].id);
+              BLOSC_TRACE_ERROR("Could not load filter %d\n", g_filters[j].id);
               return NULL;
             }
           }
@@ -1018,9 +1031,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
 
     // Cycle buffers when required
     if (filters[i] != BLOSC_NOFILTER) {
-      _src = _dest;
-      _dest = _tmp;
-      _tmp = _src;
+      _cycle_buffers(&_src, &_dest, &_tmp);
     }
   }
   return _src;
@@ -1180,7 +1191,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
     }
 
     maxout = neblock;
-    if (ntbytes + maxout > destsize) {
+    if (ntbytes + maxout > destsize && !instr_codec) {
       /* avoid buffer * overrun */
       maxout = destsize - ntbytes;
       if (maxout <= 0) {
@@ -1337,9 +1348,7 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
             unshuffle(typesize, bsize, _src, _dest);
             // Cycle filters when required
             if (j < filters_meta[i]) {
-              _src = _dest;
-              _dest = _tmp;
-              _tmp = _src;
+              _cycle_buffers(&_src, &_dest, &_tmp);
             }
             // Check whether we have to copy the intermediate _dest buffer to final destination
             if (last_copy_filter && (filters_meta[i] % 2) == 1 && j == filters_meta[i]) {
@@ -1417,9 +1426,7 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
 
     // Cycle buffers when required
     if ((filters[i] != BLOSC_NOFILTER) && (filters[i] != BLOSC_TRUNC_PREC)) {
-      _src = _dest;
-      _dest = _tmp;
-      _tmp = _src;
+      _cycle_buffers(&_src, &_dest, &_tmp);
     }
     if (last_filter_index == i) {
       break;
@@ -1917,7 +1924,7 @@ static int serial_blosc(struct thread_context* thread_context) {
   blosc2_context* context = thread_context->parent_context;
   int32_t j, bsize, leftoverblock;
   int32_t cbytes;
-  int32_t ntbytes = (int32_t)context->output_bytes;
+  int32_t ntbytes = context->output_bytes;
   int32_t* bstarts = context->bstarts;
   uint8_t* tmp = thread_context->tmp;
   uint8_t* tmp2 = thread_context->tmp2;
@@ -4569,24 +4576,25 @@ blosc2_io_cb *blosc2_get_io_cb(uint8_t id) {
 }
 
 void blosc2_unidim_to_multidim(uint8_t ndim, int64_t *shape, int64_t i, int64_t *index) {
-    int64_t strides[BLOSC2_MAX_DIM];
   if (ndim == 0) {
     return;
   }
+  int64_t *strides = malloc(ndim * sizeof(int64_t));
   strides[ndim - 1] = 1;
-    for (int j = ndim - 2; j >= 0; --j) {
-        strides[j] = shape[j + 1] * strides[j + 1];
-    }
+  for (int j = ndim - 2; j >= 0; --j) {
+      strides[j] = shape[j + 1] * strides[j + 1];
+  }
 
-    index[0] = i / strides[0];
-    for (int j = 1; j < ndim; ++j) {
-        index[j] = (i % strides[j - 1]) / strides[j];
-    }
+  index[0] = i / strides[0];
+  for (int j = 1; j < ndim; ++j) {
+      index[j] = (i % strides[j - 1]) / strides[j];
+  }
+  free(strides);
 }
 
 void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, const int64_t *strides, int64_t *i) {
-    *i = 0;
-    for (int j = 0; j < ndim; ++j) {
-        *i += index[j] * strides[j];
-    }
+  *i = 0;
+  for (int j = 0; j < ndim; ++j) {
+    *i += index[j] * strides[j];
+  }
 }

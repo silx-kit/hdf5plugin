@@ -1,12 +1,11 @@
-# Announcing C-Blosc2 2.9.2
+# Announcing C-Blosc2 2.10.2
 A fast, compressed and persistent binary data store library for C.
 
 ## What is new?
 
-This a maintenance release with improved support for dynamic plugins and
-fixes for some corner cases when handling incompressible data.  Also,
-many other small fixes and improvements have been included.  An upgrade to
-this release is recommended.
+This is a maintenance release with also several improvements for helping
+integration of C-Blosc2 in other projects (thanks to Alex Huebl).  Also,
+some fixes for MinGW platform are in (thanks to Biswapriyo Nath).
 
 For more info, please see the release notes in:
 

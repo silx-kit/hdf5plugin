@@ -11,9 +11,9 @@
 #ifndef BLOSC_TRANSPOSE_ALTIVEC_H
 #define BLOSC_TRANSPOSE_ALTIVEC_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <altivec.h>
+
+#include <stdint.h>
 
 static const __vector uint8_t even = (const __vector uint8_t) {
   0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e,
@@ -113,9 +113,4 @@ static void transpose16x16(__vector uint8_t * xmm0){
   }
 }
 
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif //BLOSC_TRANSPOSE_ALTIVEC_H
+#endif /* BLOSC_TRANSPOSE_ALTIVEC_H */
