@@ -1,5 +1,11 @@
-include ../config.make
+# Include config.make only if we're not making this tool
+ifneq ($(strip $(MAKECMDGOALS)),print_h5repack_farg)
+    ifneq ($(strip $(MAKECMDGOALS)),clean)
+        include ../config.make
+    endif
+endif
 
+# printf symbols for output of test results
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 ERROR_COLOR=\033[31;01m
@@ -27,7 +33,7 @@ test_write_plugin.o: test_write.c
 	$(CC) -c $< -o $@ -DH5Z_ZFP_USE_PLUGIN -DZFP_LIB_VERSION=0x$(ZFP_LIB_VERSION) $(CFLAGS) -I$(H5Z_ZFP_BASE) -I$(ZFP_INC) -I$(HDF5_INC)
 
 test_write_lib.o: test_write.c
-	$(CC) -c $< -o $@ $(CFLAGS) -DZFP_HAS_CFP=$(ZFP_HAS_CFP) -DZFP_LIB_VERSION=0x$(ZFP_LIB_VERSION) -I$(H5Z_ZFP_BASE) -I$(ZFP_INC) -I$(HDF5_INC)
+	$(CC) -c $< -o $@ $(CFLAGS) -DZFP_HAS_CFP=$(ZFP_HAS_CFP) -DHDF5_HAS_WRITE_CHUNK=$(HDF5_HAS_WRITE_CHUNK) -DZFP_LIB_VERSION=0x$(ZFP_LIB_VERSION) -I$(H5Z_ZFP_BASE) -I$(ZFP_INC) -I$(HDF5_INC)
 
 test_write_plugin: test_write_plugin.o plugin
 	$(CC) $< -o $@ $(CFLAGS) $(PREPATH)$(HDF5_LIB) $(PREPATH)$(ZFP_LIB) -L$(HDF5_LIB) -L$(ZFP_LIB) -lhdf5 $(ZFP_LIBS) -lm $(LDFLAGS)
@@ -42,10 +48,10 @@ test_read_lib.o: test_read.c
 	$(CC) -c $< -o $@ $(CFLAGS) -I$(H5Z_ZFP_BASE) -I$(ZFP_INC) -I$(HDF5_INC)
 
 test_read_plugin: test_read_plugin.o plugin
-	$(CC) $< -o $@ $(PREPATH)$(HDF5_LIB) $(PREPATH)$(ZFP_LIB) -L$(HDF5_LIB) -L$(ZFP_LIB) -lhdf5 $(ZFP_LIBS) $(LDFLAGS)
+	$(CC) $< -o $@ $(PREPATH)$(HDF5_LIB) $(PREPATH)$(ZFP_LIB) -L$(HDF5_LIB) -L$(ZFP_LIB) -lhdf5 $(ZFP_LIBS) -lm $(LDFLAGS)
 
 test_read_lib: test_read_lib.o lib
-	$(CC) $< -o $@ $(CFLAGS) $(PREPATH)$(HDF5_LIB) $(PREPATH)$(ZFP_LIB) -L../src -L$(HDF5_LIB) -L$(ZFP_LIB) -lh5zzfp -lhdf5 $(ZFP_LIBS) $(LDFLAGS)
+	$(CC) $< -o $@ $(CFLAGS) $(PREPATH)$(HDF5_LIB) $(PREPATH)$(ZFP_LIB) -L../src -L$(HDF5_LIB) -L$(ZFP_LIB) -lh5zzfp -lhdf5 $(ZFP_LIBS) -lm $(LDFLAGS)
 
 test_error.o: test_error.c
 	$(CC) -c $< -o $@ $(CFLAGS) -DZFP_LIB_VERSION=0x$(ZFP_LIB_VERSION) -I$(H5Z_ZFP_BASE) -I$(ZFP_INC) -I$(HDF5_INC)
@@ -57,7 +63,7 @@ print_h5repack_farg: print_h5repack_farg.o
 	$(CC) $< -o $@ $(LDFLAGS)
 
 print_h5repack_farg.o: print_h5repack_farg.c
-	$(CC) -c $< -o $@ $(CFLAGS) -I$(H5Z_ZFP_BASE) -I$(HDF5_INC)
+	$(CC) -c $< -o $@ $(CFLAGS) -I../src
 
 ifneq ($(FC),) # Fortran Tests [
 
@@ -346,17 +352,22 @@ test-reversible: plugin test_write_plugin
 # Uses h5repack to test ZFP filter on float and int datasets in
 # 1,2,3 and 4 dimensions. Note: need to specify raw cd_values on
 # command-line to h5repack. We can get these from an invokation
-# of test_write which prints them in the header output. The values
-# here are for accuracy mode and tolerance of 0.001.
+# of print_h5repack_farg. The values here are for accuracy mode
+# and tolerance of 0.001.
 # 
 # A bug-fix patch to h5repack_parse.c is required for this test on
 # older HDF5 versions (like <= 1.8.10).
 #
-test-h5repack: plugin mesh.h5 patch
+# Note use h5repack `-n` option to ensure machine native format
+# used when copying datasets to output file. Also, use filter flag
+# of 0 in h5repack's UD argument to make the filter mandatory.
+#
+test-h5repack: plugin mesh.h5 patch print_h5repack_farg
 	@echo " "; \
 	pad=$$(printf '%*s' "$(padlimit)"); \
 	pad=$${pad// /.}; \
-	x="h5repack -f UD=32013,0,4,3,0,3539053052,1062232653"; \
+        rparg=$$(./print_h5repack_farg zfpmode=3 acc=0.001 | grep '^. *-f'); \
+	x="h5repack -n $$rparg"; \
         printf "$$x"; \
 	printf ' %*.*s' 0 $$(($(padlength) - $${#x} )) "$$pad"; \
 	env LD_LIBRARY_PATH=$(HDF5_LIB):$(LD_LIBRARY_PATH) HDF5_PLUGIN_PATH=$(H5Z_ZFP_PLUGIN) $(HDF5_BIN)/$$x \
@@ -402,6 +413,27 @@ test-endian: plugin test_zfp_le.h5 test_zfp_be.h5
 	printf ' %*.*s' 0 $$(($${padlength} - $${#x} )) "$$pad"; \
 	outerr=$$(env LD_LIBRARY_PATH=$(HDF5_LIB):$(LD_LIBRARY_PATH) HDF5_PLUGIN_PATH=$(H5Z_ZFP_PLUGIN) $(HDF5_BIN)/$$x 2>&1); \
 	if [[ -z "$$(echo $$outerr | grep '0 differences found')" ]]; then \
+	    printf " [$(ERROR_COLOR)FAILED$(NO_COLOR)]\n"; \
+	    touch check-failed; \
+	    exit 0; \
+	fi; \
+	printf " [$(OK_COLOR)PASSED$(NO_COLOR)] \n"
+
+# Test dumping a file generated on a big endian machine
+# The file was generated with:
+# yes 12345 | head -n 5000 | h5import /dev/stdin -dims 5000 -type TEXTIN -size 32 -o unpacked.h5
+# h5repack -f UD=32013,0,4,1,0,0,1074921472 unpacked.h5 bigendian.h5
+test-endian1: plugin bigendian.h5
+	@echo " "; \
+        padlimit=80; \
+        padlength=80; \
+	pad=$$(printf '%*s' "$${padlimit}"); \
+	pad=$${pad// /.}; \
+        x="h5dump bigendian.h5"; \
+        printf "$$x"; \
+	printf ' %*.*s' 0 $$(($${padlength} - $${#x} )) "$$pad"; \
+	env LD_LIBRARY_PATH=$(HDF5_LIB):$(LD_LIBRARY_PATH) HDF5_PLUGIN_PATH=$(H5Z_ZFP_PLUGIN) $(HDF5_BIN)/$$x | grep -q '12345, 12345, 12345, 12345,' ; \
+	if [[ $$? -ne 0 ]]; then \
 	    printf " [$(ERROR_COLOR)FAILED$(NO_COLOR)]\n"; \
 	    touch check-failed; \
 	    exit 0; \
@@ -553,7 +585,6 @@ test-int: test_write_lib test_read_lib
 	    exit 0; \
 	elif [[ $$status -eq 2 ]]; then \
 	    printf " [$(SKIP_COLOR)SKIPPED$(NO_COLOR)]\n"; \
-	    touch check-failed; \
 	    exit 0; \
 	fi; \
 	./test_read_lib ret=1 max_absdiff=2 2>&1 1>/dev/null; \
@@ -590,7 +621,6 @@ test-sixd: test_write_lib
 	status=$$?; \
 	if [[ $$status -eq 2 ]]; then \
 	    printf " [$(SKIP_COLOR)SKIPPED$(NO_COLOR)]\n"; \
-	    touch check-failed; \
 	    exit 0; \
 	elif [[ $$status -ne 0 ]]; then \
 	    printf " [$(ERROR_COLOR)FAILED$(NO_COLOR)]\n"; \
@@ -625,7 +655,6 @@ test-zfparr: test_write_lib
 	status=$$?; \
 	if [[ $$status -eq 2 ]]; then \
 	    printf " [$(SKIP_COLOR)SKIPPED$(NO_COLOR)]\n"; \
-	    touch check-failed; \
 	    exit 0; \
 	elif [[ $$status -ne 0 ]]; then \
 	    printf " [$(ERROR_COLOR)FAILED$(NO_COLOR)]\n"; \
@@ -700,7 +729,7 @@ PLUGIN_CHECK = test-rate test-accuracy test-precision test-h5repack
 ifneq ($(ZFP_HAS_REVERSIBLE),)
     PLUGIN_CHECK += test-reversible
 endif
-PLUGIN_CHECK += test-endian
+PLUGIN_CHECK += test-endian test-endian1
 
 CHECK = $(LIB_CHECK) $(PLUGIN_CHECK)
 ifneq ($(FC),)

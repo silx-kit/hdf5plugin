@@ -1,25 +1,40 @@
 export SHELL = /bin/bash
 
-ifeq ($(HDF5_HOME),)
-    $(warning WARNING: HDF5_HOME not specified)
+#ifeq ($(HDF5_HOME),)
+#    $(warning WARNING: HDF5_HOME not specified)
+#endif
+#
+#ifeq ($(ZFP_HOME),)
+#    $(warning WARNING: ZFP_HOME not specified)
+#endif
+
+# disallow relative paths in HOME variables
+HOME_WORDS := $(subst /, ,$(HDF5_HOME))
+FIRST_WORD := $(firstword $(HOME_WORDS))
+ifeq ($(FIRST_WORD),.)
+    $(error Please use absolute path for HDF5_HOME)
+else ifeq ($(FIRST_WORD),..)
+    $(error Please use absolute path for HDF5_HOME)
+endif
+HOME_WORDS := $(subst /, ,$(ZFP_HOME))
+FIRST_WORD := $(firstword $(HOME_WORDS))
+ifeq ($(FIRST_WORD),.)
+    $(error Please use absolute path for ZFP_HOME)
+else ifeq ($(FIRST_WORD),..)
+    $(error Please use absolute path for ZFP_HOME)
 endif
 
-ifeq ($(ZFP_HOME),)
-    $(warning WARNING: ZFP_HOME not specified)
-endif
-
-# Construct version variable depending on what dir we're in
+# Construct H5Z_ZFP_BASE variable depending on what dir this config.cmake is being included from
 PWD_BASE = $(shell basename $$(pwd))
-ifeq ($(PWD_BASE),src)
-    H5Z_ZFP_BASE := .
-else ifeq ($(PWD_BASE),test)
-    H5Z_ZFP_BASE := ../src
-else ifeq ($(PWD_BASE),H5Z-ZFP)
+ifneq ($(wildcard config.make),) # we're in top-level dir
     H5Z_ZFP_BASE := ./src
+else ifneq ($(wildcard test_write.c),) # we're in test dir
+    H5Z_ZFP_BASE := ../src
+else ifneq ($(wildcard H5Zzfp.c),) # we're in src dir
+    H5Z_ZFP_BASE := .
 endif
 
 H5Z_ZFP_PLUGIN := $(H5Z_ZFP_BASE)/plugin
-H5Z_ZFP_VERSINFO := $(shell grep '^\#define H5Z_FILTER_ZFP_VERSION_[MP]' $(H5Z_ZFP_BASE)/H5Zzfp_plugin.h | cut -d' ' -f3 | tr '\n' '.' | cut -d'.' -f-3 2>/dev/null)
 ZFP_HAS_REVERSIBLE :=
 ifneq ($(ZFP_HOME),)
     ZFP_HAS_REVERSIBLE := $(shell grep zfp_stream_set_reversible $(ZFP_HOME)/include/zfp.h 2>/dev/null)
@@ -34,7 +49,7 @@ ifeq ($(ZFP_LIB_VERSION),)
     ZFP_LIB_VERSION := $(shell grep '^\#define ZFP_VERSION_[MRPT]' $(ZFP_HOME)/inc/zfp.h 2>/dev/null | tr ' ' '\n' | grep '[0-9]' | tr -d '\n' 2>/dev/null)
 endif
 ifeq ($(ZFP_LIB_VERSION),)
-    $(warning WARNING: ZFP lib version not detected by make -- some tests may run)
+    $(warning WARNING: ZFP lib version not detected by make -- some tests may be skipped)
 endif
 
 # Detect system type
@@ -51,6 +66,7 @@ HAS_ICC := $(shell basename $$(which icc 2>/dev/null) 2>/dev/null)
 HAS_PGCC := $(shell basename $$(which pgcc 2>/dev/null) 2>/dev/null)
 HAS_XLCR := $(shell basename $$(which xlc_r 2>/dev/null) 2>/dev/null)
 HAS_BGXLCR := $(shell basename $$(which bgxlc_r 2>/dev/null) 2>/dev/null)
+HAS_CC := $(shell basename $$(which cc 2>/dev/null) 2>/dev/null)
 
 # Common Fortran compilers
 HAS_GFORTRAN := $(shell basename $$(which gfortran 2>/dev/null) 2>/dev/null)
@@ -65,6 +81,8 @@ ifeq ($(CC),)
             CC = $(HAS_CLANG)
 	else ifneq ($(strip $(HAS_GCC)),)
             CC = $(HAS_GCC)
+	else ifneq ($(strip $(HAS_CC)),)
+            CC = $(HAS_CC)
         endif
     else ifneq ($(findstring ppc, $(PROCESSOR),),)
         ifneq ($(strip $(HAS_BGXLCR)),)
@@ -77,6 +95,8 @@ ifeq ($(CC),)
     else
 	ifneq ($(strip $(HAS_GCC)),)
             CC = $(HAS_GCC)
+	else ifneq ($(strip $(HAS_CLANG)),)
+            CC = $(HAS_CLANG)
 	else ifneq ($(strip $(HAS_ICC)),)
             CC = $(HAS_ICC)
 	else ifneq ($(strip $(HAS_PGCC)),)
@@ -101,7 +121,7 @@ ifneq ($(findstring gcc, $(CC)),)
 else ifneq ($(findstring clang, $(CC)),)
     SOEXT ?= dylib
     SHFLAG ?= -dynamiclib
-    PREPATH = -L
+    PREPATH = -Wl,-rpath,
 else ifneq ($(findstring icc, $(CC)),)
     CFLAGS += -fpic
     SOEXT ?= so
@@ -109,6 +129,11 @@ else ifneq ($(findstring icc, $(CC)),)
     PREPATH = -Wl,-rpath,
 else ifneq ($(findstring pgcc, $(CC)),)
     CFLAGS += -fpic
+    SOEXT ?= so
+    SHFLAG ?= -shared
+    PREPATH = -Wl,-rpath,
+else ifneq ($(findstring cc, $(CC)),)
+    CFLAGS += -fPIC
     SOEXT ?= so
     SHFLAG ?= -shared
     PREPATH = -Wl,-rpath,
@@ -145,7 +170,7 @@ else ifneq ($(wildcard $(ZFP_HOME)/inc),)
 ZFP_INC = $(ZFP_HOME)/inc
 endif
 ifeq ($(wildcard $(ZFP_INC)/zfp.h),) # no header file
-$(error "zfp.h not found")
+$(warning "zfp.h not found")
 endif
 
 ifeq ($(wildcard $(ZFP_HOME)/lib),)
@@ -186,6 +211,11 @@ else
   endif
   HDF5_BIN = $(HDF5_HOME)/bin
   MAKEVARS = HDF5_HOME=$(HDF5_HOME)
+endif
+
+HDF5_HAS_WRITE_CHUNK = 1
+ifeq ($(shell grep H5Dwrite_chunk $(HDF5_INC)/*.h),)
+    HDF5_HAS_WRITE_CHUNK = 0
 endif
 
 ifeq ($(PREFIX),)

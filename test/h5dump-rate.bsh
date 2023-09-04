@@ -1,0 +1,31 @@
+#!/bin/bash
+H5DUMP=$1
+FILE=$2
+DSET=$3
+RATE=$4
+
+# Checks
+if [[ ! -f ${H5DUMP} ]]; then
+  echo "*** ERROR: The executable h5dump \"${H5DUMP}\" does not exist."
+  exit 1
+fi
+
+if [[ ! -f ${FILE} ]]; then
+  echo "*** ERROR: File \"${FILE}\" does not exist."
+  exit 1
+fi
+
+
+EXPECTED_RATIO=$(expr 64 / ${RATE})
+ACTUAL_RATIO=`${H5DUMP} -H -d ${DSET} -p ${FILE} | grep COMPRESSION | cut -d':' -f1 | cut -d'(' -f2 | cut -d'.' -f1`
+echo "Compression ratio"
+echo "  h5dump:   ${H5DUMP}"
+echo "  File:     ${FILE}"
+echo "  Dataset:  ${DSET}"
+echo "  Expected: ${EXPECTED_RATIO}"
+echo "  Actual:   ${ACTUAL_RATIO}"
+if [[ ${ACTUAL_RATIO} != ${EXPECTED_RATIO} ]]; then
+  exit 1
+fi
+
+exit 0
