@@ -183,6 +183,7 @@ class Blosc(_FilterRefClass):
         Compression level from 0 (no compression) to 9 (maximum compression).
         Default: 5.
     :param int shuffle: One of:
+
         - Blosc.NOSHUFFLE (0): No shuffle
         - Blosc.SHUFFLE (1): byte-wise shuffle (default)
         - Blosc.BITSHUFFLE (2): bit-wise shuffle
@@ -239,6 +240,7 @@ class Blosc2(_FilterRefClass):
         Compression level from 0 (no compression) to 9 (maximum compression).
         Default: 5.
     :param int filters: One of:
+
         - Blosc2.NOFILTER (0): No pre-compression filter
         - Blosc2.SHUFFLE (1): Byte-wise shuffle (default)
         - Blosc2.BITSHUFFLE (2): Bit-wise shuffle
