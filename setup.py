@@ -37,7 +37,6 @@ import tempfile
 import platform
 from setuptools import setup, Distribution, Extension
 from setuptools.command.build_ext import build_ext
-from setuptools.command.sdist import sdist
 from setuptools.command.build_py import build_py
 from setuptools.command.build_clib import build_clib
 try:  # setuptools >= 62.4.0
@@ -1227,7 +1226,7 @@ if extensions and not sys.platform == 'win32':
 
 # setup
 
-def get_version(debian=False):
+def get_version():
     """Returns current version number from _version.py file"""
     dirname = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "src", PROJECT)
@@ -1237,69 +1236,7 @@ def get_version(debian=False):
     import _version
     sys.path = sys.path[1:]
     sys.dont_write_bytecode = dont_write_bytecode
-    return _version.debianversion if debian else _version.strictversion
-
-
-################################################################################
-# Debian source tree
-################################################################################
-
-class sdist_debian(sdist):
-    """
-    Tailor made sdist for debian
-    * remove auto-generated doc
-    * remove cython generated .c files
-    * remove cython generated .cpp files
-    * remove .bat files
-    * include .l man files
-    """
-
-    description = "Create a source distribution for Debian (tarball, zip file, etc.)"
-
-    @staticmethod
-    def get_debian_name():
-        name = "%s_%s" % (PROJECT, get_version(debian=True))
-        return name
-
-    def prune_file_list(self):
-        sdist.prune_file_list(self)
-        to_remove = ["doc/build", "doc/pdf", "doc/html", "pylint", "epydoc"]
-        print("Removing files for debian")
-        for rm in to_remove:
-            self.filelist.exclude_pattern(pattern="*", anchor=False, prefix=rm)
-
-        # this is for Cython files specifically: remove C & html files
-        search_root = os.path.dirname(os.path.abspath(__file__))
-        for root, _, files in os.walk(search_root):
-            for afile in files:
-                if os.path.splitext(afile)[1].lower() == ".pyx":
-                    base_file = os.path.join(root, afile)[len(search_root) + 1:-4]
-                    self.filelist.exclude_pattern(pattern=base_file + ".c")
-                    self.filelist.exclude_pattern(pattern=base_file + ".cpp")
-                    self.filelist.exclude_pattern(pattern=base_file + ".html")
-
-        # do not include third_party/_local files
-        self.filelist.exclude_pattern(pattern="*", prefix="silx/third_party/_local")
-
-    def make_distribution(self):
-        self.prune_file_list()
-        sdist.make_distribution(self)
-        dest = self.archive_files[0]
-        dirname, basename = os.path.split(dest)
-        base, ext = os.path.splitext(basename)
-        while ext in [".zip", ".tar", ".bz2", ".gz", ".Z", ".lz", ".orig"]:
-            base, ext = os.path.splitext(base)
-        # if ext:
-        #     dest = "".join((base, ext))
-        # else:
-        #     dest = base
-        # sp = dest.split("-")
-        # base = sp[:-1]
-        # nr = sp[-1]
-        debian_arch = os.path.join(dirname, self.get_debian_name() + ".orig.tar.gz")
-        os.rename(self.archive_files[0], debian_arch)
-        self.archive_files = [debian_arch]
-        print("Building debian .orig.tar.gz in %s" % self.archive_files[0])
+    return _version.strictversion
 
 
 PROJECT = 'hdf5plugin'
@@ -1333,7 +1270,7 @@ cmdclass = dict(
     build_clib=BuildCLib,
     build_ext=PluginBuildExt,
     build_py=BuildPy,
-    debian_src=sdist_debian)
+)
 
 
 if __name__ == "__main__":
