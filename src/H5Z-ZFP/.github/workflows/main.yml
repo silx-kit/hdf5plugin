@@ -6,7 +6,7 @@ name: h5z-zfp
 # TODO: REMOVE feat-cmake_tests before merging
 on: 
   push:
-    branches: [ master ] 
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
