@@ -35,7 +35,7 @@ import sys
 import sysconfig
 import tempfile
 import platform
-from setuptools import setup, Extension
+from setuptools import setup, Distribution, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
 from setuptools.command.build_py import build_py
@@ -48,8 +48,6 @@ try:  # setuptools >= 59.0.0
     from setuptools.errors import CompileError
 except ImportError:
     from distutils.errors import CompileError
-import distutils.ccompiler
-import distutils.sysconfig
 from wheel.bdist_wheel import bdist_wheel, get_platform
 
 logging.basicConfig(level=logging.INFO)
@@ -85,6 +83,24 @@ class BDistWheel(bdist_wheel):
 
 
 # Probe host capabilities and manage build config
+
+def get_compiler(compiler):
+    """Returns an initialized compiler
+
+    Taken from https://github.com/pypa/setuptools/issues/2806#issuecomment-961805789
+    """
+    d = Distribution()
+    build_ext = Distribution().get_command_obj("build_ext")
+    build_ext.compiler = compiler
+    build_ext.finalize_options()
+    # register an extension to ensure a compiler is created
+    build_ext.extensions = [Extension("ignored", ["ignored.c"])]
+    # disable building fake extensions
+    build_ext.build_extensions = lambda: None
+    # run to populate self.compiler
+    build_ext.run()
+    return build_ext.compiler
+
 
 def check_compile_flags(compiler, *flags, extension='.c'):
     """Try to compile an empty file to check for compiler args
@@ -128,9 +144,7 @@ class HostConfig:
     """Machine architecture description from cpuinfo parser"""
 
     def __init__(self, compiler=None):
-        compiler = distutils.ccompiler.new_compiler(compiler, force=True)
-        distutils.sysconfig.customize_compiler(compiler)
-        self.__compiler = compiler
+        self.__compiler = get_compiler(compiler)
 
         # Set architecture specific compile args
         if self.ARCH in ('X86_32', 'X86_64', 'MIPS_64'):
