@@ -50,6 +50,7 @@ except ImportError:
     from distutils.errors import CompileError
 import distutils.ccompiler
 import distutils.sysconfig
+from wheel.bdist_wheel import bdist_wheel, get_platform
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,29 +71,17 @@ except Exception:
     except Exception:
         cpuinfo_parse_arch = None
 
-# Patch bdist_wheel
-try:
-    from wheel.bdist_wheel import bdist_wheel
-except ImportError:
-    BDistWheel = None
-else:
-    from pkg_resources import parse_version
-    import wheel
-    from wheel.bdist_wheel import get_platform
 
-    class BDistWheel(bdist_wheel):
-        """Override bdist_wheel to handle as pure python package"""
+class BDistWheel(bdist_wheel):
+    """Override bdist_wheel to handle as pure python package"""
 
-        def finalize_options(self):
-            if parse_version(wheel.__version__) >= parse_version('0.34.0'):
-                self.plat_name = get_platform(self.bdist_dir)
-            else:
-                self.plat_name = get_platform()
-            bdist_wheel.finalize_options(self)
+    def finalize_options(self):
+        self.plat_name = get_platform(self.bdist_dir)
+        bdist_wheel.finalize_options(self)
 
-        def get_tag(self):
-            """Override the python and abi tag generation"""
-            return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
+    def get_tag(self):
+        """Override the python and abi tag generation"""
+        return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
 
 
 # Probe host capabilities and manage build config
@@ -1325,13 +1314,12 @@ classifiers = ["Development Status :: 5 - Production/Stable",
                "Topic :: Software Development :: Libraries :: Python Modules",
                ]
 cmdclass = dict(
+    bdist_wheel=BDistWheel,
     build=Build,
     build_clib=BuildCLib,
     build_ext=PluginBuildExt,
     build_py=BuildPy,
     debian_src=sdist_debian)
-if BDistWheel is not None:
-    cmdclass['bdist_wheel'] = BDistWheel
 
 
 if __name__ == "__main__":
