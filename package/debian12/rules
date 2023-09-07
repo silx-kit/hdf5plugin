@@ -1,0 +1,19 @@
+#!/usr/bin/make -f
+# See https://wiki.debian.org/Python/Pybuild
+
+export PYBUILD_NAME=hdf5plugin
+
+# Build options
+export HDF5PLUGIN_NATIVE=False
+export HDF5PLUGIN_SSE2=True
+export HDF5PLUGIN_AVX2=False
+export HDF5PLUGIN_OPENMP=True
+export HDF5PLUGIN_CPP11=True
+
+%:
+	dh $@ --buildsystem=pybuild
+
+override_dh_auto_test:
+	dh_auto_test -- -s custom --test-args="env PYTHONPATH={build_dir} {interpreter} -m hdf5plugin.test"
+	dh_auto_test -- -s custom --test-args="env PYTHONPATH={build_dir} {interpreter} test/test.py"
+
