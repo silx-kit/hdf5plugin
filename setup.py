@@ -1351,7 +1351,7 @@ if __name__ == "__main__":
           package_dir={'': 'src'},
           ext_modules=extensions,
           install_requires=['h5py'],
-          setup_requires=['setuptools'],
+          setup_requires=['setuptools', 'wheel'],
           extras_require={'dev': ['sphinx', 'sphinx_rtd_theme']},
           cmdclass=cmdclass,
           libraries=libraries,
