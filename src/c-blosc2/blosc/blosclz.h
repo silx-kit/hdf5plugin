@@ -14,17 +14,12 @@
   about copyright and rights to use.
 **********************************************************************/
 
+#ifndef BLOSC_BLOSCLZ_H
+#define BLOSC_BLOSCLZ_H
 
-#ifndef BLOSCLZ_H
-#define BLOSCLZ_H
 #include "context.h"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #define BLOSCLZ_VERSION_STRING "2.5.3"
-
 
 /**
   Compress a block of data in the input buffer and returns the size of
@@ -63,8 +58,4 @@ int blosclz_compress(int opt_level, const void* input, int length,
 
 int blosclz_decompress(const void* input, int length, void* output, int maxout);
 
-#if defined (__cplusplus)
-}
-#endif
-
-#endif /* BLOSCLZ_H */
+#endif /* BLOSC_BLOSCLZ_H */

@@ -8,13 +8,20 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#ifndef BLOSC_BLOSC2_TUNERS_UTILS_H
+#define BLOSC_BLOSC2_TUNERS_UTILS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     BLOSC_BTUNE = 32,
 };
 
 void register_tuners(void);
 
-// For dynamically loaded tunes
+// For dynamically loaded tuners
 typedef struct {
     char *init;
     char *next_blocksize;
@@ -22,3 +29,9 @@ typedef struct {
     char *update;
     char *free;
 } tuner_info;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* BLOSC_BLOSC2_TUNERS_UTILS_H */

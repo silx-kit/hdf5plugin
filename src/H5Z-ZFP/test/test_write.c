@@ -5,20 +5,10 @@ Written by Mark C. Miller, miller86@llnl.gov
 LLNL-CODE-707197. All rights reserved.
 
 This file is part of H5Z-ZFP. Please also read the BSD license
-https://raw.githubusercontent.com/LLNL/H5Z-ZFP/master/LICENSE 
+https://raw.githubusercontent.com/LLNL/H5Z-ZFP/master/LICENSE
 */
 
-#define _GNU_SOURCE
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "hdf5.h"
+#include "test_common.h"
 
 #ifdef H5Z_ZFP_USE_PLUGIN
 #include "H5Zzfp_plugin.h"
@@ -36,80 +26,6 @@ https://raw.githubusercontent.com/LLNL/H5Z-ZFP/master/LICENSE
   #error GOT HERE
 #endif
 #endif
-
-#define NAME_LEN 256
-
-/* convenience macro to handle command-line args and help */
-#define HANDLE_SEP(SEPSTR)                                      \
-{                                                               \
-    char tmpstr[64];                                            \
-    int len = snprintf(tmpstr, sizeof(tmpstr), "\n%s...", #SEPSTR);\
-    printf("    %*s\n",60-len,tmpstr);                          \
-}
-
-#define HANDLE_ARG(A,PARSEA,PRINTA,HELPSTR)                     \
-{                                                               \
-    int i;                                                      \
-    char tmpstr[64];                                            \
-    int len;                                                    \
-    int len2 = strlen(#A)+1;                                    \
-    for (i = 0; i < argc; i++)                                  \
-    {                                                           \
-        if (!strncmp(argv[i], #A"=", len2))                     \
-        {                                                       \
-            A = PARSEA;                                         \
-            break;                                              \
-        }                                                       \
-        else if (!strncmp(#A, "help", 4) &&                     \
-                  strcasestr(argv[i], "help"))                  \
-        {                                                       \
-            return 0;                                           \
-        }                                                       \
-    }                                                           \
-    len = snprintf(tmpstr, sizeof(tmpstr), "%s=" PRINTA, #A, A);\
-    printf("    %s%*s\n",tmpstr,60-len,#HELPSTR);               \
-}
-
-
-/* convenience macro to handle errors */
-#define ERROR(FNAME)                                              \
-do {                                                              \
-    int _errno = errno;                                           \
-    fprintf(stderr, #FNAME " failed at line %d, errno=%d (%s)\n", \
-        __LINE__, _errno, _errno?strerror(_errno):"ok");          \
-    return 1;                                                     \
-} while(0)
-
-/* Generate a simple, 1D sinusioidal data array with some noise */
-#define TYPINT 1
-#define TYPDBL 2
-static int gen_data(size_t npoints, double noise, double amp, void **_buf, int typ)
-{
-    size_t i;
-    double *pdbl = 0;
-    int *pint = 0;
-
-    /* create data buffer to write */
-    if (typ == TYPINT)
-        pint = (int *) malloc(npoints * sizeof(int));
-    else
-        pdbl = (double *) malloc(npoints * sizeof(double));
-    srandom(0xDeadBeef);
-    for (i = 0; i < npoints; i++)
-    {
-        double x = 2 * M_PI * (double) i / (double) (npoints-1);
-        double n = noise * ((double) random() / ((double)(1<<31)-1) - 0.5);
-        if (typ == TYPINT)
-            pint[i] = (int) (amp * (1 + sin(x)) + n);
-        else
-            pdbl[i] = (double) (amp * (1 + sin(x)) + n);
-    }
-    if (typ == TYPINT)
-        *_buf = pint;
-    else
-        *_buf = pdbl;
-    return 0;
-}
 
 /* Populate the hyper-dimensional array with samples of a radially symmetric
    sinc() function but where certain sub-spaces are randomized through dimindx arrays */
@@ -195,11 +111,11 @@ static void *
 gen_random_correlated_array(int typ, int ndims, int const *dims, int nucdims, int const *ucdims)
 {
     int i, n;
-    int nbyt = (int) (typ == TYPINT ? sizeof(int) : sizeof(double)); 
+    int nbyt = (int) (typ == TYPINT ? sizeof(int) : sizeof(double));
     unsigned char *buf, *buf0;
     int m[10]; /* subspace multipliers */
     int *dimindx[10];
-   
+
     assert(ndims <= 10);
 
     /* Set up total size and sub-space multipliers */
@@ -211,7 +127,7 @@ gen_random_correlated_array(int typ, int ndims, int const *dims, int nucdims, in
 
     /* allocate buffer of suitable size (doubles or ints) */
     buf0 = buf = (unsigned char*) malloc(n * nbyt);
-    
+
     /* set up dimension identity indexing (e.g. Idx[i]==i) so that
        we can randomize those dimenions we wish to have UNcorrelated */
     for (i = 0; i < ndims; i++)
@@ -286,7 +202,7 @@ buffer_time_step(void *tbuf, void *data, int typ, int ndims, int const *dims, in
 {
     int i, n;
     int k = t % 4;
-    int nbyt = (int) (typ == TYPINT ? sizeof(int) : sizeof(double)); 
+    int nbyt = (int) (typ == TYPINT ? sizeof(int) : sizeof(double));
 
     for (i = 0, n = 1; i < ndims; i++)
         n *= dims[i];
@@ -299,27 +215,28 @@ static int read_data(char const *fname, size_t npoints, double **_buf)
     size_t const nbytes = npoints * sizeof(double);
     int fd;
 
-    if (0 > (fd = open(fname, O_RDONLY))) ERROR(open);
-    if (0 == (*_buf = (double *) malloc(nbytes))) ERROR(malloc);
-    if (nbytes != read(fd, *_buf, nbytes)) ERROR(read);
-    if (0 != close(fd)) ERROR(close);
+    if (0 > (fd = open(fname, O_RDONLY))) SET_ERROR(open);
+    if (0 == (*_buf = (double *) malloc(nbytes))) SET_ERROR(malloc);
+    if (nbytes != read(fd, *_buf, nbytes)) SET_ERROR(read);
+    if (0 != close(fd)) SET_ERROR(close);
     return 0;
 }
 
 static hid_t setup_filter(int n, hsize_t *chunk, int zfpmode,
-    double rate, double acc, uint prec,
-    uint minbits, uint maxbits, uint maxprec, int minexp)
+    double rate, double acc, unsigned int prec,
+    unsigned int minbits, unsigned int maxbits, unsigned int maxprec, int minexp)
 {
     hid_t cpid;
-    unsigned int cd_values[10];
-    int i;
-    size_t cd_nelmts = 10;
 
     /* setup dataset creation properties */
-    if (0 > (cpid = H5Pcreate(H5P_DATASET_CREATE))) ERROR(H5Pcreate);
-    if (0 > H5Pset_chunk(cpid, n, chunk)) ERROR(H5Pset_chunk);
+    if (0 > (cpid = H5Pcreate(H5P_DATASET_CREATE))) SET_ERROR(H5Pcreate);
+    if (0 > H5Pset_chunk(cpid, n, chunk)) SET_ERROR(H5Pset_chunk);
 
 #ifdef H5Z_ZFP_USE_PLUGIN
+
+    unsigned int cd_values[10];
+    size_t cd_nelmts = 10;
+
     /* setup zfp filter via generic (cd_values) interface */
     if (zfpmode == H5Z_ZFP_MODE_RATE)
         H5Pset_zfp_rate_cdata(rate, cd_nelmts, cd_values);
@@ -335,15 +252,15 @@ static hid_t setup_filter(int n, hsize_t *chunk, int zfpmode,
         cd_nelmts = 0; /* causes default behavior of ZFP library */
 
     /* print cd-values array used for filter */
-    printf("%d cd_values= ", (int) cd_nelmts);
-    for (i = 0; i < (int) cd_nelmts; i++)
+    printf("\n%d cd_values=", (int) cd_nelmts);
+    for (int i = 0; i < (int) cd_nelmts; i++)
         printf("%u,", cd_values[i]);
     printf("\n");
 
     /* Add filter to the pipeline via generic interface */
-    if (0 > H5Pset_filter(cpid, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY, cd_nelmts, cd_values)) ERROR(H5Pset_filter);
+    if (0 > H5Pset_filter(cpid, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY, cd_nelmts, cd_values)) SET_ERROR(H5Pset_filter);
 
-#else 
+#else
 
     /* When filter is used as a library, we need to init it */
     H5Z_zfp_initialize();
@@ -369,7 +286,6 @@ static hid_t setup_filter(int n, hsize_t *chunk, int zfpmode,
 
 int main(int argc, char **argv)
 {
-    int i;
     int retval=0;
 
     /* filename variables */
@@ -390,10 +306,10 @@ int main(int argc, char **argv)
     int zfpmode = H5Z_ZFP_MODE_RATE;
     double rate = 4;
     double acc = 0;
-    uint prec = 11;
-    uint minbits = 0;
-    uint maxbits = 4171;
-    uint maxprec = 64;
+    unsigned int prec = 11;
+    unsigned int minbits = 0;
+    unsigned int maxbits = 4171;
+    unsigned int maxprec = 64;
     int minexp = -1074;
     int *ibuf = 0;
     double *buf = 0;
@@ -408,14 +324,14 @@ int main(int argc, char **argv)
     HANDLE_ARG(ofile,strndup(argv[i]+len2,NAME_LEN), "\"%s\"",set output filename);
 
     /* ZFP filter arguments */
-    HANDLE_SEP(ZFP compression paramaters)
-    HANDLE_ARG(zfpmode,(int) strtol(argv[i]+len2,0,10),"%d", (1=rate,2=prec,3=acc,4=expert,5=reversible)); 
+    HANDLE_SEP(ZFP compression parameters)
+    HANDLE_ARG(zfpmode,(int) strtol(argv[i]+len2,0,10),"%d", (1=rate,2=prec,3=acc,4=expert,5=reversible));
     HANDLE_ARG(rate,(double) strtod(argv[i]+len2,0),"%g",set rate for rate mode);
     HANDLE_ARG(acc,(double) strtod(argv[i]+len2,0),"%g",set accuracy for accuracy mode);
-    HANDLE_ARG(prec,(uint) strtol(argv[i]+len2,0,10),"%u",set precision for precision mode);
-    HANDLE_ARG(minbits,(uint) strtol(argv[i]+len2,0,10),"%u",set minbits for expert mode);
-    HANDLE_ARG(maxbits,(uint) strtol(argv[i]+len2,0,10),"%u",set maxbits for expert mode);
-    HANDLE_ARG(maxprec,(uint) strtol(argv[i]+len2,0,10),"%u",set maxprec for expert mode);
+    HANDLE_ARG(prec,(unsigned int) strtol(argv[i]+len2,0,10),"%u",set precision for precision mode);
+    HANDLE_ARG(minbits,(unsigned int) strtol(argv[i]+len2,0,10),"%u",set minbits for expert mode);
+    HANDLE_ARG(maxbits,(unsigned int) strtol(argv[i]+len2,0,10),"%u",set maxbits for expert mode);
+    HANDLE_ARG(maxprec,(unsigned int) strtol(argv[i]+len2,0,10),"%u",set maxprec for expert mode);
     HANDLE_ARG(minexp,(int) strtol(argv[i]+len2,0,10),"%d",set minexp for expert mode);
 
     /* 1D dataset arguments */
@@ -443,7 +359,7 @@ int main(int argc, char **argv)
     sixd = 0;
 #endif
 
-#if defined(ZFP_LIB_VERSION) && ZFP_LIB_VERSION>=0x054 && ZFP_HAS_CFP>0
+#if defined(ZFP_LIB_VERSION) && ZFP_LIB_VERSION>=0x054 && ZFP_HAS_CFP>0 && HDF5_HAS_WRITE_CHUNK>0
     HANDLE_ARG(zfparr,(int) strtol(argv[i]+len2,0,10),"%d",run ZFP array case using H5Dwrite_chunk);
 #else
     HANDLE_ARG(zfparr,(int) strtol(argv[i]+len2,0,10),"%d",requires ZFP>=0.5.4 with CFP enabled);
@@ -453,7 +369,7 @@ int main(int argc, char **argv)
 
     cpid = setup_filter(1, &chunk, zfpmode, rate, acc, prec, minbits, maxbits, maxprec, minexp);
 
-    /* Put this after setup_filter to permit printing of otherwise hard to 
+    /* Put this after setup_filter to permit printing of otherwise hard to
        construct cd_values to facilitate manual invokation of h5repack */
     HANDLE_ARG(help,(int)strtol(argv[i]+len2,0,10),"%d",this help message); /* must be last for help to work */
 
@@ -469,36 +385,36 @@ int main(int argc, char **argv)
         gen_data((size_t) npoints, noise*100, amp*1000000, (void**)&ibuf, TYPINT);
 
     /* create HDF5 file */
-    if (0 > (fid = H5Fcreate(ofile, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT))) ERROR(H5Fcreate);
+    if (0 > (fid = H5Fcreate(ofile, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT))) SET_ERROR(H5Fcreate);
 
     /* setup the 1D data space */
-    if (0 > (sid = H5Screate_simple(1, &npoints, 0))) ERROR(H5Screate_simple);
+    if (0 > (sid = H5Screate_simple(1, &npoints, 0))) SET_ERROR(H5Screate_simple);
 
     /* write the data WITHOUT compression */
-    if (0 > (dsid = H5Dcreate(fid, "original", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) ERROR(H5Dcreate);
-    if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) ERROR(H5Dwrite);
-    if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+    if (0 > (dsid = H5Dcreate(fid, "original", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+    if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) SET_ERROR(H5Dwrite);
+    if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
     if (doint)
     {
-        if (0 > (idsid = H5Dcreate(fid, "int_original", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite(idsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, ibuf)) ERROR(H5Dwrite);
-        if (0 > H5Dclose(idsid)) ERROR(H5Dclose);
+        if (0 > (idsid = H5Dcreate(fid, "int_original", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite(idsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, ibuf)) SET_ERROR(H5Dwrite);
+        if (0 > H5Dclose(idsid)) SET_ERROR(H5Dclose);
     }
 
     /* write the data with requested compression */
-    if (0 > (dsid = H5Dcreate(fid, "compressed", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
-    if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) ERROR(H5Dwrite);
-    if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+    if (0 > (dsid = H5Dcreate(fid, "compressed", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+    if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) SET_ERROR(H5Dwrite);
+    if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
     if (doint)
     {
-        if (0 > (idsid = H5Dcreate(fid, "int_compressed", H5T_NATIVE_INT, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite(idsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, ibuf)) ERROR(H5Dwrite);
-        if (0 > H5Dclose(idsid)) ERROR(H5Dclose);
+        if (0 > (idsid = H5Dcreate(fid, "int_compressed", H5T_NATIVE_INT, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite(idsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, ibuf)) SET_ERROR(H5Dwrite);
+        if (0 > H5Dclose(idsid)) SET_ERROR(H5Dclose);
     }
 
     /* clean up from simple tests */
-    if (0 > H5Sclose(sid)) ERROR(H5Sclose);
-    if (0 > H5Pclose(cpid)) ERROR(H5Pclose);
+    if (0 > H5Sclose(sid)) SET_ERROR(H5Sclose);
+    if (0 > H5Pclose(cpid)) SET_ERROR(H5Pclose);
     free(buf);
     if (ibuf) free(ibuf);
 
@@ -506,7 +422,7 @@ int main(int argc, char **argv)
     if (highd)
     {
      /* dimension indices 0   1   2  3 */
-        int fd, dims[] = {256,128,32,16};
+        int dims[] = {256,128,32,16};
         int ucdims[]={1,3}; /* UNcorrleted dimensions indices */
         hsize_t hdims[] = {256,128,32,16};
         hsize_t hchunk[] = {256,1,32,1};
@@ -515,21 +431,21 @@ int main(int argc, char **argv)
 
         cpid = setup_filter(4, hchunk, zfpmode, rate, acc, prec, minbits, maxbits, maxprec, minexp);
 
-        if (0 > (sid = H5Screate_simple(4, hdims, 0))) ERROR(H5Screate_simple);
+        if (0 > (sid = H5Screate_simple(4, hdims, 0))) SET_ERROR(H5Screate_simple);
 
         /* write the data WITHOUT compression */
-        if (0 > (dsid = H5Dcreate(fid, "highD_original", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) ERROR(H5Dwrite);
-        if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+        if (0 > (dsid = H5Dcreate(fid, "highD_original", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) SET_ERROR(H5Dwrite);
+        if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
 
         /* write the data with compression */
-        if (0 > (dsid = H5Dcreate(fid, "highD_compressed", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) ERROR(H5Dwrite);
-        if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+        if (0 > (dsid = H5Dcreate(fid, "highD_compressed", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) SET_ERROR(H5Dwrite);
+        if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
 
         /* clean up from high dimensional test */
-        if (0 > H5Sclose(sid)) ERROR(H5Sclose);
-        if (0 > H5Pclose(cpid)) ERROR(H5Pclose);
+        if (0 > H5Sclose(sid)) SET_ERROR(H5Sclose);
+        if (0 > H5Pclose(cpid)) SET_ERROR(H5Pclose);
         free(buf);
     }
     /* End of high dimensional test */
@@ -543,9 +459,9 @@ int main(int argc, char **argv)
     if (sixd)
     {
         void *tbuf;
-        int t, fd, dims[] = {31,31,31,3,3}; /* a single time instance */
+        int t, dims[] = {31,31,31,3,3}; /* a single time instance */
         int ucdims[]={3,4}; /* indices of UNcorrleted dimensions in dims (tensor components) */
-        hsize_t  hdims[] = {31,31,31,3,3,H5S_UNLIMITED};
+        hsize_t hdims[] = {31,31,31,3,3,H5S_UNLIMITED};
         hsize_t hchunk[] = {31,31,31,1,1,4}; /* 4 non-unity, requires >= ZFP 0.5.4 */
         hsize_t hwrite[] = {31,31,31,3,3,4}; /* size/shape of any given H5Dwrite */
 
@@ -553,10 +469,10 @@ int main(int argc, char **argv)
         cpid = setup_filter(6, hchunk, zfpmode, rate, acc, prec, minbits, maxbits, maxprec, minexp);
 
         /* Create the time-varying, 6D dataset */
-        if (0 > (sid = H5Screate_simple(6, hwrite, hdims))) ERROR(H5Screate_simple);
-        if (0 > (dsid = H5Dcreate(fid, "6D_extendible", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Sclose(sid)) ERROR(H5Sclose);
-        if (0 > H5Pclose(cpid)) ERROR(H5Pclose);
+        if (0 > (sid = H5Screate_simple(6, hwrite, hdims))) SET_ERROR(H5Screate_simple);
+        if (0 > (dsid = H5Dcreate(fid, "6D_extendible", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Sclose(sid)) SET_ERROR(H5Sclose);
+        if (0 > H5Pclose(cpid)) SET_ERROR(H5Pclose);
 
         /* Generate a single buffer which we'll modulate by a time-varying function
            to represent each timestep */
@@ -567,7 +483,7 @@ int main(int argc, char **argv)
         tbuf = malloc(31*31*31*3*3*4*sizeof(double));
 
         /* Iterate, writing 9 timesteps by buffering in time 4x. The last
-           write will contain just one timestep causing ZFP to wind up 
+           write will contain just one timestep causing ZFP to wind up
            padding all those blocks by 3x along the time dimension.  */
         for (t = 1; t < 10; t++)
         {
@@ -580,7 +496,7 @@ int main(int argc, char **argv)
             modulate_by_time(buf, TYPDBL, 5, dims, t);
 
             /* Buffer this timestep in memory. Since chunk size in time dimension is 4,
-               we need to buffer up 4 time steps before we can issue any writes */ 
+               we need to buffer up 4 time steps before we can issue any writes */
             buffer_time_step(tbuf, buf, TYPDBL, 5, dims, t);
 
             /* If the buffer isn't full, just continue updating it */
@@ -599,26 +515,26 @@ int main(int argc, char **argv)
                 H5Dextend(dsid, hextend);
 
             /* Create the memory dataspace */
-            if (0 > (msid = H5Screate_simple(6, hwrite, 0))) ERROR(H5Screate_simple);
+            if (0 > (msid = H5Screate_simple(6, hwrite, 0))) SET_ERROR(H5Screate_simple);
 
             /* Get the file dataspace to use for this H5Dwrite call */
-            if (0 > (fsid = H5Dget_space(dsid))) ERROR(H5Dget_space);
+            if (0 > (fsid = H5Dget_space(dsid))) SET_ERROR(H5Dget_space);
 
             /* Do a hyperslab selection on the file dataspace for this write*/
-            if (0 > H5Sselect_hyperslab(fsid, H5S_SELECT_SET, hstart, 0, hcount, 0)) ERROR(H5Sselect_hyperslab);
+            if (0 > H5Sselect_hyperslab(fsid, H5S_SELECT_SET, hstart, 0, hcount, 0)) SET_ERROR(H5Sselect_hyperslab);
 
             /* Write this iteration to the dataset */
-            if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, msid, fsid, H5P_DEFAULT, tbuf)) ERROR(H5Dwrite);
-            if (0 > H5Sclose(msid)) ERROR(H5Sclose);
-            if (0 > H5Sclose(fsid)) ERROR(H5Sclose);
+            if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, msid, fsid, H5P_DEFAULT, tbuf)) SET_ERROR(H5Dwrite);
+            if (0 > H5Sclose(msid)) SET_ERROR(H5Sclose);
+            if (0 > H5Sclose(fsid)) SET_ERROR(H5Sclose);
         }
-        if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+        if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
         free(buf);
         free(tbuf);
     }
     /* End of 6D Example */
 
-#if ZFP_HAS_CFP
+#if ZFP_HAS_CFP>0 && HDF5_HAS_WRITE_CHUNK>0
     /* ZFP Array Example */
     if (zfparr>0 && zfpmode==1 && rate>0)
     {
@@ -644,23 +560,23 @@ int main(int argc, char **argv)
 
         cpid = setup_filter(2, hchunk_dims, 1, rate, acc, prec, minbits, maxbits, maxprec, minexp);
 
-        if (0 > (sid = H5Screate_simple(2, hdims, 0))) ERROR(H5Screate_simple);
+        if (0 > (sid = H5Screate_simple(2, hdims, 0))) SET_ERROR(H5Screate_simple);
 
         /* write the data WITHOUT compression */
-        if (0 > (dsid = H5Dcreate(fid, "zfparr_original", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) ERROR(H5Dwrite);
-        if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+        if (0 > (dsid = H5Dcreate(fid, "zfparr_original", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) SET_ERROR(H5Dwrite);
+        if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
 
         /* write the data with compression via the filter */
-        if (0 > (dsid = H5Dcreate(fid, "zfparr_compressed", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) ERROR(H5Dwrite);
-        if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+        if (0 > (dsid = H5Dcreate(fid, "zfparr_compressed", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite(dsid, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf)) SET_ERROR(H5Dwrite);
+        if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
 
         /* write the data direct from compressed array using H5Dwrite_chunk calls */
-        if (0 > (dsid = H5Dcreate(fid, "zfparr_direct", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) ERROR(H5Dcreate);
-        if (0 > H5Dwrite_chunk(dsid, H5P_DEFAULT, 0, hchunk_off, cfp.array2d.compressed_size(origarr), cfp.array2d.compressed_data(origarr))) ERROR(H5Dwrite_chunk);
-         
-        if (0 > H5Dclose(dsid)) ERROR(H5Dclose);
+        if (0 > (dsid = H5Dcreate(fid, "zfparr_direct", H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, cpid, H5P_DEFAULT))) SET_ERROR(H5Dcreate);
+        if (0 > H5Dwrite_chunk(dsid, H5P_DEFAULT, 0, hchunk_off, cfp.array2d.compressed_size(origarr), cfp.array2d.compressed_data(origarr))) SET_ERROR(H5Dwrite_chunk);
+
+        if (0 > H5Dclose(dsid)) SET_ERROR(H5Dclose);
 
         free(buf);
         cfp.array2d.dtor(origarr);
@@ -668,7 +584,7 @@ int main(int argc, char **argv)
     /* End of ZFP Array Example */
 #endif
 
-    if (0 > H5Fclose(fid)) ERROR(H5Fclose);
+    if (0 > H5Fclose(fid)) SET_ERROR(H5Fclose);
 
     free(ifile);
     free(ofile);

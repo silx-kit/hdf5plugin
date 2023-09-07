@@ -1,0 +1,31 @@
+#!/bin/bash
+FILE_ORIGINAL=$1
+FILE_REPACK=$2
+
+# Checks
+if [[ ! -f ${FILE_ORIGINAL} ]]; then
+  echo "*** ERROR: Original file \"${FILE_ORIGINAL}\" does not exist."
+  exit 1
+fi
+
+if [[ ! -f ${FILE_REPACK} ]]; then
+  echo "*** ERROR: Repack file \"${FILE_REPACK}\" does not exist."
+  exit 1
+fi
+
+ORIG_SIZE=$(ls -l ${FILE_ORIGINAL} | tr -s ' ' | cut -d' ' -f5)
+NEW_SIZE=$(ls -l ${FILE_REPACK} | tr -s ' ' | cut -d' ' -f5)
+RATIO=`perl -e "printf int($ORIG_SIZE*100/$NEW_SIZE)"`
+
+echo "Original file"
+echo "  Name: ${FILE_ORIGINAL}"
+echo "  Size: ${ORIG_SIZE}"
+echo "Repack file"
+echo "  Name: ${FILE_REPACK}"
+echo "  Size: ${NEW_SIZE}"
+echo " Ratio of the file sizes: ${RATIO}"
+if [[ $RATIO -lt 200 ]]; then
+  exit 1
+fi
+
+exit 0

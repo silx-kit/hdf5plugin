@@ -12,6 +12,10 @@ https://raw.githubusercontent.com/LLNL/H5Z-ZFP/master/LICENSE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
 
 typedef unsigned int uint;
 
@@ -49,16 +53,6 @@ typedef unsigned int uint;
     printf("    %s%*s\n",tmpstr,60-len,#HELPSTR);               \
 }
 
-
-/* convenience macro to handle errors */
-#define ERROR(FNAME)                                              \
-do {                                                              \
-    int _errno = errno;                                           \
-    fprintf(stderr, #FNAME " failed at line %d, errno=%d (%s)\n", \
-        __LINE__, _errno, _errno?strerror(_errno):"ok");          \
-    return 1;                                                     \
-} while(0)
-
 static void print_cdvals(int zfpmode, double rate, double acc, uint prec,
     uint minbits, uint maxbits, uint maxprec, int minexp)
 {
@@ -92,8 +86,6 @@ static void print_cdvals(int zfpmode, double rate, double acc, uint prec,
 
 int main(int argc, char **argv)
 {
-    int i;
-
     /* compression parameters (defaults taken from ZFP header) */
     int zfpmode = 1;
     double rate = 3.5;
@@ -106,7 +98,7 @@ int main(int argc, char **argv)
     int help = 0;
 
     /* ZFP filter arguments */
-    HANDLE_SEP(Print cdvals for set of ZFP compression paramaters)
+    HANDLE_SEP(Print cdvals for set of ZFP compression parameters)
     HANDLE_ARG(zfpmode,(int) strtol(argv[i]+len2,0,10),"%d",set zfp mode (1=rate,2=prec,3=acc,4=expert,5=rev)); 
     HANDLE_ARG(rate,(double) strtod(argv[i]+len2,0),"%g",set rate for rate mode of filter);
     HANDLE_ARG(acc,(double) strtod(argv[i]+len2,0),"%g",set accuracy for accuracy mode of filter);

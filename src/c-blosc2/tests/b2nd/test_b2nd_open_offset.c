@@ -67,7 +67,10 @@ CUTEST_TEST_TEST(open_offset) {
       data2[i] = 2 * i * nchunk;
     }
     nchunks = blosc2_schunk_append_buffer(schunk_write_start, data1, isize);
-    assert(nchunks == nchunk + 1);
+    if (nchunks != nchunk + 1) {
+      printf("Unexpected nchunks: %ld, %d\n", (long)nchunks, nchunk + 1);
+      return -1;
+    }
     blosc2_schunk_append_buffer(schunk_write_append, data2, isize);
   }
 
@@ -130,7 +133,7 @@ CUTEST_TEST_TEST(open_offset) {
   blosc_set_timestamp(&current);
   ttotal = blosc_elapsed_secs(last, current);
   printf("Time for fileframe (%s) + offset %ld -> open_offset : %.3g s, %.1f GB/s\n",
-         arr_read_offset->sc->storage->urlpath, offset, ttotal, (double)arr_read_offset->sc->nbytes / (ttotal * GB));
+         arr_read_offset->sc->storage->urlpath, (long)offset, ttotal, (double)arr_read_offset->sc->nbytes / (ttotal * GB));
 
   uint8_t* cframe_read_start, *cframe_read_offset;
   bool cframe_needs_free2, cframe_needs_free3;
@@ -191,5 +194,5 @@ CUTEST_TEST_TEARDOWN(open_offset) {
 
 
 int main() {
-  CUTEST_TEST_RUN(open_offset)
+  CUTEST_TEST_RUN(open_offset);
 }

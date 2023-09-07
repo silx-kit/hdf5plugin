@@ -15,8 +15,8 @@
  * @author Blosc Development Team <blosc@blosc.org>
  */
 
-#ifndef B2ND_B2ND_H_
-#define B2ND_B2ND_H_
+#ifndef BLOSC_B2ND_H
+#define BLOSC_B2ND_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -198,8 +198,8 @@ BLOSC_EXPORT int b2nd_zeros(b2nd_context_t *ctx, b2nd_array_t **array);
  * uninitialized portions of the array.
  *
  * @param ctx The b2nd context for the new array.
- * @param fill_value Default value for uninitialized portions of the array.
  * @param array The memory pointer where the array will be created.
+ * @param fill_value Default value for uninitialized portions of the array.
  *
  * @return An error code.
  */
@@ -603,4 +603,4 @@ static inline int b2nd_deserialize_meta(
 }
 #endif
 
-#endif  // B2ND_B2ND_H_
+#endif  /* BLOSC_B2ND_H */

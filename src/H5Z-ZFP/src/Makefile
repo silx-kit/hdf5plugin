@@ -1,4 +1,6 @@
-include ../config.make
+ifneq ($(strip $(MAKECMDGOALS)),clean)
+    include ../config.make
+endif
 
 .PHONY: all lib clean
 

@@ -8,10 +8,8 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-
-#ifndef BLOSC_BLOSC2_STDIO_H
-#define BLOSC_BLOSC2_STDIO_H
-
+#ifndef BLOSC_BLOSC2_BLOSC2_STDIO_H
+#define BLOSC_BLOSC2_BLOSC2_STDIO_H
 
 #include "blosc2-export.h"
 
@@ -25,6 +23,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   FILE *file;
 } blosc2_stdio_file;
@@ -37,4 +39,8 @@ BLOSC_EXPORT int64_t blosc2_stdio_write(const void *ptr, int64_t size, int64_t n
 BLOSC_EXPORT int64_t blosc2_stdio_read(void *ptr, int64_t size, int64_t nitems, void *stream);
 BLOSC_EXPORT int blosc2_stdio_truncate(void *stream, int64_t size);
 
-#endif //BLOSC_BLOSC2_STDIO_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* BLOSC_BLOSC2_BLOSC2_STDIO_H */

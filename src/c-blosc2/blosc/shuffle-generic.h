@@ -16,16 +16,13 @@
   which isn't a multiple of the hardware's vector size.
 **********************************************************************/
 
-
-#ifndef SHUFFLE_GENERIC_H
-#define SHUFFLE_GENERIC_H
+#ifndef BLOSC_SHUFFLE_GENERIC_H
+#define BLOSC_SHUFFLE_GENERIC_H
 
 #include "blosc2/blosc2-common.h"
-#include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdint.h>
+#include <string.h>
 
 /**
   Generic (non-hardware-accelerated) shuffle routine.
@@ -34,7 +31,7 @@ extern "C" {
   implementations to process any remaining elements in a block which
   is not a multiple of (type_size * vector_size).
 */
-inline static void shuffle_generic_inline(const int32_t type_size,
+static inline void shuffle_generic_inline(const int32_t type_size,
                                    const int32_t vectorizable_blocksize, const int32_t blocksize,
                                    const uint8_t *_src, uint8_t *_dest) {
   int32_t i, j;
@@ -62,7 +59,7 @@ inline static void shuffle_generic_inline(const int32_t type_size,
   implementations to process any remaining elements in a block which
   is not a multiple of (type_size * vector_size).
 */
-inline static void unshuffle_generic_inline(const int32_t type_size,
+static inline void unshuffle_generic_inline(const int32_t type_size,
                                      const int32_t vectorizable_blocksize, const int32_t blocksize,
                                      const uint8_t *_src, uint8_t *_dest) {
   int32_t i, j;
@@ -95,8 +92,4 @@ BLOSC_NO_EXPORT void shuffle_generic(const int32_t bytesoftype, const int32_t bl
 BLOSC_NO_EXPORT void unshuffle_generic(const int32_t bytesoftype, const int32_t blocksize,
                                        const uint8_t *_src, uint8_t *_dest);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* SHUFFLE_GENERIC_H */
+#endif /* BLOSC_SHUFFLE_GENERIC_H */
