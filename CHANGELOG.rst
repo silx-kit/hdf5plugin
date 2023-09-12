@@ -1,3 +1,21 @@
+4.2.0: 12/09/2023
+-----------------
+
+- Updated libraries: **c-blosc** (v1.12.5), **c-blosc2** (v2.10.2) (PR #273)
+- Updated filter **H5Z-ZFP** (v1.1.1) (PR #273)
+
+- Updated build dependencies:
+
+  * Added `wheel`>=0.34.0 requirement (PR #272)
+  * Removed `distutils` usage (PR #276)
+
+- Updated documentation (PR #271, #278)
+- Fixed Continuous integration (PR #275)
+- Debian packaging (PR #277):
+
+  * Added Debian 12
+  * Removed Debian 10
+
 4.1.3: 16/06/2023
 -----------------
 
