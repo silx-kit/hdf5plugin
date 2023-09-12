@@ -3,7 +3,7 @@
 #    Project: Silx
 #             https://github.com/silx-kit/silx
 #
-#    Copyright (C) 2015-2020 European Synchrotron Radiation Facility, Grenoble, France
+#    Copyright (C) 2015-2023 European Synchrotron Radiation Facility, Grenoble, France
 #
 #    Principal author:       Jérôme Kieffer (Jerome.Kieffer@ESRF.eu)
 #
@@ -50,6 +50,9 @@ then
             bullseye)
                 debian_version=11
                 ;;
+            bookworm)
+                debian_version=12
+                ;;
         esac
     fi
 
@@ -63,12 +66,12 @@ project_directory="`( cd \"$project_directory\" && pwd )`" # absolutized
 dist_directory=${project_directory}/dist/${target_system}
 build_directory=${project_directory}/build/${target_system}
 
-# Get version info
-cd ${project_directory}/src/${project}
-version=$(python3 -B -c"import _version; print(_version.version)")
-strictversion=$(python3 -B -c"import _version; print(_version.strictversion)")
-debianversion=$(python3 -B -c"import _version; print(_version.debianversion)")
 cd ${project_directory}
+
+# Get version info
+version=$(python3 -c"import sys; sys.path.insert(0, './src/${project}'); import _version; print(_version.version)")
+strictversion=$(python3 -c"import sys; sys.path.insert(0, './src/${project}'); import _version; print(_version.strictversion)")
+debianversion=$(python3 -c"import sys; sys.path.insert(0, './src/${project}'); import _version; print(_version.debianversion)")
 
 if [ -d /usr/lib/ccache ];
 then
@@ -91,6 +94,7 @@ optional arguments:
     --debian9       Simulate a debian 9 Stretch system
     --debian10      Simulate a debian 10 Buster system
     --debian11      Simulate a debian 11 Bullseye system
+    --debian12      Simulate a debian 12 Bookworm system
 "
 
 install=0
@@ -139,6 +143,13 @@ do
           build_directory=${project_directory}/build/${target_system}
           shift
           ;;
+      --debian12)
+          debian_version=12
+          target_system=debian${debian_version}
+          dist_directory=${project_directory}/dist/${target_system}
+          build_directory=${project_directory}/build/${target_system}
+          shift
+          ;;
       -*)
           echo "Error: Unknown option: $1" >&2
           echo "$usage"
@@ -162,8 +173,8 @@ clean_up()
 build_deb() {
     tarname=${project}_${debianversion}.orig.tar.gz
     clean_up
-    python3 setup.py debian_src
-    cp -f dist/${tarname} ${build_directory}
+    python3 setup.py sdist
+    cp -f dist/${project}-${strictversion}.tar.gz ${build_directory}/${tarname}
     if [ -f dist/${project}-testimages.tar.gz ]
     then
       cp -f dist/${project}-testimages.tar.gz ${build_directory}

@@ -11,7 +11,7 @@ export HDF5PLUGIN_OPENMP=True
 export HDF5PLUGIN_CPP11=True
 
 %:
-	dh $@ --with python3 --buildsystem=pybuild
+	dh $@ --buildsystem=pybuild
 
 override_dh_auto_test:
 	dh_auto_test -- -s custom --test-args="env PYTHONPATH={build_dir} {interpreter} -m hdf5plugin.test"
