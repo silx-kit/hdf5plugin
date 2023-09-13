@@ -245,7 +245,7 @@ class Blosc2(_FilterRefClass):
         - Blosc2.SHUFFLE (1): Byte-wise shuffle (default)
         - Blosc2.BITSHUFFLE (2): Bit-wise shuffle
         - Blosc2.DELTA (3): Stores diff'ed blocks
-        - Blosc3.TRUNC_PREC (4): Zeroes the least significant bits of the mantissa
+        - Blosc2.TRUNC_PREC (4): Zeroes the least significant bits of the mantissa
     """
 
     NOFILTER = 0
