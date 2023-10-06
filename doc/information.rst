@@ -41,7 +41,8 @@ Presentations
 * `Presentation <https://indico.desy.de/event/39343/contributions/151492/>`_ at the `European HDF Users Group (HUG) Meeting 2023 <https://indico.desy.de/event/39343/>`_:
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2023/presentation>`
-    (:download:`Notebook <hdf5plugin_EuropeanHUG2023/presentation.ipynb>`)
+    (:download:`Notebook <hdf5plugin_EuropeanHUG2023/presentation.ipynb>`),
+    `Video <https://youtu.be/IyS_NgAwXuU>`_
   - Benchmark: :download:`script <hdf5plugin_EuropeanHUG2023/benchmark.py>`, :download:`display notebook <hdf5plugin_EuropeanHUG2023/benchmark.ipynb>`
   - :doc:`HDF5 compressed chunk direct read example <hdf5plugin_EuropeanHUG2023/hdf5_compressed_chunk_direct_read>`
     (:download:`Notebook <hdf5plugin_EuropeanHUG2023/hdf5_compressed_chunk_direct_read.ipynb>`)
