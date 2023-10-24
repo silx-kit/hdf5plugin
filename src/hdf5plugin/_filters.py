@@ -231,7 +231,7 @@ class Blosc2(_FilterRefClass):
         f.create_dataset(
             'blosc2_byte_shuffle_blosclz',
             data=numpy.arange(100),
-            **hdf5plugin.Blosc2(cname='blosclz', clevel=9, shuffle=hdf5plugin.Blosc2.SHUFFLE))
+            **hdf5plugin.Blosc2(cname='blosclz', clevel=9, filters=hdf5plugin.Blosc2.SHUFFLE))
         f.close()
 
     :param str cname:

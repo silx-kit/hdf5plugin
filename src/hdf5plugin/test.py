@@ -47,6 +47,9 @@ def should_test(filter_name):
 class BaseTestHDF5PluginRW(unittest.TestCase):
     """Base class for testing write/read HDF5 dataset with the plugins"""
 
+    _data_natoms = 1000
+    _data_shape = (100, 10)
+
     @classmethod
     def setUpClass(cls):
         cls.tempdir = tempfile.mkdtemp()
@@ -68,7 +71,7 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
             create_dataset's compression_opts argument
         :return: The tuple describing the filter
         """
-        data = numpy.ones((1000,), dtype=dtype).reshape(100, 10)
+        data = numpy.ones((self._data_natoms,), dtype=dtype).reshape(self._data_shape)
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
         args = {"blosc": hdf5plugin.Blosc,
@@ -215,8 +218,11 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                             cname=cname,
                             clevel=clevel,
                             filters=filters)
-                        self.assertEqual(
-                            filter_[2][4:], (clevel, filters, compression_id))
+                        filter_params = (clevel, filters, compression_id)
+                        if len(self._data_shape) >= 2:
+                            # Chunk shape passed to filter code
+                            filter_params += (len(self._data_shape),) + self._data_shape
+                        self.assertEqual(filter_[2][4:], filter_params)
 
     @unittest.skipUnless(should_test("bzip2"), "BZip2 filter not available")
     def testBZip2(self):
