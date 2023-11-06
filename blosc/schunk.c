@@ -73,7 +73,7 @@ int blosc2_schunk_get_dparams(blosc2_schunk *schunk, blosc2_dparams **dparams) {
 }
 
 
-void update_schunk_properties(struct blosc2_schunk* schunk) {
+int update_schunk_properties(struct blosc2_schunk* schunk) {
   blosc2_cparams* cparams = schunk->storage->cparams;
   blosc2_dparams* dparams = schunk->storage->dparams;
 
@@ -99,6 +99,10 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   }
   cparams->schunk = schunk;
   schunk->cctx = blosc2_create_cctx(*cparams);
+  if (schunk->cctx == NULL) {
+    BLOSC_TRACE_ERROR("Could not create compression ctx");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   /* The decompression context */
   if (schunk->dctx != NULL) {
@@ -106,6 +110,12 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   }
   dparams->schunk = schunk;
   schunk->dctx = blosc2_create_dctx(*dparams);
+  if (schunk->dctx == NULL) {
+    BLOSC_TRACE_ERROR("Could not create decompression ctx");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
+
+  return BLOSC2_ERROR_SUCCESS;
 }
 
 
@@ -132,27 +142,10 @@ blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
   }
 
   // ...and update internal properties
-  update_schunk_properties(schunk);
-
-  if (schunk->cctx->tuner_id < BLOSC_LAST_TUNER && schunk->cctx->tuner_id == BLOSC_STUNE) {
-    blosc_stune_init(schunk->storage->cparams->tuner_params, schunk->cctx, schunk->dctx);
-  } else {
-    for (int i = 0; i < g_ntuners; ++i) {
-      if (g_tuners[i].id == schunk->cctx->tuner_id) {
-        if (g_tuners[i].init == NULL) {
-          if (fill_tuner(&g_tuners[i]) < 0) {
-            BLOSC_TRACE_ERROR("Could not load tuner %d.", g_tuners[i].id);
-            return NULL;
-          }
-        }
-        g_tuners[i].init(schunk->storage->cparams->tuner_params, schunk->cctx, schunk->dctx);
-        goto urtunersuccess;
-      }
-    }
-    BLOSC_TRACE_ERROR("User-defined tuner %d not found\n", schunk->cctx->tuner_id);
+  if (update_schunk_properties(schunk) < 0) {
+    BLOSC_TRACE_ERROR("Error when updating schunk properties");
     return NULL;
   }
-  urtunersuccess:;
 
   if (!storage->contiguous && storage->urlpath != NULL){
     char* urlpath;
@@ -1600,6 +1593,10 @@ int blosc2_vlmeta_add(blosc2_schunk *schunk, const char *name, uint8_t *content,
   } else {
     cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
   }
+  if (cctx == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   int csize = blosc2_compress_ctx(cctx, content, content_len, content_buf, content_len + BLOSC2_MAX_OVERHEAD);
   if (csize < 0) {
@@ -1641,6 +1638,10 @@ int blosc2_vlmeta_get(blosc2_schunk *schunk, const char *name, uint8_t **content
   *content_len = nbytes;
   *content = malloc((size_t) nbytes);
   blosc2_context *dctx = blosc2_create_dctx(*schunk->storage->dparams);
+  if (dctx == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the decompression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
   int nbytes_ = blosc2_decompress_ctx(dctx, meta->content, meta->content_len, *content, nbytes);
   blosc2_free_ctx(dctx);
   if (nbytes_ != nbytes) {
@@ -1667,6 +1668,10 @@ int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name, uint8_t *conte
     cctx = blosc2_create_cctx(*cparams);
   } else {
     cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
+  }
+  if (cctx == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
   }
 
   int csize = blosc2_compress_ctx(cctx, content, content_len, content_buf, content_len + BLOSC2_MAX_OVERHEAD);

@@ -165,28 +165,22 @@ if(NOT DEACTIVATE_ZSTD)
     endif()
 endif()
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE) # pre 3.1
-set(THREADS_PREFER_PTHREAD_FLAG TRUE) # CMake 3.1+
-if(WIN32)
-    # try to use the system library
-    find_package(Threads)
-    if(NOT Threads_FOUND)
-        message(STATUS "using the internal pthread library for win32 systems.")
-        list(APPEND SOURCES blosc/win32/pthread.c)
-    else()
-        if(CMAKE_VERSION VERSION_LESS 3.1)
-            set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
-        else()
-            set(LIBS ${LIBS} Threads::Threads)
-        endif()
-    endif()
-else()
-    find_package(Threads REQUIRED)
+# Threads
+if(HAVE_THREADS)
     if(CMAKE_VERSION VERSION_LESS 3.1)
         set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
     else()
         set(LIBS ${LIBS} Threads::Threads)
     endif()
+elseif(WIN32)
+    message(STATUS "using the internal pthread library for win32 systems.")
+    list(APPEND SOURCES blosc/win32/pthread.c)
+else()
+    message(FATAL_ERROR "Threads required but not found.")
+endif()
+
+# dlopen/dlclose
+if(NOT WIN32)
     set(LIBS ${LIBS} ${CMAKE_DL_LIBS})
 endif()
 
@@ -268,7 +262,7 @@ list(APPEND SOURCES
     blosc/directories.c
     blosc/blosc2-stdio.c
     blosc/b2nd.c
-    blosc/b2nd_utils.c    
+    blosc/b2nd_utils.c
 )
 if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
     if(COMPILER_SUPPORT_SSE2)
@@ -278,6 +272,10 @@ if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
     if(COMPILER_SUPPORT_AVX2)
         message(STATUS "Adding run-time support for AVX2")
         list(APPEND SOURCES blosc/shuffle-avx2.c blosc/bitshuffle-avx2.c)
+    endif()
+    if(COMPILER_SUPPORT_AVX512)
+        message(STATUS "Adding run-time support for AVX512")
+        list(APPEND SOURCES blosc/bitshuffle-avx512.c)
     endif()
 endif()
 if(COMPILER_SUPPORT_NEON)
@@ -349,6 +347,30 @@ if(COMPILER_SUPPORT_AVX2)
             SOURCE shuffle.c
             APPEND PROPERTY COMPILE_DEFINITIONS SHUFFLE_AVX2_ENABLED)
 endif()
+if(COMPILER_SUPPORT_AVX512)
+    if(MSVC)
+        set_source_files_properties(
+                bitshuffle-avx512.c
+		PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
+        set_property(
+                SOURCE shuffle.c
+		APPEND PROPERTY COMPILE_OPTIONS "/arch:AVX512")
+    else()
+        set_source_files_properties(
+                bitshuffle-avx512.c
+                PROPERTIES COMPILE_OPTIONS "-mavx512f;-mavx512bw")
+        set_property(
+                SOURCE shuffle.c
+                APPEND PROPERTY COMPILE_OPTIONS "-mavx512f;-mavx512bw")
+    endif()
+
+    # Define a symbol for the shuffle-dispatch implementation
+    # so it knows AVX512 is supported even though that file is
+    # compiled without AVX512 support (for portability).
+    set_property(
+            SOURCE shuffle.c
+            APPEND PROPERTY COMPILE_DEFINITIONS SHUFFLE_AVX512_ENABLED)
+endif()
 if(COMPILER_SUPPORT_NEON)
     set_source_files_properties(
             shuffle-neon.c bitshuffle-neon.c
@@ -360,10 +382,10 @@ if(COMPILER_SUPPORT_NEON)
         # Only armv7l needs special -mfpu=neon flag; aarch64 doesn't.
       set_source_files_properties(
             shuffle-neon.c bitshuffle-neon.c
-            PROPERTIES COMPILE_OPTIONS "-mfpu=neon -flax-vector-conversions")
+            PROPERTIES COMPILE_OPTIONS "-mfpu=neon;-flax-vector-conversions")
       set_property(
             SOURCE shuffle.c
-            APPEND PROPERTY COMPILE_OPTIONS "-mfpu=neon -flax-vector-conversions")
+            APPEND PROPERTY COMPILE_OPTIONS "-mfpu=neon;-flax-vector-conversions")
     endif()
     # Define a symbol for the shuffle-dispatch implementation
     # so it knows NEON is supported even though that file is

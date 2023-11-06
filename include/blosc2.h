@@ -82,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    10   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    11   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.10.2"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2023-08-19 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.11.1"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2023-11-05 #$"    /* date version */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -120,6 +120,13 @@ extern "C" {
             return rc_;                             \
         }                                           \
     } while (0)
+
+#define BLOSC_INFO(msg, ...)                        \
+    do {                                            \
+        const char *__e = getenv("BLOSC_INFO");     \
+        if (!__e) { break; }                        \
+        fprintf(stderr, "[INFO] - " msg "\n", ##__VA_ARGS__); \
+    } while(0)
 
 
 /* The VERSION_FORMAT symbols below should be just 1-byte long */
@@ -287,7 +294,7 @@ enum {
   BLOSC2_GLOBAL_REGISTERED_CODECS_START = 32,
   BLOSC2_GLOBAL_REGISTERED_CODECS_STOP = 159,
   //!< Blosc-registered codecs must be between 31 - 159.
-  BLOSC2_GLOBAL_REGISTERED_CODECS = 1,
+  BLOSC2_GLOBAL_REGISTERED_CODECS = 5,
     //!< Number of Blosc-registered codecs at the moment.
   BLOSC2_USER_REGISTERED_CODECS_START = 160,
   BLOSC2_USER_REGISTERED_CODECS_STOP = 255,
@@ -462,6 +469,7 @@ enum {
   BLOSC2_ERROR_INVALID_INDEX = -33,   //!< Invalid index
   BLOSC2_ERROR_METALAYER_NOT_FOUND = -34,   //!< Metalayer has not been found
   BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED = -35,  //!< Max buffer size exceeded
+  BLOSC2_ERROR_TUNER = -36,           //!< Tuner failure
 };
 
 
@@ -1077,15 +1085,15 @@ BLOSC_EXPORT blosc2_io_cb *blosc2_get_io_cb(uint8_t id);
 typedef struct blosc2_context_s blosc2_context;   /* opaque type */
 
 typedef struct {
-  void (*init)(void * config, blosc2_context* cctx, blosc2_context* dctx);
+  int (*init)(void * config, blosc2_context* cctx, blosc2_context* dctx);
   //!< Initialize tuner. Keep in mind dctx may be NULL. This should memcpy the cctx->tuner_params.
-  void (*next_blocksize)(blosc2_context * context);
+  int (*next_blocksize)(blosc2_context * context);
   //!< Only compute the next blocksize. Only it is executed if tuner is not initialized.
-  void (*next_cparams)(blosc2_context * context);
+  int (*next_cparams)(blosc2_context * context);
   //!< Compute the next cparams. Only is executed if tuner is initialized.
-  void (*update)(blosc2_context * context, double ctime);
+  int (*update)(blosc2_context * context, double ctime);
   //!< Update the tuner parameters.
-  void (*free)(blosc2_context * context);
+  int (*free)(blosc2_context * context);
   //!< Free the tuner.
   int id;
   //!< The tuner id
