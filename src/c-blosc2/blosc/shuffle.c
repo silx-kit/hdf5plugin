@@ -13,6 +13,10 @@
 /*  Include hardware-accelerated shuffle/unshuffle routines based on
     the target architecture. Note that a target architecture may support
     more than one type of acceleration!*/
+#if defined(SHUFFLE_USE_AVX512)
+  #include "bitshuffle-avx512.h"
+#endif  /* defined(SHUFFLE_USE_AVX512) */
+
 #if defined(SHUFFLE_USE_AVX2)
   #include "shuffle-avx2.h"
   #include "bitshuffle-avx2.h"
@@ -41,17 +45,15 @@
 
 #include "shuffle-generic.h"
 #include "bitshuffle-generic.h"
-#include "blosc2/blosc2-common.h"
 #include "blosc2.h"
 
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
-
-#if !defined(__clang__) && defined(__GNUC__) && defined(__GNUC_MINOR__) && \
-    __GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
+// __builtin_cpu_supports() fixed in GCC 8: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85100
+// Also, clang added support for it in clang 10 at very least (and possibly since 3.8)
+#if (defined(__clang__) && (__clang_major__ >= 10)) || \
+    (defined(__GNUC__) && defined(__GNUC_MINOR__) && __GNUC__ >= 8)
 #define HAVE_CPU_FEAT_INTRIN
 #endif
 
@@ -61,8 +63,8 @@ typedef void(* shuffle_func)(const int32_t, const int32_t, const uint8_t*, const
 typedef void(* unshuffle_func)(const int32_t, const int32_t, const uint8_t*, const uint8_t*);
 // For bitshuffle, everything is done in terms of size_t and int64_t (return value)
 // and although this is not strictly necessary for Blosc, it does not hurt either
-typedef int64_t(* bitshuffle_func)(void*, void*, const size_t, const size_t, void*);
-typedef int64_t(* bitunshuffle_func)(void*, void*, const size_t, const size_t, void*);
+typedef int64_t(* bitshuffle_func)(const void*, void*, const size_t, const size_t);
+typedef int64_t(* bitunshuffle_func)(const void*, void*, const size_t, const size_t);
 
 /* An implementation of shuffle/unshuffle routines. */
 typedef struct shuffle_implementation {
@@ -83,20 +85,15 @@ typedef enum {
   BLOSC_HAVE_SSE2 = 1,
   BLOSC_HAVE_AVX2 = 2,
   BLOSC_HAVE_NEON = 4,
-  BLOSC_HAVE_ALTIVEC = 8
+  BLOSC_HAVE_ALTIVEC = 8,
+  BLOSC_HAVE_AVX512 = 16,
 } blosc_cpu_features;
 
 /* Detect hardware and set function pointers to the best shuffle/unshuffle
    implementations supported by the host processor. */
 #if defined(SHUFFLE_USE_AVX2) || defined(SHUFFLE_USE_SSE2)    /* Intel/i686 */
 
-/*  Disabled the __builtin_cpu_supports() call, as it has issues with
-    new versions of gcc (like 5.3.1 in forthcoming ubuntu/xenial:
-      "undefined symbol: __cpu_model"
-    For a similar report, see:
-    https://lists.fedoraproject.org/archives/list/devel@lists.fedoraproject.org/thread/ZM2L65WIZEEQHHLFERZYD5FAG7QY2OGB/
-*/
-#if defined(HAVE_CPU_FEAT_INTRIN) && 0
+#if defined(HAVE_CPU_FEAT_INTRIN)
 static blosc_cpu_features blosc_get_cpu_features(void) {
   blosc_cpu_features cpu_features = BLOSC_HAVE_NOTHING;
   if (__builtin_cpu_supports("sse2")) {
@@ -104,6 +101,9 @@ static blosc_cpu_features blosc_get_cpu_features(void) {
   }
   if (__builtin_cpu_supports("avx2")) {
     cpu_features |= BLOSC_HAVE_AVX2;
+  }
+  if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw")) {
+    cpu_features |= BLOSC_HAVE_AVX512;
   }
   return cpu_features;
 }
@@ -193,10 +193,12 @@ static blosc_cpu_features blosc_get_cpu_features(void) {
 
   /* Check for AVX-based features, if the processor supports extended features. */
   bool avx2_available = false;
+  bool avx512f_available = false;
   bool avx512bw_available = false;
   if (max_basic_function_id >= 7) {
     __cpuid(cpu_info, 7);
     avx2_available = (cpu_info[1] & (1 << 5)) != 0;
+    avx512f_available = (cpu_info[1] & (1 << 16)) != 0;
     avx512bw_available = (cpu_info[1] & (1 << 30)) != 0;
   }
 
@@ -206,13 +208,14 @@ static blosc_cpu_features blosc_get_cpu_features(void) {
       extended control register XCR0 to see if the CPU features are enabled. */
   bool xmm_state_enabled = false;
   bool ymm_state_enabled = false;
-  //bool zmm_state_enabled = false;  // commented this out for avoiding an 'unused variable' warning
+  // Silence an unused variable compiler warning
+  // bool zmm_state_enabled = false;
 
 #if defined(_XCR_XFEATURE_ENABLED_MASK)
   if (xsave_available && xsave_enabled_by_os && (
       sse2_available || sse3_available || ssse3_available
       || sse41_available || sse42_available
-      || avx2_available || avx512bw_available)) {
+      || avx2_available || avx512f_available || avx512bw_available)) {
     /* Determine which register states can be restored by the OS. */
     uint64_t xcr0_contents = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
 
@@ -221,7 +224,7 @@ static blosc_cpu_features blosc_get_cpu_features(void) {
 
     /*  Require support for both the upper 256-bits of zmm0-zmm15 to be
         restored as well as all of zmm16-zmm31 and the opmask registers. */
-    //zmm_state_enabled = (xcr0_contents & 0x70) == 0x70;
+    // zmm_state_enabled = (xcr0_contents & 0x70) == 0x70;
   }
 #endif /* defined(_XCR_XFEATURE_ENABLED_MASK) */
 
@@ -233,12 +236,13 @@ static blosc_cpu_features blosc_get_cpu_features(void) {
   printf("SSE4.1 available: %s\n", sse41_available ? "True" : "False");
   printf("SSE4.2 available: %s\n", sse42_available ? "True" : "False");
   printf("AVX2 available: %s\n", avx2_available ? "True" : "False");
+  printf("AVX512F available: %s\n", avx512f_available ? "True" : "False");
   printf("AVX512BW available: %s\n", avx512bw_available ? "True" : "False");
   printf("XSAVE available: %s\n", xsave_available ? "True" : "False");
   printf("XSAVE enabled: %s\n", xsave_enabled_by_os ? "True" : "False");
   printf("XMM state enabled: %s\n", xmm_state_enabled ? "True" : "False");
   printf("YMM state enabled: %s\n", ymm_state_enabled ? "True" : "False");
-  //printf("ZMM state enabled: %s\n", zmm_state_enabled ? "True" : "False");
+  // printf("ZMM state enabled: %s\n", zmm_state_enabled ? "True" : "False");
 #endif /* defined(BLOSC_DUMP_CPU_INFO) */
 
   /* Using the gathered CPU information, determine which implementation to use. */
@@ -249,6 +253,9 @@ static blosc_cpu_features blosc_get_cpu_features(void) {
   }
   if (xmm_state_enabled && ymm_state_enabled && avx2_available) {
     result |= BLOSC_HAVE_AVX2;
+  }
+  if (xmm_state_enabled && ymm_state_enabled && avx512f_available && avx512bw_available) {
+    result |= BLOSC_HAVE_AVX512;
   }
   return result;
 }
@@ -288,14 +295,26 @@ return BLOSC_HAVE_NOTHING;
 
 static shuffle_implementation_t get_shuffle_implementation(void) {
   blosc_cpu_features cpu_features = blosc_get_cpu_features();
+#if defined(SHUFFLE_USE_AVX512)
+  if (cpu_features & BLOSC_HAVE_AVX512) {
+    shuffle_implementation_t impl_avx512;
+    impl_avx512.name = "avx512";
+    impl_avx512.shuffle = (shuffle_func)shuffle_avx2;
+    impl_avx512.unshuffle = (unshuffle_func)unshuffle_avx2;
+    impl_avx512.bitshuffle = (bitshuffle_func) bshuf_trans_bit_elem_AVX512;
+    impl_avx512.bitunshuffle = (bitunshuffle_func)bshuf_untrans_bit_elem_AVX512;
+    return impl_avx512;
+  }
+#endif  /* defined(SHUFFLE_USE_AVX512) */
+
 #if defined(SHUFFLE_USE_AVX2)
   if (cpu_features & BLOSC_HAVE_AVX2) {
     shuffle_implementation_t impl_avx2;
     impl_avx2.name = "avx2";
     impl_avx2.shuffle = (shuffle_func)shuffle_avx2;
     impl_avx2.unshuffle = (unshuffle_func)unshuffle_avx2;
-    impl_avx2.bitshuffle = (bitshuffle_func)bshuf_trans_bit_elem_avx2;
-    impl_avx2.bitunshuffle = (bitunshuffle_func)bshuf_untrans_bit_elem_avx2;
+    impl_avx2.bitshuffle = (bitshuffle_func) bshuf_trans_bit_elem_AVX;
+    impl_avx2.bitunshuffle = (bitunshuffle_func)bshuf_untrans_bit_elem_AVX;
     return impl_avx2;
   }
 #endif  /* defined(SHUFFLE_USE_AVX2) */
@@ -306,8 +325,8 @@ static shuffle_implementation_t get_shuffle_implementation(void) {
     impl_sse2.name = "sse2";
     impl_sse2.shuffle = (shuffle_func)shuffle_sse2;
     impl_sse2.unshuffle = (unshuffle_func)unshuffle_sse2;
-    impl_sse2.bitshuffle = (bitshuffle_func)bshuf_trans_bit_elem_sse2;
-    impl_sse2.bitunshuffle = (bitunshuffle_func)bshuf_untrans_bit_elem_sse2;
+    impl_sse2.bitshuffle = (bitshuffle_func)bshuf_trans_bit_elem_SSE;
+    impl_sse2.bitunshuffle = (bitunshuffle_func) bshuf_untrans_bit_elem_SSE;
     return impl_sse2;
   }
 #endif  /* defined(SHUFFLE_USE_SSE2) */
@@ -320,12 +339,11 @@ static shuffle_implementation_t get_shuffle_implementation(void) {
     impl_neon.unshuffle = (unshuffle_func)unshuffle_neon;
     //impl_neon.shuffle = (shuffle_func)shuffle_generic;
     //impl_neon.unshuffle = (unshuffle_func)unshuffle_generic;
-    //impl_neon.bitshuffle = (bitshuffle_func)bitshuffle_neon;
-    //impl_neon.bitunshuffle = (bitunshuffle_func)bitunshuffle_neon;
+    //impl_neon.bitshuffle = (bitshuffle_func)bshuf_trans_bit_elem_NEON;
+    //impl_neon.bitunshuffle = (bitunshuffle_func)bshuf_untrans_bit_elem_NEON;
     // The current bitshuffle optimized for NEON is not any faster
     // (in fact, it is pretty much slower) than the scalar implementation.
-    // Also, bitshuffle_neon (forward direction) is broken for 1, 2 and 4 bytes.
-    // So, let's use the the scalar one, which is pretty fast, at least on a M1 CPU.
+    // So, let's use the scalar one, which is pretty fast, at least on a M1 CPU.
     impl_neon.bitshuffle = (bitshuffle_func)bshuf_trans_bit_elem_scal;
     impl_neon.bitunshuffle = (bitunshuffle_func)bshuf_untrans_bit_elem_scal;
     return impl_neon;
@@ -405,7 +423,7 @@ shuffle(const int32_t bytesoftype, const int32_t blocksize,
   init_shuffle_implementation();
 
   /* The implementation is initialized.
-     Dispatch to it's shuffle routine. */
+     Dispatch to its shuffle routine. */
   (host_implementation.shuffle)(bytesoftype, blocksize, _src, _dest);
 }
 
@@ -426,15 +444,14 @@ unshuffle(const int32_t bytesoftype, const int32_t blocksize,
     hardware-accelerated routine at run-time. */
 int32_t
 bitshuffle(const int32_t bytesoftype, const int32_t blocksize,
-           const uint8_t *_src, const uint8_t *_dest,
-           const uint8_t *_tmp) {
+           const uint8_t *_src, const uint8_t *_dest) {
   /* Initialize the shuffle implementation if necessary. */
   init_shuffle_implementation();
   size_t size = blocksize / bytesoftype;
   /* bitshuffle only supports a number of elements that is a multiple of 8. */
   size -= size % 8;
-  int ret = (int) (host_implementation.bitshuffle)((void *) _src, (void *) _dest,
-                                             size, bytesoftype, (void *) _tmp);
+  int ret = (int) (host_implementation.bitshuffle)
+      ((const void *) _src, (void *) _dest, size, bytesoftype);
   if (ret < 0) {
     // Some error in bitshuffle (should not happen)
     BLOSC_TRACE_ERROR("the impossible happened: the bitshuffle filter failed!");
@@ -452,7 +469,7 @@ bitshuffle(const int32_t bytesoftype, const int32_t blocksize,
     hardware-accelerated routine at run-time. */
 int32_t bitunshuffle(const int32_t bytesoftype, const int32_t blocksize,
                      const uint8_t *_src, const uint8_t *_dest,
-                     const uint8_t *_tmp, const uint8_t format_version) {
+                     const uint8_t format_version) {
   /* Initialize the shuffle implementation if necessary. */
   init_shuffle_implementation();
   size_t size = blocksize / bytesoftype;
@@ -462,9 +479,8 @@ int32_t bitunshuffle(const int32_t bytesoftype, const int32_t blocksize,
     if ((size % 8) == 0) {
       /* The number of elems is a multiple of 8 which is supported by
          bitshuffle. */
-      int ret = (int) (host_implementation.bitunshuffle)((void *) _src, (void *) _dest,
-                                                   blocksize / bytesoftype,
-                                                   bytesoftype, (void *) _tmp);
+      int ret = (int) (host_implementation.bitunshuffle)
+          ((const void *) _src, (void *) _dest, blocksize / bytesoftype, bytesoftype);
       if (ret < 0) {
         // Some error in bitshuffle (should not happen)
         BLOSC_TRACE_ERROR("the impossible happened: the bitunshuffle filter failed!");
@@ -481,8 +497,8 @@ int32_t bitunshuffle(const int32_t bytesoftype, const int32_t blocksize,
   else {
     /* bitshuffle only supports a number of bytes that is a multiple of 8. */
     size -= size % 8;
-    int ret = (int) (host_implementation.bitunshuffle)((void *) _src, (void *) _dest,
-                                                 size, bytesoftype, (void *) _tmp);
+    int ret = (int) (host_implementation.bitunshuffle)
+        ((const void *) _src, (void *) _dest, size, bytesoftype);
     if (ret < 0) {
       BLOSC_TRACE_ERROR("the impossible happened: the bitunshuffle filter failed!");
       return ret;

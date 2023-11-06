@@ -1,11 +1,12 @@
-# Announcing C-Blosc2 2.10.2
+# Announcing C-Blosc2 2.11.1
 A fast, compressed and persistent binary data store library for C.
 
 ## What is new?
 
-This is a maintenance release with also several improvements for helping
-integration of C-Blosc2 in other projects (thanks to Alex Huebl).  Also,
-some fixes for MinGW platform are in (thanks to Biswapriyo Nath).
+This is a maintenance release for fixing the ALTIVEC header.
+Only affects to IBM POWER builds.
+
+Also, some other fixes and improvements are in.
 
 For more info, please see the release notes in:
 
