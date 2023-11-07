@@ -58,7 +58,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.0)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.5), LZ4, Snappy, ZLib and ZStd.
 * hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2.dev0, commit `3ba4e78 <https://github.com/PyTables/PyTables/tree/3ba4e78336f21f5e32ddf49ced4560f610de70dd/hdf5-blosc2/src>`_)
-  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.10.2), LZ4, ZLib and ZStd.
+  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.11.1), LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2>`_ (v1.0.2)
   using `CharLS <https://github.com/team-charls/charls>`_
   (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_).
