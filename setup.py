@@ -869,7 +869,7 @@ def get_blosc2_plugin():
     # blosc sources
     sources = glob(f'{blosc2_dir}/blosc/*.c')
     include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
-    define_macros = [('SHUFFLE_NEON_ENABLED', 1)]
+    define_macros = [('SHUFFLE_AVX512_ENABLED', 1), ('SHUFFLE_NEON_ENABLED', 1)]
     extra_compile_args = []
     extra_link_args = []
     libraries = []
