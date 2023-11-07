@@ -1,3 +1,13 @@
+4.3.0: 07/11/2023
+-----------------
+
+- Updated `hdf5-blosc2`` to support b2nd (PR #282)
+- Updated `c-blosc2` (v2.11.1) and enabled its AVX512 support (PR #283)
+
+- Updated continuous integration to test with Python 3.12 (PR #281)
+- Added European HDF Users Group (HUG) Meeting 2023 presentation and companion material (PR #280)
+- Updated documentation (PR #279, #284)
+
 4.2.0: 12/09/2023
 -----------------
 
