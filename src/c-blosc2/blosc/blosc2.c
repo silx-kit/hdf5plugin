@@ -921,7 +921,7 @@ void _cycle_buffers(uint8_t **src, uint8_t **dest, uint8_t **tmp) {
 
 uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t bsize,
                           const uint8_t* src, const int32_t offset,
-                          uint8_t* dest, uint8_t* tmp, uint8_t* tmp2) {
+                          uint8_t* dest, uint8_t* tmp) {
   blosc2_context* context = thread_context->parent_context;
   uint8_t* _src = (uint8_t*)src + offset;
   uint8_t* _tmp = tmp;
@@ -977,7 +977,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
           }
           break;
         case BLOSC_BITSHUFFLE:
-          if (bitshuffle(typesize, bsize, _src, _dest, tmp2) < 0) {
+          if (bitshuffle(typesize, bsize, _src, _dest) < 0) {
             return NULL;
           }
           break;
@@ -1081,7 +1081,6 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   int accel;
   const uint8_t* _src;
   uint8_t *_tmp = tmp, *_tmp2 = tmp2;
-  uint8_t *_tmp3 = thread_context->tmp4;
   int last_filter_index = last_filter(context->filters, 'c');
   bool memcpyed = context->header_flags & (uint8_t)BLOSC_MEMCPYED;
   bool instr_codec = context->blosc2_flags & BLOSC2_INSTR_CODEC;
@@ -1097,14 +1096,14 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
     /* Apply the filter pipeline just for the prefilter */
     if (memcpyed && context->prefilter != NULL) {
       // We only need the prefilter output
-      _src = pipeline_forward(thread_context, bsize, src, offset, dest, _tmp2, _tmp3);
+      _src = pipeline_forward(thread_context, bsize, src, offset, dest, _tmp2);
       if (_src == NULL) {
         return BLOSC2_ERROR_FILTER_PIPELINE;
       }
       return bsize;
     }
     /* Apply regular filter pipeline */
-    _src = pipeline_forward(thread_context, bsize, src, offset, _tmp, _tmp2, _tmp3);
+    _src = pipeline_forward(thread_context, bsize, src, offset, _tmp, _tmp2);
     if (_src == NULL) {
       return BLOSC2_ERROR_FILTER_PIPELINE;
     }
@@ -1357,7 +1356,7 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
           }
           break;
         case BLOSC_BITSHUFFLE:
-          if (bitunshuffle(typesize, bsize, _src, _dest, _tmp, context->src[BLOSC2_CHUNK_VERSION]) < 0) {
+          if (bitunshuffle(typesize, bsize, _src, _dest, context->src[BLOSC2_CHUNK_VERSION]) < 0) {
             return BLOSC2_ERROR_FILTER_PIPELINE;
           }
           break;
@@ -2095,7 +2094,7 @@ void free_thread_context(struct thread_context* thread_context) {
 
 int check_nthreads(blosc2_context* context) {
   if (context->nthreads <= 0) {
-    BLOSC_TRACE_ERROR("nthreads must be a positive integer.");
+    BLOSC_TRACE_ERROR("nthreads must be >= 1 and <= %d", INT16_MAX);
     return BLOSC2_ERROR_INVALID_PARAM;
   }
 
@@ -2179,9 +2178,13 @@ static int initialize_context_compression(
   context->splitmode = splitmode;
   /* tuner some compression parameters */
   context->blocksize = (int32_t)blocksize;
+  int rc = 0;
   if (context->tuner_params != NULL) {
     if (context->tuner_id < BLOSC_LAST_TUNER && context->tuner_id == BLOSC_STUNE) {
-      blosc_stune_next_cparams(context);
+      if (blosc_stune_next_cparams(context) < 0) {
+        BLOSC_TRACE_ERROR("Error in stune next_cparams func\n");
+        return BLOSC2_ERROR_TUNER;
+      }
     } else {
       for (int i = 0; i < g_ntuners; ++i) {
         if (g_tuners[i].id == context->tuner_id) {
@@ -2191,10 +2194,16 @@ static int initialize_context_compression(
               return BLOSC2_ERROR_FAILURE;
             }
           }
-          g_tuners[i].next_cparams(context);
+          if (g_tuners[i].next_cparams(context) < 0) {
+            BLOSC_TRACE_ERROR("Error in tuner %d next_cparams func\n", context->tuner_id);
+            return BLOSC2_ERROR_TUNER;
+          }
           if (g_tuners[i].id == BLOSC_BTUNE && context->blocksize == 0) {
             // Call stune for initializing blocksize
-            blosc_stune_next_blocksize(context);
+            if (blosc_stune_next_blocksize(context) < 0) {
+              BLOSC_TRACE_ERROR("Error in stune next_blocksize func\n");
+              return BLOSC2_ERROR_TUNER;
+            }
           }
           goto urtunersuccess;
         }
@@ -2204,7 +2213,7 @@ static int initialize_context_compression(
     }
   } else {
     if (context->tuner_id < BLOSC_LAST_TUNER && context->tuner_id == BLOSC_STUNE) {
-      blosc_stune_next_blocksize(context);
+      rc = blosc_stune_next_blocksize(context);
     } else {
       for (int i = 0; i < g_ntuners; ++i) {
         if (g_tuners[i].id == context->tuner_id) {
@@ -2214,7 +2223,7 @@ static int initialize_context_compression(
               return BLOSC2_ERROR_FAILURE;
             }
           }
-          g_tuners[i].next_blocksize(context);
+          rc = g_tuners[i].next_blocksize(context);
           goto urtunersuccess;
         }
       }
@@ -2223,6 +2232,11 @@ static int initialize_context_compression(
     }
   }
   urtunersuccess:;
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Error in tuner next_blocksize func\n");
+    return BLOSC2_ERROR_TUNER;
+  }
+
 
   /* Check buffer size limits */
   if (srcsize > BLOSC2_MAX_BUFFERSIZE) {
@@ -2504,8 +2518,9 @@ static int blosc_compress_context(blosc2_context* context) {
   if (context->tuner_params != NULL) {
     blosc_set_timestamp(&current);
     double ctime = blosc_elapsed_secs(last, current);
+    int rc;
     if (context->tuner_id < BLOSC_LAST_TUNER && context->tuner_id == BLOSC_STUNE) {
-      blosc_stune_update(context, ctime);
+      rc = blosc_stune_update(context, ctime);
     } else {
       for (int i = 0; i < g_ntuners; ++i) {
         if (g_tuners[i].id == context->tuner_id) {
@@ -2515,13 +2530,17 @@ static int blosc_compress_context(blosc2_context* context) {
               return BLOSC2_ERROR_FAILURE;
             }
           }
-          g_tuners[i].update(context, ctime);
+          rc = g_tuners[i].update(context, ctime);
           goto urtunersuccess;
         }
       }
       BLOSC_TRACE_ERROR("User-defined tuner %d not found\n", context->tuner_id);
       return BLOSC2_ERROR_INVALID_PARAM;
       urtunersuccess:;
+    }
+    if (rc < 0) {
+      BLOSC_TRACE_ERROR("Error in tuner update func\n");
+      return BLOSC2_ERROR_TUNER;
     }
   }
 
@@ -2668,7 +2687,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   if (envvar != NULL) {
     long value;
     value = strtol(envvar, NULL, 10);
-    if ((value != EINVAL) && (value >= 0)) {
+    if ((errno != EINVAL) && (value >= 0)) {
       clevel = (int)value;
     }
     else {
@@ -2711,7 +2730,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   if (envvar != NULL) {
     long value;
     value = strtol(envvar, NULL, 10);
-    if ((value != EINVAL) && (value > 0)) {
+    if ((errno != EINVAL) && (value > 0)) {
       typesize = (int32_t)value;
     }
     else {
@@ -2733,7 +2752,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   if (envvar != NULL) {
     long blocksize;
     blocksize = strtol(envvar, NULL, 10);
-    if ((blocksize != EINVAL) && (blocksize > 0)) {
+    if ((errno != EINVAL) && (blocksize > 0)) {
       blosc1_set_blocksize((size_t) blocksize);
     }
     else {
@@ -2746,7 +2765,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   if (envvar != NULL) {
     long nthreads;
     nthreads = strtol(envvar, NULL, 10);
-    if ((nthreads != EINVAL) && (nthreads > 0)) {
+    if ((errno != EINVAL) && (nthreads > 0)) {
       result = blosc2_set_nthreads((int16_t) nthreads);
       if (result < 0) {
         BLOSC_TRACE_WARNING("BLOSC_NTHREADS environment variable '%s' not recognized\n", envvar);
@@ -2800,6 +2819,10 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
     cparams.nthreads = g_nthreads;
     cparams.splitmode = g_splitmode;
     cctx = blosc2_create_cctx(cparams);
+    if (cctx == NULL) {
+      BLOSC_TRACE_ERROR("Error while creating the compression context");
+      return BLOSC2_ERROR_NULL_POINTER;
+    }
     /* Do the actual compression */
     result = blosc2_compress_ctx(cctx, src, srcsize, dest, destsize);
     /* Release context resources */
@@ -2925,7 +2948,11 @@ int blosc2_decompress(const void* src, int32_t srcsize, void* dest, int32_t dest
   envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
     nthreads = strtol(envvar, NULL, 10);
-    if ((nthreads != EINVAL) && (nthreads > 0)) {
+    if ((errno != EINVAL)) {
+      if ((nthreads <= 0) || (nthreads > INT16_MAX)) {
+        BLOSC_TRACE_ERROR("nthreads must be >= 1 and <= %d", INT16_MAX);
+        return BLOSC2_ERROR_INVALID_PARAM;
+      }
       result = blosc2_set_nthreads((int16_t) nthreads);
       if (result < 0) {
         return result;
@@ -2940,6 +2967,10 @@ int blosc2_decompress(const void* src, int32_t srcsize, void* dest, int32_t dest
   if (envvar != NULL) {
     dparams.nthreads = g_nthreads;
     dctx = blosc2_create_dctx(dparams);
+    if (dctx == NULL) {
+      BLOSC_TRACE_ERROR("Error while creating the decompression context");
+      return BLOSC2_ERROR_NULL_POINTER;
+    }
     result = blosc2_decompress_ctx(dctx, src, srcsize, dest, destsize);
     blosc2_free_ctx(dctx);
     return result;
@@ -3495,7 +3526,10 @@ int16_t blosc2_set_nthreads(int16_t nthreads) {
  if (nthreads != ret) {
    g_nthreads = nthreads;
    g_global_context->new_nthreads = nthreads;
-   check_nthreads(g_global_context);
+   int16_t ret2 = check_nthreads(g_global_context);
+   if (ret2 < 0) {
+     return ret2;
+   }
  }
 
   return ret;
@@ -3940,7 +3974,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   if (envvar != NULL) {
     int32_t value;
     value = (int32_t) strtol(envvar, NULL, 10);
-    if ((value != EINVAL) && (value > 0)) {
+    if ((errno != EINVAL) && (value > 0)) {
       context->typesize = value;
     }
     else {
@@ -3955,7 +3989,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   if (envvar != NULL) {
     int value;
     value = (int)strtol(envvar, NULL, 10);
-    if ((value != EINVAL) && (value >= 0)) {
+    if ((errno != EINVAL) && (value >= 0)) {
       context->clevel = value;
     }
     else {
@@ -3982,7 +4016,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   if (envvar != NULL) {
     int32_t blocksize;
     blocksize = (int32_t) strtol(envvar, NULL, 10);
-    if ((blocksize != EINVAL) && (blocksize > 0)) {
+    if ((errno != EINVAL) && (blocksize > 0)) {
       context->blocksize = blocksize;
     }
     else {
@@ -3995,7 +4029,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
     int16_t nthreads = (int16_t) strtol(envvar, NULL, 10);
-    if ((nthreads != EINVAL) && (nthreads > 0)) {
+    if ((errno != EINVAL) && (nthreads > 0)) {
       context->nthreads = nthreads;
     }
     else {
@@ -4050,7 +4084,10 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
             return NULL;
           }
         }
-        g_tuners[i].init(cparams.tuner_params, context, NULL);
+        if (g_tuners[i].init(cparams.tuner_params, context, NULL) < 0) {
+          BLOSC_TRACE_ERROR("Error in user-defined tuner %d init function\n", cparams.tuner_id);
+          return NULL;
+        }
         goto urtunersuccess;
       }
     }
@@ -4080,7 +4117,7 @@ blosc2_context* blosc2_create_dctx(blosc2_dparams dparams) {
   char* envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
     long nthreads = strtol(envvar, NULL, 10);
-    if ((nthreads != EINVAL) && (nthreads > 0)) {
+    if ((errno != EINVAL) && (nthreads > 0)) {
       context->nthreads = (int16_t) nthreads;
     }
   }
@@ -4118,8 +4155,9 @@ void blosc2_free_ctx(blosc2_context* context) {
 #endif
   }
   if (context->tuner_params != NULL) {
+    int rc;
     if (context->tuner_id < BLOSC_LAST_TUNER && context->tuner_id == BLOSC_STUNE) {
-      blosc_stune_free(context);
+      rc = blosc_stune_free(context);
     } else {
       for (int i = 0; i < g_ntuners; ++i) {
         if (g_tuners[i].id == context->tuner_id) {
@@ -4129,13 +4167,17 @@ void blosc2_free_ctx(blosc2_context* context) {
               return;
             }
           }
-          g_tuners[i].free(context);
+          rc = g_tuners[i].free(context);
           goto urtunersuccess;
         }
       }
       BLOSC_TRACE_ERROR("User-defined tuner %d not found\n", context->tuner_id);
       return;
       urtunersuccess:;
+    }
+    if (rc < 0) {
+      BLOSC_TRACE_ERROR("Error in user-defined tuner free function\n");
+      return;
     }
   }
   if (context->prefilter != NULL) {
@@ -4218,6 +4260,10 @@ int blosc2_chunk_zeros(blosc2_cparams cparams, const int32_t nbytes, void* dest,
 
   blosc_header header;
   blosc2_context* context = blosc2_create_cctx(cparams);
+  if (context == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   int error = initialize_context_compression(
           context, NULL, nbytes, dest, destsize,
@@ -4261,6 +4307,10 @@ int blosc2_chunk_uninit(blosc2_cparams cparams, const int32_t nbytes, void* dest
 
   blosc_header header;
   blosc2_context* context = blosc2_create_cctx(cparams);
+  if (context == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
   int error = initialize_context_compression(
           context, NULL, nbytes, dest, destsize,
           context->clevel, context->filters, context->filters_meta,
@@ -4303,6 +4353,10 @@ int blosc2_chunk_nans(blosc2_cparams cparams, const int32_t nbytes, void* dest, 
 
   blosc_header header;
   blosc2_context* context = blosc2_create_cctx(cparams);
+  if (context == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   int error = initialize_context_compression(
           context, NULL, nbytes, dest, destsize,
@@ -4348,6 +4402,10 @@ int blosc2_chunk_repeatval(blosc2_cparams cparams, const int32_t nbytes,
 
   blosc_header header;
   blosc2_context* context = blosc2_create_cctx(cparams);
+  if (context == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   int error = initialize_context_compression(
           context, NULL, nbytes, dest, destsize,

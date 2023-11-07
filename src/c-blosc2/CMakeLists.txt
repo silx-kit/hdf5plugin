@@ -29,6 +29,8 @@
 #       build a lite version (only with BloscLZ and LZ4/LZ4HC) of the blosc library
 #   DEACTIVATE_AVX2: default OFF
 #       do not attempt to build with AVX2 instructions
+#   DEACTIVATE_AVX512: default OFF
+#       do not attempt to build with AVX512 instructions
 #   DEACTIVATE_ZLIB: default OFF
 #       do not include support for the Zlib library
 #   DEACTIVATE_ZSTD: default OFF
@@ -115,6 +117,8 @@ option(BUILD_LITE
     "Build a lite version (only with BloscLZ and LZ4/LZ4HC) of the blosc library." OFF)
 option(DEACTIVATE_AVX2
     "Do not attempt to build with AVX2 instructions" OFF)
+option(DEACTIVATE_AVX512
+    "Do not attempt to build with AVX512 instructions" OFF)
 option(DEACTIVATE_ZLIB
     "Do not include support for the Zlib library." OFF)
 option(DEACTIVATE_ZSTD
@@ -149,6 +153,21 @@ endif()
 if(BUILD_LITE)
     set(DEACTIVATE_ZLIB ON)
     set(DEACTIVATE_ZSTD ON)
+endif()
+
+# Threads
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE) # pre 3.1
+set(THREADS_PREFER_PTHREAD_FLAG TRUE) # CMake 3.1+
+if(WIN32)
+    # try to use the system library
+    find_package(Threads)
+else()
+    find_package(Threads REQUIRED)
+endif()
+if(Threads_FOUND)
+    set(HAVE_THREADS ON)
+else()
+    set(HAVE_THREADS OFF)
 endif()
 
 if(PREFER_EXTERNAL_LZ4)
@@ -266,6 +285,11 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL i386 OR
         else()
             set(COMPILER_SUPPORT_AVX2 FALSE)
         endif()
+        if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 4.9)
+            set(COMPILER_SUPPORT_AVX512 TRUE)
+        else()
+            set(COMPILER_SUPPORT_AVX512 FALSE)
+        endif()
     elseif(CMAKE_C_COMPILER_ID STREQUAL Clang OR CMAKE_C_COMPILER_ID STREQUAL AppleClang)
         set(COMPILER_SUPPORT_SSE2 TRUE)
         if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 3.2 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 3.2)
@@ -273,23 +297,30 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL i386 OR
         else()
             set(COMPILER_SUPPORT_AVX2 FALSE)
         endif()
-    elseif(CMAKE_C_COMPILER_ID STREQUAL Intel)
-        set(COMPILER_SUPPORT_SSE2 TRUE)
-        if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 14.0 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 14.0)
-            set(COMPILER_SUPPORT_AVX2 TRUE)
+        if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 10.0 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 10.0)
+            set(COMPILER_SUPPORT_AVX512 TRUE)
         else()
-            set(COMPILER_SUPPORT_AVX2 FALSE)
+            set(COMPILER_SUPPORT_AVX512 FALSE)
         endif()
+    elseif(CMAKE_C_COMPILER_ID STREQUAL Intel)
+        # All Intel compilers since the introduction of AVX512 in 2016 should support it, so activate all SIMD flavors
+        set(COMPILER_SUPPORT_SSE2 TRUE)
+        set(COMPILER_SUPPORT_AVX2 TRUE)
+        set(COMPILER_SUPPORT_AVX512 TRUE)
     elseif(MSVC)
         set(COMPILER_SUPPORT_SSE2 TRUE)
         if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 18.00.30501 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 18.00.30501)
             set(COMPILER_SUPPORT_AVX2 TRUE)
+        # AVX512 starts to be supported since Visual Studio 17 15.0
+        elseif(CMAKE_C_COMPILER_VERSION VERSION_GREATER 19.10.25017 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 19.10.25017)
+                set(COMPILER_SUPPORT_AVX512 TRUE)
         else()
             set(COMPILER_SUPPORT_AVX2 FALSE)
         endif()
     else()
         set(COMPILER_SUPPORT_SSE2 FALSE)
         set(COMPILER_SUPPORT_AVX2 FALSE)
+        set(COMPILER_SUPPORT_AVX512 FALSE)
         # Unrecognized compiler. Emit a warning message to let the user know hardware-acceleration won't be available.
         message(WARNING "Unable to determine which ${CMAKE_SYSTEM_PROCESSOR} hardware features are supported by the C compiler (${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}).")
     endif()
@@ -330,6 +361,13 @@ endif()
 # disable AVX2 if specified
 if(DEACTIVATE_AVX2)
     set(COMPILER_SUPPORT_AVX2 FALSE)
+    # AVX512 functions in bitshuffle depend on AVX2 too
+    set(COMPILER_SUPPORT_AVX512 FALSE)
+endif()
+
+# disable AVX512 if specified
+if(DEACTIVATE_AVX512)
+    set(COMPILER_SUPPORT_AVX512 FALSE)
 endif()
 
 # flags

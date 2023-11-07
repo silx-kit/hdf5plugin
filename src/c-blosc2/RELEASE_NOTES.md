@@ -1,12 +1,73 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.11.0 to 2.11.1
+=============================
+
+* Fix ALTIVEC header.  Only affects to IBM POWER builds. Thanks to
+  Michael Kuhn for providing a patch.
+
+
+Changes from 2.10.5 to 2.11.0
+=============================
+
+* New AVX512 support for the bitshuffle filter.  This is a backport of the upstream
+  bitshuffle project (https://github.com/kiyo-masui/bitshuffle).  Expect up to [20%
+  better compression speed](https://github.com/Blosc/c-blosc2/pull/567#issuecomment-1789239842)
+  on AMD Zen4 architecture (7950X3D CPU).
+
+* Add c-blosc2 package definition for Guix.  Thanks to Ivan Vilata.
+
+* Properly check calls to `strtol`.  Fixes #558.
+
+* Export the `b2nd_copy_buffer` function. This may be useful for other projects
+  dealing with multidimensional arrays in memory. Thanks to Ivan Vilata.
+
+* Better check that nthreads must be >= 1 and <= INT16_MAX.  Fixes #559.
+
+* Fix compile arguments for armv7l. Thanks to Ben Greiner.
+
+
+Changes from 2.10.4 to 2.10.5
+=============================
+
+* Fix a variable name in a test that was causing a segfault in some platforms.
+
+* Change tuner's functions signature to return always an error code.  This allows
+  for better error checking when using pluggable tuners in Blosc2.
+
+* Do checks when creating contexts.
+
+
+Changes from 2.10.3 to 2.10.4
+=============================
+
+* Remove duplicated tune initialization since it is already done in blosc2_create_cctx.
+  Thanks to Marta Iborra
+
+* Typos fixed.  Thanks to Dimitri Papadopoulos.
+
+
+Changes from 2.10.2 to 2.10.3
+=============================
+
+* Globally registered new codec `openhtj2k`. This will be loaded dynamically. See PR #557.
+
+* Added a `BLOSC_INFO` macro for details on compression params.
+
+* Added `get_blocksize.c` example on automatic blocksizes.
+
+* Warning fixes.
+
+* Fixes for mingw.
+
+
 Changes from 2.10.1 to 2.10.2
 =============================
 
 * Several fixes for the CMake system.  Thanks to Axel Huebl. See PR #541 and #542.
 
-* Several fixes for mingw plaform.  Thanks to Biswapriyo Nath.  See PR #540 and #543.
+* Several fixes for mingw platform.  Thanks to Biswapriyo Nath.  See PR #540 and #543.
 
 
 Changes from 2.10.0 to 2.10.1
