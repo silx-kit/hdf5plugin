@@ -18,9 +18,9 @@
 
 project = "hdf5plugin"
 copyright = (
-    "2016-2023, Data analysis unit, European Synchrotron Radiation Facility, Grenoble"
+    "2016-2023, European Synchrotron Radiation Facility, Grenoble"
 )
-author = "ESRF - Data Analysis Unit"
+author = "ESRF"
 
 # -- General configuration ---------------------------------------------------
 
