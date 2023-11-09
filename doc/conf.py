@@ -14,17 +14,13 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-import os
-
-# See https://docs.readthedocs.io/en/stable/builds.html#build-environment
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
-
-
 # -- Project information -----------------------------------------------------
 
-project = 'hdf5plugin'
-copyright = u'2016-2022, Data analysis unit, European Synchrotron Radiation Facility, Grenoble'
-author = 'ESRF - Data Analysis Unit'
+project = "hdf5plugin"
+copyright = (
+    "2016-2023, European Synchrotron Radiation Facility, Grenoble"
+)
+author = "ESRF"
 
 # -- General configuration ---------------------------------------------------
 
@@ -32,17 +28,16 @@ author = 'ESRF - Data Analysis Unit'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'nbsphinx',
+    "sphinx.ext.autodoc",
+    "nbsphinx",
+    "sphinx_rtd_theme",
 ]
 
-if not on_rtd:
-    extensions.append('sphinx_rtd_theme')
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -50,4 +45,4 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'default' if on_rtd else 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
