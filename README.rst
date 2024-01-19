@@ -250,4 +250,4 @@ See `THANKS document <https://github.com/Blosc/c-blosc2/blob/main/THANKS.rst>`_.
 
 ----
 
-**Enjoy data!**
+-- The Blosc Development Team.  **We make compression better.**
