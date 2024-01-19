@@ -82,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    11   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    12   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.11.1"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2023-11-05 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.12.0"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2023-12-28 #$"    /* date version */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -2306,9 +2306,9 @@ BLOSC_EXPORT int blosc2_vlmeta_get_names(blosc2_schunk *schunk, char **names);
 
 /* The type of timestamp used on this system. */
 #if defined(_WIN32)
-#define blosc_timestamp_t LARGE_INTEGER
+typedef LARGE_INTEGER blosc_timestamp_t;
 #else
-#define blosc_timestamp_t struct timespec
+typedef struct timespec blosc_timestamp_t;
 #endif
 
 /*
@@ -2485,6 +2485,21 @@ BLOSC_EXPORT void blosc2_unidim_to_multidim(uint8_t ndim, int64_t *shape, int64_
  * @brief Convert a multidimensional index into a sequential index
  */
 BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, const int64_t *strides, int64_t *i);
+
+/*
+ * @brief Get the unidimensional chunk indexes needed to get a slice of a schunk or a b2nd array
+ *
+ * @param schunk The super-chunk (of b2nd array or not).
+ * @param start Index (0-based if it is a schunk) where the slice begins.
+ * @param stop The first index (0-based if it is a schunk) that is not in the selected slice.
+ * @param chunks_idx The pointer to the buffer where the indexes will be written. It is the user responsibility
+ * to free the buffer.
+ *
+ *
+ * @return The number of chunks needed to get the slice. If some problem is
+ * detected, a negative code is returned instead.
+ */
+BLOSC_EXPORT int blosc2_get_slice_nchunks(blosc2_schunk* schunk, int64_t *start, int64_t *stop, int64_t **chunks_idx);
 
 #ifdef __cplusplus
 }
