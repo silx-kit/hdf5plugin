@@ -43,7 +43,7 @@
 # ``PY2 | PY3``
 #   Force compilation using either Python-2 or Python-3 syntax and code
 #   semantics.  By default, Python-2 syntax and semantics are used if the major
-#   version of Python found is 2.  Otherwise, Python-3 syntax and sematics are
+#   version of Python found is 2.  Otherwise, Python-3 syntax and semantics are
 #   used.
 #
 # ``OUTPUT_VAR <OutputVar>``
@@ -56,13 +56,13 @@
 # ``<OutputVar>``
 #   The path of the generated source file.
 #
-# Cache variables that effect the behavior include:
+# Cache variables that affect the behavior include:
 #
 # ``CYTHON_ANNOTATE``
-#   whether to create an annotated .html file when compiling
+#   Whether to create an annotated .html file when compiling.
 #
 # ``CYTHON_FLAGS``
-#   additional flags to pass to the Cython compiler
+#   Additional flags to pass to the Cython compiler.
 #
 # Example usage
 # ^^^^^^^^^^^^^
@@ -101,9 +101,6 @@ set(CYTHON_ANNOTATE OFF
 set(CYTHON_FLAGS "" CACHE STRING
     "Extra flags to the cython compiler.")
 mark_as_advanced(CYTHON_ANNOTATE CYTHON_FLAGS)
-string(REGEX REPLACE " " ";" CYTHON_FLAGS_LIST "${CYTHON_FLAGS}")
-
-find_package(PythonLibs REQUIRED)
 
 set(CYTHON_CXX_EXTENSION "cxx")
 set(CYTHON_C_EXTENSION "c")
@@ -138,10 +135,12 @@ function(add_cython_target _name)
 
   set(_embed_main FALSE)
 
-  if("${PYTHONLIBS_VERSION_STRING}" MATCHES "^2.")
-    set(_input_syntax "PY2")
+  if("C" IN_LIST languages)
+    set(_output_syntax "C")
+  elseif("CXX" IN_LIST languages)
+    set(_output_syntax "CXX")
   else()
-    set(_input_syntax "PY3")
+    message(FATAL_ERROR "Either C or CXX must be enabled to use Cython")
   endif()
 
   if(_args_EMBED_MAIN)
@@ -155,6 +154,10 @@ function(add_cython_target _name)
   if(_args_CXX)
     set(_output_syntax "CXX")
   endif()
+
+  # Doesn't select an input syntax - Cython
+  # defaults to 2 for Cython 2 and 3 for Cython 3
+  set(_input_syntax "default")
 
   if(_args_PY2)
     set(_input_syntax "PY2")
@@ -201,15 +204,15 @@ function(add_cython_target _name)
   set(c_header_dependencies "")
 
   # Get the include directories.
-  get_source_file_property(pyx_location ${_source_file} LOCATION)
-  get_filename_component(pyx_path ${pyx_location} PATH)
   get_directory_property(cmake_include_directories
-                         DIRECTORY ${pyx_path}
+                         DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
                          INCLUDE_DIRECTORIES)
   list(APPEND cython_include_directories ${cmake_include_directories})
 
   # Determine dependencies.
   # Add the pxd file with the same basename as the given pyx file.
+  get_source_file_property(pyx_location ${_source_file} LOCATION)
+  get_filename_component(pyx_path ${pyx_location} PATH)
   get_filename_component(pyx_file_basename ${_source_file} NAME_WE)
   unset(corresponding_pxd_file CACHE)
   find_file(corresponding_pxd_file ${pyx_file_basename}.pxd
@@ -323,21 +326,11 @@ function(add_cython_target _name)
     set(annotate_arg "--annotate")
   endif()
 
-  set(no_docstrings_arg "")
-  set(embed_signature_arg "")
-  if(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-    set(no_docstrings_arg "--no-docstrings")
-  else()
-    set(embed_signature_arg "-Xembedsignature=True")
-  endif()
-
   set(cython_debug_arg "")
-  set(embed_pos_arg "")
   set(line_directives_arg "")
   if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR
      CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     set(cython_debug_arg "--gdb")
-    set(embed_pos_arg "--embed-positions")
     set(line_directives_arg "--line-directives")
   endif()
 
@@ -352,12 +345,13 @@ function(add_cython_target _name)
   list(REMOVE_DUPLICATES pxd_dependencies)
   list(REMOVE_DUPLICATES c_header_dependencies)
 
+  string(REGEX REPLACE " " ";" CYTHON_FLAGS_LIST "${CYTHON_FLAGS}")
+
   # Add the command to run the compiler.
   add_custom_command(OUTPUT ${generated_file}
                      COMMAND ${CYTHON_EXECUTABLE}
                      ARGS ${cxx_arg} ${include_directory_arg} ${py_version_arg}
-                          ${embed_arg} ${annotate_arg} ${no_docstrings_arg}
-                          ${cython_debug_arg} ${embed_pos_arg} ${embed_signature_arg}
+                          ${embed_arg} ${annotate_arg} ${cython_debug_arg}
                           ${line_directives_arg} ${CYTHON_FLAGS_LIST} ${pyx_location}
                           --output-file ${generated_file}
                      DEPENDS ${_source_file}
