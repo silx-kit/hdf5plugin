@@ -13,7 +13,7 @@
 #  ``CYTHON_FOUND``
 #    true if the program was found
 #
-# For more information on the Cython project, see http://cython.org/.
+# For more information on the Cython project, see https://cython.org/.
 #
 # *Cython is a language that makes writing C extensions for the Python language
 # as easy as Python itself.*
@@ -36,9 +36,15 @@
 
 # Use the Cython executable that lives next to the Python executable
 # if it is a local installation.
-find_package(PythonInterp)
-if(PYTHONINTERP_FOUND)
+if(Python_EXECUTABLE)
+  get_filename_component(_python_path ${Python_EXECUTABLE} PATH)
+elseif(Python3_EXECUTABLE)
+  get_filename_component(_python_path ${Python3_EXECUTABLE} PATH)
+elseif(DEFINED PYTHON_EXECUTABLE)
   get_filename_component(_python_path ${PYTHON_EXECUTABLE} PATH)
+endif()
+
+if(DEFINED _python_path)
   find_program(CYTHON_EXECUTABLE
                NAMES cython cython.bat cython3
                HINTS ${_python_path}
@@ -56,7 +62,8 @@ if(CYTHON_EXECUTABLE)
                   OUTPUT_VARIABLE CYTHON_version_output
                   ERROR_VARIABLE CYTHON_version_error
                   RESULT_VARIABLE CYTHON_version_result
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+                  OUTPUT_STRIP_TRAILING_WHITESPACE
+                  ERROR_STRIP_TRAILING_WHITESPACE)
 
   if(NOT ${CYTHON_version_result} EQUAL 0)
     set(_error_msg "Command \"${CYTHON_version_command}\" failed with")
@@ -65,6 +72,10 @@ if(CYTHON_EXECUTABLE)
   else()
     if("${CYTHON_version_output}" MATCHES "^[Cc]ython version ([^,]+)")
       set(CYTHON_VERSION "${CMAKE_MATCH_1}")
+    else()
+      if("${CYTHON_version_error}" MATCHES "^[Cc]ython version ([^,]+)")
+        set(CYTHON_VERSION "${CMAKE_MATCH_1}")
+      endif()
     endif()
   endif()
 endif()

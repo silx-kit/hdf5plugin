@@ -4,8 +4,7 @@ import functools
 import cython
 from libc.stdlib cimport malloc, free
 from cython cimport view
-from cpython cimport array
-import array
+from libc.stdint cimport uint8_t
 
 import itertools
 if sys.version_info[0] == 2:
@@ -51,11 +50,11 @@ cpdef dtype_to_ztype(dtype):
 
 cpdef dtype_to_format(dtype):
     # format characters detailed here:
-    # https://docs.python.org/2/library/array.html#module-array
+    # https://docs.python.org/3/library/array.html
     if dtype == np.int32:
         return 'i' # signed int
     elif dtype == np.int64:
-        return 'l' # signed long
+        return 'q' # signed long long
     elif dtype == np.float32:
         return 'f' # float
     elif dtype == np.float64:
@@ -75,7 +74,21 @@ cpdef ztype_to_dtype(zfp_type ztype):
     except KeyError:
         raise ValueError("Unsupported zfp_type {}".format(ztype))
 
-cdef zfp_field* _init_field(np.ndarray arr):
+zfp_mode_map = {
+    zfp_mode_null: "null",
+    zfp_mode_expert: "expert",
+    zfp_mode_reversible: "reversible",
+    zfp_mode_fixed_accuracy: "tolerance",
+    zfp_mode_fixed_precision: "precision",
+    zfp_mode_fixed_rate: "rate",
+}
+cpdef zmode_to_str(zfp_mode zmode):
+    try:
+        return zfp_mode_map[zmode]
+    except KeyError:
+        raise ValueError("Unsupported zfp_mode {}".format(zmode))
+
+cdef zfp_field* _init_field(np.ndarray arr) except NULL:
     shape = arr.shape
     cdef int ndim = arr.ndim
     cdef zfp_type ztype = dtype_to_ztype(arr.dtype)
@@ -142,8 +155,8 @@ cpdef bytes compress_numpy(
     cdef zfp_field* field = _init_field(arr)
     cdef zfp_stream* stream = zfp_stream_open(NULL)
 
-    cdef zfp_type ztype = zfp_type_none;
-    cdef int ndim = arr.ndim;
+    cdef zfp_type ztype = zfp_type_none
+    cdef int ndim = arr.ndim
     _set_compression_mode(stream, ztype, ndim, tolerance, rate, precision)
 
     # Allocate space based on the maximum size potentially required by zfp to
@@ -245,7 +258,7 @@ cdef _validate_4d_list(in_list, list_name):
         )
 
 cpdef np.ndarray _decompress(
-    bytes compressed_data,
+    const uint8_t[::1] compressed_data,
     zfp_type ztype,
     shape,
     out=None,
@@ -253,17 +266,16 @@ cpdef np.ndarray _decompress(
     double rate = -1,
     int precision = -1,
 ):
-
     if compressed_data is None:
         raise TypeError("compressed_data cannot be None")
     if compressed_data is out:
         raise ValueError("Cannot decompress in-place")
     _validate_4d_list(shape, "shape")
 
-    cdef char* comp_data_pointer = compressed_data
+    cdef const void* comp_data_pointer = <const void*>&compressed_data[0]
     cdef zfp_field* field = zfp_field_alloc()
     cdef bitstream* bstream = stream_open(
-        comp_data_pointer,
+        <void *>comp_data_pointer,
         len(compressed_data)
     )
     cdef zfp_stream* stream = zfp_stream_open(bstream)
@@ -329,15 +341,15 @@ cpdef np.ndarray _decompress(
     return output
 
 cpdef np.ndarray decompress_numpy(
-    bytes compressed_data,
+    const uint8_t[::1] compressed_data,
 ):
     if compressed_data is None:
         raise TypeError("compressed_data cannot be None")
 
-    cdef char* comp_data_pointer = compressed_data
+    cdef const void* comp_data_pointer = <const void *>&compressed_data[0]
     cdef zfp_field* field = zfp_field_alloc()
     cdef bitstream* bstream = stream_open(
-        comp_data_pointer,
+        <void *>comp_data_pointer,
         len(compressed_data)
     )
     cdef zfp_stream* stream = zfp_stream_open(bstream)
@@ -353,3 +365,59 @@ cpdef np.ndarray decompress_numpy(
         stream_close(bstream)
 
     return output
+
+cpdef dict header(const uint8_t[::1] compressed_data):
+    """Return stream header information in a python dict."""
+    if compressed_data is None:
+        raise TypeError("compressed_data cannot be None")
+
+    cdef const void* comp_data_pointer = <const void *>&compressed_data[0]
+    cdef zfp_field* field = zfp_field_alloc()
+    cdef bitstream* bstream = stream_open(
+        <void *>comp_data_pointer,
+        len(compressed_data)
+    )
+    cdef zfp_stream* stream = zfp_stream_open(bstream)
+    cdef zfp_mode mode
+
+    cdef unsigned int minbits = 0
+    cdef unsigned int maxbits = 0
+    cdef unsigned int maxprec = 0
+    cdef int minexp = 0
+
+    try:
+        if zfp_read_header(stream, field, HEADER_FULL) == 0:
+            raise ValueError("Failed to read required zfp header")
+
+        mode = zfp_stream_compression_mode(stream)
+
+        ndim = 0
+        for dim in [field.nx, field.ny, field.nz, field.nw]:
+            ndim += int(dim > 0)
+
+        zfp_stream_params(stream, &minbits, &maxbits, &maxprec, &minexp)
+
+        return {
+            "nx": int(field.nx),
+            "ny": int(field.ny),
+            "nz": int(field.nz),
+            "nw": int(field.nw),
+            "type": ztype_to_dtype(field._type),
+            "mode": zmode_to_str(mode),
+            "config": {
+                "mode": int(mode),
+                "tolerance": float(zfp_stream_accuracy(stream)),
+                "rate": float(zfp_stream_rate(stream, ndim)),
+                "precision": int(zfp_stream_precision(stream)),
+                "expert": {
+                    "minbits": int(minbits),
+                    "maxbits": int(minbits),
+                    "maxprec": int(maxprec),
+                    "minexp": int(minexp),
+                },
+            },
+        }
+    finally:
+        zfp_field_free(field)
+        zfp_stream_close(stream)
+        stream_close(bstream)
