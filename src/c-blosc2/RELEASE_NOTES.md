@@ -1,6 +1,45 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.11.3 to 2.12.0
+=============================
+
+* New `blosc2_get_slice_nchunks` function for getting the unidimensional chunk indexes of a Blosc2 container slice.
+
+* Globally registered new codec `grok`. This will be loaded dynamically.
+
+
+Changes from 2.11.2 to 2.11.3
+=============================
+
+* Frames accept now typesizes that are larger than 255 (and up to 2**31).
+  See https://github.com/PyTables/PyTables/issues/1086.  Thanks to
+  @chris-allan for the report.
+
+* AVX512 runtime dispatching has been fixed (basically disabled) for GCC
+  versions <= 10.
+
+* Use typedef for blosc_timestamp_t.  Thanks to Magnus Ulimoen.
+
+
+Changes from 2.11.1 to 2.11.2
+=============================
+
+* Added support for ARMv7l platforms (Raspberry Pi).  The NEON version
+  of the bitshuffle filter was not compiling there, and besides it offered
+  no performance advantage over the generic bitshuffle version (it is 2x to
+  3x slower actually). So bitshuffle-neon.c has been disabled by default in
+  all ARM platforms.
+
+* Also, unaligned access has been disabled in all ARM non-64bits platforms.
+  It turned out that, at least the armv7l CPU in Raspberry Pi 4, had issues
+  because `__ARM_FEATURE_UNALIGNED` C macro was asserted in the compiler
+  (both gcc and clang), but it actually made binaries to raise a "Bus error".
+
+* Thanks to Ben Nuttall for providing a Raspberry Pi for tracking down these
+  issues.
+
+
 Changes from 2.11.0 to 2.11.1
 =============================
 

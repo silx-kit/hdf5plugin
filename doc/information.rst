@@ -71,12 +71,12 @@ HDF5 compression filters and compression libraries sources were obtained from:
   (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_)
   using LZ4.
 * `bitshuffle plugin <https://github.com/kiyo-masui/bitshuffle>`_ (v0.5.1) using LZ4 and ZStd.
-* bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.8.0)
+* bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.0)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.5), LZ4, Snappy, ZLib and ZStd.
-* hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2.dev0, commit `3ba4e78 <https://github.com/PyTables/PyTables/tree/3ba4e78336f21f5e32ddf49ced4560f610de70dd/hdf5-blosc2/src>`_)
-  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.11.1), LZ4, ZLib and ZStd.
+* hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
+  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.12.0), LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2>`_ (v1.0.2)
   using `CharLS <https://github.com/team-charls/charls>`_
   (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_).
@@ -87,15 +87,15 @@ HDF5 compression filters and compression libraries sources were obtained from:
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
 * `HDF5-ZFP plugin <https://github.com/LLNL/H5Z-ZFP>`_ (v1.1.1)
-  using `zfp <https://github.com/LLNL/zfp>`_ (v1.0.0).
+  using `zfp <https://github.com/LLNL/zfp>`_ (v1.0.1).
 * `HDF5Plugin-Zstandard <https://github.com/aparamon/HDF5Plugin-Zstandard>`_
   (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) using ZStd.
 
 Sources of compression libraries shared accross multiple filters were obtained from:
 
-* `LZ4 v1.9.4 <https://github.com/Blosc/c-blosc2/tree/v2.10.2/internal-complibs/lz4-1.9.4>`_
+* `LZ4 v1.9.4 <https://github.com/Blosc/c-blosc2/tree/v2.12.0/internal-complibs/lz4-1.9.4>`_
 * `Snappy v1.1.10 <https://github.com/google/snappy>`_
-* `ZStd v1.5.5 <https://github.com/Blosc/c-blosc2/tree/v2.10.2/internal-complibs/zstd-1.5.5>`_
+* `ZStd v1.5.5 <https://github.com/Blosc/c-blosc2/tree/v2.12.0/internal-complibs/zstd-1.5.5>`_
 * `ZLib v1.2.13 <https://github.com/Blosc/c-blosc/tree/v1.21.5/internal-complibs/zlib-1.2.13>`_
 
 When compiled with Intel IPP, the LZ4 compression library is replaced with `LZ4 v1.9.3 <https://github.com/lz4/lz4/releases/tag/v1.9.3>`_ patched with a patch from Intel IPP 2021.7.0.

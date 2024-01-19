@@ -1,12 +1,12 @@
-# Announcing C-Blosc2 2.11.1
+# Announcing C-Blosc2 2.12.0
 A fast, compressed and persistent binary data store library for C.
 
 ## What is new?
 
-This is a maintenance release for fixing the ALTIVEC header.
-Only affects to IBM POWER builds.
-
-Also, some other fixes and improvements are in.
+Now the `grok` codec is available globally and will be loaded dynamically. See more
+info about the codec in our blog post: https://www.blosc.org/posts/blosc2-grok-release/
+Furthermore, a new function has been added to get the unidimensional chunk indexes
+needed to get the slice of a Blosc2 container.
 
 For more info, please see the release notes in:
 

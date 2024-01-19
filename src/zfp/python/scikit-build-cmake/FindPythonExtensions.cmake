@@ -104,9 +104,10 @@
 #                         [HEADER_OUTPUT_VAR <HeaderOutputVar>]
 #                         [INCLUDE_DIR_OUTPUT_VAR <IncludeDirOutputVar>])
 #
+# without the extension is used as the logical name.  If only ``<Name>`` is
+#
 # If only ``<Name>`` is provided, and it ends in the ".h" extension, then it
 # is assumed to be the ``<HeaderFilename>``.  The filename of the header file
-# without the extension is used as the logical name.  If only ``<Name>`` is
 # provided, and it does not end in the ".h" extension, then the
 # ``<HeaderFilename>`` is assumed to ``<Name>.h``.
 #
@@ -167,8 +168,6 @@
 #
 # .. code-block:: cmake
 #
-#    find_package(PythonInterp)
-#    find_package(PythonLibs)
 #    find_package(PythonExtensions)
 #    find_package(Cython)
 #    find_package(Boost COMPONENTS python)
@@ -200,7 +199,7 @@
 #                            FORWARD_DECL_MODULES_VAR fdecl_module_list)
 #
 #    # module2 -- dynamically linked
-#    include_directories({Boost_INCLUDE_DIRS})
+#    include_directories(${Boost_INCLUDE_DIRS})
 #    add_library(module2 SHARED boost_module2.cxx)
 #    target_link_libraries(module2 ${Boost_LIBRARIES})
 #    python_extension_module(module2
@@ -209,7 +208,7 @@
 #
 #    # module3 -- loaded at runtime
 #    add_cython_target(module3a.pyx)
-#    add_library(module1 MODULE ${module3a} module3b.cxx)
+#    add_library(module3 MODULE ${module3a} module3b.cxx)
 #    target_link_libraries(module3 ${Boost_LIBRARIES})
 #    python_extension_module(module3
 #                            LINKED_MODULES_VAR linked_module_list
@@ -244,7 +243,14 @@
 #=============================================================================
 
 find_package(PythonInterp REQUIRED)
-find_package(PythonLibs)
+if(SKBUILD AND NOT PYTHON_LIBRARY)
+  set(PYTHON_LIBRARY "no-library-required")
+  find_package(PythonLibs)
+  unset(PYTHON_LIBRARY)
+  unset(PYTHON_LIBRARIES)
+else()
+  find_package(PythonLibs)
+endif()
 include(targetLinkLibrariesWithDynamicLookup)
 
 set(_command "
@@ -254,7 +260,6 @@ import os
 import os.path
 import site
 import sys
-import sysconfig
 
 result = None
 rel_result = None
@@ -288,7 +293,7 @@ sys.stdout.write(\";\".join((
     sys.prefix,
     result,
     rel_result,
-    sysconfig.get_config_var('SO')
+    distutils.sysconfig.get_config_var('EXT_SUFFIX')
 )))
 ")
 
@@ -332,16 +337,33 @@ function(_set_python_extension_symbol_visibility _target)
     set_target_properties(${_target} PROPERTIES LINK_FLAGS
         "/EXPORT:${_modinit_prefix}${_target}"
     )
-  elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+  elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # Option to not run version script. See https://github.com/scikit-build/scikit-build/issues/668
+    if(NOT DEFINED SKBUILD_GNU_SKIP_LOCAL_SYMBOL_EXPORT_OVERRIDE)
+       set(SKBUILD_GNU_SKIP_LOCAL_SYMBOL_EXPORT_OVERRIDE FALSE)
+    endif()
     set(_script_path
       ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${_target}-version-script.map
     )
-    file(WRITE ${_script_path}
-               "{global: ${_modinit_prefix}${_target}; local: *; };"
-    )
-    set_property(TARGET ${_target} APPEND_STRING PROPERTY LINK_FLAGS
-        " -Wl,--version-script=${_script_path}"
-    )
+    # Export all symbols. See https://github.com/scikit-build/scikit-build/issues/668
+    if(SKBUILD_GNU_SKIP_LOCAL_SYMBOL_EXPORT_OVERRIDE)
+      file(WRITE ${_script_path}
+                 "{global: ${_modinit_prefix}${_target};};"
+      )
+    else()
+      file(WRITE ${_script_path}
+                 "{global: ${_modinit_prefix}${_target}; local: *;};"
+      )
+    endif()
+    if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+      set_property(TARGET ${_target} APPEND_STRING PROPERTY LINK_FLAGS
+        " -Wl,--version-script=\"${_script_path}\""
+      )
+    else()
+      set_property(TARGET ${_target} APPEND_STRING PROPERTY LINK_FLAGS
+        " -Wl,-M \"${_script_path}\""
+      )
+    endif()
   endif()
 endfunction()
 
@@ -423,14 +445,14 @@ function(python_extension_module _target)
     target_link_libraries_with_dynamic_lookup(${_target} ${PYTHON_LIBRARIES})
 
     if(_is_module_lib)
-      #_set_python_extension_symbol_visibility(${_altname})
+      _set_python_extension_symbol_visibility(${_target})
     endif()
   endif()
 endfunction()
 
 function(python_standalone_executable _target)
   include_directories(${PYTHON_INCLUDE_DIRS})
-  target_link_libraries(${_target} ${PYTHON_LIBRARIES})
+  target_link_libraries(${_target} ${SKBUILD_LINK_LIBRARIES_KEYWORD} ${PYTHON_LIBRARIES})
 endfunction()
 
 function(python_modules_header _name)
@@ -571,3 +593,5 @@ function(python_modules_header _name)
   endif()
   set(${_include_dirs_var} ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 endfunction()
+
+include(UsePythonExtensions)
