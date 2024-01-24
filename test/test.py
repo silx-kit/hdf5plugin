@@ -223,8 +223,6 @@ class TestHDF5PluginRead(unittest.TestCase):
                              "Values should not be identical")
             self.assertTrue(numpy.allclose(original, output_data, atol=value),
                              "Values should be within tolerance")
-            self.assertTrue(numpy.alltrue(compressed == output_data),
-                             "Compressed data should be identical")
 
             # relative 1E-4
             value = 1E-4
@@ -269,7 +267,10 @@ class TestHDF5PluginRead(unittest.TestCase):
             self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
             self.assertFalse(numpy.alltrue(original == compressed),
                              "Values should not be identical")
-            self.assertTrue(numpy.allclose(compressed, compressed_back),
+            # Absolute error from L2 norm param from:
+            # https://github.com/szcompressor/SZ3/blob/v3.1.8/include/SZ3/utils/Statistic.hpp#L44
+            abs_error = numpy.sqrt(3.0/compressed.ndim) * value
+            self.assertTrue(numpy.allclose(compressed, compressed_back, atol=abs_error),
                              "Compressed read back values should be identical to compressed data")
 
             # create a compressed file
@@ -282,7 +283,7 @@ class TestHDF5PluginRead(unittest.TestCase):
                              "Values should not be identical")
             self.assertTrue(numpy.alltrue(compressed == output_data),
                              "Compressed data should be identical")
-            self.assertTrue(numpy.allclose(compressed_back, output_data),
+            self.assertTrue(numpy.allclose(compressed_back, output_data, atol=abs_error),
                              "Newly L2 norm read back values should be identical to compressed data")
             h5.close()
 

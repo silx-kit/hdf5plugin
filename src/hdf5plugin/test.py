@@ -438,6 +438,7 @@ class TestGetFilters(unittest.TestCase):
 class TestSZ(unittest.TestCase):
     """Specific tests for SZ compression"""
 
+    @unittest.skipUnless(should_test("sz"), "SZ filter not available")
     def testAbsoluteMode(self):
         """Test SZ's absolute mode is within required tolerance
 
