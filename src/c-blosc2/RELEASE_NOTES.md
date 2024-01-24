@@ -1,6 +1,19 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.12.0 to 2.13.0
+=============================
+
+* Added a new BLOSC_FILTER_INT_TRUNC filter for truncating integers to a
+  given number of bits.  This is useful for compressing integers that are
+  not using all the bits of the type.  See PR #577.
+
+* Optimized zstd, specially when using dicts. See PR #578.
+
+* Initialize grok library when loading the plugin. This is needed for other plugins
+  to be able to use it without the need of importing the package.
+
+
 Changes from 2.11.3 to 2.12.0
 =============================
 

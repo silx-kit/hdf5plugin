@@ -82,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    12   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_MINOR    13   /* for minor interface/format changes  */
 #define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.12.0"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2023-12-28 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.13.0"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2023-01-24 #$"    /* date version */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -226,7 +226,7 @@ enum {
   BLOSC2_GLOBAL_REGISTERED_FILTERS_START = 32,
   BLOSC2_GLOBAL_REGISTERED_FILTERS_STOP = 159,
   //!< Blosc-registered filters must be between 32 - 159.
-  BLOSC2_GLOBAL_REGISTERED_FILTERS = 4,
+  BLOSC2_GLOBAL_REGISTERED_FILTERS = 5,
   //!< Number of Blosc-registered filters at the moment.
   BLOSC2_USER_REGISTERED_FILTERS_START = 160,
   BLOSC2_USER_REGISTERED_FILTERS_STOP = 255,
@@ -588,6 +588,7 @@ BLOSC_EXPORT void blosc2_destroy(void);
  * @remark Compression is memory safe and guaranteed not to write @p dest
  * more than what is specified in @p destsize.
  * There is not a minimum for @p src buffer size @p nbytes.
+ * Equivalent to #blosc2_compress.
  *
  * @warning The @p src buffer and the @p dest buffer can not overlap.
  *
@@ -677,6 +678,7 @@ BLOSC_EXPORT int blosc1_compress(int clevel, int doshuffle, size_t typesize,
  *
  * @remark Decompression is memory safe and guaranteed not to write the @p dest
  * buffer more than what is specified in @p destsize.
+ * Similar to #blosc2_decompress.
  *
  * @remark In case you want to keep under control the number of bytes read from
  * source, you can call #blosc1_cbuffer_sizes first to check whether the
@@ -718,6 +720,8 @@ BLOSC_EXPORT int blosc1_decompress(const void* src, void* dest, size_t destsize)
  * The items are returned in @p dest buffer, which has to have enough
  * space for storing all items.
  *
+ * @remark The function #blosc2_getitem is a more complete and secure version.
+ *
  * @param src The compressed buffer from data will be decompressed.
  * @param start The position of the first item (of @p typesize size) from where data
  * will be retrieved.
@@ -757,11 +761,16 @@ BLOSC_EXPORT int blosc2_getitem(const void* src, int32_t srcsize, int start, int
 typedef void (*blosc_threads_callback)(void *callback_data, void (*dojob)(void *), int numjobs, size_t jobdata_elsize, void *jobdata);
 
 /**
-  Set the threading backend for parallel compression/decompression to use `callback` to execute work
-  instead of using the Blosc-managed threads.   This function is *not* thread-safe and should be called
-  before any other Blosc function: it affects all Blosc contexts.  Passing `NULL` uses the default
-  Blosc threading backend.  The `callback_data` argument is passed through to the callback.
- */
+  * @brief Set the threading backend for parallel compression/decompression to use @p callback to execute work
+  * instead of using the Blosc-managed threads.  The @p callback_data argument is passed through to the callback.
+
+  * @param callback: the callback to use. Passing `NULL` uses the default Blosc threading backend.
+  * @param callback_data: the callback data.
+  *
+  * @warning This function is *not* thread-safe and should be called
+  * before any other Blosc function: it affects all Blosc contexts.
+  * @sa https://github.com/Blosc/c-blosc2/pull/81
+  */
 BLOSC_EXPORT void blosc2_set_threads_callback(blosc_threads_callback callback, void *callback_data);
 
 
@@ -898,6 +907,8 @@ BLOSC_EXPORT int blosc2_free_resources(void);
  * uncompressed bytes (@p nbytes) and compressed (@p cbytes). It also
  * returns the @p blocksize (which is used internally for doing the
  * compression by blocks).
+ *
+ * @remark Equivalent to function #blosc2_cbuffer_sizes.
  *
  * @param cbuffer The buffer of compressed data.
  * @param nbytes The pointer where the number of uncompressed bytes will be put.
@@ -1076,6 +1087,13 @@ static const blosc2_io BLOSC2_IO_DEFAULTS = {
  */
 BLOSC_EXPORT int blosc2_register_io_cb(const blosc2_io_cb *io);
 
+/**
+ * @brief Get a user-defined input/output callback in Blosc.
+ *
+ * @param id The id of the callback to get.
+ *
+ * @return A pointer containing the desired callback if success. Else a NULL pointer is returned.
+ */
 BLOSC_EXPORT blosc2_io_cb *blosc2_get_io_cb(uint8_t id);
 
 /*********************************************************************
@@ -1109,7 +1127,7 @@ typedef struct {
  *
  * @return 0 if succeeds. Else a negative code is returned.
  */
-BLOSC_EXPORT int register_tuner_private(blosc2_tuner *tuner);
+BLOSC_EXPORT int blosc2_register_tuner(blosc2_tuner *tuner);
 
 
 /**
@@ -2128,46 +2146,6 @@ BLOSC_EXPORT int blosc2_meta_add(blosc2_schunk *schunk, const char *name, uint8_
 BLOSC_EXPORT int blosc2_meta_update(blosc2_schunk *schunk, const char *name, uint8_t *content,
                                     int32_t content_len);
 
-static inline void swap_store(void *dest, const void *pa, int size) {
-  uint8_t *pa_ = (uint8_t *) pa;
-  uint8_t *pa2_ = (uint8_t*)malloc((size_t) size);
-  int i = 1; /* for big/little endian detection */
-  char *p = (char *) &i;
-
-  if (p[0] == 1) {
-    /* little endian */
-    switch (size) {
-      case 8:
-        pa2_[0] = pa_[7];
-        pa2_[1] = pa_[6];
-        pa2_[2] = pa_[5];
-        pa2_[3] = pa_[4];
-        pa2_[4] = pa_[3];
-        pa2_[5] = pa_[2];
-        pa2_[6] = pa_[1];
-        pa2_[7] = pa_[0];
-        break;
-      case 4:
-        pa2_[0] = pa_[3];
-        pa2_[1] = pa_[2];
-        pa2_[2] = pa_[1];
-        pa2_[3] = pa_[0];
-        break;
-      case 2:
-        pa2_[0] = pa_[1];
-        pa2_[1] = pa_[0];
-        break;
-      case 1:
-        pa2_[0] = pa_[0];
-        break;
-      default:
-        fprintf(stderr, "Unhandled nitems: %d\n", size);
-    }
-  }
-  memcpy(dest, pa2_, size);
-  free(pa2_);
-}
-
 /**
  * @brief Get the content out of a metalayer.
  *
@@ -2312,18 +2290,31 @@ typedef struct timespec blosc_timestamp_t;
 #endif
 
 /*
- * Set a timestamp.
+ * @brief Set a timestamp.
+ *
+ * @param timestamp
+ *
  */
 BLOSC_EXPORT void blosc_set_timestamp(blosc_timestamp_t* timestamp);
 
 /*
- * Return the nanoseconds between 2 timestamps.
+ * @brief Get the nanoseconds between 2 timestamps.
+ *
+ * @param start_time
+ * @param end_time
+ *
+ * @return The nanoseconds between start_time and end_time.
  */
 BLOSC_EXPORT double blosc_elapsed_nsecs(blosc_timestamp_t start_time,
                                         blosc_timestamp_t end_time);
 
 /*
- * Return the seconds between 2 timestamps.
+ * @brief Get the seconds between 2 timestamps.
+ *
+ * @param start_time
+ * @param end_time
+ *
+ * @return The seconds between start_time and end_time.
  */
 BLOSC_EXPORT double blosc_elapsed_secs(blosc_timestamp_t start_time,
                                        blosc_timestamp_t end_time);
@@ -2458,16 +2449,29 @@ BLOSC_EXPORT int blosc2_register_filter(blosc2_filter *filter);
 
 /*
  * @brief Remove a directory and its files.
+ *
+ * @param path The directory to remove.
+ *
+ * @return 0 if succeeds. Else a negative code is returned.
  */
 BLOSC_EXPORT int blosc2_remove_dir(const char *path);
 
 /*
  * @brief Remove a file or a directory given by path.
+ *
+ * @param path The file or directory to remove.
+ *
+ * @return 0 if succeeds. Else a negative code is returned.
  */
 BLOSC_EXPORT int blosc2_remove_urlpath(const char *path);
 
 /*
  * @brief Rename a file or a directory given by old_urlpath to new_path.
+ *
+ * @param old_urlpath The original path to the directory or file.
+ * @param new_path The new path to the directory or file.
+ *
+ * @return 0 if succeeds. Else a negative code is returned.
  */
 BLOSC_EXPORT int blosc2_rename_urlpath(char* old_urlpath, char* new_path);
 
@@ -2494,7 +2498,6 @@ BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, c
  * @param stop The first index (0-based if it is a schunk) that is not in the selected slice.
  * @param chunks_idx The pointer to the buffer where the indexes will be written. It is the user responsibility
  * to free the buffer.
- *
  *
  * @return The number of chunks needed to get the slice. If some problem is
  * detected, a negative code is returned instead.
