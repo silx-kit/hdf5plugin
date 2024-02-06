@@ -45,7 +45,7 @@ jobs:
           name: cibw-sdist
           path: dist
       - name: Install sdist
-        run: pip install --pre dist/hdf5plugin*.tar.gz
+        run: pip install --pre "$(ls dist/hdf5plugin*.tar.gz)[test]"
       - name: Run tests
         run: python test/test.py
 
@@ -118,8 +118,10 @@ jobs:
         include:
           - python-version: '3.7'
             OLDEST_DEPENDENCIES: 'h5py==2.8.0'
+            EXTRAS: ''
           - python-version: '3.12'
             OLDEST_DEPENDENCIES: 'h5py==3.10.0'
+            EXTRAS: '[test]'
 
     steps:
       - uses: actions/checkout@v4
@@ -135,7 +137,7 @@ jobs:
       - name: Install h5py and hdf5plugin
         run: |
           pip install h5py
-          pip install --no-index --no-cache --find-links=./dist hdf5plugin --only-binary hdf5plugin
+          pip install --no-index --no-cache --find-links=./dist "hdf5plugin${{ matrix.EXTRAS }}" --only-binary hdf5plugin
       - name: Run test with latest h5py
         run: python test/test.py
       - name: Run test with oldest h5py

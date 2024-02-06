@@ -96,8 +96,8 @@ jobs:
           ls dist
 
       - name: Install from source package
-        run:
-          pip install --pre dist/hdf5plugin*
+        run: |
+          pip install --pre "$(ls dist/hdf5plugin-*)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*
 
       - name: Print python info
         run: |
