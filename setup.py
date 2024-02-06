@@ -865,11 +865,28 @@ def get_blosc2_plugin():
     """
     hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src'
     blosc2_dir = 'src/c-blosc2'
+    plugins_dir = f'{blosc2_dir}/plugins'
 
     # blosc sources
     sources = glob(f'{blosc2_dir}/blosc/*.c')
-    include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
-    define_macros = [('SHUFFLE_AVX512_ENABLED', 1), ('SHUFFLE_NEON_ENABLED', 1)]
+    sources += [  # Add embedded codecs, filters and tuners
+        src_file
+        for src_file in glob(f'{plugins_dir}/*.c') + glob(f'{plugins_dir}/*/*.c') + glob(f'{plugins_dir}/*/*/*.c')
+        if not os.path.basename(src_file).startswith("test")
+    ]
+    sources += glob(f'{plugins_dir}/codecs/zfp/src/*.c')  # Add ZFP embedded sources
+
+    include_dirs = [
+        blosc2_dir,
+        f'{blosc2_dir}/blosc',
+        f'{blosc2_dir}/include',
+        f'{blosc2_dir}/plugins/codecs/zfp/include',
+    ]
+    define_macros = [
+        ('HAVE_PLUGINS', 1),
+        ('SHUFFLE_AVX512_ENABLED', 1),
+        ('SHUFFLE_NEON_ENABLED', 1),
+    ]
     extra_compile_args = []
     extra_link_args = []
     libraries = []
@@ -902,8 +919,7 @@ def get_blosc2_plugin():
     include_dirs += get_zstd_clib('include_dirs')
     define_macros.append(('HAVE_ZSTD', 1))
 
-    extra_compile_args += ['-std=gnu99']  # Needed to build manylinux1 wheels
-    extra_compile_args += ['-O3', '-ffast-math']
+    extra_compile_args += ['-O3', '-ffast-math', '-std=gnu99']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
     extra_link_args += ['-pthread']
