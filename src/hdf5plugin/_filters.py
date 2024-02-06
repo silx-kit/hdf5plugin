@@ -221,8 +221,6 @@ class Blosc(_FilterRefClass):
 class Blosc2(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using blosc2 filter.
 
-    WARNING: This is a pre-release version of the HDF5 filter, only for testing purpose.
-
     It can be passed as keyword arguments:
 
     .. code-block:: python
