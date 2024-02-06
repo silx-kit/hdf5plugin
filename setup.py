@@ -1307,7 +1307,7 @@ if __name__ == "__main__":
           setup_requires=['setuptools', 'wheel'],
           extras_require={
               'dev': ['sphinx', 'sphinx_rtd_theme'],
-              'test': ['blosc2', 'blosc2-grok'],
+              'test': ['blosc2>=2.5.1', 'blosc2-grok>=0.2.2'],
             },
           cmdclass=cmdclass,
           libraries=libraries,
