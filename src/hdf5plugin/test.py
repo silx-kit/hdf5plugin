@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2019-2023 European Synchrotron Radiation Facility
+# Copyright (c) 2019-2024 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,10 @@
 #
 # ###########################################################################*/
 """Provides tests """
+from __future__ import annotations
+
+import importlib.util
+import io
 import os
 import shutil
 import tempfile
@@ -31,6 +35,10 @@ import numpy
 import h5py
 import hdf5plugin
 
+try:
+    import blosc2
+except ImportError:
+    blosc2 = None
 
 from hdf5plugin import _filters
 
@@ -465,9 +473,100 @@ class TestSZ(unittest.TestCase):
         )
 
 
+class TestBlosc2Plugins(unittest.TestCase):
+    """Specific tests for Blosc2 compression with Blosc2 plugins"""
+
+    def setUp(self):
+        if not should_test("blosc2"):
+            self.skipTest("Blosc2 filter not available")
+        if blosc2 is None:
+            self.skipTest("Blosc2 package not available")
+
+    def _readback_hdf5_blosc2_dataset(
+            self,
+            data: numpy.ndarray,
+            blocks: tuple[int, ...] | None = None,
+            **cparams
+        ) -> numpy.ndarray:
+        """Compress data with blosc2, write it as HDF5 file with direct chunk write and read it back with h5py
+
+        :param data: data array to compress
+        :param blocks: Blosc2 block shape
+        :param cparams: Blosc2 compression parameters
+        """
+        # Convert data to a blosc2 array: This is where compression happens
+        blosc_array = blosc2.asarray(
+            data,
+            chunks=data.shape,
+            blocks=blocks,
+            cparams=cparams,
+        )
+
+        # Write blosc2 array as a hdf5 dataset
+        with io.BytesIO() as buffer:
+            with h5py.File(buffer, 'w') as f:
+                dataset = f.create_dataset(
+                    'data',
+                    shape=data.shape,
+                    dtype=data.dtype,
+                    chunks=data.shape,
+                    compression=hdf5plugin.Blosc2(),
+                )
+                dataset.id.write_direct_chunk(
+                    (0,) * data.ndim,
+                    blosc_array.schunk.to_cframe(),
+                )
+                f.flush()
+
+                return dataset[()]
+
+    def test_blosc2_filter_int_trunc(self):
+        """Read blosc2 dataset written with int truncate filter plugin"""
+        data = numpy.arange(2**16, dtype=numpy.int16)
+
+        removed_bits = 2
+        read_data = self._readback_hdf5_blosc2_dataset(
+            data,
+            codec=blosc2.Codec.ZSTD,
+            filters=[blosc2.Filter.INT_TRUNC],
+            filters_meta=[-removed_bits],
+        )
+        assert numpy.allclose(read_data, data, rtol=0.0, atol=2**removed_bits)
+
+    def test_blosc2_codec_zfp(self):
+        """Read blosc2 dataset written with zfp codec plugin"""
+        data = numpy.outer(numpy.arange(128), numpy.arange(128)).astype(numpy.float32)
+
+        read_data = self._readback_hdf5_blosc2_dataset(
+            data,
+            codec=blosc2.Codec.ZFP_PREC,
+            codec_meta=8,
+            filters=[],
+            filters_meta=[],
+            splitmode=blosc2.SplitMode.NEVER_SPLIT,
+        )
+        assert numpy.allclose(read_data, data, rtol=1e-3, atol=0)
+
+    @unittest.skipIf(importlib.util.find_spec("blosc2_grok") is None, "blosc2_grok package is not available")
+    def test_blosc2_codec_grok(self):
+        """Read blosc2 dataset written with blosc2-grok external codec plugin"""
+        shape = 10, 128, 128
+        data = numpy.arange(numpy.prod(shape), dtype=numpy.uint16).reshape(shape)
+
+        read_data = self._readback_hdf5_blosc2_dataset(
+            data,
+            blocks=(1,) + data.shape[1:],  # 1 block per slice
+            codec=blosc2.Codec.GROK,
+            # Disable the filters and the splitmode, because these don't work with grok.
+            filters=[],
+            splitmode=blosc2.SplitMode.NEVER_SPLIT,
+        )
+        assert numpy.array_equal(read_data, data)
+
+
 def suite():
     test_suite = unittest.TestSuite()
-    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter, TestGetFilters, TestSZ):
+    for cls in (TestHDF5PluginRW, TestPackage, TestRegisterFilter, TestGetFilters, TestSZ, TestBlosc2Plugins):
         test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(cls))
     return test_suite
 
