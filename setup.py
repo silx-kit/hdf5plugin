@@ -423,7 +423,7 @@ class Build(build):
                     argument,
                     "HDF5_DIR" if argument == "hdf5" else argument.upper())
         self.hdf5plugin_config = BuildConfig(
-            config_file=os.path.join(self.build_lib, PROJECT, '_config.py'),
+            config_file=os.path.join(self.build_lib, "hdf5plugin", "_config.py"),
             compiler=self.compiler,
             hdf5_dir=self.hdf5,
             use_cpp11=self.cpp11,
@@ -1253,76 +1253,15 @@ if extensions and not sys.platform == 'win32':
     libraries.append(get_hdf5_dl_clib())
 
 
-# setup
-
-def get_version():
-    """Returns current version number from _version.py file"""
-    dirname = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "src", PROJECT)
-    sys.path.insert(0, dirname)
-    dont_write_bytecode = sys.dont_write_bytecode
-    sys.dont_write_bytecode = True  # Avoid creating __pycache__/_version.pyc
-    import _version
-    sys.path = sys.path[1:]
-    sys.dont_write_bytecode = dont_write_bytecode
-    return _version.strictversion
-
-
-PROJECT = 'hdf5plugin'
-author = "ESRF - Data Analysis Unit"
-author_email = "silx@esrf.fr"
-description = "HDF5 Plugins for Windows, MacOS, and Linux"
-url = 'https://github.com/silx-kit/hdf5plugin'
-f = open("README.rst")
-long_description = f.read()
-f.close()
-license = "https://github.com/silx-kit/hdf5plugin/blob/master/LICENSE"
-classifiers = ["Development Status :: 5 - Production/Stable",
-               "Environment :: Console",
-               "Environment :: MacOS X",
-               "Environment :: Win32 (MS Windows)",
-               "Intended Audience :: Education",
-               "Intended Audience :: Science/Research",
-               "License :: OSI Approved :: MIT License",
-               "License :: OSI Approved :: BSD License",
-               "License :: OSI Approved :: zlib/libpng License",
-               "Natural Language :: English",
-               "Operating System :: POSIX :: Linux",
-               "Operating System :: MacOS",
-               "Operating System :: Microsoft :: Windows",
-               "Programming Language :: Python :: 3",
-               "Topic :: Software Development :: Libraries :: Python Modules",
-               ]
-cmdclass = dict(
-    bdist_wheel=BDistWheel,
-    build=Build,
-    build_clib=BuildCLib,
-    build_ext=PluginBuildExt,
-    build_py=BuildPy,
-)
-
-
 if __name__ == "__main__":
-    setup(name=PROJECT,
-          version=get_version(),
-          author=author,
-          author_email=author_email,
-          url=url,
-          python_requires='>=3.7',
-          classifiers=classifiers,
-          description=description,
-          long_description=long_description,
-          license=license,
-          packages=[PROJECT],
-          package_dir={'': 'src'},
-          ext_modules=extensions,
-          install_requires=['h5py'],
-          setup_requires=['setuptools', 'wheel'],
-          extras_require={
-              'dev': ['sphinx', 'sphinx_rtd_theme'],
-              'test': ['blosc2>=2.5.1', 'blosc2-grok>=0.2.2'],
-            },
-          cmdclass=cmdclass,
-          libraries=libraries,
-          zip_safe=False,
-          )
+    setup(
+        cmdclass=dict(
+            bdist_wheel=BDistWheel,
+            build=Build,
+            build_clib=BuildCLib,
+            build_ext=PluginBuildExt,
+            build_py=BuildPy,
+        ),
+        ext_modules=extensions,
+        libraries=libraries,
+    )
