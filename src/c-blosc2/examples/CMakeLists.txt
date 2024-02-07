@@ -1,7 +1,7 @@
 # Examples with correspondingly named source files
 set(EXAMPLES contexts instrument_codec delta_schunk_ex multithread simple frame_metalayers
     noinit find_roots schunk_simple frame_simple schunk_postfilter urcodecs urfilters frame_vlmetalayers
-    sframe_simple frame_backed_schunk compress_file frame_offset frame_roundtrip get_set_slice get_blocksize)
+    sframe_simple frame_backed_schunk compress_file decompress_file frame_offset frame_roundtrip get_set_slice get_blocksize)
 
 add_subdirectory(b2nd)
 
@@ -44,8 +44,12 @@ if(BUILD_TESTS)
         foreach(example ${EXAMPLES})
             if(example STREQUAL compress_file)
                 add_test(NAME test_example_${example}
-                    COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${example}>
-                        "${PROJECT_BINARY_DIR}/CMakeCache.txt" CMakeCache.b2frame)
+                         COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${example}>
+                         "${PROJECT_BINARY_DIR}/CMakeCache.txt" CMakeCache.b2frame)
+            elseif(example STREQUAL decompress_file)
+                add_test(NAME test_example_${example}
+                         COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${example}>
+                         CMakeCache.b2frame CMakeCache-2.txt)
             else()
                 add_test(NAME test_example_${example}
                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${example}>)
