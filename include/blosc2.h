@@ -83,10 +83,10 @@ extern "C" {
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
 #define BLOSC2_VERSION_MINOR    13   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.13.1"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2023-01-25 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.13.2"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2023-02-07 #$"    /* date version */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -251,7 +251,7 @@ enum {
   BLOSC_BITSHUFFLE = 2,  //!< Bit-wise shuffle.
 #endif // BLOSC_H
   BLOSC_DELTA = 3,       //!< Delta filter.
-  BLOSC_TRUNC_PREC = 4,  //!< Truncate mantissa precision; positive values in cparams.filters_meta will keep bits; negative values will reduce bits.
+  BLOSC_TRUNC_PREC = 4,  //!< Truncate mantissa precision; positive values in `filters_meta` will keep bits; negative values will zero bits.
   BLOSC_LAST_FILTER = 5, //!< sentinel
   BLOSC_LAST_REGISTERED_FILTER = BLOSC2_GLOBAL_REGISTERED_FILTERS_START + BLOSC2_GLOBAL_REGISTERED_FILTERS - 1,
   //!< Determine the last registered filter. It is used to check if a filter is registered or not.
@@ -2504,6 +2504,11 @@ BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, c
  */
 BLOSC_EXPORT int blosc2_get_slice_nchunks(blosc2_schunk* schunk, int64_t *start, int64_t *stop, int64_t **chunks_idx);
 
+
+/*********************************************************************
+  Private functions, these are here for convenience,
+  and are not meant to be included in public docs
+*********************************************************************/
 
 // Private function needed in b2nd.h for deserializing meta
 static inline void swap_store(void *dest, const void *pa, int size) {
