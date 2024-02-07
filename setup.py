@@ -55,18 +55,14 @@ logger = logging.getLogger(__name__)
 try:
     import cpuinfo
 except ImportError as e:
+    logger.error("py-cpuinfo is required")
     raise e
 except Exception:  # cpuinfo raises Exception for unsupported architectures
     logger.warning("Architecture is not supported by cpuinfo")
     cpuinfo = None
-
-try:  # Embedded copy of cpuinfo
-    from cpuinfo import _parse_arch as cpuinfo_parse_arch
-except Exception:
-    try:  # Installed version of cpuinfo (when installing with pip)
-        from cpuinfo.cpuinfo import _parse_arch as cpuinfo_parse_arch
-    except Exception:
-        cpuinfo_parse_arch = None
+    cpuinfo_parse_arch = None
+else:
+    from cpuinfo.cpuinfo import _parse_arch as cpuinfo_parse_arch
 
 
 class BDistWheel(bdist_wheel):

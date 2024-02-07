@@ -2,7 +2,6 @@ include appveyor.yml
 include build-deb.sh
 include CHANGELOG.rst
 include copyright
-include cpuinfo.py
 include LICENSE
 include MANIFEST.in
 include README.rst
