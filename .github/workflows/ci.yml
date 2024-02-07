@@ -129,5 +129,6 @@ jobs:
           CIBW_BUILD: cp39-macosx_*
           CIBW_ARCHS_MACOS: arm64
           HDF5PLUGIN_SSE2: False
+          HDF5PLUGIN_SSSE3: False
           HDF5PLUGIN_AVX2: False
           HDF5PLUGIN_NATIVE: False

@@ -50,6 +50,9 @@ Available options
    * - ``HDF5PLUGIN_SSE2``
      - Whether or not to compile with `SSE2`_ support.
        Default: True on ppc64le and when probed on x86, False otherwise
+   * - ``HDF5PLUGIN_SSSE3``
+     - Whether or not to compile with `SSSE3`_ support.
+       Default: True when probed on x86, False otherwise
    * - ``HDF5PLUGIN_AVX2``
      - Whether or not to compile with `AVX2`_ support.
        It requires enabling `SSE2`_ support.
@@ -80,4 +83,5 @@ Note: Boolean options are passed as ``True`` or ``False``.
 .. _BMI2: https://en.wikipedia.org/wiki/X86_Bit_manipulation_instruction_set
 .. _IPP: https://en.wikipedia.org/wiki/Integrated_Performance_Primitives
 .. _SSE2: https://en.wikipedia.org/wiki/SSE2
+.. _SSSE3: https://en.wikipedia.org/wiki/SSSE3
 .. _OpenMP: https://www.openmp.org/

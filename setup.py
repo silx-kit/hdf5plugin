@@ -159,6 +159,11 @@ class HostConfig:
             self.sse2_compile_args = ()
 
         if self.ARCH in ('X86_32', 'X86_64'):
+            self.ssse3_compile_args = ('-mssse3',)  # There is no /arch:SSSE3
+        else:
+            self.ssse3_compile_args = ()
+
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.avx2_compile_args = ('-mavx2', '/arch:AVX2')
         else:
             self.avx2_compile_args = ()
@@ -199,6 +204,16 @@ class HostConfig:
             if self.__compiler.compiler_type == "msvc":
                 return True
             return check_compile_flags(self.__compiler, "-msse2")
+        return False  # Disabled by default
+
+    def has_ssse3(self) -> bool:
+        """Check SSSE3 availability on host"""
+        if self.ARCH in ('X86_32', 'X86_64'):
+            if not has_cpu_flag('ssse3'):
+                return False  # SSSE3 not available on host
+            if self.__compiler.compiler_type == "msvc":
+                return True
+            return check_compile_flags(self.__compiler, "-mssse3")
         return False  # Disabled by default
 
     def has_avx2(self) -> bool:
@@ -273,20 +288,24 @@ class BuildConfig:
             use_sse2 = host_config.has_sse2() if env_sse2 is None else env_sse2 == "True"
         self.__use_sse2 = bool(use_sse2)
 
+        env_ssse3 = os.environ.get("HDF5PLUGIN_SSSE3", None)
+        use_ssse3 = host_config.has_ssse3() if env_ssse3 is None else env_ssse3 == "True"
+        self.__use_ssse3 = bool(use_ssse3)
+
         if use_avx2 is None:
             env_avx2 = os.environ.get("HDF5PLUGIN_AVX2", None)
             use_avx2 = host_config.has_avx2() if env_avx2 is None else env_avx2 == "True"
-        if use_avx2 and not use_sse2:
+        if use_avx2 and not (use_sse2 and use_ssse3):
             logger.error(
-                "use_avx2=True disabled: incompatible with use_sse2=False")
+                "use_avx2=True disabled: incompatible with use_sse2=False and use_ssse3=False")
             use_avx2 = False
         self.__use_avx2 = bool(use_avx2)
 
         env_avx512 = os.environ.get("HDF5PLUGIN_AVX512", None)
         use_avx512 = host_config.has_avx512() if env_avx512 is None else env_avx512 == "True"
-        if use_avx512 and not (use_sse2 and use_avx2):
+        if use_avx512 and not (use_sse2 and use_ssse3 and use_avx2):
             logger.error(
-                "use_avx512=True disabled: incompatible with use_sse2=False or use_avx2=False")
+                "use_avx512=True disabled: incompatible with use_sse2=False, use_ssse3=False and use_avx2=False")
             use_avx512 = False
         self.__use_avx512 = bool(use_avx512)
 
@@ -304,6 +323,8 @@ class BuildConfig:
         compile_args = []
         if self.__use_sse2:
             compile_args.extend(host_config.sse2_compile_args)
+        if self.__use_ssse3:
+            compile_args.extend(host_config.ssse3_compile_args)
         if self.__use_avx2:
             compile_args.extend(host_config.avx2_compile_args)
         if self.__use_avx512:
@@ -319,6 +340,7 @@ class BuildConfig:
     use_cpp11 = property(lambda self: self.__use_cpp11)
     use_cpp14 = property(lambda self: self.__use_cpp14)
     use_sse2 = property(lambda self: self.__use_sse2)
+    use_ssse3 = property(lambda self: self.__use_ssse3)
     use_avx2 = property(lambda self: self.__use_avx2)
     use_avx512 = property(lambda self: self.__use_avx512)
     use_openmp = property(lambda self: self.__use_openmp)
@@ -346,6 +368,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'native': self.use_native,
             'bmi2': self.USE_BMI2,
             'sse2': self.use_sse2,
+            'ssse3': self.use_ssse3,
             'avx2': self.use_avx2,
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
