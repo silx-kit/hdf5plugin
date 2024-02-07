@@ -39,14 +39,8 @@ from setuptools import setup, Distribution, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 from setuptools.command.build_clib import build_clib
-try:  # setuptools >= 62.4.0
-    from setuptools.command.build import build
-except ImportError:
-    from distutils.command.build import build
-try:  # setuptools >= 59.0.0
-    from setuptools.errors import CompileError
-except ImportError:
-    from distutils.errors import CompileError
+from setuptools.command.build import build
+from setuptools.errors import CompileError
 from wheel.bdist_wheel import bdist_wheel, get_platform
 
 logging.basicConfig(level=logging.INFO)
