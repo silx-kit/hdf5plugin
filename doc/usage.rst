@@ -21,6 +21,7 @@ Hence, HDF5 compressed datasets can be read as any other dataset (see `h5py docu
 .. note::
 
    HDF5 datasets compressed with `Blosc2`_ can require additional plugins to enable decompression, such as `blosc2-grok <https://pypi.org/project/blosc2-grok>`_ or `blosc2-openhtj2k <https://pypi.org/project/blosc2-openhtj2k>`_.
+   See list of Blosc2 `filters <https://www.blosc.org/c-blosc2/reference/utility_variables.html#codes-for-filters>`_ and `codecs <https://www.blosc.org/c-blosc2/reference/utility_variables.html#compressor-codecs>`_.
 
 Write compressed datasets
 +++++++++++++++++++++++++
