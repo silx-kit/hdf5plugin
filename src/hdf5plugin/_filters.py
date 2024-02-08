@@ -27,7 +27,6 @@ from __future__ import annotations
 import logging
 import math
 import struct
-from collections.abc import Mapping
 import h5py
 
 from ._config import build_config
@@ -71,40 +70,7 @@ SPERR_ID = 32028
 """SPERR filter ID"""
 
 
-try:
-    _FilterRefClass = h5py.filters.FilterRefBase
-except AttributeError:
-    class _FilterRefClass(Mapping):
-        """Base class for referring to an HDF5 and describing its options
-
-        Your subclass must define filter_id, and may define a filter_options tuple.
-        """
-        filter_id = None
-        filter_options = ()
-
-        # Mapping interface supports using instances as **kwargs for compatibility
-        # with older versions of h5py
-        @property
-        def _kwargs(self):
-            return {
-                'compression': self.filter_id,
-                'compression_opts': self.filter_options
-            }
-
-        def __hash__(self):
-            return hash((self.filter_id, self.filter_options))
-
-        def __len__(self):
-            return len(self._kwargs)
-
-        def __iter__(self):
-            return iter(self._kwargs)
-
-        def __getitem__(self, item):
-            return self._kwargs[item]
-
-
-class Bitshuffle(_FilterRefClass):
+class Bitshuffle(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using bitshuffle filter.
 
     It can be passed as keyword arguments:
@@ -167,7 +133,7 @@ class Bitshuffle(_FilterRefClass):
             self.filter_options = (nelems, self.__COMPRESSIONS[cname])
 
 
-class Blosc(_FilterRefClass):
+class Blosc(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using blosc filter.
 
     It can be passed as keyword arguments:
@@ -223,7 +189,7 @@ class Blosc(_FilterRefClass):
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
 
 
-class Blosc2(_FilterRefClass):
+class Blosc2(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using blosc2 filter.
 
     It can be passed as keyword arguments:
@@ -285,7 +251,7 @@ class Blosc2(_FilterRefClass):
         self.filter_options = (0, 0, 0, 0, clevel, filters, compression)
 
 
-class BZip2(_FilterRefClass):
+class BZip2(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using BZip2 filter.
 
     It can be passed as keyword arguments:
@@ -310,7 +276,7 @@ class BZip2(_FilterRefClass):
         self.filter_options = (blocksize,)
 
 
-class FciDecomp(_FilterRefClass):
+class FciDecomp(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
     It can be passed as keyword arguments:
@@ -335,7 +301,7 @@ class FciDecomp(_FilterRefClass):
                 "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler.")
 
 
-class LZ4(_FilterRefClass):
+class LZ4(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using lz4 filter.
 
     It can be passed as keyword arguments:
@@ -361,7 +327,7 @@ class LZ4(_FilterRefClass):
         self.filter_options = (nbytes,)
 
 
-class Zfp(_FilterRefClass):
+class Zfp(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using ZFP filter.
 
     It can be passed as keyword arguments:
@@ -487,7 +453,7 @@ class Zfp(_FilterRefClass):
         logger.info(f"filter options = {self.filter_options}")
 
 
-class Sperr(_FilterRefClass):
+class Sperr(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SPERR filter.
 
     It can be passed as keyword arguments:
@@ -599,7 +565,7 @@ class Sperr(_FilterRefClass):
         return (ret,)
 
 
-class SZ(_FilterRefClass):
+class SZ(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
 
     It can be passed as keyword arguments:
@@ -686,7 +652,7 @@ class SZ(_FilterRefClass):
         return high, low
 
 
-class SZ3(_FilterRefClass):
+class SZ3(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ3 filter.
 
     It can be passed as keyword arguments:
@@ -754,7 +720,7 @@ class SZ3(_FilterRefClass):
         return high, low
 
 
-class Zstd(_FilterRefClass):
+class Zstd(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
     It can be passed as keyword arguments:
