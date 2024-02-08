@@ -73,15 +73,13 @@ SPERR_ID = 32028
 class Bitshuffle(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using bitshuffle filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'bitshuffle_with_lz4',
             data=numpy.arange(100),
-            **hdf5plugin.Bitshuffle(nelems=0, lz4=True))
+            compression=hdf5plugin.Bitshuffle(nelems=0, lz4=True))
         f.close()
 
     :param int nelems:
@@ -136,15 +134,13 @@ class Bitshuffle(h5py.filters.FilterRefBase):
 class Blosc(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using blosc filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'blosc_byte_shuffle_blosclz',
             data=numpy.arange(100),
-            **hdf5plugin.Blosc(cname='blosclz', clevel=9, shuffle=hdf5plugin.Blosc.SHUFFLE))
+            compression=hdf5plugin.Blosc(cname='blosclz', clevel=9, shuffle=hdf5plugin.Blosc.SHUFFLE))
         f.close()
 
     :param str cname:
@@ -192,15 +188,13 @@ class Blosc(h5py.filters.FilterRefBase):
 class Blosc2(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using blosc2 filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'blosc2_byte_shuffle_blosclz',
             data=numpy.arange(100),
-            **hdf5plugin.Blosc2(cname='blosclz', clevel=9, filters=hdf5plugin.Blosc2.SHUFFLE))
+            compression=hdf5plugin.Blosc2(cname='blosclz', clevel=9, filters=hdf5plugin.Blosc2.SHUFFLE))
         f.close()
 
     :param str cname:
@@ -254,15 +248,13 @@ class Blosc2(h5py.filters.FilterRefBase):
 class BZip2(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using BZip2 filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'bzip2',
             data=numpy.arange(100),
-            **hdf5plugin.BZip2(blocksize=5))
+            compression=hdf5plugin.BZip2(blocksize=5))
         f.close()
 
     :param int blocksize: Size of the blocks as a multiple of 100k
@@ -279,15 +271,13 @@ class BZip2(h5py.filters.FilterRefBase):
 class FciDecomp(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'fcidecomp',
             data=numpy.arange(100),
-            **hdf5plugin.FciDecomp())
+            compression=hdf5plugin.FciDecomp())
         f.close()
     """
     filter_name = "fcidecomp"
@@ -304,13 +294,11 @@ class FciDecomp(h5py.filters.FilterRefBase):
 class LZ4(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using lz4 filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset('lz4', data=numpy.arange(100),
-            **hdf5plugin.LZ4(nbytes=0))
+            compression=hdf5plugin.LZ4(nbytes=0))
         f.close()
 
     :param int nbytes:
@@ -330,15 +318,13 @@ class LZ4(h5py.filters.FilterRefBase):
 class Zfp(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using ZFP filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'zfp',
             data=numpy.random.random(100),
-            **hdf5plugin.Zfp())
+            compression=hdf5plugin.Zfp())
         f.close()
 
     This filter provides different modes:
@@ -351,7 +337,7 @@ class Zfp(h5py.filters.FilterRefBase):
           f.create_dataset(
               'zfp_fixed_rate',
               data=numpy.random.random(100),
-              **hdf5plugin.Zfp(rate=10.0))
+              compression=hdf5plugin.Zfp(rate=10.0))
 
     - **Fixed-precision** mode: To use, set the ``precision`` argument.
       For details, see `zfp fixed-precision mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-precision-mode>`_.
@@ -361,7 +347,7 @@ class Zfp(h5py.filters.FilterRefBase):
           f.create_dataset(
               'zfp_fixed_precision',
               data=numpy.random.random(100),
-              **hdf5plugin.Zfp(precision=10))
+              compression=hdf5plugin.Zfp(precision=10))
 
     - **Fixed-accuracy** mode: To use, set the ``accuracy`` argument
       For details, see `zfp fixed-accuracy mode <https://zfp.readthedocs.io/en/latest/modes.html#fixed-accuracy-mode>`_.
@@ -371,7 +357,7 @@ class Zfp(h5py.filters.FilterRefBase):
           f.create_dataset(
               'zfp_fixed_accuracy',
               data=numpy.random.random(100),
-              **hdf5plugin.Zfp(accuracy=0.001))
+              compression=hdf5plugin.Zfp(accuracy=0.001))
 
     - **Reversible** (i.e., lossless) mode: To use, set the ``reversible`` argument to True
       For details, see `zfp reversible mode <https://zfp.readthedocs.io/en/latest/modes.html#reversible-mode>`_.
@@ -381,7 +367,7 @@ class Zfp(h5py.filters.FilterRefBase):
           f.create_dataset(
               'zfp_reversible',
               data=numpy.random.random(100),
-              **hdf5plugin.Zfp(reversible=True))
+              compression=hdf5plugin.Zfp(reversible=True))
 
     - **Expert** mode: To use, set the ``minbits``, ``maxbits``, ``maxprec`` and ``minexp`` arguments.
       For details, see `zfp expert mode <https://zfp.readthedocs.io/en/latest/modes.html#expert-mode>`_.
@@ -391,7 +377,7 @@ class Zfp(h5py.filters.FilterRefBase):
           f.create_dataset(
               'zfp_expert',
               data=numpy.random.random(100),
-              **hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1074))
+              compression=hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1074))
 
     :param float rate:
         Use fixed-rate mode and set the number of compressed bits per value.
@@ -568,15 +554,13 @@ class Sperr(h5py.filters.FilterRefBase):
 class SZ(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'sz',
             data=numpy.random.random(100),
-            **hdf5plugin.SZ())
+            compression=hdf5plugin.SZ())
         f.close()
 
     This filter provides different modes:
@@ -589,7 +573,7 @@ class SZ(h5py.filters.FilterRefBase):
           f.create_dataset(
               'sz_absolute',
               data=numpy.random.random(100),
-              **hdf5plugin.SZ(absolute=0.1))
+              compression=hdf5plugin.SZ(absolute=0.1))
 
     - **Relative** mode: To use, set the ``relative`` argument.
       It ensures that the resulting values will be within the provided relative tolerance.
@@ -600,7 +584,7 @@ class SZ(h5py.filters.FilterRefBase):
           f.create_dataset(
               'sz_relative',
               data=numpy.random.random(100),
-              **hdf5plugin.SZ(relative=0.01))
+              compression=hdf5plugin.SZ(relative=0.01))
 
     - **Point-wise relative** mode: To use, set the ``pointwise_relative`` argument.
       It ensures that each grid point of the resulting values will be within the provided relative tolerance.
@@ -610,7 +594,7 @@ class SZ(h5py.filters.FilterRefBase):
           f.create_dataset(
               'sz_pointwise_relative',
               data=numpy.random.random(100),
-              **hdf5plugin.SZ(pointwise_relative=0.01))
+              compression=hdf5plugin.SZ(pointwise_relative=0.01))
 
     For more details about the compressor `SZ <https://szcompressor.org/>`_.
     """
@@ -655,8 +639,6 @@ class SZ(h5py.filters.FilterRefBase):
 class SZ3(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ3 filter.
 
-    It can be passed as keyword arguments:
-
     - **Absolute** mode: To use, set the ``absolute`` argument.
       It ensures that the resulting values will be within the provided absolute tolerance.
 
@@ -665,7 +647,7 @@ class SZ3(h5py.filters.FilterRefBase):
           f.create_dataset(
               'sz3_absolute',
               data=numpy.random.random(100),
-              **hdf5plugin.SZ3(absolute=0.1))
+              compression=hdf5plugin.SZ3(absolute=0.1))
 
     For more details about the compressor, see `SZ3 <https://szcompressor.org/>`_.
 
@@ -723,15 +705,13 @@ class SZ3(h5py.filters.FilterRefBase):
 class Zstd(h5py.filters.FilterRefBase):
     """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
 
-    It can be passed as keyword arguments:
-
     .. code-block:: python
 
         f = h5py.File('test.h5', 'w')
         f.create_dataset(
             'zstd',
             data=numpy.arange(100),
-            **hdf5plugin.Zstd())
+            compression=hdf5plugin.Zstd())
         f.close()
 
     :param int clevel: Compression level from 1 (lowest compression) to 22 (maximum compression).
@@ -743,7 +723,7 @@ class Zstd(h5py.filters.FilterRefBase):
         f.create_dataset(
             'zstd',
             data=numpy.arange(100),
-            **hdf5plugin.Zstd(clevel=22))
+            compression=hdf5plugin.Zstd(clevel=22))
         f.close()
     """
     filter_name = "zstd"
