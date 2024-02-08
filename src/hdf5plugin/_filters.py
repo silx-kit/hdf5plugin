@@ -587,6 +587,11 @@ class SZ3(_FilterRefClass):
               **hdf5plugin.SZ3(absolute=0.1))
 
     For more details about the compressor, see `SZ3 <https://szcompressor.org/>`_.
+
+    .. warning::
+
+       Backward compatibility is currently not guaranteed:
+       See `this discussion <https://github.com/szcompressor/SZ3/issues/50#issuecomment-1901170917>`_.
     """
     filter_name = "sz3"
     filter_id = SZ3_ID
