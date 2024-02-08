@@ -22,12 +22,16 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
+from __future__ import annotations
+
 __authors__ = ["V.A. Sole", "T. Vincent"]
 __license__ = "MIT"
 __date__ = "05/12/2022"
 
 
+from functools import lru_cache
 from glob import glob
+from pathlib import Path
 import itertools
 import logging
 import os
@@ -102,12 +106,10 @@ def check_compile_flags(compiler, *flags, extension='.c'):
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Create empty source file
-        tmp_file = os.path.join(tmp_dir, 'source' + extension)
-        with open(tmp_file, 'w') as f:
-            f.write('int main (int argc, char **argv) { return 0; }\n')
-
+        tmp_file = Path(tmp_dir) / f"source{extension}"
+        tmp_file.write_text('int main (int argc, char **argv) { return 0; }\n')
         try:
-            compiler.compile([tmp_file], output_dir=tmp_dir, extra_postargs=list(flags))
+            compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
         except CompileError:
             return False
         else:
@@ -228,100 +230,102 @@ class HostConfig:
 
 class BuildConfig:
     """Describe build configuration"""
-    def __init__(
-            self,
-            config_file: str,
-            compiler=None,
-            hdf5_dir=None,
-            use_cpp11=None,
-            use_sse2=None,
-            use_avx2=None,
-            use_openmp=None,
-            use_native=None,
-    ):
-
-        self.__config_file = str(config_file)
-
-        host_config = HostConfig(compiler)
-        self.__filter_file_extension = host_config.get_shared_lib_extension()
-
-        # Build option priority order: 1. command line, 2. env. var., 3. probed values
-        if hdf5_dir is None:
-            hdf5_dir = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
-        self.__hdf5_dir = hdf5_dir
-
-        if use_cpp11 is None:
-            env_cpp11 = os.environ.get("HDF5PLUGIN_CPP11", None)
-            use_cpp11 = host_config.has_cpp11() if env_cpp11 is None else env_cpp11 == "True"
-        self.__use_cpp11 = bool(use_cpp11)
-
-        env_cpp14 = os.environ.get("HDF5PLUGIN_CPP14", None)
-        use_cpp14 = host_config.has_cpp14() if env_cpp14 is None else env_cpp14 == "True"
-        self.__use_cpp14 = bool(use_cpp14)
-
-        if use_sse2 is None:
-            env_sse2 = os.environ.get("HDF5PLUGIN_SSE2", None)
-            use_sse2 = host_config.has_sse2() if env_sse2 is None else env_sse2 == "True"
-        self.__use_sse2 = bool(use_sse2)
-
-        env_ssse3 = os.environ.get("HDF5PLUGIN_SSSE3", None)
-        use_ssse3 = host_config.has_ssse3() if env_ssse3 is None else env_ssse3 == "True"
-        self.__use_ssse3 = bool(use_ssse3)
-
-        if use_avx2 is None:
-            env_avx2 = os.environ.get("HDF5PLUGIN_AVX2", None)
-            use_avx2 = host_config.has_avx2() if env_avx2 is None else env_avx2 == "True"
-        if use_avx2 and not (use_sse2 and use_ssse3):
-            logger.error(
-                "use_avx2=True disabled: incompatible with use_sse2=False and use_ssse3=False")
-            use_avx2 = False
-        self.__use_avx2 = bool(use_avx2)
-
-        env_avx512 = os.environ.get("HDF5PLUGIN_AVX512", None)
-        use_avx512 = host_config.has_avx512() if env_avx512 is None else env_avx512 == "True"
-        if use_avx512 and not (use_sse2 and use_ssse3 and use_avx2):
-            logger.error(
-                "use_avx512=True disabled: incompatible with use_sse2=False, use_ssse3=False and use_avx2=False")
-            use_avx512 = False
-        self.__use_avx512 = bool(use_avx512)
-
-        if use_openmp is None:
-            env_openmp = os.environ.get("HDF5PLUGIN_OPENMP", None)
-            use_openmp = host_config.has_openmp() if env_openmp is None else env_openmp == "True"
-        self.__use_openmp = bool(use_openmp)
-
-        if use_native is None:
-            env_native = os.environ.get("HDF5PLUGIN_NATIVE", None)
-            use_native = host_config.has_native() if env_native is None else env_native == "True"
-        self.__use_native = bool(use_native)
-
-        # Gather used compile args
-        compile_args = []
-        if self.__use_sse2:
-            compile_args.extend(host_config.sse2_compile_args)
-        if self.__use_ssse3:
-            compile_args.extend(host_config.ssse3_compile_args)
-        if self.__use_avx2:
-            compile_args.extend(host_config.avx2_compile_args)
-        if self.__use_avx512:
-            compile_args.extend(host_config.avx512_compile_args)
-        if self.__use_native:
-            compile_args.extend(host_config.native_compile_args)
-        self.__compile_args = tuple(compile_args)
-
+    def __init__(self, config_file: Path, compiler=None):
+        self.__config_file = config_file
+        self.__host_config = HostConfig(compiler)
         self.embedded_filters = []
 
-    hdf5_dir = property(lambda self: self.__hdf5_dir)
-    filter_file_extension = property(lambda self: self.__filter_file_extension)
-    use_cpp11 = property(lambda self: self.__use_cpp11)
-    use_cpp14 = property(lambda self: self.__use_cpp14)
-    use_sse2 = property(lambda self: self.__use_sse2)
-    use_ssse3 = property(lambda self: self.__use_ssse3)
-    use_avx2 = property(lambda self: self.__use_avx2)
-    use_avx512 = property(lambda self: self.__use_avx512)
-    use_openmp = property(lambda self: self.__use_openmp)
-    use_native = property(lambda self: self.__use_native)
-    compile_args = property(lambda self: self.__compile_args)
+    @staticmethod
+    def get_hdf5_library_dirs() -> list[str]:
+        """Returns list of HDF5 library directories"""
+        if sys.platform != 'win32':
+            return []
+        hdf5_dir = os.environ.get("HDF5PLUGIN_HDF5_DIR", "src/hdf5")
+        return [f"{hdf5_dir}/lib"]
+
+    @staticmethod
+    def get_hdf5_include_dirs() -> list[str]:
+        """Returns list of HDF5 include directories"""
+        try:
+            hdf5_dir = os.environ["HDF5PLUGIN_HDF5_DIR"]
+        except KeyError:
+            hdf5_dir = "src/hdf5"
+        else:  # HDF5 directory define by environment variable
+            return [f"{hdf5_dir}/include"]
+
+        # Add folder containing H5pubconf.h
+        if sys.platform == 'win32':
+            folder = 'windows'
+        elif sys.platform == 'darwin':
+            folder = 'darwin'
+        else:
+            folder = 'linux'
+        return [f"{hdf5_dir}/include", f"{hdf5_dir}/include/{folder}"]
+
+    @property
+    def filter_file_extension(self) -> str:
+        """File extension to use for filter shared libraries"""
+        return self.__host_config.get_shared_lib_extension()
+
+    @property
+    def compile_args(self) -> tuple[str, ...]:
+        """Returns compile args to use"""
+        compile_args = []
+        if self.use_sse2:
+            compile_args.extend(self.__host_config.sse2_compile_args)
+        if self.use_ssse3:
+            compile_args.extend(self.__host_config.ssse3_compile_args)
+        if self.use_avx2:
+            compile_args.extend(self.__host_config.avx2_compile_args)
+        if self.use_avx512:
+            compile_args.extend(self.__host_config.avx512_compile_args)
+        if self.use_native:
+            compile_args.extend(self.__host_config.native_compile_args)
+        return tuple(compile_args)
+
+    @lru_cache
+    def _is_enabled(self, feature: str) -> bool:
+        """Returns True if given compilation feature is enabled.
+
+        It first checks if the corresponding HDF5PLUGIN_* environment variable is set.
+        If it is not set, it checks if both the compiler and the host support the feature.
+        """
+        assert feature in ("cpp11", "cpp14", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
+        try:
+            return os.environ[f"HDF5PLUGIN_{feature.upper()}"] == "True"
+        except KeyError:
+            pass
+        check = getattr(self.__host_config, f"has_{feature.lower()}")
+        return check()
+
+    use_cpp11 = property(lambda self: self._is_enabled('cpp11'))
+    use_cpp14 = property(lambda self: self._is_enabled('cpp14'))
+    use_sse2 = property(lambda self: self._is_enabled('sse2'))
+    use_openmp = property(lambda self: self._is_enabled('openmp'))
+    use_native = property(lambda self: self._is_enabled('native'))
+
+    def use_ssse3(self) -> bool:
+        enabled = self._is_enabled('ssse3')
+        if enabled and not self.use_sse2:
+            logger.error("use_ssse3=True disabled: incompatible with use_sse2=False")
+            return False
+        return enabled
+
+    def use_avx2(self) -> bool:
+        enabled = self._is_enabled('avx2')
+        if enabled and not (self.use_sse2 and self.use_ssse3):
+            logger.error(
+                "use_avx2=True disabled: incompatible with use_sse2=False and use_ssse3=False")
+            return False
+        return enabled
+
+    def use_avx512(self) -> bool:
+        enabled = self._is_enabled('avx512')
+        if enabled and not (self.use_sse2 and self.use_ssse3 and self.use_avx2):
+            logger.error(
+                "use_avx512=True disabled: incompatible with use_sse2=False, use_ssse3=False and use_avx2=False")
+            return False
+        return enabled
 
     USE_BMI2 = bool(
             os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True'
@@ -332,13 +336,7 @@ class BuildConfig:
     INTEL_IPP_DIR = os.environ.get("HDF5PLUGIN_INTEL_IPP_DIR", None)
     """Root directory of Intel IPP or None to disable"""
 
-    CONFIG_PY_TEMPLATE = """from collections import namedtuple
-
-HDF5PluginBuildConfig = namedtuple('HDF5PluginBuildConfig', {field_names})
-build_config = HDF5PluginBuildConfig(**{config})
-"""
-
-    def get_config_string(self):
+    def get_config_string(self) -> str:
         build_config = {
             'openmp': self.use_openmp,
             'native': self.use_native,
@@ -353,24 +351,23 @@ build_config = HDF5PluginBuildConfig(**{config})
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
         }
-        return self.CONFIG_PY_TEMPLATE.format(
-            field_names=tuple(build_config.keys()),
-            config=str(build_config)
-        )
+        return f"""from collections import namedtuple
+
+HDF5PluginBuildConfig = namedtuple('HDF5PluginBuildConfig', {tuple(build_config.keys())})
+build_config = HDF5PluginBuildConfig(**{build_config})
+"""
 
     def has_config_changed(self) -> bool:
         """Returns whether config file needs to be changed or not."""
         try:
-            with open(self.__config_file, 'r') as f:
-                return f.read() != self.get_config_string()
+            return self.__config_file.read_text() != self.get_config_string()
         except:  # noqa
             pass
         return True
 
     def save_config(self) -> None:
         """Save config as a dict in a python file"""
-        with open(self.__config_file, 'w') as f:
-            f.write(self.get_config_string())
+        self.__config_file.write_text(self.get_config_string())
 
 
 # Plugins
@@ -378,45 +375,11 @@ build_config = HDF5PluginBuildConfig(**{config})
 class Build(build):
     """Build command with extra options used by PluginBuildExt"""
 
-    user_options = [
-        ('hdf5=', None, "Deprecated, use HDF5PLUGIN_HDF5_DIR environment variable"),
-        ('openmp=', None, "Deprecated, use HDF5PLUGIN_OPENMP environment variable"),
-        ('native=', None, "Deprecated, use HDF5PLUGIN_NATIVE environment variable"),
-        ('sse2=', None, "Deprecated, use HDF5PLUGIN_SSE2 environment variable"),
-        ('avx2=', None, "Deprecated, use HDF5PLUGIN_AVX2 environment variable"),
-        ('cpp11=', None, "Deprecated, use HDF5PLUGIN_CPP11 environment variable"),
-    ]
-    user_options.extend(build.user_options)
-
-    boolean_options = build.boolean_options + ['openmp', 'native', 'sse2', 'avx2', 'cpp11']
-
-    def initialize_options(self):
-        build.initialize_options(self)
-        self.hdf5 = None
-        self.cpp11 = None
-        self.openmp = None
-        self.native = None
-        self.sse2 = None
-        self.avx2 = None
-
     def finalize_options(self):
         build.finalize_options(self)
-        for argument in ('hdf5', 'cpp11', 'openmp', 'native', 'sse2', 'avx2'):
-            if getattr(self, argument) is not None:
-                logger.warning(
-                    "--%s Deprecation warning: "
-                    "use HDF5PLUGIN_%s environement variable.",
-                    argument,
-                    "HDF5_DIR" if argument == "hdf5" else argument.upper())
         self.hdf5plugin_config = BuildConfig(
-            config_file=os.path.join(self.build_lib, "hdf5plugin", "_config.py"),
+            config_file=Path(self.build_lib) / "hdf5plugin" / "_config.py",
             compiler=self.compiler,
-            hdf5_dir=self.hdf5,
-            use_cpp11=self.cpp11,
-            use_sse2=self.sse2,
-            use_avx2=self.avx2,
-            use_openmp=self.openmp,
-            use_native=self.native,
         )
 
         if not self.hdf5plugin_config.use_cpp11:
@@ -524,7 +487,6 @@ class PluginBuildExt(build_ext):
 
         for e in self.extensions:
             if isinstance(e, HDF5PluginExtension):
-                e.set_hdf5_dir(config.hdf5_dir)
                 e.extra_compile_args.extend(config.compile_args)
 
                 if config.use_cpp11:
@@ -578,31 +540,14 @@ class HDF5PluginExtension(Extension):
 
         self.define_macros.append(('H5_USE_18_API', None))
 
+        # Add HDF5 library directories
+        self.include_dirs = BuildConfig.get_hdf5_include_dirs() + self.include_dirs
+        self.library_dirs = BuildConfig.get_hdf5_library_dirs() + self.library_dirs
+
         self.sse2 = sse2 if sse2 is not None else {}
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
         self.cpp11_required = cpp11_required
-
-    def set_hdf5_dir(self, hdf5_dir=None):
-        """Set the HDF5 installation directory to use to build the plugins.
-
-        It should contains an "include" subfolder containing the HDF5 headers,
-        and on Windows a "lib" subfolder containing the hdf5.lib file.
-
-        :param Union[str,None] hdf5_dir:
-        """
-        if hdf5_dir is None:
-            hdf5_dir = os.path.join('src', 'hdf5')
-            # Add folder containing H5pubconf.h
-            if sys.platform == 'win32':
-                folder = 'windows'
-            else:
-                folder = 'darwin' if sys.platform == 'darwin' else 'linux'
-            self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include', folder))
-
-        if sys.platform == 'win32':
-            self.library_dirs.insert(0, os.path.join(hdf5_dir, 'lib'))
-        self.include_dirs.insert(0, os.path.join(hdf5_dir, 'include'))
 
     @property
     def hdf5_plugin_name(self):
@@ -1212,31 +1157,19 @@ libraries, extensions = apply_filter_strip(
 )
 
 
-# hdf5 dynamic loading lib
-def get_hdf5_dl_clib():
-    include_dirs = []
-    hdf5_dir = os.environ.get("HDF5PLUGIN_HDF5_DIR", None)
-    if hdf5_dir is None:
-        hdf5_dir = "src/hdf5"
-        if sys.platform == 'win32':
-            folder = 'windows'
-        elif sys.platform == 'darwin':
-            folder = 'darwin'
-        else:
-            folder = 'linux'
-        include_dirs.append(f"{hdf5_dir}/include/{folder}")
-    include_dirs.append(f"{hdf5_dir}/include")
-
-    return ('hdf5_dl', {
-        'sources': ['src/hdf5_dl.c'],
-        'include_dirs': include_dirs,
-        'macros': [('H5_USE_18_API', None)],
-        'cflags': [],
-    })
-
-
 if extensions and not sys.platform == 'win32':
-    libraries.append(get_hdf5_dl_clib())
+    # Add hdf5 dynamic loading lib
+    libraries.append(
+        (
+            'hdf5_dl',
+            {
+                'sources': ['src/hdf5_dl.c'],
+                'include_dirs': BuildConfig.get_hdf5_include_dirs(),
+                'macros': [('H5_USE_18_API', None)],
+                'cflags': [],
+            }
+        )
+    )
 
 
 if __name__ == "__main__":
