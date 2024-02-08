@@ -27,33 +27,28 @@ jobs:
           - name-suffix: "wheel-h5py_2.8.0"
             os: ubuntu-latest
             python-version: '3.7'
-            BUILD_COMMAND: --wheel
             OLDEST_DEPENDENCIES: 'h5py==2.8.0'
 
           - name-suffix: "sdist-h5py_2.10.0"
             os: ubuntu-latest
             python-version: '3.8'
-            BUILD_COMMAND: --sdist
             OLDEST_DEPENDENCIES: 'h5py==2.10.0 numpy==1.23.5'
 
-          - name-suffix: "wheel-h5py_3.8.0"
+          - name-suffix: "wheel-h5py_3.10.0"
             os: ubuntu-latest
-            python-version: '3.10.8'
-            BUILD_COMMAND: --wheel
-            OLDEST_DEPENDENCIES: 'h5py==3.8.0'
+            python-version: '3.12'
+            OLDEST_DEPENDENCIES: 'h5py==3.10.0'
 
           - name-suffix: "wheel-h5py_2.10.0"
             os: macos-latest
-            python-version: '3.7.16'
-            BUILD_COMMAND: --wheel
+            python-version: '3.7'
             OLDEST_DEPENDENCIES: 'h5py==2.10.0'
             env:
               MACOSX_DEPLOYMENT_TARGET: 10.15
 
           - name-suffix: "wheel-h5py_3.8.0"
             os: macos-latest
-            python-version: '3.10.8'
-            BUILD_COMMAND: --wheel
+            python-version: '3.10'
             OLDEST_DEPENDENCIES: 'h5py==3.8.0'
 
     steps:
@@ -64,10 +59,10 @@ jobs:
           cache: 'pip'
       - name: Install build tool
         run: pip install build
-      - name: Build package
-        run: python -m build ${{ matrix.BUILD_COMMAND }}
-      - name: Install package
-        run: pip install --pre "$(ls dist/hdf5plugin-*)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Install wheel
+        run: pip install --pre "$(ls dist/hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*.whl
       - name: Run the tests with latest h5py
         run: python test/test.py
       - name: Run the tests with oldest h5py
