@@ -942,8 +942,8 @@ def get_blosc2_plugin():
     include_dirs += get_zstd_clib('include_dirs')
     define_macros.append(('HAVE_ZSTD', 1))
 
-    extra_compile_args += ['-O3', '-ffast-math', '-std=gnu99']
-    extra_compile_args += ['/Ox', '/fp:fast']
+    extra_compile_args += ['-O3', '-std=gnu99']
+    extra_compile_args += ['/Ox']
     extra_compile_args += ['-pthread']
     extra_link_args += ['-pthread']
 
