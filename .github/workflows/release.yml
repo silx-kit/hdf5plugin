@@ -119,10 +119,8 @@ jobs:
         include:
           - python-version: '3.7'
             OLDEST_DEPENDENCIES: 'h5py==2.8.0'
-            EXTRAS: ''
           - python-version: '3.12'
             OLDEST_DEPENDENCIES: 'h5py==3.10.0'
-            EXTRAS: '[test]'
 
     steps:
       - uses: actions/checkout@v4
@@ -135,10 +133,11 @@ jobs:
           pattern: cibw-wheels-*
           path: dist
           merge-multiple: true
-      - name: Install h5py and hdf5plugin
+      - name: Install hdf5plugin
+        # First select the right wheel from dist/ with pip download, then install it
         run: |
-          pip install h5py
-          pip install --no-index --no-cache --find-links=./dist "hdf5plugin${{ matrix.EXTRAS }}" --only-binary hdf5plugin
+          pip download --no-index --no-cache --no-deps --find-links=./dist --only-binary :all: hdf5plugin
+          pip install "$(ls ./hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install "$(ls ./hdf5plugin-*.whl)"
       - name: Run test with latest h5py
         run: python test/test.py
       - name: Run test with oldest h5py
