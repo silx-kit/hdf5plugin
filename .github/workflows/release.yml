@@ -45,7 +45,7 @@ jobs:
           name: cibw-sdist
           path: dist
       - name: Install sdist
-        run: pip install --pre dist/hdf5plugin*.tar.gz
+        run: pip install --pre "$(ls dist/hdf5plugin*.tar.gz)[test]"
       - name: Run tests
         run: python test/test.py
 
@@ -85,13 +85,14 @@ jobs:
           HDF5PLUGIN_OPENMP: "False"
           HDF5PLUGIN_NATIVE: "False"
           HDF5PLUGIN_SSE2: ${{ matrix.with_sse2 && 'True' || 'False' }}
+          HDF5PLUGIN_SSSE3: "False"
           HDF5PLUGIN_AVX2: "False"
           HDF5PLUGIN_AVX512: "False"
           HDF5PLUGIN_BMI2: "False"
           HDF5PLUGIN_CPP11: "True"
           HDF5PLUGIN_CPP14: "True"
 
-          CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14
+          CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_SSSE3 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14
 
           # Use Python3.11 to build wheels that are compatible with all supported version of Python
           CIBW_BUILD: cp311-*
@@ -132,10 +133,11 @@ jobs:
           pattern: cibw-wheels-*
           path: dist
           merge-multiple: true
-      - name: Install h5py and hdf5plugin
+      - name: Install hdf5plugin
+        # First select the right wheel from dist/ with pip download, then install it
         run: |
-          pip install h5py
-          pip install --no-index --no-cache --find-links=./dist hdf5plugin --only-binary hdf5plugin
+          pip download --no-index --no-cache --no-deps --find-links=./dist --only-binary :all: hdf5plugin
+          pip install "$(ls ./hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install "$(ls ./hdf5plugin-*.whl)"
       - name: Run test with latest h5py
         run: python test/test.py
       - name: Run test with oldest h5py

@@ -96,8 +96,8 @@ jobs:
           ls dist
 
       - name: Install from source package
-        run:
-          pip install --pre dist/hdf5plugin*
+        run: |
+          pip install --pre "$(ls dist/hdf5plugin-*)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*
 
       - name: Print python info
         run: |
@@ -129,5 +129,7 @@ jobs:
           CIBW_BUILD: cp39-macosx_*
           CIBW_ARCHS_MACOS: arm64
           HDF5PLUGIN_SSE2: False
+          HDF5PLUGIN_SSSE3: False
           HDF5PLUGIN_AVX2: False
+          HDF5PLUGIN_AVX512: False
           HDF5PLUGIN_NATIVE: False

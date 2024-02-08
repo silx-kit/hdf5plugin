@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2022 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2024 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -159,6 +159,11 @@ class HostConfig:
             self.sse2_compile_args = ()
 
         if self.ARCH in ('X86_32', 'X86_64'):
+            self.ssse3_compile_args = ('-mssse3',)  # There is no /arch:SSSE3
+        else:
+            self.ssse3_compile_args = ()
+
+        if self.ARCH in ('X86_32', 'X86_64'):
             self.avx2_compile_args = ('-mavx2', '/arch:AVX2')
         else:
             self.avx2_compile_args = ()
@@ -199,6 +204,16 @@ class HostConfig:
             if self.__compiler.compiler_type == "msvc":
                 return True
             return check_compile_flags(self.__compiler, "-msse2")
+        return False  # Disabled by default
+
+    def has_ssse3(self) -> bool:
+        """Check SSSE3 availability on host"""
+        if self.ARCH in ('X86_32', 'X86_64'):
+            if not has_cpu_flag('ssse3'):
+                return False  # SSSE3 not available on host
+            if self.__compiler.compiler_type == "msvc":
+                return True
+            return check_compile_flags(self.__compiler, "-mssse3")
         return False  # Disabled by default
 
     def has_avx2(self) -> bool:
@@ -273,20 +288,24 @@ class BuildConfig:
             use_sse2 = host_config.has_sse2() if env_sse2 is None else env_sse2 == "True"
         self.__use_sse2 = bool(use_sse2)
 
+        env_ssse3 = os.environ.get("HDF5PLUGIN_SSSE3", None)
+        use_ssse3 = host_config.has_ssse3() if env_ssse3 is None else env_ssse3 == "True"
+        self.__use_ssse3 = bool(use_ssse3)
+
         if use_avx2 is None:
             env_avx2 = os.environ.get("HDF5PLUGIN_AVX2", None)
             use_avx2 = host_config.has_avx2() if env_avx2 is None else env_avx2 == "True"
-        if use_avx2 and not use_sse2:
+        if use_avx2 and not (use_sse2 and use_ssse3):
             logger.error(
-                "use_avx2=True disabled: incompatible with use_sse2=False")
+                "use_avx2=True disabled: incompatible with use_sse2=False and use_ssse3=False")
             use_avx2 = False
         self.__use_avx2 = bool(use_avx2)
 
         env_avx512 = os.environ.get("HDF5PLUGIN_AVX512", None)
         use_avx512 = host_config.has_avx512() if env_avx512 is None else env_avx512 == "True"
-        if use_avx512 and not (use_sse2 and use_avx2):
+        if use_avx512 and not (use_sse2 and use_ssse3 and use_avx2):
             logger.error(
-                "use_avx512=True disabled: incompatible with use_sse2=False or use_avx2=False")
+                "use_avx512=True disabled: incompatible with use_sse2=False, use_ssse3=False and use_avx2=False")
             use_avx512 = False
         self.__use_avx512 = bool(use_avx512)
 
@@ -304,6 +323,8 @@ class BuildConfig:
         compile_args = []
         if self.__use_sse2:
             compile_args.extend(host_config.sse2_compile_args)
+        if self.__use_ssse3:
+            compile_args.extend(host_config.ssse3_compile_args)
         if self.__use_avx2:
             compile_args.extend(host_config.avx2_compile_args)
         if self.__use_avx512:
@@ -319,6 +340,7 @@ class BuildConfig:
     use_cpp11 = property(lambda self: self.__use_cpp11)
     use_cpp14 = property(lambda self: self.__use_cpp14)
     use_sse2 = property(lambda self: self.__use_sse2)
+    use_ssse3 = property(lambda self: self.__use_ssse3)
     use_avx2 = property(lambda self: self.__use_avx2)
     use_avx512 = property(lambda self: self.__use_avx512)
     use_openmp = property(lambda self: self.__use_openmp)
@@ -346,6 +368,7 @@ build_config = HDF5PluginBuildConfig(**{config})
             'native': self.use_native,
             'bmi2': self.USE_BMI2,
             'sse2': self.use_sse2,
+            'ssse3': self.use_ssse3,
             'avx2': self.use_avx2,
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
@@ -865,11 +888,28 @@ def get_blosc2_plugin():
     """
     hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src'
     blosc2_dir = 'src/c-blosc2'
+    plugins_dir = f'{blosc2_dir}/plugins'
 
     # blosc sources
     sources = glob(f'{blosc2_dir}/blosc/*.c')
-    include_dirs = [blosc2_dir, f'{blosc2_dir}/blosc', f'{blosc2_dir}/include']
-    define_macros = [('SHUFFLE_AVX512_ENABLED', 1), ('SHUFFLE_NEON_ENABLED', 1)]
+    sources += [  # Add embedded codecs, filters and tuners
+        src_file
+        for src_file in glob(f'{plugins_dir}/*.c') + glob(f'{plugins_dir}/*/*.c') + glob(f'{plugins_dir}/*/*/*.c')
+        if not os.path.basename(src_file).startswith("test")
+    ]
+    sources += glob(f'{plugins_dir}/codecs/zfp/src/*.c')  # Add ZFP embedded sources
+
+    include_dirs = [
+        blosc2_dir,
+        f'{blosc2_dir}/blosc',
+        f'{blosc2_dir}/include',
+        f'{blosc2_dir}/plugins/codecs/zfp/include',
+    ]
+    define_macros = [
+        ('HAVE_PLUGINS', 1),
+        ('SHUFFLE_AVX512_ENABLED', 1),
+        ('SHUFFLE_NEON_ENABLED', 1),
+    ]
     extra_compile_args = []
     extra_link_args = []
     libraries = []
@@ -902,9 +942,8 @@ def get_blosc2_plugin():
     include_dirs += get_zstd_clib('include_dirs')
     define_macros.append(('HAVE_ZSTD', 1))
 
-    extra_compile_args += ['-std=gnu99']  # Needed to build manylinux1 wheels
-    extra_compile_args += ['-O3', '-ffast-math']
-    extra_compile_args += ['/Ox', '/fp:fast']
+    extra_compile_args += ['-O3', '-std=gnu99']
+    extra_compile_args += ['/Ox']
     extra_compile_args += ['-pthread']
     extra_link_args += ['-pthread']
 
@@ -1289,7 +1328,10 @@ if __name__ == "__main__":
           ext_modules=extensions,
           install_requires=['h5py'],
           setup_requires=['setuptools', 'wheel'],
-          extras_require={'dev': ['sphinx', 'sphinx_rtd_theme']},
+          extras_require={
+              'dev': ['sphinx', 'sphinx_rtd_theme'],
+              'test': ['blosc2>=2.5.1', 'blosc2-grok>=0.2.2'],
+            },
           cmdclass=cmdclass,
           libraries=libraries,
           zip_safe=False,
