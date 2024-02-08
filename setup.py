@@ -186,45 +186,31 @@ class HostConfig:
             return True
         return check_compile_flags(self.__compiler, '-std=c++14', extension='.cc')
 
+    def _has_x86_simd(self, *flags) -> bool:
+        """Check x86 SIMD availability on host"""
+        if self.ARCH not in ('X86_32', 'X86_64'):
+            return False
+        if not all(has_cpu_flag(flag) for flag in flags):
+            return False
+        if self.__compiler.compiler_type == "msvc":
+            return True
+        return check_compile_flags(self.__compiler, *(f"-m{flag}" for flag in flags))
+
     def has_sse2(self) -> bool:
         """Check SSE2 availability on host"""
-        if self.ARCH in ('X86_32', 'X86_64'):
-            if not has_cpu_flag('sse2'):
-                return False  # SSE2 not available on host
-            if self.__compiler.compiler_type == "msvc":
-                return True
-            return check_compile_flags(self.__compiler, "-msse2")
-        return False  # Disabled by default
+        return self._has_x86_simd('sse2')
 
     def has_ssse3(self) -> bool:
         """Check SSSE3 availability on host"""
-        if self.ARCH in ('X86_32', 'X86_64'):
-            if not has_cpu_flag('ssse3'):
-                return False  # SSSE3 not available on host
-            if self.__compiler.compiler_type == "msvc":
-                return True
-            return check_compile_flags(self.__compiler, "-mssse3")
-        return False  # Disabled by default
+        return self._has_x86_simd('ssse3')
 
     def has_avx2(self) -> bool:
         """Check AVX2 availability on host"""
-        if self.ARCH in ('X86_32', 'X86_64'):
-            if not has_cpu_flag('avx2'):
-                return False  # AVX2 not available on host
-            if self.__compiler.compiler_type == 'msvc':
-                return True
-            return check_compile_flags(self.__compiler, '-mavx2')
-        return False  # Disabled by default
+        return self._has_x86_simd('avx2')
 
     def has_avx512(self) -> bool:
         """Check AVX512 "F" and "BW" instruction sets availability on host"""
-        if self.ARCH in ('X86_32', 'X86_64'):
-            if not (has_cpu_flag('avx512f') and has_cpu_flag('avx512bw')):
-                return False  # AVX512 F and/or BW not available on host
-            if self.__compiler.compiler_type == 'msvc':
-                return True
-            return check_compile_flags(self.__compiler, '-mavx512f', '-mavx512bw')
-        return False  # Disabled by default
+        return self._has_x86_simd('avx512f', 'avx512bw')
 
     def has_openmp(self) -> bool:
         """Check OpenMP availability on host"""
