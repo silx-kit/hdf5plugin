@@ -82,22 +82,23 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
         data = numpy.ones((self._data_natoms,), dtype=dtype).reshape(self._data_shape)
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
 
-        args = {"blosc": hdf5plugin.Blosc,
-                "blosc2": hdf5plugin.Blosc2,
-                "bshuf": hdf5plugin.Bitshuffle,
-                "bzip2": hdf5plugin.BZip2,
-                "lz4": hdf5plugin.LZ4,
-                "fcidecomp": hdf5plugin.FciDecomp,
-                "sperr": hdf5plugin.Sperr,
-                "sz": hdf5plugin.SZ,
-                "sz3": hdf5plugin.SZ3,
-                "zfp": hdf5plugin.Zfp,
-                "zstd": hdf5plugin.Zstd,
-                }[filter_name](**options)
+        compression_class = {
+            "blosc": hdf5plugin.Blosc,
+            "blosc2": hdf5plugin.Blosc2,
+            "bshuf": hdf5plugin.Bitshuffle,
+            "bzip2": hdf5plugin.BZip2,
+            "lz4": hdf5plugin.LZ4,
+            "fcidecomp": hdf5plugin.FciDecomp,
+            "sperr": hdf5plugin.Sperr,
+            "sz": hdf5plugin.SZ,
+            "sz3": hdf5plugin.SZ3,
+            "zfp": hdf5plugin.Zfp,
+            "zstd": hdf5plugin.Zstd,
+        }[filter_name]
 
         # Write
         f = h5py.File(filename, "w")
-        f.create_dataset("data", data=data, chunks=data.shape, **args)
+        f.create_dataset("data", data=data, chunks=data.shape, compression=compression_class(**options))
         f.close()
 
         # Read
@@ -149,7 +150,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     def _get_bitshuffle_version(self):
         filename = os.path.join(self.tempdir, "get_bitshuffle_version.h5")
         with h5py.File(filename, "w", driver="core", backing_store=False) as h5f:
-            h5f.create_dataset("data", numpy.arange(10), **hdf5plugin.Bitshuffle())
+            h5f.create_dataset("data", numpy.arange(10), compression=hdf5plugin.Bitshuffle())
             plist = h5f["data"].id.get_create_plist()
             assert plist.get_nfilters() == 1
             filter_ = plist.get_filter(0)
