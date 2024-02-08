@@ -32,9 +32,6 @@ install:
 
     # Upgrade distribution modules and dependencies
     - "python -m pip install --upgrade pip setuptools wheel h5py"
-
-    # Print Python info
-    - "python ci\\info_platform.py"
     - "pip freeze"
 
 

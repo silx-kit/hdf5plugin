@@ -6,7 +6,6 @@ include LICENSE
 include MANIFEST.in
 include README.rst
 include setup.py
-recursive-include ci *.py
 recursive-include doc *
 recursive-include src *
 recursive-include test *.py *.h5
