@@ -42,7 +42,7 @@ Sample code:
 
     # Compression
     f = h5py.File('test.h5', 'w')
-    f.create_dataset('data', data=numpy.arange(100), **hdf5plugin.LZ4())
+    f.create_dataset('data', data=numpy.arange(100), compression=hdf5plugin.LZ4())
     f.close()
 
     # Decompression
