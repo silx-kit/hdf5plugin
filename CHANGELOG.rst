@@ -1,3 +1,14 @@
+4.4.0: 08/02/2024
+-----------------
+
+- **blosc2** filter: Added support of `blosc2 plugins <https://www.blosc.org/posts/dynamic-plugins/>`_ (PR #295)
+- **SZ3** filter: Updated tests and documentation (PR #290, #296)
+- Updated **c-blosc2** (v2.13.2) (PR #287, #291, #293, #295)
+- Updated **zfp** (v1.0.1) (PR #287)
+
+- Added automated release workflow (PR #292, #294)
+- Updated documentation (PR #285, #288, #297)
+
 4.3.0: 09/11/2023
 -----------------
 
