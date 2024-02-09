@@ -31,12 +31,12 @@ install:
     - "SET PATH=%BUILD_PY_PATH%;%OLD_PATH%"
 
     # Upgrade distribution modules and dependencies
-    - "python -m pip install --upgrade pip setuptools wheel h5py"
+    - "python -m pip install --upgrade pip build"
     - "pip freeze"
 
 
 build_script:
-    - "python setup.py bdist_wheel"
+    - "python -m build --wheel"
     - ps: "ls dist"
 
 
