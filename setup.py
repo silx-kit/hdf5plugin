@@ -52,9 +52,8 @@ logger = logging.getLogger(__name__)
 
 try:
     import cpuinfo
-except ImportError as e:
-    logger.error("py-cpuinfo is required")
-    raise e
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("py-cpuinfo is required to build hdf5plugin, please install it.")
 except Exception:  # cpuinfo raises Exception for unsupported architectures
     logger.warning("Architecture is not supported by cpuinfo")
     cpuinfo = None
