@@ -39,6 +39,10 @@ import sys
 import sysconfig
 import tempfile
 import platform
+if sys.version_info[:2] >= (3, 8):
+    from functools import cached_property
+else:
+    cached_property = property # Fallback for Python 3.7
 from setuptools import setup, Distribution, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
@@ -282,7 +286,7 @@ class BuildConfig:
             compile_args.extend(self.__host_config.native_compile_args)
         return tuple(compile_args)
 
-    @lru_cache
+    @lru_cache(maxsize=None)
     def _is_enabled(self, feature: str) -> bool:
         """Returns True if given compilation feature is enabled.
 
@@ -303,6 +307,7 @@ class BuildConfig:
     use_openmp = property(lambda self: self._is_enabled('openmp'))
     use_native = property(lambda self: self._is_enabled('native'))
 
+    @cached_property
     def use_ssse3(self) -> bool:
         enabled = self._is_enabled('ssse3')
         if enabled and not self.use_sse2:
@@ -310,6 +315,7 @@ class BuildConfig:
             return False
         return enabled
 
+    @cached_property
     def use_avx2(self) -> bool:
         enabled = self._is_enabled('avx2')
         if enabled and not (self.use_sse2 and self.use_ssse3):
@@ -318,6 +324,7 @@ class BuildConfig:
             return False
         return enabled
 
+    @cached_property
     def use_avx512(self) -> bool:
         enabled = self._is_enabled('avx512')
         if enabled and not (self.use_sse2 and self.use_ssse3 and self.use_avx2):
