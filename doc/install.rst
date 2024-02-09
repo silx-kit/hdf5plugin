@@ -41,6 +41,7 @@ Available options
      - Description
    * - ``HDF5PLUGIN_HDF5_DIR``
      - Custom path to HDF5 (as in h5py).
+       It must contain a "include" subfolder and on Windows a "lib" subfolder with hdf5.lib.
    * - ``HDF5PLUGIN_OPENMP``
      - Whether or not to compile with `OpenMP`_.
        Default: True if probed (always False on macOS).
