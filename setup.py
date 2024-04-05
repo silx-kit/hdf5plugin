@@ -39,10 +39,7 @@ import sys
 import sysconfig
 import tempfile
 import platform
-if sys.version_info[:2] >= (3, 8):
-    from functools import cached_property
-else:
-    cached_property = property # Fallback for Python 3.7
+from functools import cached_property
 from setuptools import setup, Distribution, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
