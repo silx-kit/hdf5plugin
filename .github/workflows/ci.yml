@@ -37,19 +37,19 @@ jobs:
           - name-suffix: "wheel-h5py_3.10.0"
             os: ubuntu-latest
             python-version: '3.12'
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0'
+            OLDEST_DEPENDENCIES: 'h5py==3.10.0' 'numpy<2'
 
           - name-suffix: "wheel-h5py_2.10.0"
             os: macos-latest
             python-version: '3.7.16'
-            OLDEST_DEPENDENCIES: 'h5py==2.10.0'
+            OLDEST_DEPENDENCIES: 'h5py==2.10.0 numpy<2'
             env:
               MACOSX_DEPLOYMENT_TARGET: 10.15
 
           - name-suffix: "wheel-h5py_3.8.0"
             os: macos-latest
             python-version: '3.10.8'
-            OLDEST_DEPENDENCIES: 'h5py==3.8.0'
+            OLDEST_DEPENDENCIES: 'h5py==3.8.0 numpy<2'
 
     steps:
       - uses: actions/checkout@v4
