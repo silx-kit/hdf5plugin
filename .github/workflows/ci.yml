@@ -41,7 +41,7 @@ jobs:
 
           - name-suffix: "wheel-h5py_3.0.0"
             os: macos-11
-            python-version: '3.8'
+            python-version: '3.8.8'
             env:
               MACOSX_DEPLOYMENT_TARGET: "10.15"
             OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
