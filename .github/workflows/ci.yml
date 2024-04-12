@@ -37,7 +37,7 @@ jobs:
           - name-suffix: "wheel-h5py_3.10.0"
             os: ubuntu-latest
             python-version: '3.12'
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0' 'numpy<2'
+            OLDEST_DEPENDENCIES: 'h5py==3.10.0 numpy<2'
 
           - name-suffix: "wheel-h5py_2.10.0"
             os: macos-latest
