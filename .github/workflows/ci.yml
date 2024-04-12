@@ -40,8 +40,10 @@ jobs:
             OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 
           - name-suffix: "wheel-h5py_3.0.0"
-            os: macos-latest
-            python-version: '3.9'
+            os: macos-11
+            python-version: '3.8'
+            env:
+              MACOSX_DEPLOYMENT_TARGET: "10.15"
             OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
 
           - name-suffix: "wheel-h5py_3.10.0"
@@ -58,8 +60,6 @@ jobs:
       - name: Install build tool
         run: python -m pip install --upgrade pip build
       - name: Build sdist and wheel
-        env:
-          MACOSX_DEPLOYMENT_TARGET: 10.15
         run: python -m build
       - name: Install wheel
         run: pip install --pre "$(ls dist/hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*.whl
