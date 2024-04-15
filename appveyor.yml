@@ -22,7 +22,7 @@ environment:
         - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
           TEST_PY_PATH: "C:\\Miniconda37-x64;C:\\Miniconda37-x64\\Library\\mingw-w64\\bin;C:\\Miniconda37-x64\\Library\\usr\\bin;C:\\Miniconda37-x64\\Library\\bin;C:\\Miniconda37-x64\\Scripts;C:\\Miniconda37-x64\\bin;C:\\Miniconda37-x64\\condabin"
           INSTALL_CMD: "conda install -y"
-          OLDEST_DEPENDENCIES: "h5py==2.8.0 numpy<2"
+          OLDEST_DEPENDENCIES: "h5py==3.0.0 numpy<2"
 
 
 install:
