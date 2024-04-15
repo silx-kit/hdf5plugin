@@ -118,9 +118,9 @@ jobs:
         python-version: ['3.7', '3.12']
         include:
           - python-version: '3.7'
-            OLDEST_DEPENDENCIES: 'h5py==2.8.0'
+            OLDEST_DEPENDENCIES: 'h5py==2.8.0 "numpy<2"'
           - python-version: '3.12'
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0'
+            OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 
     steps:
       - uses: actions/checkout@v4

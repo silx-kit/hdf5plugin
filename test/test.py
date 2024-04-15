@@ -122,8 +122,7 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.shape[0] == 60, "Incorrect shape")
         self.assertTrue(data.shape[1] == 30, "Incorrect shape")
         self.assertTrue(data.dtype == expected_data.dtype, "Incorrect type")
-        self.assertTrue(numpy.alltrue(data == expected_data),
-                                      "Incorrect values read")
+        self.assertTrue(numpy.all(data == expected_data), "Incorrect values read")
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.ZFP_ID),
                          "ZFP filter not available")
@@ -142,8 +141,8 @@ class TestHDF5PluginRead(unittest.TestCase):
                             "Incorrect shape")
             self.assertTrue(original.dtype == compressed.dtype,
                             "Incorrect dtype")
-            self.assertFalse(numpy.alltrue(original == compressed),
-                                      "Values should not be identical")
+            self.assertFalse(numpy.all(original == compressed),
+                             "Values should not be identical")
             self.assertTrue(numpy.allclose(original, compressed),
                                       "Values should be close")
 
@@ -178,8 +177,8 @@ class TestHDF5PluginRead(unittest.TestCase):
                             "Incorrect shape")
             self.assertTrue(original.dtype == compressed.dtype,
                             "Incorrect dtype")
-            self.assertTrue(numpy.alltrue(original[0:8] == compressed[0, 0, :8]),
-                                      "Values should not be identical")
+            self.assertTrue(numpy.all(original[0:8] == compressed[0, 0, :8]),
+                            "Values should not be identical")
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SZ3_ID),
                          "SZ3 filter not available")
@@ -204,7 +203,7 @@ class TestHDF5PluginRead(unittest.TestCase):
             compressed = h5[compressed_name][()]
             compressed_back = h5[compressed_name+"_back"][()]
             self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
-            self.assertFalse(numpy.alltrue(original == compressed),
+            self.assertFalse(numpy.all(original == compressed),
                              "Values should not be identical")
             self.assertTrue(numpy.allclose(compressed, compressed_back),
                              "Compressed read back values should be identical to compressed data")
@@ -219,7 +218,7 @@ class TestHDF5PluginRead(unittest.TestCase):
                 h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
                                **hdf5plugin.SZ3(absolute=value))
                 output_data = h5o["/data"][()]
-            self.assertFalse(numpy.alltrue(original == output_data),
+            self.assertFalse(numpy.all(original == output_data),
                              "Values should not be identical")
             self.assertTrue(numpy.allclose(original, output_data, atol=value),
                              "Values should be within tolerance")
@@ -230,7 +229,7 @@ class TestHDF5PluginRead(unittest.TestCase):
             compressed = h5[compressed_name][()]
             compressed_back = h5[compressed_name+"_back"][()]
             self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
-            self.assertFalse(numpy.alltrue(original == compressed),
+            self.assertFalse(numpy.all(original == compressed),
                              "Values should not be identical")
 
             # under windows the results are not identical to linux
@@ -244,7 +243,7 @@ class TestHDF5PluginRead(unittest.TestCase):
                 h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
                                **hdf5plugin.SZ3(relative=value))
                 output_data = h5o["/data"][()]
-            self.assertFalse(numpy.alltrue(original == output_data),
+            self.assertFalse(numpy.all(original == output_data),
                              "Values should not be identical")
 
             # see what relative and absolute differences are acceptable for this mode
@@ -265,7 +264,7 @@ class TestHDF5PluginRead(unittest.TestCase):
             compressed = h5[compressed_name][()]
             compressed_back = h5[compressed_name+"_back"][()]
             self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
-            self.assertFalse(numpy.alltrue(original == compressed),
+            self.assertFalse(numpy.all(original == compressed),
                              "Values should not be identical")
             # Absolute error from L2 norm param from:
             # https://github.com/szcompressor/SZ3/blob/v3.1.8/include/SZ3/utils/Statistic.hpp#L44
@@ -279,9 +278,9 @@ class TestHDF5PluginRead(unittest.TestCase):
                 h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
                                **hdf5plugin.SZ3(norm2=value))
                 output_data = h5o["/data"][()]
-            self.assertFalse(numpy.alltrue(original == output_data),
+            self.assertFalse(numpy.all(original == output_data),
                              "Values should not be identical")
-            self.assertTrue(numpy.alltrue(compressed == output_data),
+            self.assertTrue(numpy.all(compressed == output_data),
                              "Compressed data should be identical")
             self.assertTrue(numpy.allclose(compressed_back, output_data, atol=abs_error),
                              "Newly L2 norm read back values should be identical to compressed data")

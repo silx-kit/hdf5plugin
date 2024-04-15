@@ -16,13 +16,13 @@ environment:
         - BUILD_PY_PATH: "C:\\Python312-x64;C:\\Python312-x64\\Scripts"
           TEST_PY_PATH: "C:\\Python312-x64;C:\\Python312-x64\\Scripts"
           INSTALL_CMD: "python -m pip install --upgrade --pre"
-          H5PY_OLDER_VERSION: "3.10.0"
+          OLDEST_DEPENDENCIES: "h5py==3.10.0 numpy<2"
 
         # Miniconda37
         - BUILD_PY_PATH: "C:\\Python37-x64;C:\\Python37-x64\\Scripts"
           TEST_PY_PATH: "C:\\Miniconda37-x64;C:\\Miniconda37-x64\\Library\\mingw-w64\\bin;C:\\Miniconda37-x64\\Library\\usr\\bin;C:\\Miniconda37-x64\\Library\\bin;C:\\Miniconda37-x64\\Scripts;C:\\Miniconda37-x64\\bin;C:\\Miniconda37-x64\\condabin"
           INSTALL_CMD: "conda install -y"
-          H5PY_OLDER_VERSION: "2.8.0"
+          OLDEST_DEPENDENCIES: "h5py==2.8.0 numpy<2"
 
 
 install:
@@ -31,15 +31,12 @@ install:
     - "SET PATH=%BUILD_PY_PATH%;%OLD_PATH%"
 
     # Upgrade distribution modules and dependencies
-    - "python -m pip install --upgrade pip setuptools wheel h5py"
-
-    # Print Python info
-    - "python ci\\info_platform.py"
+    - "python -m pip install --upgrade pip build"
     - "pip freeze"
 
 
 build_script:
-    - "python setup.py bdist_wheel"
+    - "python -m build --wheel"
     - ps: "ls dist"
 
 
@@ -61,7 +58,7 @@ test_script:
     - "python test\\test.py"
 
     # Test with oldest available wheel of h5py
-    - "%INSTALL_CMD% h5py==%H5PY_OLDER_VERSION%"
+    - "%INSTALL_CMD% %OLDEST_DEPENDENCIES%"
     - "pip freeze"
     - "python test\\test.py"
 

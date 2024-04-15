@@ -2,12 +2,10 @@ include appveyor.yml
 include build-deb.sh
 include CHANGELOG.rst
 include copyright
-include cpuinfo.py
 include LICENSE
 include MANIFEST.in
 include README.rst
 include setup.py
-recursive-include ci *.py
 recursive-include doc *
 recursive-include src *
 recursive-include test *.py *.h5

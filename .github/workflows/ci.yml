@@ -24,109 +24,60 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name-suffix: "bdist_wheel-h5py_2.8.0"
+          - name-suffix: "wheel-h5py_2.8.0"
             os: ubuntu-latest
             python-version: '3.7'
-            BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 2.8.0
+            OLDEST_DEPENDENCIES: 'h5py==2.8.0'
 
           - name-suffix: "sdist-h5py_2.10.0"
             os: ubuntu-latest
             python-version: '3.8'
-            BUILD_COMMAND: sdist
-            H5PY_OLDER_VERSION: 2.10.0
-            NUMPY_OLDER_VERSION: 1.23.5
+            OLDEST_DEPENDENCIES: 'h5py==2.10.0 numpy==1.23.5'
 
-          - name-suffix: "bdist_wheel-h5py_3.8.0"
+          - name-suffix: "wheel-h5py_3.10.0"
             os: ubuntu-latest
-            python-version: '3.10.8'
-            BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 3.8.0
+            python-version: '3.12'
+            OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 
-          - name-suffix: "bdist_wheel-h5py_2.10.0"
+          - name-suffix: "wheel-h5py_2.10.0"
             os: macos-latest
             python-version: '3.7.16'
-            BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 2.10.0
+            OLDEST_DEPENDENCIES: 'h5py==2.10.0 "numpy<2"'
             env:
               MACOSX_DEPLOYMENT_TARGET: 10.15
 
-          - name-suffix: "bdist_wheel-h5py_3.8.0"
+          - name-suffix: "wheel-h5py_3.8.0"
             os: macos-latest
             python-version: '3.10.8'
-            BUILD_COMMAND: bdist_wheel
-            H5PY_OLDER_VERSION: 3.8.0
+            OLDEST_DEPENDENCIES: 'h5py==3.8.0 "numpy<2"'
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      # Runs a single command using the runners shell
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      # Display the python version
-      - name: Display Python version
-        run:
-          python -c "import sys; print(sys.version)"
-
-      - name: Upgrade distribution modules
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade setuptools
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Install build dependencies
-        run: |
-          pip install --upgrade wheel
-          pip install --upgrade numpy
-
-      - name: Install h5py for tests
-        run: |
-          pip install --pre h5py
-
-      - name: Generate source package or wheel
-        run: |
-          python setup.py ${{ matrix.BUILD_COMMAND }}
-          ls dist
-
-      - name: Install from source package
-        run: |
-          pip install --pre "$(ls dist/hdf5plugin-*)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*
-
-      - name: Print python info
-        run: |
-           python ./ci/info_platform.py
-           pip list
-
+          cache: 'pip'
+      - name: Install build tool
+        run: python -m pip install --upgrade pip build
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Install wheel
+        run: pip install --pre "$(ls dist/hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*.whl
       - name: Run the tests with latest h5py
-        run:
-          python test/test.py
-
-      - name: Run the tests with oldest available wheel of h5py
+        run: python test/test.py
+      - name: Run the tests with oldest h5py
         run: |
-          if [ -n "${{ matrix.NUMPY_OLDER_VERSION }}" ]; then
-              pip install --upgrade numpy==${{ matrix.NUMPY_OLDER_VERSION }};
-          fi
-          pip install --upgrade h5py==${{ matrix.H5PY_OLDER_VERSION }}
-          pip list
+          pip install ${{ matrix.OLDEST_DEPENDENCIES }}
           python test/test.py
 
   build_wheels_macos:
     name: Build ARM64 wheels on macos-11
     runs-on: macos-11
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.13.0
+      - uses: actions/checkout@v4
+      - uses: pypa/cibuildwheel@v2.16.5
         env:
-          CIBW_BUILD: cp39-macosx_*
+          CIBW_BUILD: cp311-macosx_*
           CIBW_ARCHS_MACOS: arm64
           HDF5PLUGIN_SSE2: False
           HDF5PLUGIN_SSSE3: False

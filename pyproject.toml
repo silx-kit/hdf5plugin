@@ -1,3 +1,56 @@
 [build-system]
-requires = ["py-cpuinfo==8.0.0", "setuptools", "wheel>=0.34.0"]
+requires = ["py-cpuinfo==9.0.0", "setuptools>=62.4.0", "wheel>=0.34.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "hdf5plugin"
+authors = [
+    {name = "ESRF", email = "silx@esrf.fr"}
+]
+description = "HDF5 Plugins for Windows, MacOS, and Linux"
+readme = "README.rst"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: MacOS X",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: BSD License",
+    "License :: OSI Approved :: zlib/libpng License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["h5py"]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/silx-kit/hdf5plugin"
+Documentation = "http://www.silx.org/doc/hdf5plugin/latest/"
+Repository = "https://github.com/silx-kit/hdf5plugin"
+
+[project.optional-dependencies]
+doc = [
+    "ipython",
+    "nbsphinx",
+    "sphinx",
+    "sphinx_rtd_theme",
+]
+test = [
+    "blosc2>=2.5.1",
+    "blosc2-grok>=0.2.2",
+]
+
+[tool.setuptools]
+packages = ["hdf5plugin"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "hdf5plugin._version.strictversion"}
