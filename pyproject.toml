@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hdf5plugin"
 authors = [
-    {name = "ESRF - Data Analysis Unit", email = "silx@esrf.fr"}
+    {name = "ESRF", email = "silx@esrf.fr"}
 ]
 description = "HDF5 Plugins for Windows, MacOS, and Linux"
 readme = "README.rst"
