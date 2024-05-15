@@ -1,0 +1,33 @@
+LFT0.12
+
+#
+#  CohenDaubechiesFeauveau.9-7.lft
+#
+#  A lifting implementation of this biorthogonal wavelet filter bank
+#  designed as a spline variant with less dissimilar lengths.  Original
+#  filter-bank coefficients published by Cohen et al.; lifted implementation
+#  described by Daubechies and Sweldens.  This biorothogonal wavelet has
+#  seen widespread use (usually in filter-bank form) in
+#  image-processing applications since it was used by Antonini, et al.
+#
+#  Permitted boundary methods:
+#    symmetric extension, periodic extension, boundary wavelet
+#
+#  Permitted signal length:
+#    any, start with even- or odd-indexed sample
+#
+#  References:
+#    A. Cohen, I. Daubechies, J. C. Feauveau, "Biorthogonal Bases of
+#      Compactly Supported Wavelets," Communications on Pure and
+#      Applied Mathematics, vol. 45, no. 5, pp. 485-560, May 1992.
+#
+#    I. Daubechies and W. Sweldens, "Factoring Wavelet Transforms Into
+#      Lifting Steps," J. Fourier Anal. Appl., vol. 4, no. 3, 
+#      pp. 245-267, 1998.
+#
+#    M. Antonini, M. Barlaud, P. Mathieu, I. Daubechies, "Image Coding Using
+#      Wavelet Transform," IEEE Transactions on Image Processing, vol. 1,
+#      no. 2, pp. 205-220, April 1992.
+#
+
+2
