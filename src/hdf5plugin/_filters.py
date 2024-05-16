@@ -24,6 +24,7 @@
 # ###########################################################################*/
 
 import logging
+import math
 import struct
 from collections.abc import Mapping
 import h5py
@@ -64,6 +65,9 @@ SZ3_ID = 32024
 
 FCIDECOMP_ID = 32018
 """FCIDECOMP filter ID"""
+
+SPERR_ID = 32028
+"""SPERR filter ID"""
 
 
 try:
@@ -482,6 +486,112 @@ class Zfp(_FilterRefClass):
         logger.info(f"filter options = {self.filter_options}")
 
 
+class Sperr(_FilterRefClass):
+    """``h5py.Group.create_dataset``'s compression arguments for using SPERR filter.
+
+    It can be passed as keyword arguments:
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'sperr',
+            data=numpy.random.random(1000).reshape(100, 10),
+            **hdf5plugin.SPERR(rate=16))
+        f.close()
+
+    This filter provides different modes:
+
+    - **Fixed bit-per-pixel (BPP)**:
+      The quality argument provides the target bitrate (range: 0.0 < quality < 64.0)
+
+      .. code-block:: python
+
+        f.create_dataset(
+            'sperr_fixed_bit-per-pixel',
+            data=numpy.random.random(1000).reshape(100, 10),
+            **hdf5plugin.SPERR(rate=10))
+
+    - **Fixed peak signal-to-noise ratio (PSNR)**:
+      The quality argument provides the target PSNR (range: 0.0 < quality)
+
+      .. code-block:: python
+
+        f.create_dataset(
+            'sperr_fixed_peak_signal-to-noise_ratio',
+            data=numpy.random.random(1000).reshape(100, 10),
+            **hdf5plugin.SPERR(peak_signal_to_noise_ratio=1e-6))
+
+    - **Fixed point-wise error (PWE)**:
+      The quality argument provides the PWE tolerance (range: 0.0 < quality)
+
+      .. code-block:: python
+
+        f.create_dataset(
+            'sperr_fixed_point-wise_error',
+            data=numpy.random.random(1000).reshape(100, 10),
+            **hdf5plugin.SPERR(point_wise_error=1e-4))
+
+    For more details, see `H5Z-SPERR <https://github.com/NCAR/H5Z-SPERR>`_.
+    """
+    filter_name = "sperr"
+    filter_id = SPERR_ID
+
+    _FRACTIONAL_BITS = 16
+    _INTEGER_BITS = 12
+
+    def __init__(
+            self,
+            rate: float | None = None,
+            peak_signal_to_noise_ratio: float | None = None,
+            point_wise_error: float | None = None):
+        if (rate, peak_signal_to_noise_ratio, point_wise_error).count(None) < 2:
+            raise TypeError("hdf5plugin.Sperr() takes at most one not None argument")
+
+        if peak_signal_to_noise_ratio is not None:
+            assert peak_signal_to_noise_ratio > 0
+            mode = 2
+            quality = peak_signal_to_noise_ratio
+        elif point_wise_error is not None:
+            assert point_wise_error > 0
+            mode = 3
+            quality = point_wise_error
+        else:
+            assert rate is None or 0 < rate < 64
+            mode = 1
+            quality = 16 if rate is None else rate
+
+        self.filter_options = self.__pack_options(mode, quality)
+
+    @classmethod
+    def __pack_options(cls, mode: int, quality: float) -> tuple[int]:
+        assert mode in (1, 2, 3)
+        assert quality > 0
+
+        if mode in (1, 2):
+            ret = int(round(quality * (1 << cls._FRACTIONAL_BITS)))
+        else:  # mode == 3
+            quality_log = math.log2(quality)
+            if quality_log < 0:
+                ret = int(math.ceil(abs(quality_log) * (1 << cls._FRACTIONAL_BITS)))
+                # Store negative sign
+                ret |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS -1)
+            else:
+                ret = int(math.floor(quality_log * (1 << cls._FRACTIONAL_BITS)))
+
+        # encode mode in the top 4 bits
+        if mode == 1:
+            mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
+        elif mode == 2:
+            mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
+        else:  # mode == 3
+            mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
+            mask |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
+        ret |= mask
+
+        return (ret,)
+
+
 class SZ(_FilterRefClass):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
 
@@ -671,7 +781,7 @@ class Zstd(_FilterRefClass):
         self.filter_options = (clevel,)
 
 
-FILTER_CLASSES = Bitshuffle, Blosc, Blosc2, BZip2, FciDecomp, LZ4, SZ, SZ3, Zfp, Zstd
+FILTER_CLASSES = Bitshuffle, Blosc, Blosc2, BZip2, FciDecomp, LZ4, Sperr, SZ, SZ3, Zfp, Zstd
 
 
 FILTERS = dict((cls.filter_name, cls.filter_id) for cls in FILTER_CLASSES)
