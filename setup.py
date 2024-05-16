@@ -191,6 +191,21 @@ class HostConfig:
             return True
         return check_compile_flags(self.__compiler, '-std=c++14', extension='.cc')
 
+    @lru_cache()
+    def get_cpp20_flag(self) -> str | None:
+        """Returns C++20 compiler flag or None if not supported"""
+        if self.__compiler.compiler_type == 'msvc':
+            return None  # TODO
+        # -std=c++20 if clang>=10 or gcc>=10 else -std=c++2a
+        for flag in ('-std=c++20', '-std=c++2a'):
+            if check_compile_flags(self.__compiler, flag, extension='.cc'):
+                return flag
+        return None
+
+    def has_cpp20(self) -> bool:
+        """Check C++20 availability on host"""
+        return self.get_cpp20_flag() is not None
+
     def _has_x86_simd(self, *flags) -> bool:
         """Check x86 SIMD availability on host"""
         if self.ARCH not in ('X86_32', 'X86_64'):
@@ -286,6 +301,11 @@ class BuildConfig:
             compile_args.extend(self.__host_config.native_compile_args)
         return tuple(compile_args)
 
+    @property
+    def cpp20_compile_arg(self) -> str | None:
+        """Returns C++20 compilation flag or None if not supported"""
+        return self.__host_config.get_cpp20_flag()
+
     @lru_cache(maxsize=None)
     def _is_enabled(self, feature: str) -> bool:
         """Returns True if given compilation feature is enabled.
@@ -293,7 +313,7 @@ class BuildConfig:
         It first checks if the corresponding HDF5PLUGIN_* environment variable is set.
         If it is not set, it checks if both the compiler and the host support the feature.
         """
-        assert feature in ("cpp11", "cpp14", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
+        assert feature in ("cpp11", "cpp14", "cpp20", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
         try:
             return os.environ[f"HDF5PLUGIN_{feature.upper()}"] == "True"
         except KeyError:
@@ -303,6 +323,7 @@ class BuildConfig:
 
     use_cpp11 = property(lambda self: self._is_enabled('cpp11'))
     use_cpp14 = property(lambda self: self._is_enabled('cpp14'))
+    use_cpp20 = property(lambda self: self._is_enabled('cpp20'))
     use_sse2 = property(lambda self: self._is_enabled('sse2'))
     use_openmp = property(lambda self: self._is_enabled('openmp'))
     use_native = property(lambda self: self._is_enabled('native'))
@@ -353,6 +374,7 @@ class BuildConfig:
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
             'cpp14': self.use_cpp14,
+            'cpp20': self.use_cpp20,
             'ipp': self.INTEL_IPP_DIR is not None,
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
@@ -412,6 +434,19 @@ class Build(build):
                 if '-std=c++14' not in ext.extra_compile_args
             ]
 
+        if not self.hdf5plugin_config.use_cpp20:
+            # Filter out C++20 libraries
+            self.distribution.libraries = [
+                (name, info) for name, info in self.distribution.libraries
+                if '-std=c++20' not in info.get('cflags', [])
+            ]
+
+            # Filter out C++20-only extensions
+            self.distribution.ext_modules = [
+                ext for ext in self.distribution.ext_modules
+                if '-std=c++20' not in ext.extra_compile_args
+            ]
+
         self.hdf5plugin_config.embedded_filters = [
             ext.hdf5_plugin_name for ext in self.distribution.ext_modules
             if isinstance(ext, HDF5PluginExtension)
@@ -458,10 +493,17 @@ class BuildCLib(build_clib):
                 cflags = [f for f in cflags if not f.endswith('openmp')]
 
             prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
-            build_info['cflags'] = [
+            cflags = [
                 f for f in cflags if f.startswith(prefix)
             ]
 
+            # Patch C++20 flag for older gcc/clang support
+            if '-std=c++20' in cflags:
+                if config.cpp20_compile_arg is None:
+                    raise RuntimeError("Cannot compile C++20 code with current compiler")
+                cflags = [f for f in cflags if f != '-std=c++20'] + [config.cpp20_compile_arg]
+
+            build_info['cflags'] = cflags
             updated_libraries.append((lib_name, build_info))
 
         super().build_libraries(updated_libraries)
