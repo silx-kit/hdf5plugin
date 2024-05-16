@@ -497,7 +497,7 @@ class Sperr(_FilterRefClass):
         f.create_dataset(
             'sperr',
             data=numpy.random.random(1000).reshape(100, 10),
-            **hdf5plugin.SPERR(rate=16))
+            **hdf5plugin.Sperr(rate=16))
         f.close()
 
     This filter provides different modes:
@@ -510,7 +510,7 @@ class Sperr(_FilterRefClass):
         f.create_dataset(
             'sperr_fixed_bit-per-pixel',
             data=numpy.random.random(1000).reshape(100, 10),
-            **hdf5plugin.SPERR(rate=10))
+            **hdf5plugin.Sperr(rate=10))
 
     - **Fixed peak signal-to-noise ratio (PSNR)**:
       The quality argument provides the target PSNR (range: 0.0 < quality)
@@ -520,7 +520,7 @@ class Sperr(_FilterRefClass):
         f.create_dataset(
             'sperr_fixed_peak_signal-to-noise_ratio',
             data=numpy.random.random(1000).reshape(100, 10),
-            **hdf5plugin.SPERR(peak_signal_to_noise_ratio=1e-6))
+            **hdf5plugin.Sperr(peak_signal_to_noise_ratio=1e-6))
 
     - **Fixed point-wise error (PWE)**:
       The quality argument provides the PWE tolerance (range: 0.0 < quality)
@@ -530,7 +530,7 @@ class Sperr(_FilterRefClass):
         f.create_dataset(
             'sperr_fixed_point-wise_error',
             data=numpy.random.random(1000).reshape(100, 10),
-            **hdf5plugin.SPERR(point_wise_error=1e-4))
+            **hdf5plugin.Sperr(point_wise_error=1e-4))
 
     For more details, see `H5Z-SPERR <https://github.com/NCAR/H5Z-SPERR>`_.
     """

@@ -265,9 +265,9 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     def testSperr(self):
         """Write/read test with Sperr filter plugin"""
         tests = [
-            {'lossless': False, 'bpp': 16},
-            # {'lossless': False, 'psnr': 1e-6},
-            # {'lossless': False, 'pwe': 1e-4},
+            {'lossless': False, 'rate': 16},
+            # {'lossless': False, 'peak_signal_to_noise_ratio': 1e-6},
+            # {'lossless': False, 'point_wise_error': 1e-4},
         ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
