@@ -725,6 +725,24 @@ def get_snappy_clib(field=None):
     return config[field]
 
 
+def get_sperr_clib(field=None):
+    """sperr static lib build config"""
+    sperr_dir = "src/SPERR"
+
+    config = dict(
+        sources=glob(f"{sperr_dir}/src/*.cpp"),
+        include_dirs=[f"{sperr_dir}/include"],
+        macros=[
+            ("SPERR_VERSION_MAJOR", 0),
+            ("USE_VANILLA_CONFIG", 1),
+        ],
+        cflags=["-std=c++20"],  # TODO
+    )
+    if field is None:
+        return 'sperr', config
+    return config[field]
+
+
 def get_zfp_clib(field=None):
     """ZFP static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
@@ -1148,6 +1166,24 @@ def get_sz3_plugin():
 PLUGIN_LIB_DEPENDENCIES['sz3'] = ('zstd',)
 
 
+def get_sperr_plugin():
+    h5z_sperr_dir = "src/H5Z-SPERR"
+
+    return HDF5PluginExtension(
+        "hdf5plugin.plugins.libh5sperr",
+        sources=[f"{h5z_sperr_dir}/src/h5z-sperr.c"],
+        include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
+        extra_link_args=['-lstdc++'],
+        define_macros=[
+            ("SPERR_VERSION_MAJOR", 0),
+            ("USE_VANILLA_CONFIG", 1),
+        ],
+    )
+
+
+PLUGIN_LIB_DEPENDENCIES['sperr'] = ("sperr",)
+
+
 def apply_filter_strip(libraries, extensions, dependencies):
     """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
     stripped_filters = set(
@@ -1183,6 +1219,7 @@ library_list = [
     get_charls_clib(),
     get_lz4_clib(),
     get_snappy_clib(),
+    get_sperr_clib(),
     get_zfp_clib(),
     get_zlib_clib(),
     get_zstd_clib(),
@@ -1200,6 +1237,7 @@ libraries, extensions = apply_filter_strip(
         get_zstandard_plugin(),
         get_sz_plugin(),
         get_sz3_plugin(),
+        get_sperr_plugin(),
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )
