@@ -66,7 +66,7 @@ int main (int argc, char* argv[])
      */
     int mode = atoi(argv[4]);
     double quality = atof(argv[5]);
-    unsigned int cd_values = H5Z_SPERR_make_cd_values(mode, quality);
+    unsigned int cd_values = H5Z_SPERR_make_cd_values(mode, quality, 0);
     status = H5Pset_filter(prop, H5Z_FILTER_SPERR, H5Z_FLAG_MANDATORY, 1, &cd_values);
 
     /*
@@ -102,8 +102,8 @@ int main (int argc, char* argv[])
     /* Find the maximum difference */
     double max = 0.0;
     for (size_t i = 0; i < npoints; i++)
-      if (fabsf(comp[i] - data[i]) > max)
-        max = fabsf(comp[i] - data[i]);
+      if (fabs(comp[i] - data[i]) > max)
+        max = fabs(comp[i] - data[i]);
 
     printf("max diff = %g\n", max);
 

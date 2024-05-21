@@ -11,14 +11,15 @@
 #define INTEGER_BITS 12
 
 /*
- * This function encodes both the SPERR compression mode and compression quality into
- * a 32-bit unsigned int. Valid input and its meaning:
+ * This function encodes 1) the SPERR compression mode, 2) compression quality, 3) if to swap
+ * rank orders into a 32-bit unsigned int. Valid input and its meaning:
  *   - Fixed bitrate compression:                mode = 1; quality = target bitrate.
  *   - Fixed PSNR compression:                   mode = 2; quality = target PSNR.
  *   - Fixed PWE (point-wise error) compression: mode = 3; quality = PWE tolerance.
+ *   - In all modes, swap != 0 means to perform rank order swaps.
  * The encoded value is returned and needs to be passed to HDF5 as `cd_values[1]`.
  */
-unsigned int H5Z_SPERR_make_cd_values(int mode, double quality)
+unsigned int H5Z_SPERR_make_cd_values(int mode, double quality, int swap)
 {
   assert(1 <= mode && mode <= 3);
   assert(quality > 0.0);
@@ -49,7 +50,7 @@ unsigned int H5Z_SPERR_make_cd_values(int mode, double quality)
       ret |= 1u << (INTEGER_BITS + FRACTIONAL_BITS - 1);
   }
 
-  /* encode mode in the top 4 bits */
+  /* Encode mode in bit 28, 29, and 30. */
   unsigned int mask = 0;
   switch (mode) {
     case 1:
@@ -66,14 +67,22 @@ unsigned int H5Z_SPERR_make_cd_values(int mode, double quality)
   }
   ret |= mask;
 
+  /* Encode swap flag at bit 31. */
+  if (swap)
+    ret |= 1u << (INTEGER_BITS + FRACTIONAL_BITS + 3);
+
   return ret;
 }
 
 void H5Z_SPERR_decode_cd_values(unsigned int cd_val, /* input */
                                 int* mode,           /* output */
-                                double* quality)     /* output */
+                                double* quality,     /* output */
+                                int* swap)           /* output */
 {
-  /* decode the compression mode from the top 4 bits */
+  /* Decode the rank swap flag. */
+  *swap = cd_val >> (INTEGER_BITS + FRACTIONAL_BITS + 3);
+
+  /* Decode the compression mode from the next 3 bits */
   unsigned int bit1 = (cd_val >> (INTEGER_BITS + FRACTIONAL_BITS)) & 1u;
   unsigned int bit2 = (cd_val >> (INTEGER_BITS + FRACTIONAL_BITS + 1)) & 1u;
   if (bit1 && !bit2)
@@ -87,7 +96,7 @@ void H5Z_SPERR_decode_cd_values(unsigned int cd_val, /* input */
   if ((cd_val >> (INTEGER_BITS + FRACTIONAL_BITS - 1)) & 1u)
     negative = 1;
 
-  /* zero out the top 4 bits and the sign bit (5 bits in total) */
+  /* Zero out the top 4 bits and the sign bit (5 bits in total) */
   unsigned int mask = 1u << (INTEGER_BITS + FRACTIONAL_BITS - 1);
   cd_val &= (mask - 1);
 

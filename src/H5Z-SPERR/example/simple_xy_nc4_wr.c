@@ -79,10 +79,11 @@ main()
     /*
      * Encode SPERR compression parameters:
      * 1 == fixed bitrate mode 
-     * 3.14 == target bitrate
+     * 6.4 == target bitrate
+     * 0 == no rank swaps
      * 32028 == registered ID for the SPERR filter.
      */
-    unsigned int cd_values = H5Z_SPERR_make_cd_values(1, 6.4);
+    unsigned int cd_values = H5Z_SPERR_make_cd_values(1, 6.4, 0);
     if ((retval = nc_def_var_filter(ncid, varid, 32028, 1, &cd_values)))
       ERR(retval);
 
