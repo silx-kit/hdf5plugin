@@ -66,7 +66,7 @@ int main (int argc, char* argv[])
      */
     int mode = atoi(argv[5]);
     double quality = atof(argv[6]);
-    unsigned int cd_values = H5Z_SPERR_make_cd_values(mode, quality);
+    unsigned int cd_values = H5Z_SPERR_make_cd_values(mode, quality, 0);
     status = H5Pset_filter(prop, H5Z_FILTER_SPERR, H5Z_FLAG_MANDATORY, 1, &cd_values);
 
     /*

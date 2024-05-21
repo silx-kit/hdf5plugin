@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 option( BUILD_SHARED_LIBS "Build shared libraries" ON )
-option( BUILD_CLI_UTILITIES "Build a set of command line utilities" OFF )
+option( BUILD_CLI_UTILITIES "Build a set of command line utilities" ON )
 option( H5ZPLUGIN_PREFER_RPATH "Set RPATH; this can fight with package managers 
                                 so turn off when building for them" ON )
 mark_as_advanced(FORCE H5ZPLUGIN_PREFER_RPATH)
@@ -47,3 +47,8 @@ endif()
 #
 include( GNUInstallDirs )
 install( TARGETS h5z-sperr LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
+
+if( BUILD_CLI_UTILITIES )
+  install( TARGETS generate_cd_values decode_cd_values
+           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+endif()

@@ -1,12 +1,16 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <SPERR_C_API.h>
 
 #include <H5PLextern.h>
 #include <hdf5.h>
 
+#include <SPERR_C_API.h>
 #include "h5z-sperr.h"
+
+#ifndef NDEBUG
+#include <stdio.h>
+#endif
 
 static htri_t H5Z_can_apply_sperr(hid_t dcpl_id, hid_t type_id, hid_t space_id)
 {
@@ -23,32 +27,56 @@ static htri_t H5Z_can_apply_sperr(hid_t dcpl_id, hid_t type_id, hid_t space_id)
     return 0;
   }
 
-  /* Get the dataspace rank. Fail if not 2 or 3. */
+  /* Get the dataspace rank. Fail if not 2, 3, or 4. */
   int ndims = H5Sget_simple_extent_ndims(space_id);
-  if (ndims < 2 || ndims > 3) {
+  if (ndims < 2 || ndims > 4) {
+#ifndef NDEBUG
+    printf("%s: %d, ndims = %d\n", __FILE__, __LINE__, ndims);
+#endif
     H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADTYPE,
-            "bad dataspace ranks. Only rank==2 or rank==3 are supported in H5Z-SPERR");
+            "bad dataspace ranks. Only rank==2, rank==3, or rank==4 with the time dimension==1 are "
+            "supported in H5Z-SPERR");
     return 0;
   }
 
-  /* Chunks have to be 2D or 3D as well, and to be conservative, we also check chunk sizes. */
-  hsize_t chunks[3];
-  ndims = H5Pget_chunk(dcpl_id, 3, chunks);
-  if (ndims < 2 || ndims > 3) {
+  /* Chunks have to be 2D, 3D, or 4D as well. */
+  hsize_t chunks[4] = {0, 0, 0, 0};
+  ndims = H5Pget_chunk(dcpl_id, 4, chunks);
+  if (ndims < 2 || ndims > 4) {
+#ifndef NDEBUG
+    printf("%s: %d, ndims = %d\n", __FILE__, __LINE__, ndims);
+#endif
     H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADTYPE,
-            "bad chunk ranks. Only rank==2 or rank==3 are supported in H5Z-SPERR");
+            "bad chunk ranks. Only rank==2, rank==3, or rank==4 with the time dimension==1 are "
+            "supported in H5Z-SPERR");
     return 0;
   }
 
-  bool bad_chunk = false;
+  /* Find out the real dimension. */
+  int real_dims = 0;
+  for (int i = 0; i < 4; i++)
+    if (chunks[i] > 1)
+      real_dims++;
+  if (real_dims < 2 || real_dims > 3) {
+#ifndef NDEBUG
+    printf("%s: %d, real_dims = %d\n", __FILE__, __LINE__, real_dims);
+#endif
+    H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADTYPE,
+            "bad chunk dimensions: only true 2D slices or 3D volumes are supported in H5Z-SPERR");
+    return 0;
+  }
+
+  /* Real chunk dimensions must be at least 9 */
   for (int i = 0; i < ndims; i++) {
-    if (chunks[i] < 9)
-      bad_chunk = true;
-  }
-  if (bad_chunk) {
-    H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADTYPE,
-            "bad chunk dimensions. (may relax this requirement in the future)");
-    return 0;
+    if (chunks[i] > 1 && chunks[i] < 9) {
+#ifndef NDEBUG
+      printf("%s: %d, chunks[%d] = %llu\n", __FILE__, __LINE__, i, chunks[i]);
+#endif
+      H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADTYPE,
+              "bad chunk dimensions: any dimension must be at least 9. (may relax this requirement "
+              "in the future)");
+      return 0;
+    }
   }
 
   return 1;
@@ -65,32 +93,25 @@ static unsigned int H5Z_SPERR_pack_data_type(int rank,  /* Input */
 
   /*
    * Bit position 0-3 to encode the rank.
-   * Only support 2, 3 right now.
+   * Since this function is called from `set_local()`, it should always be 2 or 3.
    */
   if (rank == 2) {
     ret |= 1u << 1; /* Position 1 */
   }
-  else if (rank == 3) {
+  else {
+    assert(rank == 3);
     ret |= 1u;      /* Position 0 */
     ret |= 1u << 1; /* Position 1 */
-  }
-  else {
-    H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADVALUE,
-            "Only 2D or 3D spaces are supported.");
-    return 0;
   }
 
   /*
    * Bit position 4-7 encode data type.
    * Only float (1) and double (0) are supported right now.
    */
-  if (dtype == 1)       /* is_float   */
-    ret |= 1u << 4;     /* Position 4 */
-  else if (dtype > 1) { /* error */
-    H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADTYPE,
-            "Only 32-bit or 64-bit floating point values are supported.");
-    return 0;
-  }
+  if (dtype == 1)   /* is_float   */
+    ret |= 1u << 4; /* Position 4 */
+  else
+    assert(dtype == 0);
 
   return ret;
 }
@@ -135,54 +156,58 @@ static herr_t H5Z_set_local_sperr(hid_t dcpl_id, hid_t type_id, hid_t space_id)
    * 	space_id	Dataspace identifier
    */
 
-  /* Get the dataspace rank. It must be 2 or 3, since it passed the `can_apply` function. */
-  int rank = H5Sget_simple_extent_ndims(space_id);
-
-  /* Get the datatype size. It must be 4 or 8, since the float type is verified by `can_apply`. */
-  int is_float = 1;
-  if (H5Tget_size(type_id) == 8)
-    is_float = 0; /* !is_float i.e. double */
-
-  /* Get chunk sizes. */
-  hsize_t chunks[3];
-  int ndims = H5Pget_chunk(dcpl_id, 3, chunks);
-  if (ndims != rank) {
-    H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADSIZE,
-            "Somehow the chunk rank is different from two queries ??");
-    return -1;
-  }
-
   /* Get the user-specified compression mode and quality. */
-  size_t user_cd_nelem = 16, nchar = 16;
+  size_t user_cd_nelem = 2, nchar = 16;
   unsigned int user_cd_values[user_cd_nelem], flags;
   char name[nchar];
   herr_t status =
       H5Pget_filter_by_id(dcpl_id, H5Z_FILTER_SPERR, &flags, &user_cd_nelem, user_cd_values, nchar,
                           name, user_cd_values + user_cd_nelem - 1);
   if (user_cd_nelem != 1) {
+#ifndef NDEBUG
+    printf("%s: %d, user_cd_nelem = %lu\n", __FILE__, __LINE__, user_cd_nelem);
+#endif
     H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADSIZE,
-            "User cd_values[] isn't 3 elements ??");
+            "User cd_values[] isn't a single element ??");
     return -1;
   }
 
+  /* Get the datatype size. It must be 4 or 8, since the float type is verified by `can_apply`. */
+  int is_float = 1;
+  if (H5Tget_size(type_id) == 8)
+    is_float = 0; /* !is_float, i.e. double */
+  else
+    assert(H5Tget_size(type_id) == 4);
+
+  /* Get chunk sizes. */
+  hsize_t chunks[4] = {0, 0, 0, 0};
+  int ndims = H5Pget_chunk(dcpl_id, 4, chunks);
+  int real_dims = 0;
+  for (int i = 0; i < 4; i++)
+    if (chunks[i] > 1)
+      real_dims++;
+  assert(real_dims == 2 || real_dims == 3);
+
   /*
-   * Assemble the meta info (cd_values[4] or cd_values[5]) to be stored.
-   * [0]  : 2D/3D, float/double, compression mode.
+   * Assemble the meta info to be stored.
+   * [0]  : 2D/3D, float/double
    * [1]  : compression specifics
    * [2-3]: (dimx, dimy) in 2D cases.
    * [2-4]: (dimx, dimy, dimz) in 3D cases.
    */
   unsigned int cd_values[5] = {0, 0, 0, 0, 0};
-  cd_values[0] = H5Z_SPERR_pack_data_type(rank, is_float);
+  cd_values[0] = H5Z_SPERR_pack_data_type(real_dims, is_float);
   cd_values[1] = user_cd_values[0];
-  cd_values[2] = chunks[0];
-  cd_values[3] = chunks[1];
-  if (rank == 2)
-    H5Pmodify_filter(dcpl_id, H5Z_FILTER_SPERR, H5Z_FLAG_MANDATORY, 4, cd_values);
-  else {
-    cd_values[4] = chunks[2];
-    H5Pmodify_filter(dcpl_id, H5Z_FILTER_SPERR, H5Z_FLAG_MANDATORY, 5, cd_values);
+  int i1 = 2, i2 = 0;
+  while (i2 < 4) {
+    if (chunks[i2] > 1)
+      cd_values[i1++] = chunks[i2];
+    i2++;
   }
+  if (real_dims == 2)
+    H5Pmodify_filter(dcpl_id, H5Z_FILTER_SPERR, H5Z_FLAG_MANDATORY, 4, cd_values);
+  else
+    H5Pmodify_filter(dcpl_id, H5Z_FILTER_SPERR, H5Z_FLAG_MANDATORY, 5, cd_values);
 
   return 0;
 }
@@ -195,20 +220,33 @@ static size_t H5Z_filter_sperr(unsigned int flags,
                                void** buf)
 {
   /* Extract info from cd_values[] */
-  int rank, is_float;
+  int rank = 0, is_float = 0;
   H5Z_SPERR_unpack_data_type(cd_values[0], &rank, &is_float);
   if ((rank == 2 && cd_nelmts != 4) || (rank == 3 && cd_nelmts != 5)) {
+#ifndef NDEBUG
+    printf("rank = %d, cd_nelmts = %lu\n", rank, cd_nelmts);
+#endif
     H5Epush(H5E_DEFAULT, __FILE__, __func__, __LINE__, H5E_ERR_CLS, H5E_PLINE, H5E_BADVALUE,
             "SPERR filter cd_values[] length not correct.");
     return 0;
   }
 
-  int mode;
-  double quality;
-  H5Z_SPERR_decode_cd_values(cd_values[1], &mode, &quality);
-  unsigned int dims[3] = {cd_values[2], cd_values[3], 1};
-  if (rank == 3)
-    dims[2] = cd_values[4];
+  int mode = 0, swap = 0;
+  double quality = 0.0;
+  H5Z_SPERR_decode_cd_values(cd_values[1], &mode, &quality, &swap);
+  unsigned int dims[3] = {cd_values[2], cd_values[3], rank == 2 ? 1 : cd_values[4]};
+  if (swap) {
+    if (rank == 2) {
+      unsigned int tmp = dims[0];
+      dims[0] = dims[1];
+      dims[1] = tmp;
+    }
+    else {
+      unsigned int tmp = dims[0];
+      dims[0] = dims[2];
+      dims[2] = tmp;
+    }
+  }
 
   /* Decompression */
   if (flags & H5Z_FLAG_REVERSE) {
@@ -217,7 +255,7 @@ static size_t H5Z_filter_sperr(unsigned int flags,
     if (rank == 2)
       ret = sperr_decomp_2d(*buf, nbytes, is_float, dims[0], dims[1], &dst);
     else {
-      size_t dimx, dimy, dimz;
+      size_t dimx = 0, dimy = 0, dimz = 0;
       ret = sperr_decomp_3d(*buf, nbytes, is_float, 1, &dimx, &dimy, &dimz, &dst);
     }
     if (ret != 0) {
