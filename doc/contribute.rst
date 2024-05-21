@@ -181,10 +181,10 @@ compression_opts: (**block_size**,)
 sperr
 .....
 
-compression_opts: (**mode_and_quality**,)
+compression_opts: (**mode_quality_swap**,)
 
-- **mode_and_quality**: Store mode and quality as a 32 bits unsigned integer:
-  For details see the implementation of the C function: `H5Z_SPERR_make_cd_values <https://github.com/NCAR/H5Z-SPERR/blob/4ae7bed2f94e943f5961f7d8196b1749a8444c00/include/h5z-sperr.h#L21>`_
+- **mode_quality_swap**: Store mode, quality and swap as a 32 bits unsigned integer:
+  For details see the implementation of the C function: `H5Z_SPERR_make_cd_values <https://github.com/NCAR/H5Z-SPERR/blob/v0.1.2/include/h5z-sperr.h#L21>`_
 
 sz
 ..

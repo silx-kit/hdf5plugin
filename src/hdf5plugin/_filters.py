@@ -545,7 +545,8 @@ class Sperr(_FilterRefClass):
             self,
             rate: float | None = None,
             peak_signal_to_noise_ratio: float | None = None,
-            point_wise_error: float | None = None):
+            point_wise_error: float | None = None,
+            swap: bool = False):
         if (rate, peak_signal_to_noise_ratio, point_wise_error).count(None) < 2:
             raise TypeError("hdf5plugin.Sperr() takes at most one not None argument")
 
@@ -562,10 +563,10 @@ class Sperr(_FilterRefClass):
             mode = 1
             quality = 16 if rate is None else rate
 
-        self.filter_options = self.__pack_options(mode, quality)
+        self.filter_options = self.__pack_options(mode, quality, swap)
 
     @classmethod
-    def __pack_options(cls, mode: int, quality: float) -> tuple[int]:
+    def __pack_options(cls, mode: int, quality: float, swap: bool) -> tuple[int]:
         assert mode in (1, 2, 3)
         assert quality > 0
 
@@ -584,11 +585,14 @@ class Sperr(_FilterRefClass):
         if mode == 1:
             mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
         elif mode == 2:
-            mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
+            mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 1)
         else:  # mode == 3
             mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
-            mask |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)
+            mask |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 1)
         ret |= mask
+
+        if swap:
+            ret |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 3)
 
         return (ret,)
 
