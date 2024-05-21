@@ -501,10 +501,10 @@ class Sperr(_FilterRefClass):
             **hdf5plugin.Sperr(rate=16))
         f.close()
 
-    This filter provides different modes:
+    This filter provides 3 modes:
 
-    - **Fixed bit-per-pixel (BPP)**:
-      The quality argument provides the target bitrate (range: 0.0 < quality < 64.0)
+    - **Fixed bit-per-pixel** with the ``rate`` argument:
+      The quality argument provides the target bitrate (range: 0.0 < rate < 64.0)
 
       .. code-block:: python
 
@@ -513,8 +513,8 @@ class Sperr(_FilterRefClass):
             data=numpy.random.random(1000).reshape(100, 10),
             **hdf5plugin.Sperr(rate=10))
 
-    - **Fixed peak signal-to-noise ratio (PSNR)**:
-      The quality argument provides the target PSNR (range: 0.0 < quality)
+    - **Fixed peak signal-to-noise ratio (PSNR)** with the ``peak_signal_to_noise_ratio`` argument:
+      The quality argument provides the target PSNR (range: 0.0 < peak_signal_to_noise_ratio)
 
       .. code-block:: python
 
@@ -523,15 +523,17 @@ class Sperr(_FilterRefClass):
             data=numpy.random.random(1000).reshape(100, 10),
             **hdf5plugin.Sperr(peak_signal_to_noise_ratio=1e-6))
 
-    - **Fixed point-wise error (PWE)**:
-      The quality argument provides the PWE tolerance (range: 0.0 < quality)
+    - **Fixed point-wise error (PWE)** with the ``absolute`` argument:
+      The quality argument provides the PWE tolerance (range: 0.0 < absolute)
 
       .. code-block:: python
 
         f.create_dataset(
             'sperr_fixed_point-wise_error',
             data=numpy.random.random(1000).reshape(100, 10),
-            **hdf5plugin.Sperr(point_wise_error=1e-4))
+            **hdf5plugin.Sperr(absolute=1e-4))
+
+    If the ``swap`` argument is True (False by default) a "rank order swap" pre-filtering is performed.
 
     For more details, see `H5Z-SPERR <https://github.com/NCAR/H5Z-SPERR>`_.
     """
@@ -545,19 +547,19 @@ class Sperr(_FilterRefClass):
             self,
             rate: float | None = None,
             peak_signal_to_noise_ratio: float | None = None,
-            point_wise_error: float | None = None,
+            absolute: float | None = None,
             swap: bool = False):
-        if (rate, peak_signal_to_noise_ratio, point_wise_error).count(None) < 2:
+        if (rate, peak_signal_to_noise_ratio, absolute).count(None) < 2:
             raise TypeError("hdf5plugin.Sperr() takes at most one not None argument")
 
         if peak_signal_to_noise_ratio is not None:
             assert peak_signal_to_noise_ratio > 0
             mode = 2
             quality = peak_signal_to_noise_ratio
-        elif point_wise_error is not None:
-            assert point_wise_error > 0
+        elif absolute is not None:
+            assert absolute > 0
             mode = 3
-            quality = point_wise_error
+            quality = absolute
         else:
             assert rate is None or 0 < rate < 64
             mode = 1
