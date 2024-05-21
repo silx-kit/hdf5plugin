@@ -733,7 +733,7 @@ def get_sperr_clib(field=None):
         sources=glob(f"{sperr_dir}/src/*.cpp"),
         include_dirs=[f"{sperr_dir}/include"],
         macros=[
-            ("SPERR_VERSION_MAJOR", 0),
+            ("SPERR_VERSION_MAJOR", 0),  # Check project(SPERR VERSION ... in src/SPERR/CMakeLists.txt
             ("USE_VANILLA_CONFIG", 1),
         ],
         cflags=["-std=c++20"],  # TODO
