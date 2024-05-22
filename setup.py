@@ -98,21 +98,24 @@ def get_compiler(compiler):
     return build_ext.compiler
 
 
-def check_compile_flags(compiler, *flags, extension='.c'):
+def check_compile_flags(compiler, *flags, extension='.c', source=None):
     """Try to compile an empty file to check for compiler args
 
     :param distutils.ccompiler.CCompiler compiler: The compiler to use
     :param flags: Flags argument to pass to compiler
     :param str extension: Source file extension (default: '.c')
+    :param source: Source code to compile (default: dummy C function)
     :returns: Whether or not compilation was successful
     :rtype: bool
     """
+    if source is None:
+        source = 'int main (int argc, char **argv) { return 0; }\n'
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Create empty source file
         tmp_file = Path(tmp_dir) / f"source{extension}"
-        tmp_file.write_text('int main (int argc, char **argv) { return 0; }\n')
+        tmp_file.write_text(source)
         try:
-            compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
+            result = compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
         except CompileError:
             return False
         else:
@@ -195,7 +198,23 @@ class HostConfig:
     def get_cpp20_flag(self) -> str | None:
         """Returns C++20 compiler flag or None if not supported"""
         if self.__compiler.compiler_type == 'msvc':
-            return None  # TODO
+            # C++20 available since Visual Studio C++ 2019 v16.11
+            # Lack of support of the compilation flag do not raise an error
+            # So instead check the _MSVC_LANG macro
+            # See: https://learn.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version?view=msvc-170#c-standards-support
+            is_available = check_compile_flags(
+                self.__compiler,
+                '/std:c++20',
+                extension='.cc',
+                source="""
+                    #if _MSVC_LANG != 202002L
+                    #error C++20 is not supported
+                    #endif
+                    int main (int argc, char **argv) { return 0; }
+                """,
+            )
+            return "/std:c++20" if is_available else None
+
         # -std=c++20 if clang>=10 or gcc>=10 else -std=c++2a
         for flag in ('-std=c++20', '-std=c++2a'):
             if check_compile_flags(self.__compiler, flag, extension='.cc'):
@@ -435,17 +454,18 @@ class Build(build):
             ]
 
         if not self.hdf5plugin_config.use_cpp20:
+            cpp20_flags = set(["/std:c++20", "-std=c++20"])
+
             # Filter out C++20 libraries
             self.distribution.libraries = [
                 (name, info) for name, info in self.distribution.libraries
-                if '-std=c++20' not in info.get('cflags', [])
+                if cpp20_flags.isdisjoint(info.get('cflags', []))
             ]
 
             # Filter out C++20-only extensions
             self.distribution.ext_modules = [
                 ext for ext in self.distribution.ext_modules
-                if '-std=c++20' not in ext.extra_compile_args
-            ]
+                if not (isinstance(ext, HDF5PluginExtension) and ext.cpp20_required)]
 
         self.hdf5plugin_config.embedded_filters = [
             ext.hdf5_plugin_name for ext in self.distribution.ext_modules
@@ -501,7 +521,7 @@ class BuildCLib(build_clib):
             if '-std=c++20' in cflags:
                 if config.cpp20_compile_arg is None:
                     raise RuntimeError("Cannot compile C++20 code with current compiler")
-                cflags = [f for f in cflags if f != '-std=c++20'] + [config.cpp20_compile_arg]
+                cflags = [f if f != '-std=c++20' else config.cpp20_compile_arg for f in cflags]
 
             build_info['cflags'] = cflags
             updated_libraries.append((lib_name, build_info))
@@ -569,7 +589,7 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, cpp20_required=False, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
         if not self.depends:
@@ -596,6 +616,7 @@ class HDF5PluginExtension(Extension):
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
         self.cpp11_required = cpp11_required
+        self.cpp20_required = cpp20_required
 
     @property
     def hdf5_plugin_name(self):
@@ -736,7 +757,7 @@ def get_sperr_clib(field=None):
             ("SPERR_VERSION_MAJOR", 0),  # Check project(SPERR VERSION ... in src/SPERR/CMakeLists.txt
             ("USE_VANILLA_CONFIG", 1),
         ],
-        cflags=["-std=c++20"],  # TODO
+        cflags=["-std=c++20", "/std:c++20"],
     )
     if field is None:
         return 'sperr', config
@@ -1178,6 +1199,7 @@ def get_sperr_plugin():
             ("SPERR_VERSION_MAJOR", 0),
             ("USE_VANILLA_CONFIG", 1),
         ],
+        cpp20_required=True,
     )
 
 
