@@ -91,8 +91,8 @@ jobs:
           HDF5PLUGIN_BMI2: "False"
           HDF5PLUGIN_CPP11: "True"
           HDF5PLUGIN_CPP14: "True"
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
 
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.13
           CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_SSSE3 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14
 
           # Use Python3.11 to build wheels that are compatible with all supported version of Python
@@ -115,7 +115,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
         python-version: ['3.7', '3.12']
         include:
           - python-version: '3.7'
