@@ -1195,10 +1195,7 @@ def get_sperr_plugin():
         sources=[f"{h5z_sperr_dir}/src/h5z-sperr.c"],
         include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
         extra_link_args=['-lstdc++'],
-        define_macros=[
-            ("SPERR_VERSION_MAJOR", 0),
-            ("USE_VANILLA_CONFIG", 1),
-        ],
+        define_macros=get_sperr_clib("macros"),
         cpp20_required=True,
     )
 
