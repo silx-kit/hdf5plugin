@@ -214,8 +214,28 @@ class HostConfig:
         # -std=c++20 if clang>=10 or gcc>=10 else -std=c++2a
         for flag in ('-std=c++20', '-std=c++2a'):
             if check_compile_flags(self.__compiler, flag, extension='.cc'):
-                return flag
-        return None
+                break
+        else:  # Check failed for both flags
+            return None
+
+        if sys.platform != 'darwin':
+            return flag
+
+        # Check macos min version >= 10.13:
+        # 10.13 does not fully support C++20, but is enough to build the SPERR library
+        is_available = check_compile_flags(
+            self.__compiler,
+            flag,
+            extension='.cc',
+            source="""
+                #include "AvailabilityMacros.h"
+                #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_13
+                #error C++20 is not supported: macOS 10.13 at least is required
+                #endif
+                int main (int argc, char **argv) { return 0; }
+            """,
+        )
+        return flag if is_available else None
 
     def has_cpp20(self) -> bool:
         """Check C++20 availability on host"""
