@@ -118,10 +118,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
-        python-version: ['3.7', '3.12']
+        python-version: ['3.8', '3.12']
         include:
-          - python-version: '3.7'
-            OLDEST_DEPENDENCIES: 'h5py==2.8.0 "numpy<2"'
+          - python-version: '3.8'
+            OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
           - python-version: '3.12'
             OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 
