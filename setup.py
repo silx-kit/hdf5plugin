@@ -69,13 +69,9 @@ else:
 class BDistWheel(bdist_wheel):
     """Override bdist_wheel to handle as pure python package"""
 
-    def finalize_options(self):
-        self.plat_name = get_platform(self.bdist_dir)
-        bdist_wheel.finalize_options(self)
-
     def get_tag(self):
         """Override the python and abi tag generation"""
-        return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
+        return self.python_tag, "none", super().get_tag()[-1]
 
 
 # Probe host capabilities and manage build config
