@@ -122,6 +122,9 @@ jobs:
         include:
           - python-version: '3.8'
             OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
+          - python-version: '3.8'
+            os: 'macos-latest'
+            OLDEST_DEPENDENCIES: 'h5py==3.7.0 "numpy<2"'
           - python-version: '3.12'
             OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 
