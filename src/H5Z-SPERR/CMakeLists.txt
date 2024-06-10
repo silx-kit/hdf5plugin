@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(H5Z-MD5 VERSION 0.0.1 LANGUAGES C DESCRIPTION "HDF5 plugin for SPERR compression")
+project(H5Z-MD5 VERSION 0.1.3 LANGUAGES C DESCRIPTION "HDF5 plugin for SPERR compression")
 
 set(CMAKE_C_STANDARD 11)
 if(NOT CMAKE_BUILD_TYPE)

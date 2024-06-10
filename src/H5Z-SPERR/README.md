@@ -68,7 +68,7 @@ In the following example, `generate_cd_values` reports that `268651725u` encodes
 a bitrate of 3.3 bit-per-value, without doing rank order swap.
 ```Bash
 $ ./bin/generate_cd_values 1 3.3
-For fixed-rate compression with a bitrate of 3, without swapping rank orders,
+For fixed-rate compression with a bitrate of 3.3, without swapping rank orders,
 H5Z-SPERR cd_values = 268651725u (Filter ID = 32028).
 Please use this value as a single 32-bit unsigned integer in your applications.
 ```
