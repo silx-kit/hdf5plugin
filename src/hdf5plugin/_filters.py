@@ -138,7 +138,7 @@ class Bitshuffle(_FilterRefClass):
         assert clevel <= 22
 
         if lz4 is not None:
-            if cname is not None:
+            if cname is not None and lz4 is not False:
                 raise ValueError("Providing both cname and lz4 arguments is not supported")
             logger.warning(
                 "Deprecation: hdf5plugin.Bitshuffle's lz4 argument is deprecated, "
