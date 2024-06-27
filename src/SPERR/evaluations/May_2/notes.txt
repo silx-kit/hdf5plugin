@@ -1,0 +1,7 @@
+These results represent the improvement brought by PR #11. 
+
+In summary, these changes improve performance by more than 10%.
+
+Also, they reduce the peak memory consumption. 
+In one test with a 512^3 cube, the peak memory was reduced from 8.4GB to 6.7GB 
+(Note: use /usr/bin/time -v to collect peak memory info.)

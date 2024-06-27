@@ -178,6 +178,14 @@ compression_opts: (**block_size**,)
   Default 0 for a block size of 1GB.
   It MUST be < 1.9 GB.
 
+sperr
+.....
+
+compression_opts: (**mode_quality_swap**,)
+
+- **mode_quality_swap**: Store mode, quality and swap as a 32 bits unsigned integer:
+  For details see the implementation of the C function: `H5Z_SPERR_make_cd_values <https://github.com/NCAR/H5Z-SPERR/blob/v0.1.2/include/h5z-sperr.h#L21>`_
+
 sz
 ..
 

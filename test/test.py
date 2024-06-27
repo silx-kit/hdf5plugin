@@ -146,6 +146,25 @@ class TestHDF5PluginRead(unittest.TestCase):
             self.assertTrue(numpy.allclose(original, compressed),
                                       "Values should be close")
 
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SPERR_ID),
+                         "Sperr filter not available")
+    def testSperr(self):
+        """Test reading Sperr compressed data"""
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        for fname in ["sperr.h5"]:
+            fname = os.path.join(dirname, fname)
+            self.assertTrue(os.path.exists(fname),
+                            "Cannot find %s file" % fname)
+            with h5py.File(fname, "r") as h5:
+                compressed = h5["f64_sperr"][()]
+                original = h5["f64_original"][()]
+            self.assertTrue(original.shape == compressed.shape,
+                            "Incorrect shape")
+            self.assertTrue(original.dtype == compressed.dtype,
+                            "Incorrect dtype")
+            self.assertTrue(numpy.allclose(original, compressed, atol=1e-3),
+                            "Values should be close")
+
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SZ_ID),
                          "SZ filter not available")
     def testSZ(self):

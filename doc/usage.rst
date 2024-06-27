@@ -95,6 +95,13 @@ LZ4
    :members:
    :undoc-members:
 
+Sperr
+=====
+
+.. autoclass:: Sperr
+   :members:
+   :undoc-members:
+
 SZ
 ==
 
