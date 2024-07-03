@@ -116,7 +116,7 @@ class Bitshuffle(_FilterRefClass):
     :param int nelems:
         The number of elements per block.
         It needs to be divisible by eight.
-        Default: 0 (for about 8KB per block).
+        Default: 0 (for about 8 kilobytes per block).
     :param str cname:
         `lz4` (default), `none`, `zstd`
     :param int clevel: Compression level, used only for `zstd` compression.
