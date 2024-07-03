@@ -99,10 +99,6 @@ def register_filter(name):
     # Unregister existing filter
     filter_id = FILTERS[name]
     is_avail = is_filter_available(name)
-    if h5py.version.version_tuple < (2, 10) and is_avail in (True, None):
-        logger.error(
-            "h5py.h5z.unregister_filter is not available in this version of h5py.")
-        return False
     if is_avail is True:
         if not h5py.h5z.unregister_filter(filter_id):
             logger.error(f"Failed to unregister filter {name} ({filter_id})")

@@ -235,7 +235,7 @@ class TestHDF5PluginRead(unittest.TestCase):
             output_file = os.path.join(self.tempdir, compressed_name + ".h5")
             with h5py.File(output_file, "w", driver="core", backing_store=False) as h5o:
                 h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
-                               **hdf5plugin.SZ3(absolute=value))
+                               compression=hdf5plugin.SZ3(absolute=value))
                 output_data = h5o["/data"][()]
             self.assertFalse(numpy.all(original == output_data),
                              "Values should not be identical")
@@ -260,7 +260,7 @@ class TestHDF5PluginRead(unittest.TestCase):
             output_file = os.path.join(self.tempdir, compressed_name + ".h5")
             with h5py.File(output_file, "w", driver="core", backing_store=False) as h5o:
                 h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
-                               **hdf5plugin.SZ3(relative=value))
+                               compression=hdf5plugin.SZ3(relative=value))
                 output_data = h5o["/data"][()]
             self.assertFalse(numpy.all(original == output_data),
                              "Values should not be identical")
@@ -295,7 +295,7 @@ class TestHDF5PluginRead(unittest.TestCase):
             output_file = os.path.join(self.tempdir, compressed_name + ".h5")
             with h5py.File(output_file, "w", driver="core", backing_store=False) as h5o:
                 h5o.create_dataset("data", data=original, dtype=original.dtype, chunks=original.shape,
-                               **hdf5plugin.SZ3(norm2=value))
+                               compression=hdf5plugin.SZ3(norm2=value))
                 output_data = h5o["/data"][()]
             self.assertFalse(numpy.all(original == output_data),
                              "Values should not be identical")
