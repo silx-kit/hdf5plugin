@@ -88,6 +88,7 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
                 "bzip2": hdf5plugin.BZip2,
                 "lz4": hdf5plugin.LZ4,
                 "fcidecomp": hdf5plugin.FciDecomp,
+                "sperr": hdf5plugin.Sperr,
                 "sz": hdf5plugin.SZ,
                 "sz3": hdf5plugin.SZ3,
                 "zfp": hdf5plugin.Zfp,
@@ -259,6 +260,22 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for dtype in (numpy.uint8, numpy.uint16, numpy.int8, numpy.int16):
             with self.subTest(dtype=dtype):
                 self._test('fcidecomp', dtype=dtype)
+
+    @unittest.skipUnless(should_test("sperr"), "Sperr filter not available")
+    def testSperr(self):
+        """Write/read test with Sperr filter plugin"""
+        tests = [
+            {'lossless': False, 'rate': 16},
+            {'lossless': False, 'rate': 16, 'swap': True},
+            {'lossless': False, 'peak_signal_to_noise_ratio': 1e-4},
+            {'lossless': False, 'peak_signal_to_noise_ratio': 1e-4, 'swap': True},
+            {'lossless': False, 'absolute': 1e-4},
+            {'lossless': False, 'absolute': 1e-4, 'swap': True}
+        ]
+        for options in tests:
+            for dtype in (numpy.float32, numpy.float64):
+                with self.subTest(options=options, dtype=dtype):
+                    self._test('sperr', dtype=dtype, **options)
 
     @unittest.skipUnless(should_test("sz"), "SZ filter not available")
     def testSZ(self):

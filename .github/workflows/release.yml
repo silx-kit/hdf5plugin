@@ -69,7 +69,7 @@ jobs:
           - os: windows-2019
             cibw_archs: "auto64"
             with_sse2: true
-          - os: macos-11
+          - os: macos-12
             cibw_archs: "universal2"
             with_sse2: true
 
@@ -91,9 +91,12 @@ jobs:
           HDF5PLUGIN_BMI2: "False"
           HDF5PLUGIN_CPP11: "True"
           HDF5PLUGIN_CPP14: "True"
+          HDF5PLUGIN_CPP20: "True"
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
 
           CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_SSSE3 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14
 
+          CIBW_BUILD_VERBOSITY: 1
           # Use Python3.11 to build wheels that are compatible with all supported version of Python
           CIBW_BUILD: cp311-*
           # Do not build for pypy and muslinux
@@ -114,11 +117,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.7', '3.12']
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        python-version: ['3.8', '3.12']
         include:
-          - python-version: '3.7'
-            OLDEST_DEPENDENCIES: 'h5py==2.8.0 "numpy<2"'
+          - python-version: '3.8'
+            OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
+          - python-version: '3.8'
+            os: 'macos-latest'
+            OLDEST_DEPENDENCIES: 'h5py==3.7.0 "numpy<2"'
           - python-version: '3.12'
             OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 

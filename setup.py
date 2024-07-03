@@ -69,13 +69,9 @@ else:
 class BDistWheel(bdist_wheel):
     """Override bdist_wheel to handle as pure python package"""
 
-    def finalize_options(self):
-        self.plat_name = get_platform(self.bdist_dir)
-        bdist_wheel.finalize_options(self)
-
     def get_tag(self):
         """Override the python and abi tag generation"""
-        return self.python_tag, "none", bdist_wheel.get_tag(self)[-1]
+        return self.python_tag, "none", super().get_tag()[-1]
 
 
 # Probe host capabilities and manage build config
@@ -98,21 +94,24 @@ def get_compiler(compiler):
     return build_ext.compiler
 
 
-def check_compile_flags(compiler, *flags, extension='.c'):
+def check_compile_flags(compiler, *flags, extension='.c', source=None):
     """Try to compile an empty file to check for compiler args
 
     :param distutils.ccompiler.CCompiler compiler: The compiler to use
     :param flags: Flags argument to pass to compiler
     :param str extension: Source file extension (default: '.c')
+    :param source: Source code to compile (default: dummy C function)
     :returns: Whether or not compilation was successful
     :rtype: bool
     """
+    if source is None:
+        source = 'int main (int argc, char **argv) { return 0; }\n'
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Create empty source file
         tmp_file = Path(tmp_dir) / f"source{extension}"
-        tmp_file.write_text('int main (int argc, char **argv) { return 0; }\n')
+        tmp_file.write_text(source)
         try:
-            compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
+            result = compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
         except CompileError:
             return False
         else:
@@ -190,6 +189,57 @@ class HostConfig:
         if self.__compiler.compiler_type == 'msvc':
             return True
         return check_compile_flags(self.__compiler, '-std=c++14', extension='.cc')
+
+    @lru_cache()
+    def get_cpp20_flag(self) -> str | None:
+        """Returns C++20 compiler flag or None if not supported"""
+        if self.__compiler.compiler_type == 'msvc':
+            # C++20 available since Visual Studio C++ 2019 v16.11
+            # Lack of support of the compilation flag do not raise an error
+            # So instead check the _MSVC_LANG macro
+            # See: https://learn.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version?view=msvc-170#c-standards-support
+            is_available = check_compile_flags(
+                self.__compiler,
+                '/std:c++20',
+                extension='.cc',
+                source="""
+                    #if _MSVC_LANG != 202002L
+                    #error C++20 is not supported
+                    #endif
+                    int main (int argc, char **argv) { return 0; }
+                """,
+            )
+            return "/std:c++20" if is_available else None
+
+        # -std=c++20 if clang>=10 or gcc>=10 else -std=c++2a
+        for flag in ('-std=c++20', '-std=c++2a'):
+            if check_compile_flags(self.__compiler, flag, extension='.cc'):
+                break
+        else:  # Check failed for both flags
+            return None
+
+        if sys.platform != 'darwin':
+            return flag
+
+        # Check macos min version >= 10.13:
+        # 10.13 does not fully support C++20, but is enough to build the SPERR library
+        is_available = check_compile_flags(
+            self.__compiler,
+            flag,
+            extension='.cc',
+            source="""
+                #include "AvailabilityMacros.h"
+                #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_13
+                #error C++20 is not supported: macOS 10.13 at least is required
+                #endif
+                int main (int argc, char **argv) { return 0; }
+            """,
+        )
+        return flag if is_available else None
+
+    def has_cpp20(self) -> bool:
+        """Check C++20 availability on host"""
+        return self.get_cpp20_flag() is not None
 
     def _has_x86_simd(self, *flags) -> bool:
         """Check x86 SIMD availability on host"""
@@ -286,6 +336,11 @@ class BuildConfig:
             compile_args.extend(self.__host_config.native_compile_args)
         return tuple(compile_args)
 
+    @property
+    def cpp20_compile_arg(self) -> str | None:
+        """Returns C++20 compilation flag or None if not supported"""
+        return self.__host_config.get_cpp20_flag()
+
     @lru_cache(maxsize=None)
     def _is_enabled(self, feature: str) -> bool:
         """Returns True if given compilation feature is enabled.
@@ -293,7 +348,7 @@ class BuildConfig:
         It first checks if the corresponding HDF5PLUGIN_* environment variable is set.
         If it is not set, it checks if both the compiler and the host support the feature.
         """
-        assert feature in ("cpp11", "cpp14", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
+        assert feature in ("cpp11", "cpp14", "cpp20", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
         try:
             return os.environ[f"HDF5PLUGIN_{feature.upper()}"] == "True"
         except KeyError:
@@ -303,6 +358,7 @@ class BuildConfig:
 
     use_cpp11 = property(lambda self: self._is_enabled('cpp11'))
     use_cpp14 = property(lambda self: self._is_enabled('cpp14'))
+    use_cpp20 = property(lambda self: self._is_enabled('cpp20'))
     use_sse2 = property(lambda self: self._is_enabled('sse2'))
     use_openmp = property(lambda self: self._is_enabled('openmp'))
     use_native = property(lambda self: self._is_enabled('native'))
@@ -353,6 +409,7 @@ class BuildConfig:
             'avx512': self.use_avx512,
             'cpp11': self.use_cpp11,
             'cpp14': self.use_cpp14,
+            'cpp20': self.use_cpp20,
             'ipp': self.INTEL_IPP_DIR is not None,
             'filter_file_extension': self.filter_file_extension,
             'embedded_filters': tuple(sorted(set(self.embedded_filters))),
@@ -412,6 +469,20 @@ class Build(build):
                 if '-std=c++14' not in ext.extra_compile_args
             ]
 
+        if not self.hdf5plugin_config.use_cpp20:
+            cpp20_flags = set(["/std:c++20", "-std=c++20"])
+
+            # Filter out C++20 libraries
+            self.distribution.libraries = [
+                (name, info) for name, info in self.distribution.libraries
+                if cpp20_flags.isdisjoint(info.get('cflags', []))
+            ]
+
+            # Filter out C++20-only extensions
+            self.distribution.ext_modules = [
+                ext for ext in self.distribution.ext_modules
+                if not (isinstance(ext, HDF5PluginExtension) and ext.cpp20_required)]
+
         self.hdf5plugin_config.embedded_filters = [
             ext.hdf5_plugin_name for ext in self.distribution.ext_modules
             if isinstance(ext, HDF5PluginExtension)
@@ -458,10 +529,17 @@ class BuildCLib(build_clib):
                 cflags = [f for f in cflags if not f.endswith('openmp')]
 
             prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
-            build_info['cflags'] = [
+            cflags = [
                 f for f in cflags if f.startswith(prefix)
             ]
 
+            # Patch C++20 flag for older gcc/clang support
+            if '-std=c++20' in cflags:
+                if config.cpp20_compile_arg is None:
+                    raise RuntimeError("Cannot compile C++20 code with current compiler")
+                cflags = [f if f != '-std=c++20' else config.cpp20_compile_arg for f in cflags]
+
+            build_info['cflags'] = cflags
             updated_libraries.append((lib_name, build_info))
 
         super().build_libraries(updated_libraries)
@@ -527,7 +605,7 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, **kwargs):
+    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, cpp20_required=False, **kwargs):
         Extension.__init__(self, name, **kwargs)
 
         if not self.depends:
@@ -554,6 +632,7 @@ class HDF5PluginExtension(Extension):
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
         self.cpp11_required = cpp11_required
+        self.cpp20_required = cpp20_required
 
     @property
     def hdf5_plugin_name(self):
@@ -680,6 +759,24 @@ def get_snappy_clib(field=None):
 
     if field is None:
         return 'snappy', config
+    return config[field]
+
+
+def get_sperr_clib(field=None):
+    """sperr static lib build config"""
+    sperr_dir = "src/SPERR"
+
+    config = dict(
+        sources=glob(f"{sperr_dir}/src/*.cpp"),
+        include_dirs=[f"{sperr_dir}/include"],
+        macros=[
+            ("SPERR_VERSION_MAJOR", 0),  # Check project(SPERR VERSION ... in src/SPERR/CMakeLists.txt
+            ("USE_VANILLA_CONFIG", 1),
+        ],
+        cflags=["-std=c++20", "/std:c++20"],
+    )
+    if field is None:
+        return 'sperr', config
     return config[field]
 
 
@@ -1106,6 +1203,22 @@ def get_sz3_plugin():
 PLUGIN_LIB_DEPENDENCIES['sz3'] = ('zstd',)
 
 
+def get_sperr_plugin():
+    h5z_sperr_dir = "src/H5Z-SPERR"
+
+    return HDF5PluginExtension(
+        "hdf5plugin.plugins.libh5sperr",
+        sources=[f"{h5z_sperr_dir}/src/h5z-sperr.c"],
+        include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
+        extra_link_args=['-lstdc++'],
+        define_macros=get_sperr_clib("macros"),
+        cpp20_required=True,
+    )
+
+
+PLUGIN_LIB_DEPENDENCIES['sperr'] = ("sperr",)
+
+
 def apply_filter_strip(libraries, extensions, dependencies):
     """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
     stripped_filters = set(
@@ -1141,6 +1254,7 @@ library_list = [
     get_charls_clib(),
     get_lz4_clib(),
     get_snappy_clib(),
+    get_sperr_clib(),
     get_zfp_clib(),
     get_zlib_clib(),
     get_zstd_clib(),
@@ -1158,6 +1272,7 @@ libraries, extensions = apply_filter_strip(
         get_zstandard_plugin(),
         get_sz_plugin(),
         get_sz3_plugin(),
+        get_sperr_plugin(),
     ],
     dependencies=PLUGIN_LIB_DEPENDENCIES,
 )

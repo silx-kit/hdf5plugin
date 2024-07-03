@@ -1,0 +1,25 @@
+# Encoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+0.25(C)  34.9358  47.8739
+# Encoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+0.5(C)  34.7062  63.7828
+# Encoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+1(C)  35.155  94.5729
+# Encoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+2(C)  34.6972  170.391
+# Encoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+4(C)  34.7394  281.039
+# Decoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+0.25(D)  33.4787  18.1373
+# Decompressed volume with dimensions (128, 128, 128). Actual BPP = 0.250000
+# Decoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+0.5(D)  32.7892  28.7482
+# Decompressed volume with dimensions (128, 128, 128). Actual BPP = 0.500000
+# Decoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+1(D)  32.592  50.0473
+# Decompressed volume with dimensions (128, 128, 128). Actual BPP = 1.000000
+# Decoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+2(D)  33.0054  100.845
+# Decompressed volume with dimensions (128, 128, 128). Actual BPP = 2.000000
+# Decoding time in milliseconds: Bit-per-Pixel  XForm_Time  SPECK_Time
+4(D)  33.2819  178.468
+# Decompressed volume with dimensions (128, 128, 128). Actual BPP = 4.000000
