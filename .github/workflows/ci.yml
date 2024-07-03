@@ -71,8 +71,8 @@ jobs:
           python test/test.py
 
   build_wheels_macos:
-    name: Build ARM64 wheels on macos-11
-    runs-on: macos-11
+    name: Build ARM64 wheels on macos-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pypa/cibuildwheel@v2.16.5
