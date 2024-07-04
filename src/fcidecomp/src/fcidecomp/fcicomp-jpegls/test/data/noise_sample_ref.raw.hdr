@@ -1,0 +1,9 @@
+ENVI
+samples = 32
+lines   = 32
+bands   = 1
+header offset = 0
+data type = 12
+interleave = bsq
+byte order = 0
+comments = "Generated with imagemagick: convert -size 32x32 xc: +noise Random -depth 16 gray:noise_sample.raw"
