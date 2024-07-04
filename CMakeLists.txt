@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.1)
-project(Snappy VERSION 1.1.10 LANGUAGES C CXX)
+project(Snappy VERSION 1.2.1 LANGUAGES C CXX)
 
 # C++ standard can be overridden when this is used as a sub-project.
 if(NOT CMAKE_CXX_STANDARD)
@@ -72,6 +72,11 @@ else(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
     endif(NOT CMAKE_CXX_FLAGS MATCHES "-Werror")
   endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+
+  # Disable sign comparison warnings. Matches upcoming Bazel setup.
+  if(NOT CMAKE_CXX_FLAGS MATCHES "-Wno-sign-compare")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
+  endif(NOT CMAKE_CXX_FLAGS MATCHES "-Wno-sign-compare")
 
   # Disable C++ exceptions.
   string(REGEX REPLACE "-fexceptions" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -141,6 +146,8 @@ endif(SNAPPY_REQUIRE_AVX2)
 # Used by googletest.
 check_cxx_compiler_flag(-Wno-missing-field-initializers
                         SNAPPY_HAVE_NO_MISSING_FIELD_INITIALIZERS)
+check_cxx_compiler_flag(-Wno-implicit-int-float-conversion
+                        SNAPPY_HAVE_NO_IMPLICIT_INT_FLOAT_CONVERSION)
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("
@@ -152,6 +159,12 @@ check_cxx_source_compiles("
 int main() {
   return __builtin_ctzll(0);
 }" HAVE_BUILTIN_CTZ)
+
+check_cxx_source_compiles("
+int main() {
+  __builtin_prefetch(0, 0, 3);
+  return 0;
+}" HAVE_BUILTIN_PREFETCH)
 
 check_cxx_source_compiles("
 __attribute__((always_inline)) int zero() { return 0; }
@@ -322,6 +335,11 @@ if(SNAPPY_BUILD_TESTS)
     set_property(TARGET gmock
         APPEND PROPERTY COMPILE_OPTIONS -Wno-missing-field-initializers)
   endif(SNAPPY_HAVE_NO_MISSING_FIELD_INITIALIZERS)
+
+  if(SNAPPY_HAVE_NO_IMPLICIT_INT_FLOAT_CONVERSION)
+    set_property(TARGET gtest
+        APPEND PROPERTY COMPILE_OPTIONS -Wno-implicit-int-float-conversion)
+  endif(SNAPPY_HAVE_NO_IMPLICIT_INT_FLOAT_CONVERSION)
 
   add_executable(snappy_unittest "")
   target_sources(snappy_unittest
