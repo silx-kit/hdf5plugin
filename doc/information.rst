@@ -73,7 +73,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `bitshuffle plugin <https://github.com/kiyo-masui/bitshuffle>`_ (v0.5.1) using LZ4 and ZStd.
 * bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
-* `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.0)
+* `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.1)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.5), LZ4, Snappy, ZLib and ZStd.
 * hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
   using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.13.2), LZ4, ZLib and ZStd.
