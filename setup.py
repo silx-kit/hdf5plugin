@@ -664,8 +664,9 @@ def get_charls_clib(field=None):
 
     config = dict(
         sources=glob(f'{charls_dir}/*.cpp'),
-        include_dirs=[charls_dir],
-        cflags=['-std=c++11'],
+        include_dirs=["src/charls/include", "src/charls/include/charls", charls_dir],
+        macros=[("CHARLS_STATIC", 1), ("CHARLS_LIBRARY_BUILD", 1)],
+        cflags=['-std=c++14'],
     )
 
     if field is None:
@@ -1100,7 +1101,7 @@ def get_bzip2_plugin():
 
 def get_fcidecomp_plugin():
     """FCIDECOMP plugin build config"""
-    fcidecomp_dir = 'src/fcidecomp/FCIDECOMP_V1.0.2/Software/FCIDECOMP_SOURCES'
+    fcidecomp_dir = 'src/fcidecomp/src/fcidecomp'
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
@@ -1114,7 +1115,7 @@ def get_fcidecomp_plugin():
         extra_link_args=extra_link_args,
         cpp11={'extra_link_args': ['-lstdc++']},
         cpp11_required=True,
-        define_macros=[('CHARLS_STATIC', 1)],
+        define_macros=[('CHARLS_STATIC', 1), ('LOGGING', 1)],
     )
 
 
