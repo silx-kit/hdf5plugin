@@ -26,7 +26,7 @@ Instead of just linking this Blosc filter into your HDF5 application, it is poss
 it as a system-wide HDF5 plugin (with HDF5 1.8.11 or later).  This is useful because it allows
 *every* HDF5-using program on your system to transparently read Blosc-compressed HDF5 files.
 
-As described in the `HDF5 plugin documentation <https://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf>`_, you just need to compile the Blosc plugin into a shared library and
+As described in the `HDF5 plugin documentation <https://portal.hdfgroup.org/display/HDF5/HDF5+Dynamically+Loaded+Filters>`_, you just need to compile the Blosc plugin into a shared library and
 copy it to the plugin directory (which defaults to ``/usr/local/hdf5/lib/plugin`` on non-Windows systems).
 
 Following the ``cmake`` instructions below produces a ``libH5Zblosc.so`` shared library 
