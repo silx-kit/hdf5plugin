@@ -1,0 +1,18 @@
+
+div.admonition p.admonition-title {
+  font-size: 14px;
+}
+
+p.last {
+  font-size: 12px;
+}
+
+@font-face {
+    font-family: "Dosis ExtraLight";
+    src: url("./Dosis-ExtraLight.ttf");
+}
+
+@font-face {
+    font-family: "Barlow";
+    src: url("./Barlow-Regular.ttf");
+}

@@ -1,0 +1,35 @@
+name: fcidecomp
+description: fcidecomp
+license_spdx: Apache-2.0
+home_url: http://www.eumetsat.int/
+copyright: EUMETSAT
+
+version: 2.0.0
+date: 2023-01-09
+
+about_resource: /AUTHORS.txt
+about_resource: /CHANGES.md
+about_resource: /INSTALL.md
+about_resource: /README.md
+about_resource: /.gitattributes
+about_resource: /.gitignore
+about_resource: /.gitlab-ci.yml
+about_resource: /inventory/**
+about_resource: /documentation/*
+about_resource: /documentation/*/*.csv
+about_resource: /documentation/*/*.rst
+about_resource: /documentation/*/*images/*
+about_resource: /documentation/*/*/*.css
+about_resource: /conda/scripts/*
+about_resource: /conda/*
+about_resource: /src/fcidecomp/*.sh
+about_resource: /src/fcidecomp/cmake/**
+about_resource: /src/fcidecomp/fcicomp-common/**
+about_resource: /src/fcidecomp/fcicomp-*pegls/include/**
+about_resource: /src/fcidecomp/fcicomp-*pegls/src/**
+about_resource: /src/fcidecomp/fcicomp-*pegls/*
+about_resource: /src/fcidecomp/fcidecomp-test/*.sh
+about_resource: /src/fcidecomp/gen/*
+about_resource: /src/fcidecomp/SCF_fcidecomp/*
+about_resource: /src/fcidecomp-python/README.md
+

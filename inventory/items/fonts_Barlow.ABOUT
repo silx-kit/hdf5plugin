@@ -1,0 +1,10 @@
+name: fcidecomp font Barlow
+description: Barlow font
+license_spdx: OFL-1.1
+home_url: https://github.com/jpt/barlow
+copyright: 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+
+version: 2.0.0
+date: 2023-01-09
+
+about_resource: documentation/*/_static/Barlow-Regular.ttf
