@@ -13,7 +13,7 @@ env:
 
 jobs:
   build_test_py38:
-    name: Python3.8 on ${{ matrix.os }}
+    name: Python 3.8 ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -23,23 +23,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pypa/cibuildwheel@v2.16.5
         env:
-          CIBW_BUILD: cp38-{manylinux,win,macosx}_*
-          CIBW_TEST_COMMAND: python {project}/test/test.py && pip install "h5py==3.0.0" "numpy<2" && python {project}/test/test.py
+          CIBW_BUILD: cp38-{manylinux_x86_64,win_amd64,macosx_x86_64}
+          CIBW_TEST_COMMAND: python {project}/test/test.py && pip install "h5py==3.0.0" && python {project}/test/test.py
 
   build_test:
-    name: ${{ matrix.cibw_build }} on ${{ matrix.os }}
+    name: ${{ matrix.cibw_build }} ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
-            cibw_build: "cp310-manylinux_*"
+            cibw_build: "cp310-manylinux_x86_64"
             OLDEST_DEPENDENCIES: 'h5py==3.6.0 "numpy<2"'
           - os: windows-latest
-            cibw_build: "cp311-win_*"
+            cibw_build: "cp311-win_amd64"
             OLDEST_DEPENDENCIES: 'h5py==3.8.0 "numpy<2"'
-          - os: macos-latest  # arm64
-            cibw_build: "cp312-macosx_*"
+          - os: macos-latest
+            cibw_build: "cp312-macosx_arm64"
             OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
 
     steps:
