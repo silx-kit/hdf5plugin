@@ -12,10 +12,30 @@ env:
   CIBW_BUILD_VERBOSITY: 1
 
 jobs:
+  build_sdist:
+    name: Build sdist & documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m build --sdist
+      - run: python -m twine check dist/*
+      # Build documentation
+      - run: sudo apt-get install pandoc
+      - run: pip install "$(ls ./dist/hdf5plugin-*.tar.gz)[doc]"
+        env:
+          HDF5PLUGIN_STRIP: all  # Do not build the filters
+      - run: sphinx-build --fail-on-warning --keep-going -b html doc/ ./html
+
   build_test_py38:
-    name: Python 3.8 ${{ matrix.os }}
+    name: cp38 / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-20.04, windows-2019, macos-12]  # macos: x86_64
 
@@ -27,20 +47,21 @@ jobs:
           CIBW_TEST_COMMAND: python {project}/test/test.py && pip install "h5py==3.0.0" && python {project}/test/test.py
 
   build_test:
-    name: ${{ matrix.cibw_build }} ${{ matrix.os }}
+    name: ${{ matrix.cibw_build }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             cibw_build: "cp310-manylinux_x86_64"
-            OLDEST_DEPENDENCIES: 'h5py==3.6.0 "numpy<2"'
+            OLDEST_H5PY: '3.6.0'
           - os: windows-latest
             cibw_build: "cp311-win_amd64"
-            OLDEST_DEPENDENCIES: 'h5py==3.8.0 "numpy<2"'
+            OLDEST_H5PY: '3.8.0'
           - os: macos-latest
             cibw_build: "cp312-macosx_arm64"
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
+            OLDEST_H5PY: '3.10.0'
 
     steps:
       - uses: actions/checkout@v4
@@ -48,4 +69,4 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_TEST_EXTRAS: test  # To run tests
-          CIBW_TEST_COMMAND: python {project}/test/test.py && pip install ${{ matrix.OLDEST_DEPENDENCIES }} && python {project}/test/test.py
+          CIBW_TEST_COMMAND: python {project}/test/test.py && pip install "h5py==${{ matrix.OLDEST_H5PY }}" "numpy<2" && python {project}/test/test.py
