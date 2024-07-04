@@ -92,11 +92,23 @@ set_target_properties (SZ PROPERTIES
     OUTPUT_NAME_RELWITHDEBINFO ${LIB_RELEASE_NAME}
   )
 
-target_link_libraries (SZ PUBLIC ${ZLIB_dep} ${ZSTD_dep} m)
+if (WIN32 AND NOT MINGW)
+    target_link_libraries (SZ PUBLIC ${ZLIB_dep} ${ZSTD_dep})
+else ()
+    target_link_libraries (SZ PUBLIC ${ZLIB_dep} ${ZSTD_dep} m)
+endif ()
 
-target_compile_options(SZ
-	PRIVATE $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Wno-unused-parameter>
-	)
+if (WIN32 AND NOT MINGW)
+    message(STATUS "Native windows compiler detected, adding compile flags")
+    target_compile_options(SZ
+        PRIVATE $<$<CONFIG:Debug>:-Wall>
+    )
+else ()
+    message(STATUS "GCC detected, adding compile flags")
+    target_compile_options(SZ
+        PRIVATE $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Wno-unused-parameter>
+    )
+endif()
 
 if(BUILD_OPENMP)
   target_link_libraries(SZ PRIVATE OpenMP::OpenMP_C)
