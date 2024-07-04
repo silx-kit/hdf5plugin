@@ -1,0 +1,155 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Test Images">
+      <UniqueIdentifier>{1153eae4-e88f-4af5-8cad-d7545b2953c6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder_strategy_tester.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="jpeg_test_stream_writer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="color_transform_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="decoder_strategy_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="default_traits_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder_strategy_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg_stream_reader_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg_stream_writer_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpegls_decoder_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpegls_encoder_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpegls_preset_coding_parameters_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="interface_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="compliance_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="charls_jpegls_encoder_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="charls_jpegls_decoder_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jpeg_error_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lossless_traits_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="version_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ctable_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="encode_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="documentation_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="lena8b.pgm">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/lena8b.jls">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8C0E0.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8C0E3.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8C1E0.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8C1E3.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8C2E0.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8C2E3.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8NDE0.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T8NDE3.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T16E0.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T16E3.JLS">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/T16E3.pgm">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/TEST8.PPM">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/TEST8BS2.PGM">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="../test/conformance/TEST16.PGM">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="ff_in_entropy_data.jls">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="16-bit-640-480-many-dots.pgm">
+      <Filter>Test Images</Filter>
+    </CopyFileToFolders>
+  </ItemGroup>
+</Project>

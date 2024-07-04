@@ -29,51 +29,99 @@
     <ClCompile Include="performance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="time.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="time.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="bitstreamdamage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="compliance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="performance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dicomsamples.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="portable_anymap_file.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="conformance\T16E0.JLS">
+    <CopyFileToFolders Include="0015.raw">
       <Filter>Data Files</Filter>
-    </None>
-    <None Include="conformance\TEST16.PGM">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="alphatest.raw">
       <Filter>Data Files</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="0015.raw">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="jlsimage\banny.ppm">
       <Filter>Data Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="lena8b.jls">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="jlsimage\banny_HP1.jls">
       <Filter>Data Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="conformance\T8C2E3.JLS">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="jlsimage\banny_HP2.jls">
       <Filter>Data Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="conformance\TEST8.PPM">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="jlsimage\banny_HP3.jls">
       <Filter>Data Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="alphatest.raw">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="jlsimage\banny_normal.jls">
       <Filter>Data Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="MR2_UNC">
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="lena8b.jls">
       <Filter>Data Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="lena8b.raw" />
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="lena8b.raw">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="MR2_UNC">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8C0E0.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8C0E3.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8C1E0.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8C1E3.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8C2E0.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8C2E3.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8NDE0.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T8NDE3.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T16E0.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\T16E3.JLS">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\TEST8.PPM">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\TEST8BS2.PGM">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="conformance\TEST16.PGM">
+      <Filter>Data Files</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>
