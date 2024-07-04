@@ -467,6 +467,7 @@ class Build(build):
             self.distribution.ext_modules = [
                 ext for ext in self.distribution.ext_modules
                 if '-std=c++14' not in ext.extra_compile_args
+                and not (isinstance(ext, HDF5PluginExtension) and ext.cpp14_required)
             ]
 
         if not self.hdf5plugin_config.use_cpp20:
@@ -605,7 +606,17 @@ class PluginBuildExt(build_ext):
 class HDF5PluginExtension(Extension):
     """Extension adding specific things to build a HDF5 plugin"""
 
-    def __init__(self, name, sse2=None, avx2=None, cpp11=None, cpp11_required=False, cpp20_required=False, **kwargs):
+    def __init__(
+            self,
+            name,
+            sse2=None,
+            avx2=None,
+            cpp11=None,
+            cpp11_required=False,
+            cpp14_required=False,
+            cpp20_required=False,
+            **kwargs
+    ):
         Extension.__init__(self, name, **kwargs)
 
         if not self.depends:
@@ -632,6 +643,7 @@ class HDF5PluginExtension(Extension):
         self.avx2 = avx2 if avx2 is not None else {}
         self.cpp11 = cpp11 if cpp11 is not None else {}
         self.cpp11_required = cpp11_required
+        self.cpp14_required = cpp14_required
         self.cpp20_required = cpp20_required
 
     @property
@@ -1105,7 +1117,7 @@ def get_fcidecomp_plugin():
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-fopenmp', '/openmp']
+    extra_link_args = ['-lstdc++', '-fopenmp', '/openmp']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5fcidecomp",
@@ -1113,8 +1125,7 @@ def get_fcidecomp_plugin():
         include_dirs=glob(f"{fcidecomp_dir}/fcicomp-*/include") + get_charls_clib('include_dirs'),
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        cpp11={'extra_link_args': ['-lstdc++']},
-        cpp11_required=True,
+        cpp14_required=True,
         define_macros=[('CHARLS_STATIC', 1), ('LOGGING', 1)],
     )
 
