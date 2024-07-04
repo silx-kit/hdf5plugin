@@ -6,17 +6,29 @@ Win32/
 x64/
 .vscode/
 .vs/
+build/
 [Dd]ebug/
 [Rr]elease/
 [Cc]hecked/
-build/
+TestResults/
+*.opensdf
+*.sdf
 
 # Ignore files created by Visual Studio
 *.suo
 *.user
 *.ipch
-*.opensdf
-*.sdf
 *.opendb
-*.VC.db
+*.db
 *.aps
+*.sqlite
+
+# NuGet Packages
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+
+# Ignore Coverity build folder
+cov-int/

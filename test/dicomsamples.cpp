@@ -1,65 +1,73 @@
+// Copyright (c) Team CharLS.
+// SPDX-License-Identifier: BSD-3-Clause
 
+#include "dicomsamples.h"
+#include "util.h"
 
-#include "config.h"
 #include <iostream>
 #include <vector>
+#include <array>
 
+using std::cout;
+using std::vector;
+using std::array;
+using std::error_code;
 
-#include "util.h"
-#include "../src/interface.h"
-
-
-int findstring(std::vector<BYTE>& container, BYTE* bytesToFind, unsigned int bytesLength)
+namespace
 {
-    for (unsigned int i=0; i < container.size() - bytesLength; ++i)
-    {
-        for (unsigned int j=0; j < bytesLength; ++j)
-        {
-            if (bytesToFind[j] != container[i + j])
-                goto next;
-        }
-        return i;
 
-        next:;
+bool ContainsString(const uint8_t* container, const uint8_t* bytesToFind, size_t bytesLength) noexcept
+{
+    for (size_t j = 0; j < bytesLength; ++j)
+    {
+        if (bytesToFind[j] != container[j])
+            return false;
+    }
+
+    return true;
+}
+
+int FindString(vector<uint8_t>& container, const uint8_t* bytesToFind, size_t bytesLength) noexcept
+{
+    for (size_t i = 0; i < container.size() - bytesLength; ++i)
+    {
+        if (ContainsString(&container[i], bytesToFind, bytesLength))
+            return static_cast<int>(i);
     }
     return -1;
 }
 
-#define COUNT(x) (sizeof(x)/sizeof(x[0]))
-
 
 void TestDicomSampleImage(const char* name)
 {
-    std::vector<BYTE> data;
-    bool success = ReadFile(name, &data, 9);
+    vector<uint8_t> data = ReadFile(name);
 
-    ASSERT(success);
+    const array<uint8_t, 8> pixelDataStart = {0x00, 0x00, 0x01, 0x00, 0xFF, 0xD8, 0xFF, 0xF7};
 
-        BYTE pixeldataStart[] =  { 0x00, 0x00, 0x01, 0x00, 0xFF, 0xD8, 0xFF, 0xF7 };
-
-    int offset = findstring(data, pixeldataStart, COUNT(pixeldataStart));
+    const int offset = FindString(data, pixelDataStart.data(), pixelDataStart.size());
 
     data.erase(data.begin(), data.begin() + offset - 4);
 
-    // remove the dicom fragment headers (in the concerned images they occur every 64k)
+    // remove the DICOM fragment headers (in the concerned images they occur every 64k)
     for (unsigned int i =  0; i < data.size(); i+= 64 * 1024)
     {
         data.erase(data.begin() + i, data.begin() + i + 8);
     }
 
-    JlsParameters info;
+    JlsParameters params{};
+    error_code error = JpegLsReadHeader(data.data(), data.size(), &params, nullptr);
+    Assert::IsTrue(!error);
 
-    JLS_ERROR error = JpegLsReadHeader(&data[0], data.size(), &info);
+    vector<uint8_t> dataUnc;
+    dataUnc.resize(static_cast<size_t>(params.stride) * params.height);
 
-
-//    0xFE, 0xFF, 0x00, 0xE0, 0x00, 0x00, 0x01, 0x00
-    std::vector<BYTE> dataUnc;
-    dataUnc.resize(info.bytesperline * info.height);
-
-    error = JpegLsDecode(&dataUnc[0], dataUnc.size(), &data[0], data.size(), NULL);
-    ASSERT(error == OK);
-    std::cout << ".";
+    error = JpegLsDecode(dataUnc.data(), dataUnc.size(), data.data(), data.size(), nullptr, nullptr);
+    Assert::IsTrue(!error);
+    cout << ".";
 }
+
+} // namespace
+
 
 void TestDicomWG4Images()
 {
