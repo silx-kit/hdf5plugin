@@ -95,7 +95,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 Sources of compression libraries shared accross multiple filters were obtained from:
 
 * `LZ4 v1.9.4 <https://github.com/Blosc/c-blosc2/tree/v2.13.2/internal-complibs/lz4-1.9.4>`_
-* `Snappy v1.1.10 <https://github.com/google/snappy>`_
+* `Snappy v1.2.1 <https://github.com/google/snappy>`_
 * `ZStd v1.5.5 <https://github.com/Blosc/c-blosc2/tree/v2.13.2/internal-complibs/zstd-1.5.5>`_
 * `ZLib v1.2.13 <https://github.com/Blosc/c-blosc/tree/v1.21.5/internal-complibs/zlib-1.2.13>`_
 
