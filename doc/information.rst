@@ -68,7 +68,7 @@ HDF5 filters and compression libraries
 HDF5 compression filters and compression libraries sources were obtained from:
 
 * `LZ4 plugin <https://github.com/nexusformat/HDF5-External-Filter-Plugins>`_ 
-  (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_)
+  (commit `49e3b65 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/commit/49e3b65eca772bca77af13ba047d8b577673afba>`_)
   using LZ4.
 * `bitshuffle plugin <https://github.com/kiyo-masui/bitshuffle>`_ (v0.5.1) using LZ4 and ZStd.
 * bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
