@@ -39,7 +39,7 @@ jobs:
           - os: windows-2019
             cibw_build: "cp38-win_amd64"
           - os: macos-12
-            cibw_build: "cp312-macosx_x86_64"
+            cibw_build: "cp38-macosx_x86_64"
           - os: ubuntu-latest
             cibw_build: "cp310-manylinux_x86_64"
           - os: windows-latest
