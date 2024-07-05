@@ -17,7 +17,7 @@
 
 
 #ifndef LZ4_H5FILTER_H
-#define LZ5_H5FILTER_H
+#define LZ4_H5FILTER_H
 
 #define H5Z_class_t_vers 2
 #include "hdf5.h"

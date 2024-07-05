@@ -4,6 +4,10 @@ else ()
   set (BUILD_EXT_LIBS_TYPE "STATIC")
 endif ()
 
+if (WIN32 AND NOT MINGW)
+  set (BUILD_EXT_LIBS_TYPE "STATIC")
+endif ()
+
 add_library(ZLIB ${BUILD_EXT_LIBS_TYPE} 
   ./gzclose.c
   ./uncompr.c

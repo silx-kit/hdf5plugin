@@ -68,12 +68,12 @@ HDF5 filters and compression libraries
 HDF5 compression filters and compression libraries sources were obtained from:
 
 * `LZ4 plugin <https://github.com/nexusformat/HDF5-External-Filter-Plugins>`_ 
-  (commit `d48f960 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/d48f96064cb6e229ede4bf5e5c0e1935cf691036>`_)
+  (commit `49e3b65 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/49e3b65eca772bca77af13ba047d8b577673afba>`_)
   using LZ4.
 * `bitshuffle plugin <https://github.com/kiyo-masui/bitshuffle>`_ (v0.5.1) using LZ4 and ZStd.
 * bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
-* `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.0)
+* `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.1)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.5), LZ4, Snappy, ZLib and ZStd.
 * hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
   using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.13.2), LZ4, ZLib and ZStd.
@@ -81,9 +81,9 @@ HDF5 compression filters and compression libraries sources were obtained from:
   using `CharLS <https://github.com/team-charls/charls>`_
   (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_).
 * `SZ plugin <https://github.com/szcompressor/SZ>`_
-  (commit `c25805c12b3 <https://github.com/szcompressor/SZ/commit/c25805c12b339d2cb2f406f95293b9a7313c4fb1>`_)
-* `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.1.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.1).
+  (commit `f466775 <https://github.com/szcompressor/SZ/tree/f4667759ead6a902110e80ff838ccdfddbc8dcd7>`_)
   using `SZ <https://github.com/szcompressor/SZ>`_, ZLib and ZStd.
+* `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.1.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.1).
 * `SZ3 plugin <https://github.com/szcompressor/SZ3>`_
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
@@ -95,7 +95,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 Sources of compression libraries shared accross multiple filters were obtained from:
 
 * `LZ4 v1.9.4 <https://github.com/Blosc/c-blosc2/tree/v2.13.2/internal-complibs/lz4-1.9.4>`_
-* `Snappy v1.1.10 <https://github.com/google/snappy>`_
+* `Snappy v1.2.1 <https://github.com/google/snappy>`_
 * `ZStd v1.5.5 <https://github.com/Blosc/c-blosc2/tree/v2.13.2/internal-complibs/zstd-1.5.5>`_
 * `ZLib v1.2.13 <https://github.com/Blosc/c-blosc/tree/v1.21.5/internal-complibs/zlib-1.2.13>`_
 

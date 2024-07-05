@@ -1,3 +1,4 @@
+
 Copyright Notice and License Terms for 
 HDF5 LZ4 compression filter plugin
 -----------------------------------------------------------------------------
@@ -56,4 +57,4 @@ Source code of the HDF5 LZ4 filter is based on h5py implementation found in
            Additional_Legal/h5py_Copyrights_and_Licenses.txt
       Original source:
            http://docs.h5py.org/en/latest/licenses.html
-License type: BSD-style license
+      License type: BSD-style license

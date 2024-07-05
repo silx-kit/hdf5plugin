@@ -485,7 +485,16 @@ unsigned char *SZ_compress_rev(int dataType, void *data, void *reservedValue, si
 
 void *SZ_decompress(int dataType, unsigned char *bytes, size_t byteLength, size_t r5, size_t r4, size_t r3, size_t r2, size_t r1)
 {
-	if(confparams_dec==NULL)
+    //correct dimension if needed
+    size_t _r[5];
+    filterDimension(r5, r4, r3, r2, r1, _r);
+    r5 = _r[4];
+    r4 = _r[3];
+    r3 = _r[2];
+    r2 = _r[1];
+    r1 = _r[0];
+
+    if(confparams_dec==NULL)
 		confparams_dec = (sz_params*)malloc(sizeof(sz_params));
 	memset(confparams_dec, 0, sizeof(sz_params));
 	if(exe_params==NULL)
