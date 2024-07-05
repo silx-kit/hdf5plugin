@@ -1,7 +1,7 @@
 hdf5plugin
 ==========
 
-*hdf5plugin* provides `HDF5 compression filters <https://portal.hdfgroup.org/documentation/hdf5-docs/registered_filter_plugins.html>`_ (namely: Blosc, Blosc2, BitShuffle, BZip2, FciDecomp, LZ4, SZ, SZ3, Zfp, ZStd) and makes them usable from `h5py <https://www.h5py.org>`_.
+*hdf5plugin* provides `HDF5 compression filters <https://github.com/HDFGroup/hdf5_plugins/blob/master/docs/RegisteredFilterPlugins.md#list-of-filters-registered-with-the-hdf-group>`_ (namely: Blosc, Blosc2, BitShuffle, BZip2, FciDecomp, LZ4, Sperr, SZ, SZ3, Zfp, ZStd) and makes them usable from `h5py <https://www.h5py.org>`_.
 
 
 * Supported operating systems: Linux, Windows, macOS.
