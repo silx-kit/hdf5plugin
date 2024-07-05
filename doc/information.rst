@@ -77,9 +77,9 @@ HDF5 compression filters and compression libraries sources were obtained from:
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.5), LZ4, Snappy, ZLib and ZStd.
 * hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
   using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.13.2), LZ4, ZLib and ZStd.
-* `FCIDECOMP plugin <ftp://ftp.eumetsat.int/pub/OPS/out/test-data/Test-data-for-External-Users/MTG_FCI_Test-Data/FCI_Decompression_Software_V1.0.2>`_ (v1.0.2)
-  using `CharLS <https://github.com/team-charls/charls>`_
-  (1.x branch, commit `25160a4 <https://github.com/team-charls/charls/tree/25160a42fb62e71e4b0ce081f5cb3f8bb73938b5>`_).
+* `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
+  (`v2.0.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/e88f83c03bafcd0769c167dca14aa7aabf728e1b>`_)
+  using `CharLS <https://github.com/team-charls/charls>`_ (v2.1.0).
 * `SZ plugin <https://github.com/szcompressor/SZ>`_
   (commit `f466775 <https://github.com/szcompressor/SZ/tree/f4667759ead6a902110e80ff838ccdfddbc8dcd7>`_)
   using `SZ <https://github.com/szcompressor/SZ>`_, ZLib and ZStd.
@@ -116,7 +116,7 @@ Please read the different licenses:
 * blosc2: See `src/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/PyTables/LICENSE.txt>`_  and `src/c-blosc2/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc2/LICENSES/>`_
 * bzip2: See `src/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/PyTables/LICENSE.txt>`_ and `src/bzip2/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/bzip2/LICENSE>`_
 * lz4: See `src/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/COPYING>`_, `src/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/LICENSE>`_ and `src/c-blosc/LICENSES/LZ4.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc/LICENSES/LZ4.txt>`_
-* FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/fcidecomp/LICENSE.txt>`_ and `src/charls/src/License.txt  <https://github.com/silx-kit/hdf5plugin/blob/main/src/charls/src/License.txt>`_
+* FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/fcidecomp/LICENSE>`_ and `src/charls/LICENSE.md  <https://github.com/silx-kit/hdf5plugin/blob/main/src/charls/LICENSE.md>`_
 * SZ: See `src/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/SZ/copyright-and-BSD-license.txt>`_
 * SZ3: See `src/SZ3/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/SZ3/copyright-and-BSD-license.txt>`_
 * zfp: See `src/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/H5Z-ZFP/LICENSE>`_ and `src/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/zfp/LICENSE>`_

@@ -1,0 +1,12 @@
+.DS_store
+_build
+~$*
+__pycache__/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+nbs/
+**/.idea/
+
+#VS Code
+.vscode

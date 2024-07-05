@@ -1,0 +1,115 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Cannot use .NET Core as dotnet core runtime can only test x64 or x86 but not both. -->
+    <TargetFramework>net472</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+
+    <Platforms>x86;x64</Platforms>
+
+    <Configurations>Debug;Release;Checked</Configurations>
+    <CodeAnalysisRuleSet>CharLSNetTest.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="nunit" Version="3.12.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.15.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\test\conformance\T16E0.JLS">
+      <Link>DataFiles\T16E0.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T16E3.JLS">
+      <Link>DataFiles\T16E3.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T16E3.pgm">
+      <Link>DataFiles\T16E3.pgm</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8C0E0.JLS">
+      <Link>DataFiles\T8C0E0.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8C0E3.JLS">
+      <Link>DataFiles\T8C0E3.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8C1E0.JLS">
+      <Link>DataFiles\T8C1E0.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8C1E3.JLS">
+      <Link>DataFiles\T8C1E3.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8C2E0.JLS">
+      <Link>DataFiles\T8C2E0.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8C2E3.JLS">
+      <Link>DataFiles\T8C2E3.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8NDE0.JLS">
+      <Link>DataFiles\T8NDE0.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8NDE3.JLS">
+      <Link>DataFiles\T8NDE3.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8SSE0.JLS">
+      <Link>DataFiles\T8SSE0.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\T8SSE3.JLS">
+      <Link>DataFiles\T8SSE3.JLS</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST16.PGM">
+      <Link>DataFiles\TEST16.PGM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST8.PPM">
+      <Link>DataFiles\TEST8.PPM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST8B.PGM">
+      <Link>DataFiles\TEST8B.PGM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST8BS2.PGM">
+      <Link>DataFiles\TEST8BS2.PGM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST8G.PGM">
+      <Link>DataFiles\TEST8G.PGM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST8GR4.PGM">
+      <Link>DataFiles\TEST8GR4.PGM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\test\conformance\TEST8R.PGM">
+      <Link>DataFiles\TEST8R.PGM</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\CharLSNet.csproj">
+      <Project>{6f9955c1-a285-4de0-b3e6-f69eb08bbd7b}</Project>
+      <Name>CharLSNet</Name>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>

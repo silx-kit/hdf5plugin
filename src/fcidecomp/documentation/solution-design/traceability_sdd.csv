@@ -1,0 +1,5 @@
+"[DTWS-FCI-010]","The solution shall be compatible with all MTG user stations that match the approved baseline.",Y,:ref:`supported_platforms`
+"[DTWS-FCI-020]","The solution shall be included in standard installations of the Data Tailor software.",Y,:ref:`integration_with_data_tailor`
+"[DTWS-FCI-030]","The solution shall allow users to read FCI L1c data compressed using CharLS directly, i.e. without requiring the use of the Data Tailor. The solution shall be compatible both with netCDF-C and netCDF-Java.",Y,:ref:`integration_with_netcdf_c` :ref:`usage_as_cli_tool` :ref:`integration_with_netcdf_java`
+"[DTWS-FCI-040]","The solution shall utilise only software that is licensed in a way that is compatible with any use, i.e. free and open source software. Any dependencies shall be archived at EUMETSAT to ensure that they remain available even if their repositories in the Internet should become unavailable.",Y,:ref:`creation_of_canonical_repository`
+"[DTWS-FCI-050]","The solution shall be maintained by the Contractor for the remaining duration of the Contract.",Y,"Contractual requirement, doesn't need to be covered by design"

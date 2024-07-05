@@ -1,84 +1,87 @@
-// 
-// (C) Jan de Vaan 2007-2010, all rights reserved. See the accompanying "License.txt" for licensed use. 
-// 
+// Copyright (c) Team CharLS.
+// SPDX-License-Identifier: BSD-3-Clause
 
-
-#include "config.h"
-
+#include "compliance.h"
 #include "util.h"
-
-#include "../src/interface.h"
-#include "../src/util.h"
 
 #include <iostream>
 #include <vector>
 #include <cstring>
+#include <array>
 
+using std::cout;
+using std::error_code;
+using std::swap;
+using std::vector;
+using std::array;
+using namespace charls;
 
-void Triplet2Planar(std::vector<BYTE>& rgbyte, Size size)
+namespace
 {
-    std::vector<BYTE> rgbytePlanar(rgbyte.size());
 
-    int cbytePlane = size.cx * size.cy;
-    for (int index = 0; index < cbytePlane; index++)
+void Triplet2Planar(vector<uint8_t>& buffer, Size size)
+{
+    vector<uint8_t> workBuffer(buffer.size());
+
+    const size_t byteCount = size.cx * size.cy;
+    for (size_t index = 0; index < byteCount; index++)
     {
-        rgbytePlanar[index]                 = rgbyte[index * 3 + 0];
-        rgbytePlanar[index + 1*cbytePlane]  = rgbyte[index * 3 + 1];
-        rgbytePlanar[index + 2*cbytePlane]  = rgbyte[index * 3 + 2];
+        workBuffer[index] = buffer[index * 3 + 0];
+        workBuffer[index + 1 * byteCount] = buffer[index * 3 + 1];
+        workBuffer[index + 2 * byteCount] = buffer[index * 3 + 2];
     }
-    std::swap(rgbyte, rgbytePlanar);
+    swap(buffer, workBuffer);
 }
 
 
-void Triplet2Line(std::vector<BYTE>& rgbyte, Size size)
+bool VerifyEncodedBytes(const void* uncompressedData, size_t uncompressedLength, const void* compressedData, size_t compressedLength)
 {
-    std::vector<BYTE> rgbyteInterleaved(rgbyte.size());
+    JlsParameters info{};
+    error_code error = JpegLsReadHeader(compressedData, compressedLength, &info, nullptr);
+    if (error)
+        return false;
 
-    int cbyteLine = size.cx;
+    vector<uint8_t> ourEncodedBytes(compressedLength + 16);
+    size_t bytesWritten;
+    error = JpegLsEncode(ourEncodedBytes.data(), ourEncodedBytes.size(), &bytesWritten, uncompressedData, uncompressedLength, &info, nullptr);
+    if (error)
+        return false;
 
-    for (int line = 0; line < size.cy; ++line)
+    for (size_t i = 0; i < compressedLength; ++i)
     {
-        const BYTE* pbyteLineIn = &rgbyte[line * size.cx * 3];
-        BYTE* pbyteLineOut = &rgbyteInterleaved[line * size.cx * 3];
-
-        for (int index = 0; index < cbyteLine; index++)
+        if (static_cast<const uint8_t*>(compressedData)[i] != ourEncodedBytes[i])
         {
-            pbyteLineOut[index]                 = pbyteLineIn[index * 3 + 0];
-            pbyteLineOut[index + 1*cbyteLine]   = pbyteLineIn[index * 3 + 1];
-            pbyteLineOut[index + 2*cbyteLine]   = pbyteLineIn[index * 3 + 2];
+            return false;
         }
     }
-    std::swap(rgbyte, rgbyteInterleaved);
+
+    return true;
 }
 
 
-void TestCompliance(const BYTE* compressedBytes, size_t compressedLength, const BYTE* rgbyteRaw, size_t cbyteRaw, bool bcheckEncode)
+void TestCompliance(const uint8_t* compressedBytes, size_t compressedLength, const uint8_t* uncompressedData, size_t uncompressedLength, bool checkEncode)
 {
-    JlsParameters info = JlsParameters();
-    JLS_ERROR err = JpegLsReadHeader(compressedBytes, compressedLength, &info);
-    ASSERT(err == OK);
+    JlsParameters info{};
+    error_code error = JpegLsReadHeader(compressedBytes, compressedLength, &info, nullptr);
+    Assert::IsTrue(!error);
 
-    if (bcheckEncode)
+    if (checkEncode)
     {
-        err = JpegLsVerifyEncode(&rgbyteRaw[0], cbyteRaw, compressedBytes, compressedLength);
-        ASSERT(err == OK);
+        Assert::IsTrue(VerifyEncodedBytes(uncompressedData, uncompressedLength, compressedBytes, compressedLength));
     }
 
-    std::vector<BYTE> rgbyteCompressed(info.height *info.width* 4);
+    vector<uint8_t> destination(static_cast<size_t>(info.height) *info.width * ((info.bitsPerSample + 7) / 8) * info.components);
 
-    std::vector<BYTE> rgbyteOut(info.height *info.width * ((info.bitspersample + 7) / 8) * info.components);
+    error = JpegLsDecode(destination.data(), destination.size(), compressedBytes, compressedLength, nullptr, nullptr);
+    Assert::IsTrue(!error);
 
-    err = JpegLsDecode(&rgbyteOut[0], rgbyteOut.size(), compressedBytes, compressedLength, NULL);
-    ASSERT(err == OK);
-
-    if (info.allowedlossyerror == 0)
+    if (info.allowedLossyError == 0)
     {
-        BYTE* pbyteOut = &rgbyteOut[0];
-        for (size_t i = 0; i < cbyteRaw; ++i)
+        for (size_t i = 0; i < uncompressedLength; ++i)
         {
-            if (rgbyteRaw[i] != pbyteOut[i])
+            if (uncompressedData[i] != destination[i])
             {
-                ASSERT(false);
+                Assert::IsTrue(false);
                 break;
             }
         }
@@ -86,105 +89,101 @@ void TestCompliance(const BYTE* compressedBytes, size_t compressedLength, const 
 }
 
 
-void DecompressFile(SZC strNameEncoded, SZC strNameRaw, int ioffs, bool bcheckEncode)
+void DecompressFile(const char* strNameEncoded, const char* strNameRaw, int offset, bool checkEncode = true)
 {
-    std::cout << "Conformance test:" << strNameEncoded << "\n\r";
-    std::vector<BYTE> rgbyteFile;
-    if (!ReadFile(strNameEncoded, &rgbyteFile))
-        return;
+    cout << "Conformance test:" << strNameEncoded << "\n\r";
+    vector<uint8_t> encodedBuffer = ReadFile(strNameEncoded);
 
-    JlsParameters metadata;
-    if (JpegLsReadHeader(&rgbyteFile[0], rgbyteFile.size(), &metadata) != OK)
+    JlsParameters params{};
+    if (make_error_code(JpegLsReadHeader(encodedBuffer.data(), encodedBuffer.size(), &params, nullptr)))
     {
-        ASSERT(false);
+        Assert::IsTrue(false);
         return;
     }
 
-    std::vector<BYTE> rgbyteRaw;
-    if (!ReadFile(strNameRaw, &rgbyteRaw, ioffs))
-        return;
+    vector<uint8_t> rawBuffer = ReadFile(strNameRaw, offset);
 
-    if (metadata.bitspersample > 8)
+    if (params.bitsPerSample > 8)
     {
-        FixEndian(&rgbyteRaw, false);
+        FixEndian(&rawBuffer, false);
     }
 
-    if (metadata.ilv == ILV_NONE && metadata.components == 3)
+    if (params.interleaveMode == interleave_mode::none && params.components == 3)
     {
-        Triplet2Planar(rgbyteRaw, Size(metadata.width, metadata.height));
+        Triplet2Planar(rawBuffer, Size(params.width, params.height));
     }
 
-    TestCompliance(&rgbyteFile[0], rgbyteFile.size(), &rgbyteRaw[0], rgbyteRaw.size(), bcheckEncode);
+    TestCompliance(encodedBuffer.data(), encodedBuffer.size(), rawBuffer.data(), rawBuffer.size(), checkEncode);
 }
 
 
-BYTE palettisedDataH10[] = {
-    0xFF, 0xD8, //Start of image (SOI) marker 
-    0xFF, 0xF7, //Start of JPEG-LS frame (SOF 55) marker � marker segment follows 
-    0x00, 0x0B, //Length of marker segment = 11 bytes including the length field 
-    0x02, //P = Precision = 2 bits per sample 
-    0x00, 0x04, //Y = Number of lines = 4 
-    0x00, 0x03, //X = Number of columns = 3 
-    0x01, //Nf = Number of components in the frame = 1 
-    0x01, //C1  = Component ID = 1 (first and only component) 
-    0x11, //Sub-sampling: H1 = 1, V1 = 1 
-    0x00, //Tq1 = 0 (this field is always 0) 
+////uint8_t palettisedDataH10[] = {
+////    0xFF, 0xD8, //Start of image (SOI) marker
+////    0xFF, 0xF7, //Start of JPEG-LS frame (SOF 55) marker – marker segment follows
+////    0x00, 0x0B, //Length of marker segment = 11 bytes including the length field
+////    0x02, //P = Precision = 2 bits per sample
+////    0x00, 0x04, //Y = Number of lines = 4
+////    0x00, 0x03, //X = Number of columns = 3
+////    0x01, //Nf = Number of components in the frame = 1
+////    0x01, //C1  = Component ID = 1 (first and only component)
+////    0x11, //Sub-sampling: H1 = 1, V1 = 1
+////    0x00, //Tq1 = 0 (this field is always 0)
+////
+////    0xFF, 0xF8, //LSE – JPEG-LS preset parameters marker
+////    0x00, 0x11, //Length of marker segment = 17 bytes including the length field
+////    0x02, //ID = 2, mapping table
+////    0x05, //TID = 5 Table identifier (arbitrary)
+////    0x03, //Wt = 3 Width of table entry
+////    0xFF, 0xFF, 0xFF, //Entry for index 0
+////    0xFF, 0x00, 0x00, //Entry for index 1
+////    0x00, 0xFF, 0x00, //Entry for index 2
+////    0x00, 0x00, 0xFF, //Entry for index 3
+////
+////    0xFF, 0xDA, //Start of scan (SOS) marker
+////    0x00, 0x08, //Length of marker segment = 8 bytes including the length field
+////    0x01, //Ns = Number of components for this scan = 1
+////    0x01, //C1 = Component ID = 1
+////    0x05, //Tm 1  = Mapping table identifier = 5
+////    0x00, //NEAR = 0 (near-lossless max error)
+////    0x00, //ILV = 0 (interleave mode = non-interleaved)
+////    0x00, //Al = 0, Ah = 0 (no point transform)
+////    0xDB, 0x95, 0xF0, //3 bytes of compressed image data
+////    0xFF, 0xD9 //End of image (EOI) marker
+////};
 
-    0xFF, 0xF8, //LSE � JPEG-LS preset parameters marker 
-    0x00, 0x11, //Length of marker segment = 17 bytes including the length field 
-    0x02, //ID = 2, mapping table  
-    0x05, //TID = 5 Table identifier (arbitrary) 
-    0x03, //Wt = 3 Width of table entry 
-    0xFF, 0xFF, 0xFF, //Entry for index 0 
-    0xFF, 0x00, 0x00, //Entry for index 1 
-    0x00, 0xFF, 0x00, //Entry for index 2 
-    0x00, 0x00, 0xFF, //Entry for index 3 
 
-    0xFF, 0xDA, //Start of scan (SOS) marker 
-    0x00, 0x08, //Length of marker segment = 8 bytes including the length field 
-    0x01, //Ns = Number of components for this scan = 1 
-    0x01, //C1 = Component ID = 1  
-    0x05, //Tm 1  = Mapping table identifier = 5 
-    0x00, //NEAR = 0 (near-lossless max error) 
-    0x00, //ILV = 0 (interleave mode = non-interleaved) 
-    0x00, //Al = 0, Ah = 0 (no point transform) 
-    0xDB, 0x95, 0xF0, //3 bytes of compressed image data 
-    0xFF, 0xD9 //End of image (EOI) marker 
-};
-
-
-
-const BYTE rgbyte[] = { 0,   0,  90,  74, 
-68,  50,  43, 205, 
-64, 145, 145, 145, 
+const array<uint8_t, 16> buffer = { 0,   0,  90,  74,
+68,  50,  43, 205,
+64, 145, 145, 145,
 100, 145, 145, 145};
-//// const BYTE rgbyteComp[] =   {  0xFF, 0xD8, 0xFF, 0xF7, 0x00, 0x0B, 0x08, 0x00, 0x04, 0x00, 0x04, 0x01, 0x01, 0x11, 0x00, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 
-//// 0xC0, 0x00, 0x00, 0x6C, 0x80, 0x20, 0x8E,
-//// 0x01, 0xC0, 0x00, 0x00, 0x57, 0x40, 0x00, 0x00, 0x6E, 0xE6, 0x00, 0x00, 0x01, 0xBC, 0x18, 0x00,
-//// 0x00, 0x05, 0xD8, 0x00, 0x00, 0x91, 0x60, 0xFF, 0xD9};
+////const uint8_t bufferEncoded[] =   {   0xFF, 0xD8, 0xFF, 0xF7, 0x00, 0x0B, 0x08, 0x00, 0x04, 0x00, 0x04, 0x01, 0x01, 0x11, 0x00, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+////0xC0, 0x00, 0x00, 0x6C, 0x80, 0x20, 0x8E,
+////0x01, 0xC0, 0x00, 0x00, 0x57, 0x40, 0x00, 0x00, 0x6E, 0xE6, 0x00, 0x00, 0x01, 0xBC, 0x18, 0x00,
+////0x00, 0x05, 0xD8, 0x00, 0x00, 0x91, 0x60, 0xFF, 0xD9};
 
+} // namespace
 
 
 void TestSampleAnnexH3()
 {
-    //// Size size = Size(4,4);
-    std::vector<BYTE> vecRaw(16);
-    memcpy(&vecRaw[0], rgbyte, 16);
-    //// TestJls(vecRaw, size, 8, 1, ILV_NONE, rgbyteComp, sizeof(rgbyteComp), false);
+    ////Size size = Size(4,4);
+    vector<uint8_t> vecRaw(16);
+    memcpy(vecRaw.data(), buffer.data(), buffer.size());
+    ////  TestJls(vecRaw, size, 8, 1, ILV_NONE, bufferEncoded, sizeof(bufferEncoded), false);
 }
-
 
 
 void TestColorTransforms_HpImages()
-{   
-    DecompressFile("test/jlsimage/banny_normal.jls", "test/jlsimage/banny.ppm",38, false);
-    DecompressFile("test/jlsimage/banny_Hp1.jls", "test/jlsimage/banny.ppm",38, false);
-    DecompressFile("test/jlsimage/banny_Hp2.jls", "test/jlsimage/banny.ppm",38, false);
-    DecompressFile("test/jlsimage/banny_Hp3.jls", "test/jlsimage/banny.ppm",38, false);
+{
+    DecompressFile("test/jlsimage/banny_normal.jls", "test/jlsimage/banny.ppm", 38, false);
+    DecompressFile("test/jlsimage/banny_HP1.jls", "test/jlsimage/banny.ppm", 38, false);
+    DecompressFile("test/jlsimage/banny_HP2.jls", "test/jlsimage/banny.ppm", 38, false);
+    DecompressFile("test/jlsimage/banny_HP3.jls", "test/jlsimage/banny.ppm", 38, false);
 }
 
+
 void TestConformance()
-{   
+{
     // Test 1
     DecompressFile("test/conformance/T8C0E0.JLS", "test/conformance/TEST8.PPM",15);
 
@@ -193,7 +192,6 @@ void TestConformance()
 
     // Test 3
     DecompressFile("test/conformance/T8C2E0.JLS", "test/conformance/TEST8.PPM", 15);
-
 
     // Test 4
     DecompressFile("test/conformance/T8C0E3.JLS", "test/conformance/TEST8.PPM",15);
@@ -204,15 +202,14 @@ void TestConformance()
     // Test 6
     DecompressFile("test/conformance/T8C2E3.JLS", "test/conformance/TEST8.PPM",15);
 
-
     // Test 7
     // Test 8
 
     // Test 9
-    DecompressFile("test/conformance/T8NDE0.JLS", "test/conformance/TEST8BS2.PGM",15);  
+    DecompressFile("test/conformance/T8NDE0.JLS", "test/conformance/TEST8BS2.PGM",15);
 
     // Test 10
-    DecompressFile("test/conformance/T8NDE3.JLS", "test/conformance/TEST8BS2.PGM",15);  
+    DecompressFile("test/conformance/T8NDE3.JLS", "test/conformance/TEST8BS2.PGM",15);
 
     // Test 11
     DecompressFile("test/conformance/T16E0.JLS", "test/conformance/TEST16.PGM",16);
@@ -220,10 +217,6 @@ void TestConformance()
     // Test 12
     DecompressFile("test/conformance/T16E3.JLS", "test/conformance/TEST16.PGM",16);
 
-
-
     // additional, Lena compressed with other codec (UBC?), vfy with CharLS
     DecompressFile("test/lena8b.jls", "test/lena8b.raw",0);
 }
-
-

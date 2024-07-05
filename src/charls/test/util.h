@@ -1,20 +1,52 @@
-// 
-// (C) Jan de Vaan 2007-2010, all rights reserved. See the accompanying "License.txt" for licensed use. 
-// 
+// Copyright (c) Team CharLS.
+// SPDX-License-Identifier: BSD-3-Clause
 
-#ifndef TEST_UTIL
-#define TEST_UTIL
+#pragma once
 
-#include "../src/util.h"
+#include <charls/charls_legacy.h>
+#include <charls/charls.h>
 
-typedef const char* SZC;
+#include <vector>
+#include <exception>
 
-void FixEndian(std::vector<BYTE>* rgbyte, bool littleEndianData);
-bool ReadFile(SZC strName, std::vector<BYTE>* pvec, int ioffs = 0, int bytes = 0);
-void TestFile(SZC strName, int ioffs, Size size2, int cbit, int ccomp, bool littleEndianFile = false, int loopCount = 1);
-void TestRoundTrip(const char* strName, std::vector<BYTE>& rgbyteRaw, Size size, int cbit, int ccomp, int loopCount = 1);
+struct Size final
+{
+    Size(size_t width, size_t height) noexcept
+        :
+        cx(width),
+        cy(height)
+    {}
+    size_t cx;
+    size_t cy;
+};
 
-void WriteFile(SZC strName, std::vector<BYTE>& vec);
-void DecompressFile(SZC strNameEncoded, SZC strNameRaw, int ioffs, bool bcheckEncode = true);
 
+void FixEndian(std::vector<uint8_t>* buffer, bool littleEndianData) noexcept;
+std::vector<uint8_t> ReadFile(const char* filename, long offset = 0, size_t bytes = 0);
+void TestFile(const char* filename, int offset, Size size2, int bitsPerSample, int componentCount, bool littleEndianFile = false, int loopCount = 1);
+void TestRoundTrip(const char* strName, const std::vector<uint8_t>& decodedBuffer, Size size, int bitsPerSample, int componentCount, int loopCount = 1);
+void TestRoundTrip(const char* strName, const std::vector<uint8_t>& originalBuffer, JlsParameters& params, int loopCount = 1);
+void test_portable_anymap_file(const char* filename, int loopCount = 1);
+
+class UnitTestException final : public std::exception {
+public:
+    explicit UnitTestException() = default;
+};
+
+class Assert final
+{
+public:
+    static void IsTrue(bool condition)
+    {
+        if (!condition)
+            throw UnitTestException();
+    }
+};
+
+#ifdef _MSC_VER
+#define MSVC_WARNING_SUPPRESS(x) __pragma(warning(push)) __pragma(warning(disable : x))  // NOLINT(misc-macro-parentheses, bugprone-macro-parentheses)
+#define MSVC_WARNING_UNSUPPRESS() __pragma(warning(pop))
+#else
+#define MSVC_WARNING_SUPPRESS(x)
+#define MSVC_WARNING_UNSUPPRESS()
 #endif
