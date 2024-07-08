@@ -71,6 +71,9 @@ Available options
    * - ``HDF5PLUGIN_CPP14``
      - Whether or not to compile C++14 code if available.
        Default: True if probed.
+   * - ``HDF5PLUGIN_CPP20``
+     - Whether or not to compile C++20 code if available.
+       Default: True if probed.
    * - ``HDF5PLUGIN_INTEL_IPP_DIR``
      - Experimental feature: Path to Intel `IPP`_ root directory.
        If provided, the LZ4 compression library and Blosc2 are set to use Intel `IPP`_.
