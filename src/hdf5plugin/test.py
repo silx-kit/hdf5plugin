@@ -364,22 +364,9 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(config.build_config.embedded_filters, tuple)
         self.assertIsInstance(config.registered_filters, dict)
 
-    def testDeprecatedConfig(self):
-        """Test hdf5plugin.config availability"""
-        config = hdf5plugin.config
-        self.assertIsInstance(config.openmp, bool)
-        self.assertIsInstance(config.native, bool)
-        self.assertIsInstance(config.sse2, bool)
-        self.assertIsInstance(config.avx2, bool)
-        self.assertIsInstance(config.cpp11, bool)
-        self.assertIsInstance(config.cpp14, bool)
-        self.assertIsInstance(config.embedded_filters, tuple)
-
     def testVersion(self):
         """Test version information"""
         self.assertIsInstance(hdf5plugin.version, str)
-        self.assertIsInstance(hdf5plugin.strictversion, str)
-        self.assertIsInstance(hdf5plugin.hexversion, int)
         version_info = hdf5plugin.version_info
         self.assertIsInstance(version_info.major, int)
         self.assertIsInstance(version_info.minor, int)

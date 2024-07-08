@@ -53,4 +53,4 @@ packages = ["hdf5plugin"]
 package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
-version = {attr = "hdf5plugin._version.strictversion"}
+version = {attr = "hdf5plugin._version.version"}
