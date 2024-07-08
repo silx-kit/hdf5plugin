@@ -531,7 +531,7 @@ class Sperr(h5py.filters.FilterRefBase):
             if quality_log < 0:
                 ret = int(math.ceil(abs(quality_log) * (1 << cls._FRACTIONAL_BITS)))
                 # Store negative sign
-                ret |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS -1)
+                ret |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS - 1)
             else:
                 ret = int(math.floor(quality_log * (1 << cls._FRACTIONAL_BITS)))
 

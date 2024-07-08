@@ -209,9 +209,11 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         self._test('blosc2')  # Default options
 
         # Specify options
-        tested_filters = (hdf5plugin.Blosc2.NOFILTER,
-                    hdf5plugin.Blosc2.SHUFFLE,
-                    hdf5plugin.Blosc2.BITSHUFFLE)
+        tested_filters = (
+            hdf5plugin.Blosc2.NOFILTER,
+            hdf5plugin.Blosc2.SHUFFLE,
+            hdf5plugin.Blosc2.BITSHUFFLE,
+        )
         compress = 'blosclz', 'lz4', 'lz4hc', 'unused', 'zlib', 'zstd'
         for compression_id, cname in enumerate(compress):
             if cname == 'unused':
@@ -488,7 +490,7 @@ class TestBlosc2Plugins(unittest.TestCase):
             data: numpy.ndarray,
             blocks: tuple[int, ...] | None = None,
             **cparams
-        ) -> numpy.ndarray:
+    ) -> numpy.ndarray:
         """Compress data with blosc2, write it as HDF5 file with direct chunk write and read it back with h5py
 
         :param data: data array to compress

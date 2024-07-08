@@ -46,7 +46,7 @@ from setuptools.command.build_py import build_py
 from setuptools.command.build_clib import build_clib
 from setuptools.command.build import build
 from setuptools.errors import CompileError
-from wheel.bdist_wheel import bdist_wheel, get_platform
+from wheel.bdist_wheel import bdist_wheel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -78,7 +78,6 @@ def get_compiler(compiler):
 
     Taken from https://github.com/pypa/setuptools/issues/2806#issuecomment-961805789
     """
-    d = Distribution()
     build_ext = Distribution().get_command_obj("build_ext")
     build_ext.compiler = compiler
     build_ext.finalize_options()
@@ -108,7 +107,7 @@ def check_compile_flags(compiler, *flags, extension='.c', source=None):
         tmp_file = Path(tmp_dir) / f"source{extension}"
         tmp_file.write_text(source)
         try:
-            result = compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
+            compiler.compile([str(tmp_file)], output_dir=tmp_dir, extra_postargs=list(flags))
         except CompileError:
             return False
         else:
@@ -387,9 +386,9 @@ class BuildConfig:
         return enabled
 
     USE_BMI2 = bool(
-            os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True'
-            and sys.platform in ('linux', 'darwin')
-        )
+        os.environ.get("HDF5PLUGIN_BMI2", 'True') == 'True'
+        and sys.platform in ('linux', 'darwin')
+    )
     """Whether to build with BMI2 instruction set or not (bool)"""
 
     INTEL_IPP_DIR = os.environ.get("HDF5PLUGIN_INTEL_IPP_DIR", None)
@@ -985,8 +984,7 @@ def get_blosc2_plugin():
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc2",
-        sources=sources + \
-            prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
+        sources=sources + prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
         extra_objects=get_zstd_clib('extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc2_dir],
         define_macros=define_macros,
@@ -1027,7 +1025,7 @@ def get_bitshuffle_plugin():
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
     extra_link_args = ['-fopenmp', '/openmp']
 
-    define_macros=[("ZSTD_SUPPORT", 1)]
+    define_macros = [("ZSTD_SUPPORT", 1)]
     if platform.machine() == 'ppc64le':
         define_macros.append(('NO_WARN_X86_INTRINSICS', None))  # P9 way to enable SSE2
 
