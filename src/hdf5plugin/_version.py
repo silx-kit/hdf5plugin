@@ -37,19 +37,17 @@ class _VersionInfo(NamedTuple):
     releaselevel: str = "final"
     serial: int = 0
 
-    def __init__(self, version: str):
-        pattern = r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)((?P<prerelease>a|b|rc)(?P<serial>\d+))?"
-        match = re.fullmatch(pattern, version, re.ASCII)
-        fields = {k: v for k, v in match.groupdict().items() if v is not None}
 
-        # Convert prerelease to releaselevel
-        prerelease = fields.pop("prerelease", None)
-        if prerelease is not None:
-            fields["releaselevel"] = {"a": "alpha", "b": "beta", "rc": "candidate"}[
-                prerelease
-            ]
+def _version_info(version: str) -> _VersionInfo:
+    pattern = r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)((?P<prerelease>a|b|rc)(?P<serial>\d+))?"
+    match = re.fullmatch(pattern, version, re.ASCII)
+    fields = {k: v for k, v in match.groupdict().items() if v is not None}
+    # Remove prerelease and convert it to releaselevel
+    prerelease = fields.pop("prerelease", None)
+    releaselevel = {"a": "alpha", "b": "beta", "rc": "candidate", None: "final"}[prerelease]
+    version_fields = {k: int(v) for k, v in fields.items()}
 
-        super().__init__(**fields)
+    return _VersionInfo(releaselevel=releaselevel, **version_fields)
 
 
-version_info = _VersionInfo(version)
+version_info = _version_info(version)
