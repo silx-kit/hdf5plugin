@@ -8,46 +8,46 @@ on:
 
 jobs:
   build_sdist:
-    name: Build source distribution
+    name: Build and test source distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine
-      - name: Build sdist
-        run: python -m build --sdist
-      - name: Check the package
-        run: |
-          python -m twine check dist/*
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m build --sdist
+      - run: python -m twine check dist/*
+      - run: pip install --pre "$(ls dist/hdf5plugin*.tar.gz)[test]"
+      - run: python test/test.py
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
 
-  test_sdist:
-    needs: [build_sdist]
-    name: Test source distribution
+  build_doc:
+    name: Build documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      - uses: actions/download-artifact@v4
+          python-version: "3.12"
+          cache: "pip"
+      - run: sudo apt-get install pandoc
+      - run: pip install .[doc]
+        env:
+          HDF5PLUGIN_STRIP: all  # Do not build the filters
+      - name: Build doc
+        run: |
+          export OUTPUT_NAME="hdf5plugin-$(python -c 'import hdf5plugin; print(hdf5plugin.version)')_documentation"
+          sphinx-build doc/ "${OUTPUT_NAME}/"
+          zip -r "${OUTPUT_NAME}.zip" "${OUTPUT_NAME}/"
+      - uses: actions/upload-artifact@v4
         with:
-          name: cibw-sdist
-          path: dist
-      - name: Install sdist
-        run: pip install --pre "$(ls dist/hdf5plugin*.tar.gz)[test]"
-      - name: Run tests
-        run: python test/test.py
+          name: documentation
+          path: hdf5plugin-*_documentation.zip
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}-${{ matrix.cibw_archs }}
@@ -94,7 +94,7 @@ jobs:
           HDF5PLUGIN_CPP20: "True"
           MACOSX_DEPLOYMENT_TARGET: "10.13"
 
-          CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_SSSE3 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14
+          CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_SSSE3 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14 HDF5PLUGIN_CPP20
 
           CIBW_BUILD_VERBOSITY: 1
           # Use Python3.11 to build wheels that are compatible with all supported version of Python
@@ -143,7 +143,7 @@ jobs:
         # First select the right wheel from dist/ with pip download, then install it
         run: |
           pip download --no-index --no-cache --no-deps --find-links=./dist --only-binary :all: hdf5plugin
-          pip install "$(ls ./hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install "$(ls ./hdf5plugin-*.whl)"
+          pip install "$(ls ./hdf5plugin-*.whl)[test]"
       - name: Run test with latest h5py
         run: python test/test.py
       - name: Run test with oldest h5py
@@ -152,7 +152,7 @@ jobs:
           python test/test.py
 
   pypi-publish:
-    needs: [build_wheels, build_sdist, test_wheels, test_sdist]
+    needs: [build_wheels, build_sdist, build_doc, test_wheels]
     name: Upload release to PyPI
     runs-on: ubuntu-latest
     environment:
