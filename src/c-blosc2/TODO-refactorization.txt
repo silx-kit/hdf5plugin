@@ -1,3 +1,0 @@
-compcode -> codec
-
-look into the packed offsets and come with an standard
