@@ -34,9 +34,4 @@ Alternatives to install HDF5 compression filters are: system-wide installation o
    contribute.rst
    changelog.rst
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+:ref:`genindex`
