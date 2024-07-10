@@ -31,23 +31,26 @@ version = "5.0.0a0"
 
 class _VersionInfo(NamedTuple):
     """Version information as a namedtuple"""
+
     major: int
     minor: int
     micro: int
     releaselevel: str = "final"
     serial: int = 0
 
+    @staticmethod
+    def from_string(version: str) -> "_VersionInfo":
+        pattern = r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)((?P<prerelease>a|b|rc)(?P<serial>\d+))?"
+        match = re.fullmatch(pattern, version, re.ASCII)
+        fields = {k: v for k, v in match.groupdict().items() if v is not None}
+        # Remove prerelease and convert it to releaselevel
+        prerelease = fields.pop("prerelease", None)
+        releaselevel = {"a": "alpha", "b": "beta", "rc": "candidate", None: "final"}[
+            prerelease
+        ]
+        version_fields = {k: int(v) for k, v in fields.items()}
 
-def _version_info(version: str) -> _VersionInfo:
-    pattern = r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)((?P<prerelease>a|b|rc)(?P<serial>\d+))?"
-    match = re.fullmatch(pattern, version, re.ASCII)
-    fields = {k: v for k, v in match.groupdict().items() if v is not None}
-    # Remove prerelease and convert it to releaselevel
-    prerelease = fields.pop("prerelease", None)
-    releaselevel = {"a": "alpha", "b": "beta", "rc": "candidate", None: "final"}[prerelease]
-    version_fields = {k: int(v) for k, v in fields.items()}
-
-    return _VersionInfo(releaselevel=releaselevel, **version_fields)
+        return _VersionInfo(releaselevel=releaselevel, **version_fields)
 
 
-version_info = _version_info(version)
+version_info = _VersionInfo.from_string(version)
