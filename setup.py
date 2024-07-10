@@ -796,7 +796,9 @@ def get_sperr_clib(field=None):
 def get_zfp_clib(field=None):
     """ZFP static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
-    cflags += ['/Ox', '/fp:fast', '/openmp']
+    # Use /Ob1 to fix ZFP test failing with Visual Studio 2022: MSVC 14.40.33807
+    # See https://github.com/LLNL/zfp/issues/222
+    cflags += ['/Ob1', '/fp:fast', '/openmp']
 
     zfp_dir = "src/zfp"
 

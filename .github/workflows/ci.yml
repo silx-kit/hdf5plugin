@@ -1,86 +1,62 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the action will run.
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    name: "Python ${{ matrix.python-version }} on ${{ matrix.os }} ${{ matrix.name-suffix }}"
-    runs-on: ${{ matrix.os }}
-    strategy:
-      # do not cancel tests after first fail
-      fail-fast: false
-      matrix:
-        include:
-          - name-suffix: "wheel-h5py_3.0.0"
-            os: ubuntu-latest
-            python-version: '3.7'
-            OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
-
-          - name-suffix: "sdist-h5py_3.6.0"
-            os: ubuntu-latest
-            python-version: '3.10'
-            OLDEST_DEPENDENCIES: 'h5py==3.6.0 "numpy<2"'
-
-          - name-suffix: "wheel-h5py_3.10.0"
-            os: ubuntu-latest
-            python-version: '3.12'
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
-
-          - name-suffix: "wheel-h5py_3.0.0"
-            os: macos-13
-            python-version: '3.7.16'
-            OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
-            env:
-              MACOSX_DEPLOYMENT_TARGET: 10.15
-
-          - name-suffix: "wheel-h5py_3.10.0"
-            os: macos-13
-            python-version: '3.10.8'
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
-
+  build_sdist:
+    name: Build sdist & documentation
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
           cache: 'pip'
-      - name: Install build tool
-        run: python -m pip install --upgrade pip build
-      - name: Build sdist and wheel
-        run: python -m build
-      - name: Install wheel
-        run: pip install --pre "$(ls dist/hdf5plugin-*.whl)[test]" --only-binary blosc2 || pip install --pre dist/hdf5plugin-*.whl
-      - name: Run the tests with latest h5py
-        run: python test/test.py
-      - name: Run the tests with oldest h5py
-        run: |
-          pip install ${{ matrix.OLDEST_DEPENDENCIES }}
-          python test/test.py
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m build --sdist
+      - run: python -m twine check dist/*
+      # Build documentation
+      - run: sudo apt-get install pandoc
+      - run: pip install "$(ls ./dist/hdf5plugin-*.tar.gz)[doc]"
+        env:
+          HDF5PLUGIN_STRIP: all  # Do not build the filters
+      - run: sphinx-build --fail-on-warning --keep-going -b html doc/ ./html
 
-  build_wheels_macos:
-    name: Build ARM64 wheels on macos-latest
-    runs-on: macos-latest
+  build_test:
+    name: ${{ matrix.cibw_build }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            cibw_build: "cp38-manylinux_x86_64"
+          - os: windows-2019
+            cibw_build: "cp38-win_amd64"
+          - os: macos-12
+            cibw_build: "cp38-macosx_x86_64"
+          - os: ubuntu-latest
+            cibw_build: "cp310-manylinux_x86_64"
+          - os: windows-latest
+            cibw_build: "cp311-win_amd64"
+          - os: macos-latest
+            cibw_build: "cp312-macosx_arm64"
+
     steps:
       - uses: actions/checkout@v4
       - uses: pypa/cibuildwheel@v2.16.5
         env:
-          CIBW_BUILD: cp311-macosx_*
-          CIBW_ARCHS_MACOS: arm64
-          HDF5PLUGIN_SSE2: False
-          HDF5PLUGIN_SSSE3: False
-          HDF5PLUGIN_AVX2: False
-          HDF5PLUGIN_AVX512: False
-          HDF5PLUGIN_NATIVE: False
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_BUILD: ${{ matrix.cibw_build }}
+          CIBW_TEST_EXTRAS: "test"
+          # Test twice: with latest version and with numpy v1 and oldest supported h5py
+          CIBW_TEST_COMMAND: >
+            python {project}/test/test.py &&
+            pip install -r {project}/ci/oldest_h5py.txt &&
+            python {project}/test/test.py

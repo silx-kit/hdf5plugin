@@ -42,7 +42,7 @@ Presentations
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2023/presentation>`
     (:download:`Notebook <hdf5plugin_EuropeanHUG2023/presentation.ipynb>`),
-    `Video <https://youtu.be/IyS_NgAwXuU>`_
+    `Video EuHUG2023 <https://youtu.be/IyS_NgAwXuU>`_
   - Benchmark: :download:`script <hdf5plugin_EuropeanHUG2023/benchmark.py>`, :download:`display notebook <hdf5plugin_EuropeanHUG2023/benchmark.ipynb>`
   - :doc:`HDF5 compressed chunk direct read example <hdf5plugin_EuropeanHUG2023/hdf5_compressed_chunk_direct_read>`
     (:download:`Notebook <hdf5plugin_EuropeanHUG2023/hdf5_compressed_chunk_direct_read.ipynb>`)
@@ -52,14 +52,14 @@ Presentations
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2022>`
     (:download:`Notebook <hdf5plugin_EuropeanHUG2022.ipynb>`),
-    `Video <https://youtu.be/Titp1XRBh9k>`_
+    `Video EuHUG2022 <https://youtu.be/Titp1XRBh9k>`_
 
 
 * :doc:`Presentation <hdf5plugin_EuropeanHUG2021>` at the `European HDF Users Group (HUG) Summer 2021 <https://www.hdfgroup.org/hug/europeanhug21/>`_:
 
   - :doc:`Presentation material <hdf5plugin_EuropeanHUG2021>`
     (:download:`Notebook <hdf5plugin_EuropeanHUG2021.ipynb>`),
-    `Video <https://youtu.be/DP-r2omEnrg>`_
+    `Video EuHUG2021 <https://youtu.be/DP-r2omEnrg>`_
 
 
 HDF5 filters and compression libraries
