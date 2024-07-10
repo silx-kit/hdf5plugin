@@ -1,0 +1,142 @@
+name: CI CMake
+on: [push, pull_request]
+jobs:
+  ci-cmake:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu GCC
+            os: ubuntu-latest
+            compiler: gcc
+
+          - name: Ubuntu GCC No Plugins
+            os: ubuntu-latest
+            compiler: gcc
+            cmake-args: -D BUILD_PLUGINS=OFF
+
+          # Out of source build
+          - name: Ubuntu GCC OSB
+            os: ubuntu-latest
+            compiler: gcc
+            build-dir: ../build
+            build-src-dir: ../c-blosc2
+
+          - name: Ubuntu GCC External LZ4
+            os: ubuntu-latest
+            compiler: gcc
+            packages: liblz4-1 liblz4-dev
+            cmake-args: -D PREFER_EXTERNAL_LZ4=ON
+
+          - name: Ubuntu GCC External ZLIB
+            os: ubuntu-latest
+            compiler: gcc
+            packages: zlib1g-dev
+            cmake-args: -D PREFER_EXTERNAL_ZLIB=ON
+
+            # Not too recent Zstd libs (< 1.4.4) in distros perform pretty bad on compression
+            # ratios when using dictionaries, making some tests not passing.
+            # Commenting this out for the time being.
+            # - name: Ubuntu GCC External ZSTD
+            #   os: ubuntu-latest
+            #   compiler: gcc
+            #   packages: zstd libzstd-dev
+            #   cmake-args: -D PREFER_EXTERNAL_ZSTD=ON
+
+          # For some reason, some tests do not pass on ARM SF and HF.  Not sure what's going on,
+          # but having ARM AARCH64 working is good enough for now, so commenting the former out.
+          # - name: Ubuntu GCC ARM SF
+          #  os: ubuntu-latest
+          #  packages: qemu qemu-user gcc-arm-linux-gnueabi g++-arm-linux-gnueabi libc-dev-armel-cross
+          #  cmake-args: -D CMAKE_TOOLCHAIN_FILE=cmake/toolchain-armsf.cmake
+
+          # - name: Ubuntu GCC ARM HF
+          #  os: ubuntu-latest
+          #  packages: qemu qemu-user gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc-dev-armel-cross
+          #  cmake-args: -D CMAKE_TOOLCHAIN_FILE=cmake/toolchain-armhf.cmake
+
+          - name: Ubuntu GCC AARCH64
+            os: ubuntu-latest
+            packages: qemu qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc-dev-arm64-cross
+            cmake-args: -D CMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64.cmake
+
+          - name: Ubuntu Clang
+            os: ubuntu-latest
+            compiler: clang
+
+          - name: Ubuntu Clang No AVX2
+            os: ubuntu-latest
+            compiler: clang
+            cmake-args: -D DEACTIVATE_AVX2=ON
+
+          - name: Ubuntu Clang No AVX512
+            os: ubuntu-latest
+            compiler: clang
+            cmake-args: -D DEACTIVATE_AVX512=ON
+
+          - name: Ubuntu Clang No ZLIB
+            os: ubuntu-latest
+            compiler: clang
+            cmake-args: -D DEACTIVATE_ZLIB=ON
+
+          - name: Ubuntu Clang No ZSTD
+            os: ubuntu-latest
+            compiler: clang
+            cmake-args: -D DEACTIVATE_ZSTD=ON
+
+          - name: Windows MSVC Win64
+            os: windows-latest
+            compiler: cl
+            cmake-args: -A x64
+
+          - name: Windows GCC Ninja
+            os: windows-latest
+            compiler: gcc
+            cmake-args: -G Ninja
+
+          - name: Windows GCC MinGW
+            os: windows-latest
+            compiler: gcc
+            cmake-args:  -G "MinGW Makefiles"
+
+          - name: macOS Clang
+            os: macOS-latest
+            compiler: clang
+
+          - name: macOS GCC
+            os: macOS-latest
+            compiler: gcc
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install packages (Ubuntu)
+      if: runner.os == 'Linux' && matrix.packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.packages }}
+
+    - name: Install packages (Windows)
+      if: runner.os == 'Windows'
+      run: choco install ninja ${{ matrix.packages }}
+
+    - name: Install packages (macOS)
+      if: runner.os == 'macOS'
+      run: brew install ninja ${{ matrix.packages }}
+
+    - name: Generate project files
+      run: cmake -S ${{ matrix.build-src-dir || '.' }} -B ${{ matrix.build-dir || '.' }} ${{ matrix.cmake-args }} -D CMAKE_BUILD_TYPE=${{ matrix.build-config || 'Release' }} -D BUILD_SHARED_LIBS=OFF
+      env:
+        CC: ${{ matrix.compiler }}
+        CFLAGS: ${{ matrix.cflags }}
+        LDFLAGS: ${{ matrix.ldflags }}
+        CI: true
+
+    - name: Compile source code
+      run: cmake --build ${{ matrix.build-dir || '.' }} --config ${{ matrix.build-config || 'Release' }}
+
+    - name: Run test cases
+      run: ctest -C Release --output-on-failure --max-width 120
+      working-directory: ${{ matrix.build-dir || '.' }}
