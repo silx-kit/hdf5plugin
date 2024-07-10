@@ -1,15 +1,12 @@
-include appveyor.yml
-include build-deb.sh
 include CHANGELOG.rst
-include copyright
 include LICENSE
 include MANIFEST.in
+include pyproject.toml
 include README.rst
 include setup.py
 recursive-include doc *
 recursive-include src *
 recursive-include test *.py *.h5
-recursive-include package *
 global-exclude *__pycache__/*
 global-exclude *.ipynb_checkpoints/*
 global-exclude .*.swp

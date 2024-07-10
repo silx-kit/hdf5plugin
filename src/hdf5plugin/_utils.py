@@ -161,7 +161,7 @@ def register_filter(name):
     if h5py.version.version_tuple[:3] > (3, 8, 0):
         try:
             h5py.h5z.register_filter(lib.H5PLget_plugin_info())
-        except:
+        except:  # noqa: E722
             logger.error(f"Cannot register filter {name}: {retval}")
             logger.error(traceback.format_exc())
             return False

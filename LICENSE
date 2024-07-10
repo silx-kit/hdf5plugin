@@ -1,10 +1,7 @@
 The hdf5plugin code itself is licensed under the MIT license (See below).
 
 The HDF5 filter plugins bundled in hdf5plugin have different copyright and licenses:
-
-* bitshuffle: See src/bitshuffle/LICENSE
-* blosc: See src/hdf5-blosc/LICENSES/ and src/c-blosc/LICENSES/
-* lz4: See src/HDF5-External-Filter-Plugins/LZ4/COPYING
+See doc/information.rst
 
 
 hdf5plugin copyright and license:

@@ -209,9 +209,11 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         self._test('blosc2')  # Default options
 
         # Specify options
-        tested_filters = (hdf5plugin.Blosc2.NOFILTER,
-                    hdf5plugin.Blosc2.SHUFFLE,
-                    hdf5plugin.Blosc2.BITSHUFFLE)
+        tested_filters = (
+            hdf5plugin.Blosc2.NOFILTER,
+            hdf5plugin.Blosc2.SHUFFLE,
+            hdf5plugin.Blosc2.BITSHUFFLE,
+        )
         compress = 'blosclz', 'lz4', 'lz4hc', 'unused', 'zlib', 'zstd'
         for compression_id, cname in enumerate(compress):
             if cname == 'unused':
@@ -364,22 +366,9 @@ class TestPackage(unittest.TestCase):
         self.assertIsInstance(config.build_config.embedded_filters, tuple)
         self.assertIsInstance(config.registered_filters, dict)
 
-    def testDeprecatedConfig(self):
-        """Test hdf5plugin.config availability"""
-        config = hdf5plugin.config
-        self.assertIsInstance(config.openmp, bool)
-        self.assertIsInstance(config.native, bool)
-        self.assertIsInstance(config.sse2, bool)
-        self.assertIsInstance(config.avx2, bool)
-        self.assertIsInstance(config.cpp11, bool)
-        self.assertIsInstance(config.cpp14, bool)
-        self.assertIsInstance(config.embedded_filters, tuple)
-
     def testVersion(self):
         """Test version information"""
         self.assertIsInstance(hdf5plugin.version, str)
-        self.assertIsInstance(hdf5plugin.strictversion, str)
-        self.assertIsInstance(hdf5plugin.hexversion, int)
         version_info = hdf5plugin.version_info
         self.assertIsInstance(version_info.major, int)
         self.assertIsInstance(version_info.minor, int)
@@ -501,7 +490,7 @@ class TestBlosc2Plugins(unittest.TestCase):
             data: numpy.ndarray,
             blocks: tuple[int, ...] | None = None,
             **cparams
-        ) -> numpy.ndarray:
+    ) -> numpy.ndarray:
         """Compress data with blosc2, write it as HDF5 file with direct chunk write and read it back with h5py
 
         :param data: data array to compress
