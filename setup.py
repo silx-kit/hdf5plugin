@@ -1023,7 +1023,7 @@ def get_bitshuffle_plugin():
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-fopenmp', '/openmp']
+    extra_link_args = ['-fopenmp']
 
     define_macros = [("ZSTD_SUPPORT", 1)]
     if platform.machine() == 'ppc64le':
@@ -1114,7 +1114,7 @@ def get_fcidecomp_plugin():
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-lstdc++', '-fopenmp', '/openmp']
+    extra_link_args = ['-lstdc++', '-fopenmp']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5fcidecomp",
@@ -1136,7 +1136,7 @@ def get_h5zfp_plugin():
 
     extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-fopenmp', '/openmp']
+    extra_link_args = ['-fopenmp']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zfp",
@@ -1157,7 +1157,7 @@ def get_sz_plugin():
 
     extra_compile_args = ['-O3', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/openmp']
-    extra_link_args = ['-fopenmp', '/openmp', "-lm"]
+    extra_link_args = ['-fopenmp', "-lm"]
 
     include_dirs = [f'{h5zsz_dir}/include']
     include_dirs += [sz_dir, f"{sz_dir}/include"]
@@ -1196,7 +1196,7 @@ def get_sz3_plugin():
 
     extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-fopenmp', '/openmp', "-lm"]
+    extra_link_args = ['-fopenmp', "-lm"]
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5sz3",
