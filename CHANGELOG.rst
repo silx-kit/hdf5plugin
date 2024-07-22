@@ -1,3 +1,24 @@
+5.0.0: --/--/2024
+-----------------
+
+This release requires Python >= 3.8 (PR #301) and h5py >= 3.0.0 (PR #300).
+
+- Removed deprecated constants: ``hdf5plugin.config``, ``hdf5plugin.date``, ``hdf5plugin.hexversion`` and ``hdf5plugin.strictversion`` (PR #301)
+- Compression filters and libraries:
+
+  * Added **Sperr** filter (PR #303)
+  * Updated filters: **Fcidecomp** (v2.0.1) (PR #311), **hdf5-blosc** (v1.0.1), **LZ4** (commit 49e3b65), **SZ** (commit f466775) (PR #310)
+  * Updated libraries: **c-blosc2** (v2.15.0) (PR #315), **CharLS** (PR #311), **Snappy** (v1.2.1) (PR #310), **ZStd** (v1.5.6) (PR #315)
+  * Fixed **zfp** compilation options for Visual Studio 2022 (PR #313)
+
+- Fixed ``hdf5plugin.Bitshuffle`` to avoid raising ``ValueError`` when ``lz4=False`` (PR #309)
+- Fixed compilation warning on Windows by removing ``/openmp`` link flags (PR #316)
+- Added ``HDF5PLUGIN_CPP20`` build configuration environment variables for **Sperr** (PR #303)
+- Updated ``setup.py`` (PR #298)
+- Updated copyright statement (PR #308)
+- Updated documentation (PR #299, #312, #314, #319)
+- Updated continuous integration configuration (PR #298, #312,#313, #314)
+
 4.4.0: 08/02/2024
 -----------------
 
