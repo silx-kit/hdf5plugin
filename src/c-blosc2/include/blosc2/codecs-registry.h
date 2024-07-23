@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -10,8 +10,6 @@
 
 #ifndef BLOSC_BLOSC2_CODECS_REGISTRY_H
 #define BLOSC_BLOSC2_CODECS_REGISTRY_H
-
-#include "blosc2.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,9 +42,6 @@ typedef struct {
     char *encoder;
     char *decoder;
 } codec_info;
-
-// Silence unused codec_info typedef warning
-static codec_info codec_info_defaults BLOSC_ATTRIBUTE_UNUSED = {0};
 
 #ifdef __cplusplus
 }

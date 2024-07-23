@@ -1,6 +1,82 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.14.4 to 2.15.0
+=============================
+
+* Removed some duplicated functions. See https://github.com/Blosc/c-blosc2/issues/503.
+
+* Added a new io mode to memory map files. This forced to change the `io_cb` read API.
+  See https://github.com/Blosc/c-blosc2/blob/main/tests/test_mmap.c to see an example on
+  how to use it.
+
+* Updated the `SOVERSION` to 4 due to the API change in `io_cb` read.
+
+* Added functions to get cparams, dparams, storage and io defaults respectively.
+
+* Internal zstd sources updated to 1.5.6.
+
+* Fixed a bug when setting a slice using prefilters.
+
+
+Changes from 2.14.3 to 2.14.4
+=============================
+
+* Bumped SONAME due to recent API changes. See https://github.com/Blosc/c-blosc2/issues/581.
+
+
+Changes from 2.14.2 to 2.14.3
+=============================
+
+* More fixes for internal fuzzer.
+
+
+Changes from 2.14.1 to 2.14.2
+=============================
+
+* Fixes for CVE-2024-3203 and CVE-2024-3204.
+
+
+Changes from 2.14.0 to 2.14.1
+=============================
+
+* When loading plugins, first try with `python` and then `python3`.
+  This is because many linux distros do not have `python` as a
+  symlink to `python3` anymore.
+
+
+Changes from 2.13.2 to 2.14.0
+=============================
+
+* Fixed a bug preventing buffers to be appended to empty (0-sized) b2nd arrays.
+
+* New acceleration path for `b2nd_append()`.  This new path is
+  much faster (up to 4x) than the previous one, specially for large arrays.
+  See `bench/bench_stack_append.c` for the bench of use.
+
+* New examples for using the `b2nd_set_slice_cbuffer()` and
+  `b2nd_append()` functions for adding data into existing b2nd arrays.
+  See `examples/example_stack_images.c`.
+
+* Now, ``python3`` is used for finding plugins instead of ``python``.
+  This is because many linux distros do not have ``python`` as a symlink
+  to ``python3`` anymore.
+
+* New round of fixing warnings.  Now, C-Blosc2 should be relatively free of them.
+
+* Small performance tweak for clevel 1 in BloscLZ codec.
+
+* Fixed a leak in frame code.  Closes #591.  Thanks to @LuMingYinDetect.
+
+* Disable shuffle repeat in filters pipeline.  This was broken
+  since the initial implemented, and it was never documented.
+  Also, compression ratios do not seem to be improved in our experiments,
+  so this capability has been removed completely.
+
+* Support for new Intel compilers (2023.0.1 and on).  Fixes #533.
+  Thanks to Nick Papior.
+
+
 Changes from 2.13.1 to 2.13.2
 =============================
 

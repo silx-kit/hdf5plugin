@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -45,7 +45,17 @@ CUTEST_TEST_SETUP(append) {
       {2, {18, 6}, {6, 6}, {3, 3}, {18, 12}, 1},
       {3, {12, 10, 14}, {3, 5, 9}, {3, 4, 4}, {12, 10, 18}, 2},
       {4, {10, 10, 5, 5}, {5, 7, 3, 3}, {2, 2, 1, 1}, {10, 10, 5, 30}, 3},
-
+      // Append to empty arrays
+      {1, {0}, {3}, {3}, {10}, 0},
+      {2, {0, 6}, {6, 6}, {3, 3}, {6, 6}, 0},
+      // Accelerated path with chunkshape and blockshape equal to buffershape
+      {2, {0, 6}, {6, 6}, {6, 6}, {6, 6}, 0},
+      // Accelerated path with chunkshape and blockshape equals except in the first dimension
+      {2, {0, 6}, {6, 6}, {3, 6}, {6, 6}, 0},
+      {2, {0, 6}, {6, 6}, {4, 6}, {6, 6}, 0},
+      {2, {0, 6}, {6, 6}, {3, 6}, {13, 6}, 0},
+      // The one below is not supported yet
+      // {2, {0, 6}, {6, 6}, {4, 6}, {13, 6}, 0},
   ));
 }
 

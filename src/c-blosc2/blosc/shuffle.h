@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -39,7 +39,7 @@
 #define SHUFFLE_USE_SSE2
 #endif
 
-#if defined(SHUFFLE_ALTIVEC_ENABLED) && defined(__ALTIVEC__)
+#if defined(SHUFFLE_ALTIVEC_ENABLED) && defined(__ALTIVEC__) && defined(__VSX__) && defined(_ARCH_PWR8)
 #define SHUFFLE_USE_ALTIVEC
 #endif
 

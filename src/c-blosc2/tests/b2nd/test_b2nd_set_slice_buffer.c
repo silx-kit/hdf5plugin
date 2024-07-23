@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -56,6 +56,10 @@ CUTEST_TEST_SETUP(set_slice_buffer) {
       // Replacing the above line by this one makes qemu-aarch64 happy.
       {2, {150, 45}, {15, 15}, {7, 7}, {4, 2}, {6, 5}},
       {2, {10, 10}, {5, 7}, {2, 2}, {0, 0}, {5, 5}},
+      // Checks for fast path in setting a single chunk that is C contiguous
+      {2, {20, 20}, {10, 10}, {5, 10}, {10, 10}, {20, 20}},
+      {3, {3, 4, 5}, {1, 4, 5}, {1, 2, 5}, {1, 0, 0}, {2, 4, 5}},
+      {3, {3, 8, 5}, {1, 4, 5}, {1, 2, 5}, {1, 4, 0}, {2, 8, 5}},
 
   ));
 }

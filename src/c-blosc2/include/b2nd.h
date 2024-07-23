@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -131,7 +131,7 @@ typedef struct {
  * @param chunkshape The chunk shape.
  * @param blockshape The block shape.
  * @param dtype The data type expressed as a string version.
- * @param dtype_format The data type format; default is DTYPE_NUMPY_FORMAT.
+ * @param dtype_format The data type format; DTYPE_NUMPY_FORMAT should be chosen for NumPy compatibility.
  * @param metalayers The memory pointer to the list of the metalayers desired.
  * @param nmetalayers The number of metalayers.
  *
@@ -364,10 +364,10 @@ BLOSC_EXPORT int b2nd_get_slice_cbuffer(const b2nd_array_t *array, const int64_t
  * @brief Set a slice in a b2nd array using a C buffer.
  *
  * @param buffer The buffer where the slice data is.
+ * @param buffershape The shape of the buffer.
  * @param buffersize The size (in bytes) of the buffer.
  * @param start The coordinates where the slice will begin.
  * @param stop The coordinates where the slice will end.
- * @param buffershape The shape of the buffer.
  * @param array The b2nd array where the slice will be set
  *
  * @return An error code.
@@ -526,78 +526,8 @@ BLOSC_EXPORT int b2nd_serialize_meta(int8_t ndim, const int64_t *shape, const in
  *
  * @return An error code.
  */
-static inline int b2nd_deserialize_meta(
-    const uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
-    int32_t *chunkshape, int32_t *blockshape, char **dtype, int8_t *dtype_format) {
-    const uint8_t *pmeta = smeta;
-
-  // Check that we have an array with 7 entries (version, ndim, shape, chunkshape, blockshape, dtype_format, dtype)
-  pmeta += 1;
-
-  // version entry
-  // int8_t version = (int8_t)pmeta[0];  // positive fixnum (7-bit positive integer) commented to avoid warning
-  pmeta += 1;
-
-  // ndim entry
-  *ndim = (int8_t) pmeta[0];
-  int8_t ndim_aux = *ndim;  // positive fixnum (7-bit positive integer)
-  pmeta += 1;
-
-  // shape entry
-  // Initialize to ones, as required by b2nd
-  for (int i = 0; i < ndim_aux; i++) shape[i] = 1;
-  pmeta += 1;
-  for (int8_t i = 0; i < ndim_aux; i++) {
-    pmeta += 1;
-    swap_store(shape + i, pmeta, sizeof(int64_t));
-    pmeta += sizeof(int64_t);
-  }
-
-  // chunkshape entry
-  // Initialize to ones, as required by b2nd
-  for (int i = 0; i < ndim_aux; i++) chunkshape[i] = 1;
-  pmeta += 1;
-  for (int8_t i = 0; i < ndim_aux; i++) {
-    pmeta += 1;
-    swap_store(chunkshape + i, pmeta, sizeof(int32_t));
-    pmeta += sizeof(int32_t);
-  }
-
-  // blockshape entry
-  // Initialize to ones, as required by b2nd
-  for (int i = 0; i < ndim_aux; i++) blockshape[i] = 1;
-  pmeta += 1;
-  for (int8_t i = 0; i < ndim_aux; i++) {
-    pmeta += 1;
-    swap_store(blockshape + i, pmeta, sizeof(int32_t));
-    pmeta += sizeof(int32_t);
-  }
-
-  // dtype entry
-  if (pmeta - smeta < smeta_len) {
-    // dtype info is here
-    *dtype_format = (int8_t) *(pmeta++);
-    pmeta += 1;
-    int dtype_len;
-    swap_store(&dtype_len, pmeta, sizeof(int32_t));
-    pmeta += sizeof(int32_t);
-    *dtype = (char*)malloc(dtype_len + 1);
-    char* dtype_ = *dtype;
-    memcpy(dtype_, (char*)pmeta, dtype_len);
-    dtype_[dtype_len] = '\0';
-    pmeta += dtype_len;
-  }
-  else {
-    // dtype is mandatory in b2nd metalayer, but this is mainly meant as
-    // a fall-back for deprecated caterva headers
-    *dtype = NULL;
-    *dtype_format = 0;
-  }
-
-  int32_t slen = (int32_t) (pmeta - smeta);
-  return (int)slen;
-}
-
+BLOSC_EXPORT int b2nd_deserialize_meta(const uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
+                                       int32_t *chunkshape, int32_t *blockshape, char **dtype, int8_t *dtype_format);
 
 // Utilities for C buffers representing multidimensional arrays
 

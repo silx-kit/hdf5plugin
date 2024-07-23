@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -438,7 +438,7 @@ int blosclz_compress(const int clevel, const void* input, int length,
   // Minimum lengths for encoding (normally it is good to match the shift value)
   unsigned minlen = 3;
 
-  uint8_t hashlog_[10] = {0, HASH_LOG - 1, HASH_LOG - 1, HASH_LOG, HASH_LOG,
+  uint8_t hashlog_[10] = {0, HASH_LOG - 2, HASH_LOG - 1, HASH_LOG, HASH_LOG,
                           HASH_LOG, HASH_LOG, HASH_LOG, HASH_LOG, HASH_LOG};
   uint8_t hashlog = hashlog_[clevel];
 

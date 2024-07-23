@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -16,9 +16,8 @@
 **********************************************************************/
 
 #include "ndlz4x4.h"
-#include "ndlz.h"
 #include "xxhash.h"
-#include "../plugins/plugin_utils.h"
+#include "b2nd.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -73,7 +72,7 @@ int ndlz4_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
   int64_t *shape = malloc(8 * sizeof(int64_t));
   int32_t *chunkshape = malloc(8 * sizeof(int32_t));
   int32_t *blockshape = malloc(8 * sizeof(int32_t));
-  deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape);
+  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
 
   if (ndim != 2) {
@@ -522,8 +521,8 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   uint8_t *ip_limit = ip + input_len;
   uint8_t *op = (uint8_t *) output;
   uint8_t ndim;
-  uint32_t blockshape[2];
-  uint32_t eshape[2];
+  int32_t blockshape[2];
+  int32_t eshape[2];
   uint8_t *buffercpy;
   uint8_t local_buffer[16];
   uint8_t token;
@@ -542,10 +541,18 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   ip += 4;
   memcpy(&blockshape[1], ip, 4);
   ip += 4;
+
+  // Sanity check.  See https://www.cve.org/CVERecord?id=CVE-2024-3204
+  if (output_len < 0 || blockshape[0] < 0 || blockshape[1] < 0) {
+    BLOSC_TRACE_ERROR("Output length or blockshape is negative");
+    return BLOSC2_ERROR_FAILURE;
+  }
+
   eshape[0] = ((blockshape[0] + 3) / 4) * 4;
   eshape[1] = ((blockshape[1] + 3) / 4) * 4;
 
   if (NDLZ_UNEXPECT_CONDITIONAL((int64_t)output_len < (int64_t)blockshape[0] * (int64_t)blockshape[1])) {
+    BLOSC_TRACE_ERROR("The blockshape is bigger than the output buffer");
     return 0;
   }
   memset(op, 0, blockshape[0] * blockshape[1]);
@@ -691,7 +698,7 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   }
   ind += padding[1];
 
-  if (ind != (blockshape[0] * blockshape[1])) {
+  if ((int32_t)ind != (blockshape[0] * blockshape[1])) {
     BLOSC_TRACE_ERROR("Output size is not compatible with embedded blockshape");
     return BLOSC2_ERROR_FAILURE;
   }

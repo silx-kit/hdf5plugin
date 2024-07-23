@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -95,6 +95,82 @@ int b2nd_serialize_meta(int8_t ndim, const int64_t *shape, const int32_t *chunks
 }
 
 
+int b2nd_deserialize_meta(const uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
+                          int32_t *chunkshape, int32_t *blockshape, char **dtype, int8_t *dtype_format) {
+  const uint8_t *pmeta = smeta;
+
+  // Check that we have an array with 7 entries (version, ndim, shape, chunkshape, blockshape, dtype_format, dtype)
+  pmeta += 1;
+
+  // version entry
+  // int8_t version = (int8_t)pmeta[0];  // positive fixnum (7-bit positive integer) commented to avoid warning
+  pmeta += 1;
+
+  // ndim entry
+  *ndim = (int8_t) pmeta[0];
+  int8_t ndim_aux = *ndim;  // positive fixnum (7-bit positive integer)
+  pmeta += 1;
+
+  // shape entry
+  // Initialize to ones, as required by b2nd
+  for (int i = 0; i < ndim_aux; i++) shape[i] = 1;
+  pmeta += 1;
+  for (int8_t i = 0; i < ndim_aux; i++) {
+    pmeta += 1;
+    swap_store(shape + i, pmeta, sizeof(int64_t));
+    pmeta += sizeof(int64_t);
+  }
+
+  // chunkshape entry
+  // Initialize to ones, as required by b2nd
+  for (int i = 0; i < ndim_aux; i++) chunkshape[i] = 1;
+  pmeta += 1;
+  for (int8_t i = 0; i < ndim_aux; i++) {
+    pmeta += 1;
+    swap_store(chunkshape + i, pmeta, sizeof(int32_t));
+    pmeta += sizeof(int32_t);
+  }
+
+  // blockshape entry
+  // Initialize to ones, as required by b2nd
+  for (int i = 0; i < ndim_aux; i++) blockshape[i] = 1;
+  pmeta += 1;
+  for (int8_t i = 0; i < ndim_aux; i++) {
+    pmeta += 1;
+    swap_store(blockshape + i, pmeta, sizeof(int32_t));
+    pmeta += sizeof(int32_t);
+  }
+
+  // dtype entry
+  if (dtype_format == NULL || dtype == NULL) {
+    return (int32_t)(pmeta - smeta);
+  }
+  if (pmeta - smeta < smeta_len) {
+    // dtype info is here
+    *dtype_format = (int8_t) *(pmeta++);
+    pmeta += 1;
+    int dtype_len;
+    swap_store(&dtype_len, pmeta, sizeof(int32_t));
+    pmeta += sizeof(int32_t);
+    *dtype = (char*)malloc(dtype_len + 1);
+    char* dtype_ = *dtype;
+    memcpy(dtype_, (char*)pmeta, dtype_len);
+    dtype_[dtype_len] = '\0';
+    pmeta += dtype_len;
+  }
+  else {
+    // dtype is mandatory in b2nd metalayer, but this is mainly meant as
+    // a fall-back for deprecated caterva headers
+    *dtype = NULL;
+    *dtype_format = 0;
+  }
+
+  int32_t slen = (int32_t) (pmeta - smeta);
+  return (int)slen;
+}
+
+
+
 int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
                  const int32_t *chunkshape, const int32_t *blockshape) {
   array->ndim = ndim;
@@ -121,7 +197,7 @@ int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
                   chunkshape[i] + blockshape[i] - chunkshape[i] % blockshape[i];
         }
       } else {
-        array->extchunkshape[i] = 0;
+        array->extchunkshape[i] = chunkshape[i];
         array->extshape[i] = 0;
       }
     } else {
@@ -233,6 +309,9 @@ int array_new(b2nd_context_t *ctx, int special_value, b2nd_array_t **array) {
     BLOSC_TRACE_ERROR("Pointer is NULL");
     return BLOSC2_ERROR_FAILURE;
   }
+  // Set the chunksize for the schunk, as it cannot be derived from storage
+  int32_t chunksize = (int32_t) (*array)->extchunknitems * sc->typesize;
+  sc->chunksize = chunksize;
 
   // Serialize the dimension info
   if (sc->nmetalayers >= BLOSC2_MAX_METALAYERS) {
@@ -274,7 +353,6 @@ int array_new(b2nd_context_t *ctx, int special_value, b2nd_array_t **array) {
   }
   // Fill schunk with uninit values
   if ((*array)->nitems != 0) {
-    int32_t chunksize = (int32_t) (*array)->extchunknitems * sc->typesize;
     int64_t nchunks = (*array)->extnitems / (*array)->chunknitems;
     int64_t nitems = nchunks * (*array)->extchunknitems;
     // blosc2_schunk_fill_special(sc, nitems, BLOSC2_SPECIAL_ZERO, chunksize);
@@ -300,8 +378,7 @@ int b2nd_empty(b2nd_context_t *ctx, b2nd_array_t **array) {
   BLOSC_ERROR_NULL(ctx, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
 
-  // BLOSC_ERROR(array_new(ctx, BLOSC2_SPECIAL_UNINIT, array));
-  // Avoid variable cratios
+  // Fill with zeros to avoid variable cratios
   BLOSC_ERROR(array_new(ctx, BLOSC2_SPECIAL_ZERO, array));
 
   return BLOSC2_ERROR_SUCCESS;
@@ -514,6 +591,156 @@ int b2nd_to_cbuffer(const b2nd_array_t *array, void *buffer,
   return BLOSC2_ERROR_SUCCESS;
 }
 
+int b2nd_get_slice_nchunks(const b2nd_array_t *array, const int64_t *start, const int64_t *stop, int64_t **chunks_idx) {
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
+
+  int8_t ndim = array->ndim;
+
+  // 0-dim case
+  if (ndim == 0) {
+    *chunks_idx = malloc(1 * sizeof(int64_t));
+    *chunks_idx[0] = 0;
+    return 1;
+  }
+
+  int64_t chunks_in_array[B2ND_MAX_DIM] = {0};
+  for (int i = 0; i < ndim; ++i) {
+    chunks_in_array[i] = array->extshape[i] / array->chunkshape[i];
+  }
+
+  int64_t chunks_in_array_strides[B2ND_MAX_DIM];
+  chunks_in_array_strides[ndim - 1] = 1;
+  for (int i = ndim - 2; i >= 0; --i) {
+    chunks_in_array_strides[i] = chunks_in_array_strides[i + 1] * chunks_in_array[i + 1];
+  }
+
+  // Compute the number of chunks to update
+  int64_t update_start[B2ND_MAX_DIM];
+  int64_t update_shape[B2ND_MAX_DIM];
+
+  int64_t update_nchunks = 1;
+  for (int i = 0; i < ndim; ++i) {
+    int64_t pos = 0;
+    while (pos <= start[i]) {
+      pos += array->chunkshape[i];
+    }
+    update_start[i] = pos / array->chunkshape[i] - 1;
+    while (pos < stop[i]) {
+      pos += array->chunkshape[i];
+    }
+    update_shape[i] = pos / array->chunkshape[i] - update_start[i];
+    update_nchunks *= update_shape[i];
+  }
+
+  int nchunks = 0;
+  // Initially we do not know the number of chunks that will be affected
+  *chunks_idx = malloc(array->sc->nchunks * sizeof(int64_t));
+  int64_t *ptr = *chunks_idx;
+  for (int update_nchunk = 0; update_nchunk < update_nchunks; ++update_nchunk) {
+    int64_t nchunk_ndim[B2ND_MAX_DIM] = {0};
+    blosc2_unidim_to_multidim(ndim, update_shape, update_nchunk, nchunk_ndim);
+    for (int i = 0; i < ndim; ++i) {
+      nchunk_ndim[i] += update_start[i];
+    }
+    int64_t nchunk;
+    blosc2_multidim_to_unidim(nchunk_ndim, ndim, chunks_in_array_strides, &nchunk);
+
+    // Check if the chunk is inside the slice domain
+    int64_t chunk_start[B2ND_MAX_DIM] = {0};
+    int64_t chunk_stop[B2ND_MAX_DIM] = {0};
+    for (int i = 0; i < ndim; ++i) {
+      chunk_start[i] = nchunk_ndim[i] * array->chunkshape[i];
+      chunk_stop[i] = chunk_start[i] + array->chunkshape[i];
+      if (chunk_stop[i] > array->shape[i]) {
+        chunk_stop[i] = array->shape[i];
+      }
+    }
+    bool chunk_empty = false;
+    for (int i = 0; i < ndim; ++i) {
+      chunk_empty |= (chunk_stop[i] <= start[i] || chunk_start[i] >= stop[i]);
+    }
+    if (chunk_empty) {
+      continue;
+    }
+
+    ptr[nchunks] = nchunk;
+    nchunks++;
+  }
+
+  if (nchunks < array->sc->nchunks) {
+    *chunks_idx = realloc(ptr, nchunks * sizeof(int64_t));
+  }
+
+  return nchunks;
+}
+
+
+// Check whether the slice defined by start and stop is a single chunk and contiguous
+// in the C order. We also need blocks inside a chunk, and chunks inside an array,
+// are C contiguous. This is a fast path for the get_slice and set_slice functions.
+int64_t nchunk_fastpath(const b2nd_array_t *array, const int64_t *start,
+                        const int64_t *stop, const int64_t slice_size) {
+  if (slice_size != array->chunknitems) {
+    return -1;
+  }
+
+  int ndim = (int) array->ndim;
+  int inner_dim = ndim - 1;
+  int64_t partial_slice_size = 1;
+  int64_t partial_chunk_size = 1;
+  for (int i = ndim - 1; i >= 0; --i) {
+    // We need to check if the slice is contiguous in the C order
+    if (array->extshape[i] != array->shape[i]) {
+      return -1;
+    }
+    if (array->extchunkshape[i] != array->chunkshape[i]) {
+      return -1;
+    }
+
+    // blocks need to be C contiguous inside the chunk as well
+    if (array->chunkshape[i] > array->blockshape[i]) {
+      if (i < inner_dim) {
+        if (array->chunkshape[i] % array->blockshape[i] != 0) {
+          return -1;
+        }
+      }
+      else {
+        if (array->chunkshape[i] != array->blockshape[i]) {
+          return -1;
+        }
+      }
+      inner_dim = i;
+    }
+
+    // We need start and stop to be aligned with the chunkshape
+    // Do that by computing the slice size in reverse order and compare with the chunkshape
+    partial_slice_size *= stop[i] - start[i];
+    partial_chunk_size *= array->chunkshape[i];
+    if (partial_slice_size != partial_chunk_size) {
+      return -1;
+    }
+    // Ensure that the slice starts at the beginning of the chunk
+    if (start[i] % array->chunkshape[i] != 0) {
+      return -1;
+    }
+  }
+
+  // Compute the chunk number
+  int64_t *chunks_idx;
+  int nchunks = b2nd_get_slice_nchunks(array, start, stop, &chunks_idx);
+  if (nchunks != 1) {
+    free(chunks_idx);
+    BLOSC_TRACE_ERROR("The number of chunks to read is not 1; go fix the code");
+    BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+  }
+  int64_t nchunk = chunks_idx[0];
+  free(chunks_idx);
+
+  return nchunk;
+}
+
 
 // Setting and getting slices
 int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const int64_t *stop,
@@ -555,7 +782,61 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     return BLOSC2_ERROR_SUCCESS;
   }
 
+  if (array->nitems == 0) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+
+  int64_t nelems_slice = 1;
+  for (int i = 0; i < array->ndim; ++i) {
+    if (stop[i] - start[i] > shape[i]) {
+      BLOSC_TRACE_ERROR("The buffer shape can not be smaller than the slice shape");
+      return BLOSC2_ERROR_INVALID_PARAM;
+    }
+    nelems_slice *= stop[i] - start[i];
+  }
+  int64_t slice_nbytes = nelems_slice * array->sc->typesize;
   int32_t data_nbytes = (int32_t) array->extchunknitems * array->sc->typesize;
+
+  if (buffersize < slice_nbytes) {
+    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+  }
+
+  // Check for fast path for aligned slices with chunks and blocks (only 1 chunk is supported)
+  int64_t nchunk = nchunk_fastpath(array, start, stop, nelems_slice);
+  if (nchunk >= 0) {
+    if (set_slice) {
+      // Fast path for set. Let's set the chunk buffer straight into the array.
+      // Compress the chunk
+      int32_t chunk_nbytes = data_nbytes + BLOSC2_MAX_OVERHEAD;
+      uint8_t *chunk = malloc(chunk_nbytes);
+      BLOSC_ERROR_NULL(chunk, BLOSC2_ERROR_MEMORY_ALLOC);
+      int brc;
+      // Update current_chunk in case a prefilter is applied
+      array->sc->current_nchunk = nchunk;
+      brc = blosc2_compress_ctx(array->sc->cctx, buffer, data_nbytes, chunk, chunk_nbytes);
+      if (brc < 0) {
+        BLOSC_TRACE_ERROR("Blosc can not compress the data");
+        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+      }
+      int64_t brc_ = blosc2_schunk_update_chunk(array->sc, nchunk, chunk, false);
+      if (brc_ < 0) {
+        BLOSC_TRACE_ERROR("Blosc can not update the chunk");
+        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+      }
+      // We are done
+      return BLOSC2_ERROR_SUCCESS;
+    }
+    else {
+      // Fast path for get. Let's read the chunk straight into the buffer.
+      if (blosc2_schunk_decompress_chunk(array->sc, nchunk, buffer, (int32_t) slice_nbytes) < 0) {
+        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+      }
+      return BLOSC2_ERROR_SUCCESS;
+    }
+  }
+
+  // Slow path for set and get
+
   uint8_t *data = malloc(data_nbytes);
   BLOSC_ERROR_NULL(data, BLOSC2_ERROR_MEMORY_ALLOC);
 
@@ -621,8 +902,6 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     }
 
     int32_t nblocks = (int32_t) array->extchunknitems / array->blocknitems;
-
-
     if (set_slice) {
       // Check if all the chunk is going to be updated and avoid the decompression
       bool decompress_chunk = false;
@@ -785,6 +1064,8 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
       uint8_t *chunk = malloc(chunk_nbytes);
       BLOSC_ERROR_NULL(chunk, BLOSC2_ERROR_MEMORY_ALLOC);
       int brc;
+      // Update current_chunk in case a prefilter is applied
+      array->sc->current_nchunk = nchunk;
       brc = blosc2_compress_ctx(array->sc->cctx, data, data_nbytes, chunk, chunk_nbytes);
       if (brc < 0) {
         BLOSC_TRACE_ERROR("Blosc can not compress the data");
@@ -812,22 +1093,6 @@ int b2nd_get_slice_cbuffer(const b2nd_array_t *array, const int64_t *start, cons
   BLOSC_ERROR_NULL(buffershape, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
 
-  int64_t size = array->sc->typesize;
-  for (int i = 0; i < array->ndim; ++i) {
-    if (stop[i] - start[i] > buffershape[i]) {
-      BLOSC_TRACE_ERROR("The buffer shape can not be smaller than the slice shape");
-      return BLOSC2_ERROR_INVALID_PARAM;
-    }
-    size *= buffershape[i];
-  }
-
-  if (array->nitems == 0) {
-    return BLOSC2_ERROR_SUCCESS;
-  }
-
-  if (buffersize < size) {
-    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
-  }
   BLOSC_ERROR(get_set_slice(buffer, buffersize, start, stop, buffershape, (b2nd_array_t *)array, false));
 
   return BLOSC2_ERROR_SUCCESS;
@@ -841,19 +1106,6 @@ int b2nd_set_slice_cbuffer(const void *buffer, const int64_t *buffershape, int64
   BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
-
-  int64_t size = array->sc->typesize;
-  for (int i = 0; i < array->ndim; ++i) {
-    size *= stop[i] - start[i];
-  }
-
-  if (buffersize < size) {
-    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
-  }
-
-  if (array->nitems == 0) {
-    return BLOSC2_ERROR_SUCCESS;
-  }
 
   BLOSC_ERROR(get_set_slice((void*)buffer, buffersize, start, stop, (int64_t *)buffershape, array, true));
 
@@ -923,92 +1175,6 @@ int b2nd_get_slice(b2nd_context_t *ctx, b2nd_array_t **array, const b2nd_array_t
   }
 
   return BLOSC2_ERROR_SUCCESS;
-}
-
-
-int b2nd_get_slice_nchunks(b2nd_array_t *array, const int64_t *start, const int64_t *stop, int64_t **chunks_idx) {
-  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
-  BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
-  BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
-
-  int8_t ndim = array->ndim;
-
-  // 0-dim case
-  if (ndim == 0) {
-    *chunks_idx = malloc(1 * sizeof(int64_t));
-    *chunks_idx[0] = 0;
-    return 1;
-  }
-
-  int64_t chunks_in_array[B2ND_MAX_DIM] = {0};
-  for (int i = 0; i < ndim; ++i) {
-    chunks_in_array[i] = array->extshape[i] / array->chunkshape[i];
-  }
-
-  int64_t chunks_in_array_strides[B2ND_MAX_DIM];
-  chunks_in_array_strides[ndim - 1] = 1;
-  for (int i = ndim - 2; i >= 0; --i) {
-    chunks_in_array_strides[i] = chunks_in_array_strides[i + 1] * chunks_in_array[i + 1];
-  }
-
-  // Compute the number of chunks to update
-  int64_t update_start[B2ND_MAX_DIM];
-  int64_t update_shape[B2ND_MAX_DIM];
-
-  int64_t update_nchunks = 1;
-  for (int i = 0; i < ndim; ++i) {
-    int64_t pos = 0;
-    while (pos <= start[i]) {
-      pos += array->chunkshape[i];
-    }
-    update_start[i] = pos / array->chunkshape[i] - 1;
-    while (pos < stop[i]) {
-      pos += array->chunkshape[i];
-    }
-    update_shape[i] = pos / array->chunkshape[i] - update_start[i];
-    update_nchunks *= update_shape[i];
-  }
-
-  int nchunks = 0;
-  // Initially we do not know the number of chunks that will be affected
-  *chunks_idx = malloc(array->sc->nchunks * sizeof(int64_t));
-  int64_t *ptr = *chunks_idx;
-  for (int update_nchunk = 0; update_nchunk < update_nchunks; ++update_nchunk) {
-    int64_t nchunk_ndim[B2ND_MAX_DIM] = {0};
-    blosc2_unidim_to_multidim(ndim, update_shape, update_nchunk, nchunk_ndim);
-    for (int i = 0; i < ndim; ++i) {
-      nchunk_ndim[i] += update_start[i];
-    }
-    int64_t nchunk;
-    blosc2_multidim_to_unidim(nchunk_ndim, ndim, chunks_in_array_strides, &nchunk);
-
-    // Check if the chunk is inside the slice domain
-    int64_t chunk_start[B2ND_MAX_DIM] = {0};
-    int64_t chunk_stop[B2ND_MAX_DIM] = {0};
-    for (int i = 0; i < ndim; ++i) {
-      chunk_start[i] = nchunk_ndim[i] * array->chunkshape[i];
-      chunk_stop[i] = chunk_start[i] + array->chunkshape[i];
-      if (chunk_stop[i] > array->shape[i]) {
-        chunk_stop[i] = array->shape[i];
-      }
-    }
-    bool chunk_empty = false;
-    for (int i = 0; i < ndim; ++i) {
-      chunk_empty |= (chunk_stop[i] <= start[i] || chunk_start[i] >= stop[i]);
-    }
-    if (chunk_empty) {
-      continue;
-    }
-
-    ptr[nchunks] = nchunk;
-    nchunks++;
-  }
-
-  if (nchunks < array->sc->nchunks) {
-    *chunks_idx = realloc(ptr, nchunks * sizeof(int64_t));
-  }
-
-  return nchunks;
 }
 
 
@@ -1223,8 +1389,8 @@ int extend_shape(b2nd_array_t *array, const int64_t *new_shape, const int64_t *s
       BLOSC_TRACE_ERROR("The new shape must be greater than the old one");
       BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
     }
-    if (array->shape[i] == 0) {
-      BLOSC_TRACE_ERROR("Cannot extend array with shape[%d] = 0", i);
+    if (array->shape[i] == INT64_MAX) {
+      BLOSC_TRACE_ERROR("Cannot extend array with shape[%d] = %" PRId64 "d", i, INT64_MAX);
       BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
     }
   }
@@ -1305,8 +1471,7 @@ int shrink_shape(b2nd_array_t *array, const int64_t *new_shape, const int64_t *s
       BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
     }
     if (array->shape[i] == 0) {
-      BLOSC_TRACE_ERROR("Cannot shrink array with shape[%d] = 0", i);
-      BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+      continue;
     }
   }
   if (diffs_sum == 0) {
@@ -1451,7 +1616,40 @@ int b2nd_append(b2nd_array_t *array, const void *buffer, int64_t buffersize,
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
 
-  BLOSC_ERROR(b2nd_insert(array, buffer, buffersize, axis, array->shape[axis]));
+  int32_t chunksize = array->sc->chunksize;
+  int64_t nchunks_append = buffersize / chunksize;
+  // Check whether chunkshape and blockshape are compatible with accelerated path.
+  // Essentially, we are checking whether the buffer is a multiple of the chunksize
+  // and that the chunkshape and blockshape are the same, except for the first axis.
+  // Also, axis needs to be the first one.
+  bool compat_chunks_blocks = true;
+  for (int i = 1; i < array->ndim; ++i) {
+    if (array->chunkshape[i] != array->blockshape[i]) {
+      compat_chunks_blocks = false;
+      break;
+    }
+  }
+  if (axis > 0) {
+    compat_chunks_blocks = false;
+  }
+  // General case where a buffer has a different size than the chunksize
+  if (!compat_chunks_blocks || buffersize % chunksize != 0 || nchunks_append != 1) {
+    BLOSC_ERROR(b2nd_insert(array, buffer, buffersize, axis, array->shape[axis]));
+    return BLOSC2_ERROR_SUCCESS;
+  }
+
+  // Accelerated path for buffers that are of the same size as the chunksize
+  // printf("accelerated path\n");
+
+  // Append the buffer to the underlying schunk. This is very fast, as
+  // it doesn't need to do internal partitioning.
+  BLOSC_ERROR(blosc2_schunk_append_buffer(array->sc, (void*)buffer, buffersize));
+
+  // Finally, resize the array
+  int64_t newshape[B2ND_MAX_DIM];
+  memcpy(newshape, array->shape, array->ndim * sizeof(int64_t));
+  newshape[axis] += nchunks_append * array->chunkshape[axis];
+  BLOSC_ERROR(b2nd_resize(array, newshape, NULL));
 
   return BLOSC2_ERROR_SUCCESS;
 }

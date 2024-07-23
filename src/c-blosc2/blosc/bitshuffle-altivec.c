@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -26,13 +26,14 @@
 #include "bitshuffle-generic.h"
 
 /* Make sure ALTIVEC is available for the compilation target and compiler. */
-#if defined(__ALTIVEC__)
+#if defined(__ALTIVEC__) && defined(__VSX__) && defined(_ARCH_PWR8)
 
 #include "transpose-altivec.h"
 
 #include <altivec.h>
 
 #include <stdint.h>
+#include <stdlib.h>
 
 /* The next is useful for debugging purposes */
 #if 0

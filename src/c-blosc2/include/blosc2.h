@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -13,7 +13,7 @@
   @brief Blosc2 header file.
 
   This file contains Blosc2 public API and the structures needed to use it.
-  @author The Blosc Development Team <blosc@blosc.org>
+  @author Blosc Development Team <blosc@blosc.org>
 **********************************************************************/
 
 #ifndef BLOSC_BLOSC2_H
@@ -82,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    13   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    15   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.13.2"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2023-02-07 #$"    /* date version */
+#define BLOSC2_VERSION_STRING   "2.15.0"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2024-06-20 #$"    /* date version year-month-day */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -108,12 +108,12 @@ extern "C" {
     do {                                            \
         if ((pointer) == NULL) {                    \
             BLOSC_TRACE_ERROR("Pointer is null");   \
-            return rc;                              \
+            return (rc);                            \
         }                                           \
     } while (0)
 #define BLOSC_ERROR(rc)                             \
     do {                                            \
-        int rc_ = rc;                               \
+        int rc_ = (rc);                             \
         if (rc_ < BLOSC2_ERROR_SUCCESS) {           \
             char *error_msg = print_error(rc_);     \
             BLOSC_TRACE_ERROR("%s", error_msg);     \
@@ -245,14 +245,22 @@ enum {
  */
 enum {
 #ifndef BLOSC_H
-  BLOSC_NOSHUFFLE = 0,   //!< No shuffle (for compatibility with Blosc1).
-  BLOSC_NOFILTER = 0,    //!< No filter.
-  BLOSC_SHUFFLE = 1,     //!< Byte-wise shuffle.
-  BLOSC_BITSHUFFLE = 2,  //!< Bit-wise shuffle.
+  BLOSC_NOSHUFFLE = 0,
+  //!< No shuffle (for compatibility with Blosc1).
+  BLOSC_NOFILTER = 0,
+  //!< No filter.
+  BLOSC_SHUFFLE = 1,
+  //!< Byte-wise shuffle. `filters_meta` does not have any effect here.
+  BLOSC_BITSHUFFLE = 2,
+  //!< Bit-wise shuffle. `filters_meta` does not have any effect here.
 #endif // BLOSC_H
-  BLOSC_DELTA = 3,       //!< Delta filter.
-  BLOSC_TRUNC_PREC = 4,  //!< Truncate mantissa precision; positive values in `filters_meta` will keep bits; negative values will zero bits.
-  BLOSC_LAST_FILTER = 5, //!< sentinel
+  BLOSC_DELTA = 3,
+  //!< Delta filter. `filters_meta` does not have any effect here.
+  BLOSC_TRUNC_PREC = 4,
+  //!< Truncate mantissa precision.
+  //!< Positive values in `filters_meta` will keep bits; negative values will zero bits.
+  BLOSC_LAST_FILTER = 5,
+  //!< sentinel
   BLOSC_LAST_REGISTERED_FILTER = BLOSC2_GLOBAL_REGISTERED_FILTERS_START + BLOSC2_GLOBAL_REGISTERED_FILTERS - 1,
   //!< Determine the last registered filter. It is used to check if a filter is registered or not.
 };
@@ -1016,7 +1024,8 @@ BLOSC_EXPORT const char* blosc2_cbuffer_complib(const void* cbuffer);
 
 enum {
   BLOSC2_IO_FILESYSTEM = 0,
-  BLOSC_IO_LAST_BLOSC_DEFINED = 1,  // sentinel
+  BLOSC2_IO_FILESYSTEM_MMAP = 1,
+  BLOSC_IO_LAST_BLOSC_DEFINED = 2,  // sentinel
   BLOSC_IO_LAST_REGISTERED = 32,  // sentinel
 };
 
@@ -1028,11 +1037,11 @@ enum {
 
 typedef void*   (*blosc2_open_cb)(const char *urlpath, const char *mode, void *params);
 typedef int     (*blosc2_close_cb)(void *stream);
-typedef int64_t (*blosc2_tell_cb)(void *stream);
-typedef int     (*blosc2_seek_cb)(void *stream, int64_t offset, int whence);
-typedef int64_t (*blosc2_write_cb)(const void *ptr, int64_t size, int64_t nitems, void *stream);
-typedef int64_t (*blosc2_read_cb)(void *ptr, int64_t size, int64_t nitems, void *stream);
+typedef int64_t (*blosc2_size_cb)(void *stream);
+typedef int64_t (*blosc2_write_cb)(const void *ptr, int64_t size, int64_t nitems, int64_t position, void *stream);
+typedef int64_t (*blosc2_read_cb)(void **ptr, int64_t size, int64_t nitems, int64_t position, void *stream);
 typedef int     (*blosc2_truncate_cb)(void *stream, int64_t size);
+typedef int     (*blosc2_destroy_cb)(void *params);
 
 
 /*
@@ -1043,20 +1052,23 @@ typedef struct {
   //!< The IO identifier.
   char* name;
   //!< The IO name.
+  bool is_allocation_necessary;
+  //!< If true, the caller needs to allocate data for the read function (ptr argument). If false, the read function
+  //!< takes care of memory allocation and stores the address in the allocated_ptr argument.
   blosc2_open_cb open;
   //!< The IO open callback.
   blosc2_close_cb close;
   //!< The IO close callback.
-  blosc2_tell_cb tell;
-  //!< The IO tell callback.
-  blosc2_seek_cb seek;
-  //!< The IO seek callback.
+  blosc2_size_cb size;
+  //!< The IO size callback.
   blosc2_write_cb write;
   //!< The IO write callback.
   blosc2_read_cb read;
   //!< The IO read callback.
   blosc2_truncate_cb truncate;
   //!< The IO truncate callback.
+  blosc2_destroy_cb destroy;
+  //!< The IO destroy callback (called in the end when finished with the schunk).
 } blosc2_io_cb;
 
 
@@ -1659,6 +1671,31 @@ typedef struct {
  */
 static const blosc2_storage BLOSC2_STORAGE_DEFAULTS = {false, NULL, NULL, NULL, NULL};
 
+/**
+ * @brief Get default struct for compression params meant for user initialization.
+ */
+BLOSC_EXPORT blosc2_cparams blosc2_get_blosc2_cparams_defaults(void);
+
+/**
+ * @brief Get default struct for decompression params meant for user initialization.
+ */
+BLOSC_EXPORT blosc2_dparams blosc2_get_blosc2_dparams_defaults(void);
+
+/**
+ * @brief Get default struct for #blosc2_storage meant for user initialization.
+ */
+BLOSC_EXPORT blosc2_storage blosc2_get_blosc2_storage_defaults(void);
+
+/**
+ * @brief Get default struct for #blosc2_io meant for user initialization.
+ */
+BLOSC_EXPORT blosc2_io blosc2_get_blosc2_io_defaults(void);
+
+/**
+ * @brief Get default struct for #blosc2_stdio_mmap meant for user initialization.
+ */
+BLOSC_EXPORT blosc2_stdio_mmap blosc2_get_blosc2_stdio_mmap_defaults(void);
+
 typedef struct blosc2_frame_s blosc2_frame;   /* opaque type */
 
 /**
@@ -1822,6 +1859,19 @@ BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64
  */
 BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_udio(const char* urlpath, const blosc2_io *udio);
 
+/**
+ * @brief Open an existing super-chunk (no copy is made) using a user-defined I/O interface.
+ *
+ * @param urlpath The file name.
+ *
+ * @param offset The frame offset.
+ * 
+ * @param udio The user-defined I/O interface.
+ *
+ * @return The new super-chunk.
+ */
+BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_offset_udio(const char* urlpath, int64_t offset, const blosc2_io *udio);
+
 /* @brief Convert a super-chunk into a contiguous frame buffer.
  *
  * @param schunk The super-chunk to convert.
@@ -1929,7 +1979,7 @@ BLOSC_EXPORT int64_t blosc2_schunk_delete_chunk(blosc2_schunk *schunk, int64_t n
  * @return The number of chunks in super-chunk. If some problem is
  * detected, this number will be negative.
  */
-BLOSC_EXPORT int64_t blosc2_schunk_append_buffer(blosc2_schunk *schunk, void *src, int32_t nbytes);
+BLOSC_EXPORT int64_t blosc2_schunk_append_buffer(blosc2_schunk *schunk, const void *src, int32_t nbytes);
 
 /**
  * @brief Decompress and return the @p nchunk chunk of a super-chunk.
@@ -2083,7 +2133,7 @@ BLOSC_EXPORT int64_t blosc2_schunk_frame_len(blosc2_schunk* schunk);
  * If there is an error, a negative value is returned.
  */
 BLOSC_EXPORT int64_t blosc2_schunk_fill_special(blosc2_schunk* schunk, int64_t nitems,
-                                            int special_value, int32_t chunksize);
+                                                int special_value, int32_t chunksize);
 
 
 /*********************************************************************

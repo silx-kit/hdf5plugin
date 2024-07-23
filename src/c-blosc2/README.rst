@@ -6,7 +6,7 @@ A fast, compressed and persistent data store library for C
 ==========================================================
 
 
-:Author: The Blosc Development Team
+:Author: Blosc Development Team
 :Contact: blosc@blosc.org
 :URL: https://www.blosc.org
 :Gitter: |gitter|
@@ -36,6 +36,7 @@ What is it?
 C-Blosc2 is the new major version of `C-Blosc <https://github.com/Blosc/c-blosc>`_, and is backward compatible with both the C-Blosc1 API and its in-memory format.  However, the reverse thing is generally not true for the format; buffers generated with C-Blosc2 are not format-compatible with C-Blosc1 (i.e. forward compatibility is not supported).  In case you want to ensure full API compatibility with C-Blosc1 API, define the `BLOSC1_COMPAT` symbol.
 
 See a 3 minutes  `introductory video to Blosc2 <https://www.youtube.com/watch?v=ER12R7FXosk>`_.
+
 
 Blosc2 NDim: an N-Dimensional store
 ===================================
@@ -117,6 +118,19 @@ New features in C-Blosc2
 More info about the `improved capabilities of C-Blosc2 can be found in this talk <https://www.blosc.org/docs/Caterva-HDF5-Workshop.pdf>`_.
 
 C-Blosc2 API and format have been frozen, and that means that there is guarantee that your programs will continue to work with future versions of the library, and that next releases will be able to read from persistent storage generated from previous releases (as of 2.0.0).
+
+
+Open format
+===========
+
+The Blosc2 format is open and documented in the next documents:
+
+* [The chunk; the basic building block](https://github.com/Blosc/c-blosc2/blob/main/README_CHUNK_FORMAT.rst)
+* [The cframe; this is made of different chunks in contiguous storage](https://github.com/Blosc/c-blosc2/blob/main/README_CFRAME_FORMAT.rst)
+* [The sframe; a variation of the cframe for sparse storage](https://github.com/Blosc/c-blosc2/blob/main/README_SFRAME_FORMAT.rst)
+* [The b2nd metalayer; info for the n-dimensional data container](https://github.com/Blosc/c-blosc2/blob/main/README_B2ND_METALAYER.rst)
+
+All these documents take less than 1000 lines of text, so they should be easy to read and understand.  In our opinion, this is very important for the long-term success of the library, as it allows for third-party implementations of the format, and also for the users to understand what is going on under the hood.
 
 
 Python wrapper
@@ -250,4 +264,4 @@ See `THANKS document <https://github.com/Blosc/c-blosc2/blob/main/THANKS.rst>`_.
 
 ----
 
--- The Blosc Development Team.  **We make compression better.**
+-- Blosc Development Team.  **We make compression better.**

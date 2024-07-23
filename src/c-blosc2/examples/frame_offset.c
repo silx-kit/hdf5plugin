@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -75,7 +75,10 @@ int main(void) {
       data2[i] = 2 * i * nchunk;
     }
     nchunks = blosc2_schunk_append_buffer(schunk0w, data, isize);
-    assert(nchunks == nchunk + 1);
+    if (nchunks != nchunk + 1) {
+      printf("Unexpected nchunks!");
+      return nchunks;
+    }
     blosc2_schunk_append_buffer(schunk1a, data2, isize);
   }
 

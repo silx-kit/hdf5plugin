@@ -1,6 +1,6 @@
 # Blosc - Blocked Shuffling and Compression Library
 #
-# Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+# Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
 # https://blosc.org
 # License: BSD 3-Clause (see LICENSE.txt)
 #
@@ -29,7 +29,7 @@ if(BUILD_SHARED)
     endif()
     set_target_properties(blosc2_shared PROPERTIES
         VERSION ${version_string}
-        SOVERSION 2  # Change this when an ABI change happens
+        SOVERSION 4  # Change this when an ABI change happens
     )
     target_compile_definitions(blosc2_shared PUBLIC BLOSC_SHARED_LIBRARY)
     target_include_directories(blosc2_shared PUBLIC
@@ -152,7 +152,7 @@ if(NOT DEACTIVATE_ZSTD)
             target_link_libraries(blosc_testing PUBLIC ${ZSTD_LIBRARY})
         endif()
     else()
-        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.5)
+        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.6)
         if(BUILD_SHARED)
             target_include_directories(blosc2_shared PRIVATE ${ZSTD_LOCAL_DIR} ${ZSTD_LOCAL_DIR}/common)
         endif()

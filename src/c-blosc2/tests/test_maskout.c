@@ -3,7 +3,7 @@
 
   Unit tests for BLOSC_COMPRESSOR environment variable in Blosc.
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -65,7 +65,7 @@ static char *test_mask(void) {
 }
 
 
-// Check decompression with mask, and no mask aftewards
+// Check decompression with mask, and no mask afterwards
 static char *test_mask_nomask(void) {
   blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
   dparams.nthreads = nthreads;

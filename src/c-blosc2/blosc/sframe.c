@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -73,7 +73,8 @@ void* sframe_create_chunk(blosc2_frame_s* frame, uint8_t* chunk, int64_t nchunk,
     BLOSC_TRACE_ERROR("Error getting the input/output API");
     return NULL;
   }
-  int64_t wbytes = io_cb->write(chunk, 1, cbytes, fpc);
+  int64_t io_pos = 0;
+  int64_t wbytes = io_cb->write(chunk, 1, cbytes, io_pos, fpc);
   io_cb->close(fpc);
   if (wbytes != cbytes) {
     BLOSC_TRACE_ERROR("Cannot write the full chunk.");
@@ -109,18 +110,23 @@ int32_t sframe_get_chunk(blosc2_frame_s* frame, int64_t nchunk, uint8_t** chunk,
     return BLOSC2_ERROR_PLUGIN_IO;
   }
 
-  io_cb->seek(fpc, 0L, SEEK_END);
-  int64_t chunk_cbytes = io_cb->tell(fpc);
-  *chunk = malloc((size_t)chunk_cbytes);
+  int64_t chunk_cbytes = io_cb->size(fpc);
 
-  io_cb->seek(fpc, 0L, SEEK_SET);
-  int64_t rbytes = io_cb->read(*chunk, 1, chunk_cbytes, fpc);
+  if (io_cb->is_allocation_necessary) {
+    *chunk = malloc((size_t)chunk_cbytes);
+    *needs_free = true;
+  }
+  else {
+    *needs_free = false;
+  }
+
+  int64_t io_pos = 0;
+  int64_t rbytes = io_cb->read((void**)chunk, 1, chunk_cbytes, io_pos, fpc);
   io_cb->close(fpc);
   if (rbytes != chunk_cbytes) {
     BLOSC_TRACE_ERROR("Cannot read the chunk out of the chunkfile.");
     return BLOSC2_ERROR_FILE_READ;
   }
-  *needs_free = true;
 
   return (int32_t)chunk_cbytes;
 }

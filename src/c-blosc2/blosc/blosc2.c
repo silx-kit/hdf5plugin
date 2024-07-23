@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -660,10 +660,10 @@ typedef struct blosc_header_s {
   int32_t blocksize;
   int32_t cbytes;
   // Extended Blosc2 header
-  uint8_t filter_codes[BLOSC2_MAX_FILTERS];
+  uint8_t filters[BLOSC2_MAX_FILTERS];
   uint8_t udcompcode;
   uint8_t compcode_meta;
-  uint8_t filter_meta[BLOSC2_MAX_FILTERS];
+  uint8_t filters_meta[BLOSC2_MAX_FILTERS];
   uint8_t reserved2;
   uint8_t blosc2_flags;
 } blosc_header;
@@ -739,12 +739,12 @@ int read_chunk_header(const uint8_t* src, int32_t srcsize, bool extended_header,
     // The number of filters depends on the version of the header. Blosc2 alpha series
     // did not initialize filters to zero beyond the max supported.
     if (header->version == BLOSC2_VERSION_FORMAT_ALPHA) {
-      header->filter_codes[5] = 0;
-      header->filter_meta[5] = 0;
+      header->filters[5] = 0;
+      header->filters_meta[5] = 0;
     }
   }
   else {
-    flags_to_filters(header->flags, header->filter_codes);
+    flags_to_filters(header->flags, header->filters);
   }
   return 0;
 }
@@ -775,11 +775,11 @@ static int blosc2_initialize_context_from_header(blosc2_context* context, blosc_
     /* Extended header */
     context->header_overhead = BLOSC_EXTENDED_HEADER_LENGTH;
 
-    memcpy(context->filters, header->filter_codes, BLOSC2_MAX_FILTERS);
-    memcpy(context->filters_meta, header->filter_meta, BLOSC2_MAX_FILTERS);
+    memcpy(context->filters, header->filters, BLOSC2_MAX_FILTERS);
+    memcpy(context->filters_meta, header->filters_meta, BLOSC2_MAX_FILTERS);
     context->compcode_meta = header->compcode_meta;
 
-    context->filter_flags = filters_to_flags(header->filter_codes);
+    context->filter_flags = filters_to_flags(header->filters);
     context->special_type = (header->blosc2_flags >> 4) & BLOSC2_SPECIAL_MASK;
 
     is_lazy = (context->blosc2_flags & 0x08u);
@@ -894,8 +894,8 @@ static int blosc2_intialize_header_from_context(blosc2_context* context, blosc_h
   if (extended_header) {
     /* Store filter pipeline info at the end of the header */
     for (int i = 0; i < BLOSC2_MAX_FILTERS; i++) {
-      header->filter_codes[i] = context->filters[i];
-      header->filter_meta[i] = context->filters_meta[i];
+      header->filters[i] = context->filters[i];
+      header->filters_meta[i] = context->filters_meta[i];
     }
     header->udcompcode = context->compcode;
     header->compcode_meta = context->compcode_meta;
@@ -970,13 +970,7 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
     if (filters[i] <= BLOSC2_DEFINED_FILTERS_STOP) {
       switch (filters[i]) {
         case BLOSC_SHUFFLE:
-          for (int j = 0; j <= filters_meta[i]; j++) {
-            shuffle(typesize, bsize, _src, _dest);
-            // Cycle filters when required
-            if (j < filters_meta[i]) {
-              _cycle_buffers(&_src, &_dest, &_tmp);
-            }
-          }
+          shuffle(typesize, bsize, _src, _dest);
           break;
         case BLOSC_BITSHUFFLE:
           if (bitshuffle(typesize, bsize, _src, _dest) < 0) {
@@ -1345,17 +1339,7 @@ int pipeline_backward(struct thread_context* thread_context, const int32_t bsize
     if (filters[i] <= BLOSC2_DEFINED_FILTERS_STOP) {
       switch (filters[i]) {
         case BLOSC_SHUFFLE:
-          for (int j = 0; j <= filters_meta[i]; j++) {
-            unshuffle(typesize, bsize, _src, _dest);
-            // Cycle filters when required
-            if (j < filters_meta[i]) {
-              _cycle_buffers(&_src, &_dest, &_tmp);
-            }
-            // Check whether we have to copy the intermediate _dest buffer to final destination
-            if (last_copy_filter && (filters_meta[i] % 2) == 1 && j == filters_meta[i]) {
-              memcpy(dest + offset, _dest, (unsigned int) bsize);
-            }
-          }
+          unshuffle(typesize, bsize, _src, _dest);
           break;
         case BLOSC_BITSHUFFLE:
           if (bitunshuffle(typesize, bsize, _src, _dest, context->src[BLOSC2_CHUNK_VERSION]) < 0) {
@@ -1494,6 +1478,18 @@ static int32_t set_nans(int32_t typesize, uint8_t* dest, int32_t destsize) {
 
 
 static int32_t set_values(int32_t typesize, const uint8_t* src, uint8_t* dest, int32_t destsize) {
+#if defined(BLOSC_STRICT_ALIGN)
+  if (destsize % typesize != 0) {
+    BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+  }
+  int32_t nitems = destsize / typesize;
+  if (nitems == 0) {
+    return 0;
+  }
+  for (int i = 0; i < nitems; i++) {
+    memcpy(dest + i * typesize, src + BLOSC_EXTENDED_HEADER_LENGTH, typesize);
+  }
+#else
   // destsize can only be a multiple of typesize
   int64_t val8;
   int64_t* dest8;
@@ -1546,6 +1542,7 @@ static int32_t set_values(int32_t typesize, const uint8_t* src, uint8_t* dest, i
         memcpy(dest + i * typesize, src + BLOSC_EXTENDED_HEADER_LENGTH, typesize);
       }
   }
+#endif
 
   return nitems;
 }
@@ -1623,6 +1620,7 @@ static int blosc_d(
       return BLOSC2_ERROR_PLUGIN_IO;
     }
 
+    int64_t io_pos = 0;
     if (frame->sframe) {
       // The chunk is not in the frame
       char* chunkpath = malloc(strlen(frame->urlpath) + 1 + 8 + strlen(".chunk") + 1);
@@ -1632,16 +1630,16 @@ static int blosc_d(
       BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       free(chunkpath);
       // The offset of the block is src_offset
-      io_cb->seek(fp, src_offset, SEEK_SET);
+      io_pos = src_offset;
     }
     else {
       fp = io_cb->open(urlpath, "rb", context->schunk->storage->io->params);
       BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       // The offset of the block is src_offset
-      io_cb->seek(fp, frame->file_offset + chunk_offset + src_offset, SEEK_SET);
+      io_pos = frame->file_offset + chunk_offset + src_offset;
     }
     // We can make use of tmp3 because it will be used after src is not needed anymore
-    int64_t rbytes = io_cb->read(tmp3, 1, block_csize, fp);
+    int64_t rbytes = io_cb->read((void**)&tmp3, 1, block_csize, io_pos, fp);
     io_cb->close(fp);
     if ((int32_t)rbytes != block_csize) {
       BLOSC_TRACE_ERROR("Cannot read the (lazy) block out of the fileframe.");
@@ -3792,6 +3790,7 @@ void blosc_set_schunk(blosc2_schunk* schunk) {
 
 blosc2_io *blosc2_io_global = NULL;
 blosc2_io_cb BLOSC2_IO_CB_DEFAULTS;
+blosc2_io_cb BLOSC2_IO_CB_MMAP;
 
 void blosc2_init(void) {
   /* Return if Blosc is already initialized */
@@ -3799,13 +3798,25 @@ void blosc2_init(void) {
 
   BLOSC2_IO_CB_DEFAULTS.id = BLOSC2_IO_FILESYSTEM;
   BLOSC2_IO_CB_DEFAULTS.name = "filesystem";
+  BLOSC2_IO_CB_DEFAULTS.is_allocation_necessary = true;
   BLOSC2_IO_CB_DEFAULTS.open = (blosc2_open_cb) blosc2_stdio_open;
   BLOSC2_IO_CB_DEFAULTS.close = (blosc2_close_cb) blosc2_stdio_close;
-  BLOSC2_IO_CB_DEFAULTS.tell = (blosc2_tell_cb) blosc2_stdio_tell;
-  BLOSC2_IO_CB_DEFAULTS.seek = (blosc2_seek_cb) blosc2_stdio_seek;
+  BLOSC2_IO_CB_DEFAULTS.size = (blosc2_size_cb) blosc2_stdio_size;
   BLOSC2_IO_CB_DEFAULTS.write = (blosc2_write_cb) blosc2_stdio_write;
   BLOSC2_IO_CB_DEFAULTS.read = (blosc2_read_cb) blosc2_stdio_read;
   BLOSC2_IO_CB_DEFAULTS.truncate = (blosc2_truncate_cb) blosc2_stdio_truncate;
+  BLOSC2_IO_CB_DEFAULTS.destroy = (blosc2_destroy_cb) blosc2_stdio_destroy;
+
+  BLOSC2_IO_CB_MMAP.id = BLOSC2_IO_FILESYSTEM_MMAP;
+  BLOSC2_IO_CB_MMAP.name = "filesystem_mmap";
+  BLOSC2_IO_CB_MMAP.is_allocation_necessary = false;
+  BLOSC2_IO_CB_MMAP.open = (blosc2_open_cb) blosc2_stdio_mmap_open;
+  BLOSC2_IO_CB_MMAP.close = (blosc2_close_cb) blosc2_stdio_mmap_close;
+  BLOSC2_IO_CB_MMAP.read = (blosc2_read_cb) blosc2_stdio_mmap_read;
+  BLOSC2_IO_CB_MMAP.size = (blosc2_size_cb) blosc2_stdio_mmap_size;
+  BLOSC2_IO_CB_MMAP.write = (blosc2_write_cb) blosc2_stdio_mmap_write;
+  BLOSC2_IO_CB_MMAP.truncate = (blosc2_truncate_cb) blosc2_stdio_mmap_truncate;
+  BLOSC2_IO_CB_MMAP.destroy = (blosc2_destroy_cb) blosc2_stdio_mmap_destroy;
 
   g_ncodecs = 0;
   g_nfilters = 0;
@@ -4647,6 +4658,13 @@ blosc2_io_cb *blosc2_get_io_cb(uint8_t id) {
     }
     return blosc2_get_io_cb(id);
   }
+  else if (id == BLOSC2_IO_FILESYSTEM_MMAP) {
+    if (_blosc2_register_io_cb(&BLOSC2_IO_CB_MMAP) < 0) {
+      BLOSC_TRACE_ERROR("Error registering the mmap IO API");
+      return NULL;
+    }
+    return blosc2_get_io_cb(id);
+  }
   return NULL;
 }
 
@@ -4695,3 +4713,23 @@ int blosc2_get_slice_nchunks(blosc2_schunk* schunk, int64_t *start, int64_t *sto
 
   return rc;
 }
+
+blosc2_cparams blosc2_get_blosc2_cparams_defaults(void) {
+  return BLOSC2_CPARAMS_DEFAULTS;
+};
+
+blosc2_dparams blosc2_get_blosc2_dparams_defaults(void) {
+  return BLOSC2_DPARAMS_DEFAULTS;
+};
+
+blosc2_storage blosc2_get_blosc2_storage_defaults(void) {
+  return BLOSC2_STORAGE_DEFAULTS;
+};
+
+blosc2_io blosc2_get_blosc2_io_defaults(void) {
+  return BLOSC2_IO_DEFAULTS;
+};
+
+blosc2_stdio_mmap blosc2_get_blosc2_stdio_mmap_defaults(void) {
+  return BLOSC2_STDIO_MMAP_DEFAULTS;
+};

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2021  The Blosc Development Team <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <inttypes.h>
 #include "blosc2.h"
 #include "blosc2/filters-registry.h"
 
@@ -102,7 +103,7 @@ int main64(void) {
       // Check for precision
       if ((data_buffer[i] - rec_buffer[i]) > (1LL << PRECISION_BITS)) {
         printf("Value not in tolerance margin: ");
-        printf("%lld - %lld: %lld, (nchunk: %d, nelem: %d)\n",
+        printf("%" PRId64 " - %" PRId64 ": %" PRId64 ", (nchunk: %d, nelem: %d)\n",
                data_buffer[i], rec_buffer[i],
                (data_buffer[i] - rec_buffer[i]), nchunk, i);
         return -1;
