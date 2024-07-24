@@ -30,7 +30,7 @@ As for reading compressed datasets, ``import hdf5plugin`` is required to enable 
 
 To create a compressed dataset use `h5py.Group.create_dataset`_ and set the ``compression`` and ``compression_opts`` arguments.
 
-``hdf5plugin`` provides helpers to prepare those compression options: `Bitshuffle`_, `Blosc`_, `BZip2`_, `FciDecomp`_, `LZ4`_, `SZ`_, `SZ3`_, `Zfp`_, `Zstd`_.
+``hdf5plugin`` provides helpers to prepare those compression options: `Bitshuffle`_, `Blosc`_, `Blosc2`_, `BZip2`_, `FciDecomp`_, `LZ4`_, `Sperr`_, `SZ`_, `SZ3`_, `Zfp`_, `Zstd`_.
 
 Sample code:
 

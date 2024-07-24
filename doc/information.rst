@@ -18,14 +18,8 @@ Project resources
 
 - `Source repository <https://github.com/silx-kit/hdf5plugin>`_
 - `Issue tracker <https://github.com/silx-kit/hdf5plugin/issues>`_
-- Continuous integration: *hdf5plugin* is continuously tested on all three major
-  operating systems:
 
-  - Linux, MacOS, Windows: `GitHub Actions <https://github.com/silx-kit/hdf5plugin/actions>`_
-  - Windows: `AppVeyor <https://ci.appveyor.com/project/ESRF/hdf5plugin>`_
-- `Weekly builds <https://silx.gitlab-pages.esrf.fr/bob/hdf5plugin/>`_
-
-`hdf5plugin` can be cited with its `Zenodo DOI <https://doi.org/10.5281/zenodo.7257761>`_.
+`hdf5plugin` can be cited with its DOI: `10.5281/zenodo.7257761 <https://doi.org/10.5281/zenodo.7257761>`_.
 
 Presentations
 -------------

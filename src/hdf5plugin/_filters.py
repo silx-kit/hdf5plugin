@@ -596,7 +596,7 @@ class SZ(h5py.filters.FilterRefBase):
               data=numpy.random.random(100),
               compression=hdf5plugin.SZ(pointwise_relative=0.01))
 
-    For more details about the compressor `SZ <https://szcompressor.org/>`_.
+    For more details about the compressor, see `SZ compressor <https://github.com/szcompressor/SZ>`_.
     """
     filter_name = "sz"
     filter_id = SZ_ID
@@ -649,7 +649,7 @@ class SZ3(h5py.filters.FilterRefBase):
               data=numpy.random.random(100),
               compression=hdf5plugin.SZ3(absolute=0.1))
 
-    For more details about the compressor, see `SZ3 <https://szcompressor.org/>`_.
+    For more details about the compressor, see `SZ3 compressor <https://github.com/szcompressor/SZ3>`_.
 
     .. warning::
 
