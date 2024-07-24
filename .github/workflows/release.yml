@@ -104,7 +104,9 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
 
           # Use silx wheelhouse for ppc64le
-          CIBW_BEFORE_TEST: pip install h5py --only-binary ":all:" --find-links=https://www.silx.org/pub/wheelhouse/ --trusted-host=www.silx.org
+          # Use numpy<2 since a wheel for h5py v3.11 which supports numpy v2 is not available for aarch64
+          # see https://github.com/h5py/h5py/issues/2408
+          CIBW_BEFORE_TEST: pip install "numpy<2" h5py --only-binary ":all:" --find-links=https://www.silx.org/pub/wheelhouse/ --trusted-host=www.silx.org
           CIBW_TEST_COMMAND: python {project}/test/test.py
       - uses: actions/upload-artifact@v4
         with:
