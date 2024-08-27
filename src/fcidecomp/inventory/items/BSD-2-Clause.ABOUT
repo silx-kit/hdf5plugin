@@ -1,0 +1,15 @@
+name: fcidecomp
+description: fcidecomp project documents
+license_spdx: BSD-2-Clause
+home_url: http://www.eumetsat.int/
+copyright: EUMETSAT
+
+version: 2.0.0
+date: 2023-01-09
+
+about_resource: documentation/available-software-and-documents/Makefile
+about_resource: documentation/installation-manual/Makefile
+about_resource: documentation/solution-design/Makefile
+about_resource: documentation/verification-validation-plan/Makefile
+about_resource: documentation/verification-validation-test-cases-test-procedures/Makefile
+about_resource: documentation/notebooks/*

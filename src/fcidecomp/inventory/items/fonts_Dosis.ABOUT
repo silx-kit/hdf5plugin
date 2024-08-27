@@ -1,0 +1,12 @@
+name: fcidecomp font Dosis
+description: Dosis font
+license_spdx: OFL-1.1
+home_url: www.ikern.com/k1/
+copyright: Copyright (c) 2011, Edgar Tolentino and Pablo Impallari (www.impallari.com|impallari@gmail.com),
+Copyright (c) 2011, Igino Marini. (www.ikern.com|mail@iginomarini.com),
+with Reserved Font Names "Dosis".
+
+version: 2.0.0
+date: 2023-01-09
+
+about_resource: documentation/*/_static/Dosis-ExtraLight.ttf

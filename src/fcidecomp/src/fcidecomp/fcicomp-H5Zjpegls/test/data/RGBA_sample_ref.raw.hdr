@@ -1,0 +1,9 @@
+ENVI
+samples = 60
+lines   = 40
+bands   = 4
+header offset = 0
+data type = 1
+interleave = bsq
+byte order = 0
+comment = "To convert to PNG format: convert -size 60x40 -depth 8 -interlace plane rgba:RGBA_sample.raw RGBA_sample.png"

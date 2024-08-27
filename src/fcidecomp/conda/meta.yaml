@@ -1,0 +1,44 @@
+# Code inspired by:
+# - https://github.com/conda-forge/charls-feedstock/blob/master/recipe/build.sh
+# - https://github.com/mraspaud/fcidecomp-conda-recipe/blob/master/build.sh
+
+{% set setup_data = load_setup_py_data(setup_file='../src/fcidecomp-python/setup.py', from_recipe_dir=True) %}
+{% set charls_version = "2.1.0" %}
+
+package:
+  name: fcidecomp
+  version: "{{ setup_data.get('version').replace('-', '_').strip() }}"
+
+source:
+  - url: https://github.com/team-charls/charls/archive/{{ charls_version }}.tar.gz # [win32]
+  - path: ../src/
+
+build:
+  number: 1
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - charls={{ charls_version }}         # [win]
+    - cmake
+    - hdf5=1.12.2=nompi_*
+    - m2-patch              # [win]
+    - make                  # [not win]
+    - ninja                 # [win]
+  host:
+    - charls>={{ charls_version }}         # [not win]
+    - hdf5=1.12.2=nompi_*
+    - h5py >=2.10
+    - netcdf4                          
+    - python {{ python }}
+    - zlib                                 
+  run:
+    - charls={{ charls_version }}          # [win]
+    - charls>={{ charls_version }}         # [not win]
+    - hdf5=1.12.2=nompi_*
+    - h5py >=2.10
+    - libnetcdf!=4.8.0      # [win]
+    - libssh2               # [win]
+    - netcdf4
+    - python {{ python }}
