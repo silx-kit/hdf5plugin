@@ -10,7 +10,7 @@
 #include <iostream>
 #include <fstream>
 
-namespace SZ {
+namespace SZ3 {
 
 // N-d regression predictor
     template<class T, uint N>
@@ -109,7 +109,8 @@ namespace SZ {
                 quantizer_independent.save(c);
                 quantizer_liner.save(c);
                 HuffmanEncoder<int> encoder = HuffmanEncoder<int>();
-                encoder.preprocess_encode(regression_coeff_quant_inds,0);
+                encoder.preprocess_encode(regression_coeff_quant_inds,
+                                          2 * std::max(quantizer_independent.get_radius(), quantizer_liner.get_radius()));
                 encoder.save(c);
                 encoder.encode(regression_coeff_quant_inds, c);
                 encoder.postprocess_encode();
@@ -164,14 +165,14 @@ namespace SZ {
             std::cout << std::endl;
         }
 
-        void clear() {
-            quantizer_liner.clear();
-            quantizer_independent.clear();
-            regression_coeff_quant_inds.clear();
-            regression_coeff_index = 0;
-            current_coeffs = {0};
-            prev_coeffs = {0};
-        }
+//        void clear() {
+//            quantizer_liner.clear();
+//            quantizer_independent.clear();
+//            regression_coeff_quant_inds.clear();
+//            regression_coeff_index = 0;
+//            current_coeffs = {0};
+//            prev_coeffs = {0};
+//        }
 
         std::array<T, N + 1> get_current_coeffs() {
             return current_coeffs;

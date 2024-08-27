@@ -1,23 +1,23 @@
-#ifndef SZ_TIMEBASED_FRONTEND
-#define SZ_TIMEBASED_FRONTEND
+#ifndef SZ_TIME_SERIES_DECOMPOSITION_HPP
+#define SZ_TIME_SERIES_DECOMPOSITION_HPP
 
-#include <SZ3/frontend/Frontend.hpp>
-#include <SZ3/def.hpp>
-#include <SZ3/predictor/Predictor.hpp>
-#include <SZ3/predictor/LorenzoPredictor.hpp>
-#include <SZ3/quantizer/Quantizer.hpp>
-#include <SZ3/utils/Iterator.hpp>
-#include <SZ3/utils/Config.hpp>
-#include <SZ3/utils/MemoryUtil.hpp>
+#include "Decomposition.hpp"
+#include "SZ3/def.hpp"
+#include "SZ3/predictor/Predictor.hpp"
+#include "SZ3/predictor/LorenzoPredictor.hpp"
+#include "SZ3/quantizer/Quantizer.hpp"
+#include "SZ3/utils/Iterator.hpp"
+#include "SZ3/utils/Config.hpp"
+#include "SZ3/utils/MemoryUtil.hpp"
 
-namespace SZ {
+namespace SZ3 {
 
 
     template<class T, uint N, class Predictor, class Quantizer>
-    class TimeBasedFrontend : public concepts::FrontendInterface<T, N> {
+    class TimeSeriesDecomposition : public concepts::DecompositionInterface<T, N> {
     public:
 
-        TimeBasedFrontend(const Config &conf, Predictor predictor, Quantizer quantizer, T *data_ts0) :
+        TimeSeriesDecomposition(const Config &conf, Predictor predictor, Quantizer quantizer, T *data_ts0) :
                 fallback_predictor(LorenzoPredictor<T, N - 1, 1>(conf.absErrorBound)),
                 predictor(predictor),
                 quantizer(quantizer),
@@ -31,9 +31,9 @@ namespace SZ {
             global_dimensions[1] = conf.dims[1];
         }
 
-        ~TimeBasedFrontend() = default;
+        ~TimeSeriesDecomposition() = default;
 
-        std::vector<int> compress(T *data) {
+        std::vector<int> compress(const Config &conf, T *data) {
             std::vector<int> quant_inds(num_elements);
             size_t quant_count = 0;
             if (data_ts0 != nullptr) {
@@ -46,9 +46,9 @@ namespace SZ {
                     global_dims[i] = global_dimensions[i + 1];
                 };
 
-                auto inter_block_range = std::make_shared<SZ::multi_dimensional_range<T, N - 1>>(
+                auto inter_block_range = std::make_shared<SZ3::multi_dimensional_range<T, N - 1>>(
                         data, std::begin(global_dims), std::end(global_dims), stride, 0);
-                auto intra_block_range = std::make_shared<SZ::multi_dimensional_range<T, N - 1>>(
+                auto intra_block_range = std::make_shared<SZ3::multi_dimensional_range<T, N - 1>>(
                         data, std::begin(global_dims), std::end(global_dims), 1, 0);
 
 //                std::array<size_t, N - 1> intra_block_dims;
@@ -99,7 +99,7 @@ namespace SZ {
             return quant_inds;
         }
 
-        T *decompress(std::vector<int> &quant_inds, T *dec_data) {
+        T *decompress(const Config &conf, std::vector<int> &quant_inds, T *dec_data) {
 
             int const *quant_inds_pos = (int const *) quant_inds.data();
             std::array<size_t, N - 1> intra_block_dims;
@@ -114,10 +114,10 @@ namespace SZ {
                 for (int i = 0; i < N - 1; i++) {
                     global_dims[i] = global_dimensions[i + 1];
                 };
-                auto inter_block_range = std::make_shared<SZ::multi_dimensional_range<T, N - 1>>(
+                auto inter_block_range = std::make_shared<SZ3::multi_dimensional_range<T, N - 1>>(
                         dec_data, std::begin(global_dims), std::end(global_dims), stride, 0);
 
-                auto intra_block_range = std::make_shared<SZ::multi_dimensional_range<T, N - 1>>(
+                auto intra_block_range = std::make_shared<SZ3::multi_dimensional_range<T, N - 1>>(
                         dec_data, std::begin(global_dims), std::end(global_dims), 1, 0);
 
                 predictor.predecompress_data(inter_block_range->begin());
@@ -175,31 +175,17 @@ namespace SZ {
             num_elements = 1;
             for (const auto &d: global_dimensions) {
                 num_elements *= d;
-                std::cout << d << " ";
+//                std::cout << d << " ";
             }
-            std::cout << std::endl;
+//            std::cout << std::endl;
             read(block_size, c, remaining_length);
             stride = block_size;
             predictor.load(c, remaining_length);
             quantizer.load(c, remaining_length);
         }
 
-        void print() {
-//            predictor.print();
-//            quantizer.print();
-        }
-
-        void clear() {
-            predictor.clear();
-            fallback_predictor.clear();
-            quantizer.clear();
-        }
-
         int get_radius() const { return quantizer.get_radius(); }
 
-        size_t get_num_elements() const { return num_elements; };
-
-        size_t size_est() { return 0; };
     private:
         Predictor predictor;
         LorenzoPredictor<T, N - 1, 1> fallback_predictor;
@@ -212,9 +198,9 @@ namespace SZ {
     };
 
     template<class T, uint N, class Predictor, class Quantizer>
-    TimeBasedFrontend<T, N, Predictor, Quantizer>
-    make_sz3_timebased_frontend(const Config &conf, Predictor predictor, Quantizer quantizer, T *data_ts0) {
-        return TimeBasedFrontend<T, N, Predictor, Quantizer>(conf, predictor, quantizer, data_ts0);
+    TimeSeriesDecomposition<T, N, Predictor, Quantizer>
+    make_decomposition_timeseries(const Config &conf, Predictor predictor, Quantizer quantizer, T *data_ts0) {
+        return TimeSeriesDecomposition<T, N, Predictor, Quantizer>(conf, predictor, quantizer, data_ts0);
     }
 }
 

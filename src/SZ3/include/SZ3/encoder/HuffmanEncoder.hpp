@@ -6,7 +6,10 @@
 #include "SZ3/utils/ByteUtil.hpp"
 #include "SZ3/utils/MemoryUtil.hpp"
 #include "SZ3/utils/Timer.hpp"
-#include "SZ3/utils/ska_hash/unordered_map.hpp"
+#include <cstdint>
+#if INTPTR_MAX == INT64_MAX // 64bit system
+    #include "SZ3/utils/ska_hash/unordered_map.hpp"
+#endif // INTPTR_MAX == INT64_MAX
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -18,7 +21,7 @@
 #include <set>
 
 
-namespace SZ {
+namespace SZ3 {
 
 
     template<class T>
@@ -87,7 +90,7 @@ namespace SZ {
         /**
          * build huffman tree using bins
          * @param bins
-         * @param stateNum is no longer needed
+         * @param stateNum
          */
         void preprocess_encode(const std::vector<T> &bins, int stateNum) {
             preprocess_encode(bins.data(), bins.size(), stateNum);
@@ -97,7 +100,7 @@ namespace SZ {
          * build huffman tree using bins
          * @param bins
          * @param num_bin
-         * @param stateNum is no longer needed
+         * @param stateNum
          */
         void preprocess_encode(const T *bins, size_t num_bin, int stateNum) {
             nodeCount = 0;
@@ -112,7 +115,7 @@ namespace SZ {
         }
 
         //save the huffman Tree in the compressed data
-        uint save(uchar *&c) {
+        void save(uchar *&c) {
             auto cc = c;
             write(offset, c);
             int32ToBytes_bigEndian(c, nodeCount);
@@ -128,7 +131,7 @@ namespace SZ {
             else
                 totalSize = convert_HuffTree_to_bytes_anyStates<unsigned int>(nodeCount, c);
             c += totalSize;
-            return c - cc;
+//            return c - cc;
         }
 
         size_t size_est() {
@@ -525,7 +528,12 @@ namespace SZ {
             T max = s[0];
             offset = s[0]; //offset is min
 
-            ska::unordered_map<T, size_t> frequency;
+            #if INTPTR_MAX == INT64_MAX // 64bit system
+                ska::unordered_map<T, size_t> frequency;
+            #else // most likely 32bit system
+                std::unordered_map<T, size_t> frequency;
+            #endif // INTPTR_MAX == INT64_MAX
+
             for (size_t i = 0; i < length; i++) {
                 frequency[s[i]]++;
             }
