@@ -255,7 +255,7 @@ void *blosc2_stdio_mmap_open(const char *urlpath, const char *mode, void* params
       _print_last_error();
       BLOSC_TRACE_ERROR("Cannot close the handle to the memory-mapped file.");
     }
-    
+
     return NULL;
   }
 #else
@@ -353,7 +353,7 @@ int64_t blosc2_stdio_mmap_write(const void *ptr, int64_t size, int64_t nitems, i
         _print_last_error();
         BLOSC_TRACE_ERROR("Cannot close the handle to the memory-mapped file.");
       }
-      
+
       return 0;
     }
 
