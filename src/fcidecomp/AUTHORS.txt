@@ -1,5 +1,0 @@
-# Copyright holder
-EUMETSAT
-# Authors
-B-Open Solutions srl
-THALES Services
