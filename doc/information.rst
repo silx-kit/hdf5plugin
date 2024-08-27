@@ -65,11 +65,11 @@ HDF5 compression filters and compression libraries sources were obtained from:
   (commit `49e3b65 <https://github.com/nexusformat/HDF5-External-Filter-Plugins/tree/49e3b65eca772bca77af13ba047d8b577673afba>`_)
   using LZ4.
 * `bitshuffle plugin <https://github.com/kiyo-masui/bitshuffle>`_ (v0.5.1) using LZ4 and ZStd.
-* bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
+* bzip2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.10.1)
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.1)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.5), LZ4, Snappy, ZLib and ZStd.
-* hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.9.2)
+* hdf5-blosc2 plugin (from `PyTables <https://github.com/PyTables/PyTables/>`_ v3.10.1)
   using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.15.0), LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.0.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/e88f83c03bafcd0769c167dca14aa7aabf728e1b>`_)
