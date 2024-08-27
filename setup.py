@@ -942,15 +942,17 @@ def get_blosc2_plugin():
     ]
     define_macros = [
         ('HAVE_PLUGINS', 1),
+        ('SHUFFLE_SSE2_ENABLED', 1),
+        ('SHUFFLE_AVX2_ENABLED', 1),
         ('SHUFFLE_AVX512_ENABLED', 1),
         ('SHUFFLE_NEON_ENABLED', 1),
+        ('SHUFFLE_ALTIVEC_ENABLED', 1),
     ]
     extra_compile_args = []
     extra_link_args = []
     libraries = []
 
     if platform.machine() == 'ppc64le':
-        define_macros.append(('SHUFFLE_ALTIVEC_ENABLED', 1))
         define_macros.append(('NO_WARN_X86_INTRINSICS', None))
     if HostConfig.ARCH == 'ARM_8':
         extra_compile_args += ['-flax-vector-conversions']
