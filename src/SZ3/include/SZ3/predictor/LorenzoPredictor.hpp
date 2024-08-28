@@ -6,7 +6,7 @@
 #include "SZ3/utils/Iterator.hpp"
 #include <cassert>
 
-namespace SZ {
+namespace SZ3 {
 
     // N-dimension L-layer lorenzo predictor
     template<class T, uint N, uint L>
@@ -94,7 +94,7 @@ namespace SZ {
             return do_predict(iter);
         }
 
-        void clear() {}
+//        void clear() {}
 
     protected:
         T noise = 0;

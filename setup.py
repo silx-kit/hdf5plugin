@@ -1186,8 +1186,8 @@ def get_sz3_plugin():
     h5z_sz3_dir = "src/SZ3/tools/H5Z-SZ3"
 
     include_dirs = [f"{sz3_dir}/include"]
-    include_dirs += glob(f"{sz3_dir}/include/SZ3/*/")
-    include_dirs += glob(f"{sz3_dir}/include/SZ3/utils/*/")
+    include_dirs += glob(f"{sz3_dir}/include/SZ3")
+
     # add version.hpp
     include_dirs.append("src/SZ3_extra")
     if sys.platform == 'darwin':
