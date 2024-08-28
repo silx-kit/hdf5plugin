@@ -7,12 +7,11 @@ various Python libraries and the EUMETSAT Data-Tailor software.
 
 The ``fcidecomp`` software can be installed on:
 
-- Linux CentOS 7 64-bit
 - RockyLinux 8 64-bit (also from source code)
 - Linux Ubuntu 18.04 LTS 64-bit
 - Linux Ubuntu 20.04 LTS 64-bit (also from source code)
 - Windows 10 64-bit
-- Windows 10 32-bit
+
 
 ## Installing the ``fcidecomp`` software
 
@@ -143,9 +142,9 @@ Files listed under `inventory/items/data_proprietary.ABOUT` are licensed under E
 The following dependencies are not included in the package but are required and they will be downloaded at build or compilation time:
 * component name, version, SPDX license id, copyright, home_url, comments
 * charls, 2.1.0, BSD 3-Clause, - , https://github.com/team-charls/charls, - .
-* hdf5, 1.10.*, BSD 3-Clause, - , https://www.h5py.org/, - .
+* hdf5, 1.12.* to 1.14.*, BSD 3-Clause, - , https://www.h5py.org/, - .
 * h5py, 2.* and 3.6.0, BSD 3-Clause, - , https://www.h5py.org/, - .
-* python, 3.8.16, see https://docs.python.org/3/license.html, - , https://www.python.org/, - .
+* python, 3.9 to 3.12, see https://docs.python.org/3/license.html, - , https://www.python.org/, - .
 * zlib, 1.2.13, zlib (http://zlib.net/zlib_license.html), - , https://zlib.net/, - .
 * libnetcdf, 4.8.1, MIT , - , https://www.unidata.ucar.edu/software/netcdf/, - .
 * libssh2, 1.10.0, - , see https://www.libssh2.org/license.html , https://www.libssh2.org/, - .

@@ -23,7 +23,10 @@
 # - https://github.com/conda-forge/charls-feedstock/blob/master/recipe/build.sh
 # - https://github.com/mraspaud/fcidecomp-conda-recipe/blob/master/build.sh
 
-set -ex
+#set -ex
+
+ $PYTHON -m pip install $RECIPE_DIR/../src/fcidecomp-python --no-deps --ignore-installed -vv
+
 
 PATH_TO_DELIVERY=$(pwd)
 FCIDECOMP_BUILD_PATH=${PATH_TO_DELIVERY}/build
@@ -49,7 +52,6 @@ cp -r ${PATH_TO_DELIVERY}/fcidecomp/* ${FCIDECOMP_BUILD_PATH}
 # ./gen/build.sh fcicomp-H5Zjpegls test
 ./gen/install.sh fcicomp-H5Zjpegls
 
-pip install --no-deps --ignore-installed -vv ../fcidecomp-python
 
 mkdir -p "${PREFIX}/etc/conda/activate.d"
 cp "${RECIPE_DIR}/scripts/activate.sh" "${PREFIX}/etc/conda/activate.d/${PKG_NAME}_activate.sh"

@@ -103,10 +103,8 @@ use this one:
 
 Now we can build ``fcidecomp`` proper.
 
-Go to one folder up.
-
 Obtain the source code either from the Open Source EUMETSAT repository (set ``FCIDECOMP_TAG`` to the proper 
-``fcidecomp`` tag, e.g. `2.0.1`):
+``fcidecomp`` tag, e.g. `2.0.0`):
 
      git clone -b $FCIDECOMP_TAG https://gitlab.eumetsat.int/open-source/fcidecomp/
 
@@ -117,17 +115,17 @@ or obtain the source code as a `tar.gz` package and uncompress it:
 
 Now build and install the software as follows (set ``FCIDECOMP_TAG`` to the proper ``fcidecomp`` tag,
 ``PATH_TO_CHARLS`` to the path where CharLS has been installed, i.e. ``/usr/local/lib`` if the defaults
-are used (for Ubuntu20.04), and change the installation paths below as deemed appropriate. Note that
+are used, and change the installation paths below as deemed appropriate. Note that
 install commands require super-user privileges):
 
-    cd fcidecomp-2.0.1/src/fcidecomp
+    cd fcidecomp/src/fcidecomp
     ./gen/build.sh fcicomp-jpegls release -DCMAKE_PREFIX_PATH=$PATH_TO_CHARLS   -DCMAKE_INSTALL_PREFIX=/usr/local/fcidecomp
     sudo ./gen/install.sh fcicomp-jpegls
     ./gen/build.sh fcicomp-H5Zjpegls release -DCMAKE_PREFIX_PATH="/usr/local/fcidecomp" -DCMAKE_INSTALL_PREFIX=/usr/local/fcidecomp
     sudo ./gen/install.sh fcicomp-H5Zjpegls
 
 Finally, set the environment variable ``HDF5_PLUGIN_PATH`` to the install path of the compiled HDF5 plugin
-specified above (following the instructions above, it is ``/usr/local/fcidecomp/hdf5/lib/plugin/`` (for Ubuntu20.04)):
+specified above (following the instructions above, it is ``/usr/local/fcidecomp/hdf5/lib/plugin/``):
 
     export HDF5_PLUGIN_PATH=/usr/local/fcidecomp/hdf5/lib/plugin/
 

@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1]
+
+### Added
+- Added support for HDF5 (1.12 and 1.14)
+- Added support for Python 3.10, 3.11, 3.12 (Linux only)
+
+### Changed
+- Improved IPR and license information
+- Updated dependencies.
+
+### Removed
+- Remove support for Python 3.7, 3.8
+
+
 ## [2.0.1] - 2023-03-17
 
 ### Fixed

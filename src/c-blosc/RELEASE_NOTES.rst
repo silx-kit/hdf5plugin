@@ -3,8 +3,17 @@
 ===========================
 
 
+Changes from 1.21.5 to 1.21.6
+=============================
+
+* Zlib updated to 1.3.1.  Thanks to Lachlan Deakin.
+* Zstd updated to 1.5.6
+* Fixed many typos.  Thanks to Dimitri Papadopoulos.
+
+
 Changes from 1.21.4 to 1.21.5
 =============================
+
 
 * Fix SSE2/AVX2 build issue.  Fixes #352. Thanks to Thomas VINCENT
   and Mark Kittisopikul.
