@@ -37,16 +37,24 @@ class Bitmask {
   //
   auto rlong(size_t idx) const -> uint64_t;  // `idx` of the bit, not the long.
   auto rbit(size_t idx) const -> bool;
+
+  // Functions to perform bulk tests.
+  //
+  // Two versions of the `has_true()` function. Both versions return -1 in case of no true found.
+  //   1) Position == false: it returns 1 indicating finding a true.
+  //   2) Position == true:  it returns the offset relative to `start` of the first true.
+  template <bool Position>
+  auto has_true(size_t start, size_t len) const -> int64_t;
   auto count_true() const -> size_t;  // How many 1's in this mask?
 
   // Functions for write
   //
-  void wlong(size_t idx, uint64_t value);  // `idx` of the bit, not the long.
   void wbit(size_t idx, bool bit);
-  void wtrue(size_t idx);   // This is faster than `wbit(idx, true)`.
-  void wfalse(size_t idx);  // This is faster than `wbit(idx, false)`.
-  void reset();             // Set the current bitmask to be all 0's.
-  void reset_true();        // Set the current bitmask to be all 1's.
+  void wlong(size_t idx, uint64_t value);  // `idx` of the bit, not the long.
+  void wtrue(size_t idx);                  // This is faster than `wbit(idx, true)`.
+  void wfalse(size_t idx);                 // This is faster than `wbit(idx, false)`.
+  void reset();                            // Set the current bitmask to be all 0's.
+  void reset_true();                       // Set the current bitmask to be all 1's.
 
   // Functions for direct access of the underlying data buffer
   // Note: `use_bitstream()` reads the number of values (uint64_t type) that provide
@@ -55,7 +63,7 @@ class Bitmask {
   auto view_buffer() const -> const std::vector<uint64_t>&;
   void use_bitstream(const void* p);
 
-#if defined __cpp_lib_three_way_comparison && defined __cpp_impl_three_way_comparison
+#if __cplusplus >= 202002L && defined __cpp_lib_three_way_comparison
   auto operator<=>(const Bitmask& rhs) const noexcept;
   auto operator==(const Bitmask& rhs) const noexcept -> bool;
 #endif

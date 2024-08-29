@@ -1,0 +1,568 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[colorlinks]{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage[many]{tcolorbox}    	% for COLORED BOXES (tikz and xcolor included)
+\usepackage{minted}
+\usepackage{xspace}
+\setcounter{tocdepth}{1}
+\setminted{linenos}
+\setlength\parindent{0pt}   % killing indentation for all the text
+\setlength\columnsep{0.25in} % setting length of column separator
+\pagestyle{empty}           % setting pagestyle to be empty
+\definecolor{main}{HTML}{5989cf}    % setting main color to be used
+\definecolor{sub}{HTML}{cde4ff}     % setting sub color to be used
+\tcbset{
+    sharp corners,
+    colback = white,
+    before skip = 0.2cm,    % add extra space before the box
+    after skip = 0.5cm      % add extra space after the box
+}                           % setting global options for tcolorbox
+\newtcolorbox{BlueBox}{
+    sharpish corners, % better drop shadow
+    colback = sub, 
+    colframe = main, 
+    boxrule = 0pt, 
+    toprule = 4.5pt, % top rule weight
+    enhanced,
+    fuzzy shadow = {0pt}{-2pt}{-0.5pt}{0.5pt}{black!35} % {xshift}{yshift}{offset}{step}{options} 
+}
+\newcommand{\callout}[1]{\begin{BlueBox}#1\end{BlueBox}}
+
+
+
+\title{SPERR Interface and Examples}
+\author{Samuel Li}
+\date{\today}
+
+\begin{document}
+
+\vspace{-1cm}
+\maketitle
+
+\vspace{-1cm}
+
+\section{Introduction}
+This document is the SPERR section of the handout for the 
+\href{https://szcompressor.org/next.szcompressor.github.io/meetings/feb24fl/}{FZ workshop} 
+hands-on session on February 15 2024, Sarasota, FL.
+It provides examples for the CLI interface, C++ interface, and C interface of SPERR
+(Section~\ref{sec:cli}, \ref{sec:cpp}, and \ref{sec:c}, respectively).
+
+\section{SPERR}
+Contact: \href{shaomeng@ucar.edu}{Samuel Li (shaomeng@ucar.edu)} \\
+Repo: \href{https://github.com/NCAR/SPERR/}{github.com/NCAR/SPERR/} \\
+Wiki: \href{https://github.com/NCAR/SPERR/wiki}{github.com/NCAR/SPERR/wiki}
+
+\vspace{2mm}
+SPERR uses \textit{wavelet transforms} to decorrelate the data, encodes the quantized 
+coefficients, and explicitly corrects any data point exceeding a prescribed point-wise error
+(PWE) tolerance.
+Most often, SPERR produces the smallest compressed bitstream 
+honoring a PWE tolerance.
+
+A SPERR bitstream can be used to reconstruct the data fields 
+in two additional fashions: \textit{flexible-rate} decoding and
+\textit{multi-resolution} decoding.
+
+\vspace{-2mm}
+\begin{itemize}
+\item \textit{Flexible-rate} decoding: any prefix of a SPERR bitstream 
+(i.e., a sub-bitstream that starts from the very beginning)
+produced by a simple truncation is still valid to reconstruct the data 
+field, though at a lower quality.
+This ability is useful for applications such as tiered storage and data sharing 
+over slow connections, to name a few.
+\vspace{-2mm}
+\item \textit{Multi-resolution} decoding: a hierarchy of the data field
+with coarsened resolutions can be obtained together with the 
+native resolution.
+This ability is useful for quick analyses with limited resources.
+\end{itemize}
+
+\callout{On a Unix-like system with a working C++ compiler and CMake, SPERR can be
+built from source and made available to users in just a few commands.
+See this \href{https://github.com/NCAR/SPERR?tab=readme-ov-file\#quick-build}{README} 
+for detail.}
+
+
+\subsection{CLI Interface}
+\label{sec:cli}
+Upon a successful build, four CLI utility programs are placed in the \texttt{./bin/}
+directory; three of them are most relevant for end users: \texttt{sperr2d}, 
+\texttt{sperr3d}, and \texttt{sperr3d\_trunc};
+each of them can be invoked with the \texttt{-h} option to display a help message.
+
+\subsubsection{\texttt{sperr2d}}
+\texttt{sperr2d} is responsible for compressing and decompressing a 2D data slice.
+In compression mode (\texttt{-c}), it takes as input a raw binary file consisting of 
+single- or double-precision floating point values, and outputs a compressed bitstream.
+In decompression mode (\texttt{-d}), it takes as input a compressed bitstream, and
+outputs the decompressed binary file of single- or double-precision floating point values.
+Its help message contains all the options \texttt{sperr2d} takes:
+
+\begin{minted}{bash}
+$ ./bin/sperr2d -h
+
+Usage: ./bin/sperr2d [OPTIONS] [filename]
+
+Positionals:
+  filename TEXT:FILE          A data slice to be compressed, or
+                              a bitstream to be decompressed.
+
+Options:
+  -h,--help                   Print this help message and exit
+
+Execution settings:
+  -c Excludes: -d             Perform a compression task.
+  -d Excludes: -c             Perform a decompression task.
+
+Input properties:
+  --ftype UINT                Specify the input float type in bits. Must be 32 or 64.
+  --dims [UINT,UINT]          Dimensions of the input slice. E.g., `--dims 128 128`
+                              (The fastest-varying dimension appears first.)
+
+Output settings:
+  --bitstream TEXT            Output compressed bitstream.
+  --decomp_f TEXT             Output decompressed slice in f32 precision.
+  --decomp_d TEXT             Output decompressed slice in f64 precision.
+  --decomp_lowres_f TEXT      Output lower resolutions of the decompressed slice in f32 precision.
+  --decomp_lowres_d TEXT      Output lower resolutions of the decompressed slice in f64 precision.
+  --print_stats Needs: -c     Show statistics measuring the compression quality.
+
+Compression settings (choose one):
+  --pwe FLOAT Excludes: --psnr --bpp
+                              Maximum point-wise error (PWE) tolerance.
+  --psnr FLOAT Excludes: --pwe --bpp
+                              Target PSNR to achieve.
+  --bpp FLOAT:FLOAT in [0 - 64] Excludes: --pwe --psnr
+                              Target bit-per-pixel (bpp) to achieve.
+\end{minted}
+
+Examples:
+\begin{enumerate}
+\item Compress a 2D slice in $512\times512$ dimension, single-precision floats
+      with a PWE tolerance of $10^{-2}$: \\ 
+      \texttt{./bin/sperr2d -c --ftype 32 --dims 512 512  --pwe 1e-2 
+              \textbackslash \\
+               --bitstream ./out.stream ./in.f32}
+
+\item Perform the compression task described above, plus also write out the 
+      compress-decompressed slice, and finally print statistics
+      measuring the compression quality: \\
+      \texttt{./bin/sperr2d -c --ftype 32 --dims 512 512  --pwe 1e-2
+               \textbackslash \\
+               --decomp\_f ./out.decomp --print\_stats
+               --bitstream ./out.stream ./in.f32}
+
+\item Decompress from a SPERR bitstream, and write out the slice in native 
+      and coarsened resolutions: \\
+      \texttt{./bin/sperr2d -d --decomp\_f ./out.decomp --decomp\_lowres\_f ./out.lowres 
+              ./sperr.stream}
+      In this example, the output file \texttt{out.decomp} will be of the native resolution, 
+      and six other files (\texttt{out.lowres.256x256, out.lowres.128x128, etc.}) 
+      will also be produced with their filenames indicating the coarsened resolution.
+\end{enumerate}
+
+\subsubsection{sperr3d}
+\label{sec:sperr3d}
+\texttt{sperr3d} is responsible for compressing and decompressing a 2D data volume.
+Similar to \texttt{sperr2d}, it operates in either compression (\texttt{-c}) or 
+decompression (\texttt{-d}) mode, converting between raw binary floating-point values 
+and compressed bitstreams. 
+Different from \texttt{sperr2d} which compresses the input 2D slice as a whole, 
+\texttt{sperr3d} divides an input 3D volume into smaller chunks, and then compresses
+each chunk individually.
+This chunking step allows for compressing and decompressing all the small chunks 
+individually and in parallel.
+\texttt{sperr3d} uses $256^3$ as the default chunk size, but any number from dozens to
+low hundreds would work well.
+(Chunk dimensions that can divide the full volume are preferred, but not mandatory.)
+Command line options \texttt{--chunks} and \texttt{--omp} control the chunking and 
+parallel execution behavior respectivelly.
+The help message of \texttt{sperr3d} details all the options it takes:
+
+\begin{minted}{bash}
+$ ./bin/sperr3d -h
+
+Usage: ./bin/sperr3d [OPTIONS] [filename]
+
+Positionals:
+  filename TEXT:FILE          A data volume to be compressed, or
+                              a bitstream to be decompressed.
+
+Options:
+  -h,--help                   Print this help message and exit
+
+Execution settings:
+  -c Excludes: -d             Perform a compression task.
+  -d Excludes: -c             Perform a decompression task.
+  --omp UINT                  Number of OpenMP threads to use. Default (or 0) to use all.
+
+Input properties (for compression):
+  --ftype UINT                Specify the input float type in bits. Must be 32 or 64.
+  --dims [UINT,UINT,UINT]     Dimensions of the input volume. E.g., `--dims 128 128 128`
+                              (The fastest-varying dimension appears first.)
+
+Output settings:
+  --bitstream TEXT            Output compressed bitstream.
+  --decomp_f TEXT             Output decompressed volume in f32 precision.
+  --decomp_d TEXT             Output decompressed volume in f64 precision.
+  --decomp_lowres_f TEXT      Output lower resolutions of the decompressed volume in f32 precision.
+  --decomp_lowres_d TEXT      Output lower resolutions of the decompressed volume in f64 precision.
+  --print_stats Needs: -c     Print statistics measuring the compression quality.
+
+Compression settings:
+  --chunks [UINT,UINT,UINT]   Dimensions of the preferred chunk size. Default: 256 256 256
+                              (Volume dims don't need to be divisible by these chunk dims.)
+  --pwe FLOAT Excludes: --psnr --bpp
+                              Maximum point-wise error (PWE) tolerance.
+  --psnr FLOAT Excludes: --pwe --bpp
+                              Target PSNR to achieve.
+  --bpp FLOAT:FLOAT in [0 - 64] Excludes: --pwe --psnr
+                              Target bit-per-pixel (bpp) to achieve.
+\end{minted}
+
+Examples:
+\begin{enumerate}
+\item Compress a 3D volume in $384\times384\times256$ dimension, double-precision floats,
+      using a PWE tolerance of $10^{-9}$ and chunks of $192\times192\times256$: \\
+      \texttt{./bin/sperr3d -c --omp 4 --ftype 64 --dims 384 384 256 --chunks 192 192 256 
+      \textbackslash \\
+      --pwe 1e-9 --bitstream ./out.stream ./in.f64}
+\item Perform the compression task described above, plus also write out the 
+      compress-decompressed volume, and finally print statistics
+      measuring the compression quality: \\
+       \texttt{./bin/sperr3d -c --omp 4 --ftype 64 --dims 384 384 256 --chunks 192 192 256 
+       \textbackslash \\
+       --pwe 1e-9 --decomp\_d ./out.decomp --print\_stats --bitstream ./out.stream ./in.f64}
+\item Decompress from a SPERR bitstream, and write out the volume in native 
+      and coarsened resolutions: \\
+      \texttt{./bin/sperr3d -d --decomp\_d ./out.decomp --decomp\_lowres\_d ./out.lowres 
+              ./sperr.stream}
+      In this example, the output file \texttt{out.decomp} will be of the native resolution, 
+      and five other files (\texttt{out.lowres.192x192x128, out.lowres.96x96x64, etc.}) 
+      will also be produced with their filenames indicating the coarsened resolution.
+\end{enumerate}
+
+\callout{To support multi-resolution decoding in 3D cases, the individual chunks 
+(\texttt{--chunks}) need to 1) approximate a cube, so that there are the same number
+of wavelet transforms performed on each dimension, and 2) divide the full volume
+in each dimension.}
+
+\subsubsection{\texttt{sperr3d\_trunc} and Flexible-Rate Decoding}
+Compressed SPERR bitstreams support \textit{flexible-rate} decoding, meaning that a
+sub-bitstream of it from the beginning can still be used to reconstruct the data field.
+Equally important, the reconstruction will have the best possible quality (in terms of
+average error) under the the size constraint of the sub-bitstream, though lower quality
+than using the full bitstream.
+Given a compressed bitstream, a sub-bitstream can be obtained by a simple truncation,
+for example, a truncation that keeps the first 10\% of the full bitstream.
+%On Unix systems, utility tool \texttt{head} can easily perform this task.
+
+The chunking scheme used in 3D compression (see Section~\ref{sec:sperr3d}) 
+brings some complication,
+because the bitstream representing each chunk needs to be truncated \textit{individually}.
+\texttt{sperr3d\_trunc} is thus introduced to properly truncate a multi-chunked SPERR bitstream.
+Specifically, it 1) locates the bitstream representing each chunk,
+2) truncates the bitstream, and 3) stitches all truncated bitstreams together so
+\texttt{sperr3d} can properly decompress it.
+
+The help message of \texttt{sperr3d\_trunc} details its options:
+
+\callout{SPERR bitstreams without using multi-chunks (i.e., \texttt{--dims} equals 
+\texttt{--chunks} in 3D, and all 2D cases) can safely be truncated by any method.
+For example, the following command truncates a compressed bitstream \texttt{field.stream}
+to keep its first 5kB as \texttt{field2.stream}, which is also recognized by SPERR:\\
+\texttt{head -c 5000 density.stream > density2.stream}
+}
+
+\begin{minted}{bash}
+$ ./bin/sperr3d_trunc -h
+
+Usage: ./bin/sperr3d_trunc [OPTIONS] [filename]
+
+Positionals:
+  filename TEXT:FILE          The original SPERR3D bitstream to be truncated.
+
+Options:
+  -h,--help                   Print this help message and exit
+
+Truncation settings:
+  --pct UINT REQUIRED         Percentage (1--100) of the original bitstream to truncate.
+  --omp UINT                  Number of OpenMP threads to use. Default (or 0) to use all.
+
+Output settings:
+  -o TEXT                     Write out the truncated bitstream.
+
+Input settings:
+  --orig32 TEXT               Original raw data in 32-bit precision to calculate compression
+                              quality using the truncated bitstream.
+  --orig64 TEXT               Original raw data in 64-bit precision to calculate compression
+                              quality using the truncated bitstream.
+\end{minted}
+
+Examples:
+\begin{enumerate}
+\item Produce a truncated version of a bitstream using 10\% of the original length: \\
+      \texttt{./bin/sperr3d\_trunc --pct 10 -o ./stream.10 ./bitstream}
+\item Perform the task above, plus evaluate compression quality using the truncated
+      bitstream:\\
+      \texttt{./bin/sperr3d\_trunc --pct 10 -o ./stream.10 --orig64 ./data.f64 ./bitstream}
+\end{enumerate}
+
+\subsection{C++ Interface}
+\label{sec:cpp}
+\subsubsection{2D Compression and Decompression}
+C++ class \texttt{sperr::SPECK2D\_FLT} is responsible for 2D compression and decompression.
+The sample code walks through necessary steps to perform a compression and decompression
+task, and a more concrete example can be found
+\href{https://github.com/NCAR/SPERR/blob/main/utilities/sperr2d.cpp}{here}.
+
+\begin{minted}{cpp}
+//
+// Example of using a sperr::SPECK2D_FLT() to compress a 2D slice.
+// This is a 6-step process.
+//
+#include "SPECK2D_FLT.h"
+
+// Step 1: create an encoder:
+auto encoder = sperr::SPECK2D_FLT();
+
+// Step 2: specify the 2D slice dimension (the third dimension is left with 1):
+encoder.set_dims({128, 128, 1});
+
+// Step 3: copy over the input data from a raw pointer (float* or double*):
+encoder.copy_data(ptr, 16'384);      // 16,384 is the number of values.
+// Step 3 alternative: one can hand a memory buffer to the encoder to avoid a memory copy;
+// use either version is cool.
+encoder.take_data(std::move(input)); // input is of type std::vector<doubles>.
+
+// Step 4: specify the compression quality measured in one of three metrics;
+// only the last invoked quality metric is honored.
+encoder.set_tolerance(1e-9);         // PWE tolerance = 1e-9
+encoder.set_bitrate(2.2);            // Target bitrate = 2.2
+encoder.set_psnr(102.2);             // Target PSNR = 102.2
+
+// Step 5: perform the compression task:
+encoder.compress();
+
+// Step 6: retrieve the compressed bitstream:
+auto bitstream = std::vector<uint8_t>();
+encoder.append_encoded_bitstream(bitstream);
+\end{minted}
+
+\begin{minted}{cpp}
+//
+// Example of using a sperr::SPECK2D_FLT() to decompress a bitstream.
+// This is a 5-step process.
+//
+#include "SPECK2D_FLT.h"
+
+// Step 1: create a decoder:
+auto decoder = sperr::SPECK2D_FLT();
+
+// Step 2: specify the 2D slice dimension (the third dimension is left with 1):
+// This information is often saved once somewhere for many same-sized slices.
+decoder.set_dims({128, 128, 1});
+
+// Step 3: pass in the compressed bitstream as a raw pointer (uint8_t*):
+decoder.use_bitstream(ptr, 16'384);  // 16,384 is the length of the bitstream.
+
+// Step 4: perform the decompression task:
+decoder.decompress(multi_res);  // a boolean, if to enable multi-resolution decoding
+
+// Step 5: retrieve the decompressed volume:
+std::vector<double> vol = decoder.view_decoded_data();
+auto hierarchy = decoder.view_hierarchy();     // if multi-resolution was enabled
+// Step 5 alternative: one can take ownership of the data buffer to avoid a memory copy.
+std::vector<double> vol = decoder.release_decoded_data();
+auto hierarchy = decoder.release_hierarchy();  // if multi-resolution was enabled
+\end{minted}
+
+\subsubsection{3D Compression and Decompression}
+C++ class \texttt{sperr::SPERR3D\_OMP\_C} is responsible for 3D compression, and 
+\texttt{sperr::SPERR3D\_OMP\_D} is responsible for 3D decompression.
+The sample code walks through necessary steps to perform a compression and decompression
+task, and a more concrete example can be found
+\href{https://github.com/NCAR/SPERR/blob/main/utilities/sperr3d.cpp}{here}.
+
+\begin{minted}{cpp}
+//
+// Example of using a sperr::SPERR3D_OMP_C() to compress a 3D volume.
+// This is a 6-step process.
+//
+#include "SPERR3D_OMP_C.h"
+
+// Step 1: create an encoder:
+auto encoder = sperr::SPERR3D_OMP_C();
+
+// Step 2: specify the volume and chunk dimensions, respectively:
+encoder.set_dims_and chunks({384, 384, 256}, {192, 192, 128});
+
+// Step 3: specify the number of OpenMP threads to use:
+encoder.set_num_threads(4);
+
+// Step 4: specify the compression quality measured in one of three metrics;
+// only the last invoked quality metric is honored.
+encoder.set_tolerance(1e-9);         // PWE tolerance = 1e-9
+encoder.set_bitrate(2.2);            // Target bitrate = 2.2
+encoder.set_psnr(102.2);             // Target PSNR = 102.2
+
+// Step 5: perform the compression task:
+// The input data is passed in in the form of a raw pointer (float* or double*),
+// and the total number of values will be passed in here too.
+encoder.compress(ptr, 384 * 384 * 256);
+
+// Step 6: retrieve the compressed bitstream:
+std::vector<uint8_t> stream = encoder.get_encoded_bitstream();
+\end{minted}
+
+\begin{minted}{cpp}
+//
+// Example of using a sperr::SPERR3D_OMP_D() to decompress a bitstream.
+// This is a 5-step process.
+//
+#include "SPERR3D_OMP_D.h"
+
+// Step 1: create a decoder:
+auto decoder = sperr::SPERR3D_OMP_D();
+
+// Step 2: specify the number of OpenMP threads to use:
+decoder.set_num_threads(4);
+
+// Step 3: pass in the compressed bitstream as a raw pointer (uint8_t*):
+decoder.use_bitstream(ptr, 16'384);  // 16,384 is the length of the bitstream.
+
+// Step 4: perform the decompression task:
+// Note that the pointer to the bitstream is passed in again!
+decoder.decompress(ptr, multi_res);  // a boolean, if to enable multi-resolution decoding
+
+// Step 5: retrieve the decompressed volume:
+auto [dimx, dimy, dimz] = decoder.get_dims();  // dimension of the volume
+std::vector<double> vol = decoder.view_decoded_data();
+auto hierarchy = decoder.view_hierarchy();     // if multi-resolution was enabled
+// Step 5 alternative: one can take ownership of the data buffer to avoid memory copies.
+std::vector<double> vol = decoder.release_decoded_data();
+auto hierarchy = decoder.release_hierarchy();  // if multi-resolution was enabled
+\end{minted}
+
+\callout{To achieve higher performance with repeated compression and 
+         decompression tasks, the encoder and decoder objects are better to be
+         re-used rather than repeatedly destroyed and created.}
+
+\subsection{C Interface}
+\label{sec:c}
+SPERR provides a C wrapper with a set of C functions. 
+All of the C interface is in the header file
+\href{https://github.com/NCAR/SPERR/blob/main/include/SPERR_C_API.h}{\texttt{SPERR\_C\_API.h}},
+which itself documents the C functions and parameters, etc.
+The following example code walks through key steps to use the C API to perform
+compression and decompression, while more concrete examples are available
+for \href{https://github.com/NCAR/SPERR/blob/main/examples/C_API/2d.c}{2D}
+and \href{https://github.com/NCAR/SPERR/blob/main/examples/C_API/3d.c}{3D} cases.
+
+\subsubsection{Example: 2D}
+
+\begin{minted}{C}
+/*
+ * Example of using the SPERR C API to perform 2D compression and decompression tasks.
+ */
+#include "SPERR_C_API.h"
+
+/* Step 1: create variables to keep the output: */
+void* stream = NULL;  /* caller is responsible for free'ing it after use. */
+size_t stream_len = 0;
+
+/* Step 2: call the 2D compression function:
+ * Assume that we have a buffer of 128 * 128 floats (in float* type) to be compressed, 
+ * using PWE tolerance = 1e-3.
+ */
+int ret = sperr_comp_2d(ptr,           /* memory buffer containing the input */
+                        1,             /* the input is of type float; 0 means double. */
+                        128,           /* dimx */
+                        128,           /* dimy */
+                        3,             /* compression mode; 3 means fixed PWE */
+                        1e-3,          /* actual PWE tolerance */
+                        0,             /* not using a header for the output bitstream */
+                        &stream,       /* will hold the compressed bitstream */
+                        &stream_len);  /* length of the compressed bitstream */
+assert(ret == 0);
+
+/* 
+ * Now that the 2D compression is completed, one can decompress the bitstream to
+ * retrieve the raw values, as the rest of this example shows.
+ */
+
+/* Step 3: create a pointer to hold the decompressed values: */
+void* output = NULL;  /* caller is responsible for free'ing it after use. */
+
+/* Step 4: call the 2D decompression function: */
+int ret2 = sperr_decomp_2d(stream,      /* compressed bitstream */
+                           stream_len,  /* compressed bitstream length */
+                           1,           /* decompress to floats. 0 means to doubles. */
+                           128,         /* dimx */
+                           128,         /* dimy */
+                           &output);    /* decompressed data is stored here */
+assert(ret2 == 0);
+free(output);   /* cleanup */
+free(stream);   /* cleanup */
+\end{minted}
+
+\subsubsection{Example: 3D}
+
+\begin{minted}{C}
+/*
+ * Example of using the SPERR C API to perform 3D compression and decompression tasks.
+ */
+#include "SPERR_C_API.h"
+
+/* Step 1: create variables to keep the output: */
+void* stream = NULL;  /* caller is responsible for free'ing it after use. */
+size_t stream_len = 0;
+
+/* Step 2: call the 3D compression function:
+ * Assume that we have a buffer of 256^3 floats (in float* type) to be compressed,
+ * using PWE tolerance = 1e-3 and chunk dimension of 128^3.
+ */
+int ret = sperr_comp_3d(ptr,           /* memory buffer containing the input */
+                        1,             /* the input is of type float; 0 means double. */
+                        256,           /* dimx */
+                        256,           /* dimy */
+                        256,           /* dimz */
+                        128,           /* chunk_x */
+                        128,           /* chunk_y */
+                        128,           /* chunk_z */
+                        3,             /* compression mode; 3 means fixed PWE */
+                        1e-3,          /* actual PWE tolerance */
+                        4,             /* use 4 OpenMP threads */
+                        &stream,       /* will hold the compressed bitstream */
+                        &stream_len);  /* length of the compressed bitstream */
+assert(ret == 0);
+
+/* 
+ * Now that the 3D compression is completed, one can decompress the bitstream to
+ * retrieve the raw values, as the rest of this example shows.
+ */
+
+/* Step 3: create a pointer to hold the decompressed values,
+ * and also variables to hold the volume dimensions.
+ */
+void* output = NULL;  /* caller is responsible for free'ing it after use. */
+size_t dimx = 0, dimy = 0, dimz = 0;
+
+/* Step 4: call the 3D decompression function: */
+int ret2 = sperr_decomp_3d(stream,      /* compressed bitstream */
+                           stream_len,  /* compressed bitstream length */
+                           1,           /* decompress to floats. 0 means to doubles. */
+                           4,           /* use 4 OpenMP threads */
+                           &dimx,       /* dimx of the decompressed volume */
+                           &dimy,       /* dimy of the decompressed volume */
+                           &dimz,       /* dimz of the decompressed volume */
+                           &output);    /* decompressed data is stored here */
+assert(ret2 == 0);
+free(output);   /* cleanup */
+free(stream);   /* cleanup */
+\end{minted}
+
+\end{document}

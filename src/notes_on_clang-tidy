@@ -5,4 +5,4 @@ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
 
 2. I used the following clang-tidy options:
 
-clang-tidy-10 ../src/SPECK3D.cpp -checks=-*,performance-*,portability-*,modernize-*,clang-analyzer-*,-modernize-avoid-c-arrays,-modernize-use-nodiscard  -header-filter=../include/* -fix
+clang-tidy ../src/SPECK3D.cpp -checks=-*,performance-*,portability-*,modernize-*,clang-analyzer-*,-modernize-avoid-c-arrays,-modernize-use-nodiscard  -header-filter=../include/* -fix

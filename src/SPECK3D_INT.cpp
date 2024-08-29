@@ -5,6 +5,10 @@
 #include <cstring>
 #include <numeric>
 
+#if __cplusplus >= 202002L
+#include <bit>
+#endif
+
 template <typename T>
 void sperr::SPECK3D_INT<T>::m_clean_LIS()
 {
@@ -100,13 +104,22 @@ void sperr::SPECK3D_INT<T>::m_sorting_pass()
   const auto bits_x64 = m_LIP_mask.size() - m_LIP_mask.size() % 64;
 
   for (size_t i = 0; i < bits_x64; i += 64) {
-    const auto value = m_LIP_mask.rlong(i);
+    auto value = m_LIP_mask.rlong(i);
+
+#if __cplusplus >= 202002L
+    while (value) {
+      auto j = std::countr_zero(value);
+      m_process_P_lite(i + j);
+      value &= value - 1;
+    }
+#else
     if (value != 0) {
       for (size_t j = 0; j < 64; j++) {
         if ((value >> j) & uint64_t{1})
           m_process_P_lite(i + j);
       }
     }
+#endif
   }
   for (auto i = bits_x64; i < m_LIP_mask.size(); i++) {
     if (m_LIP_mask.rbit(i))
@@ -127,27 +140,73 @@ void sperr::SPECK3D_INT<T>::m_sorting_pass()
 template <typename T>
 void sperr::SPECK3D_INT<T>::m_code_S(size_t idx1, size_t idx2)
 {
-  auto [subsets, next_lev] = m_partition_S_XYZ(m_LIS[idx1][idx2], uint16_t(idx1));
+  auto set = m_LIS[idx1][idx2];
 
-  // Since some subsets could be empty, let's put empty sets at the end.
-  const auto set_end =
-      std::remove_if(subsets.begin(), subsets.end(), [](auto& s) { return s.num_elem() == 0; });
+  if (set.length_x == 2 && set.length_y == 2 && set.length_z == 2) {  // tail ellison case
+    size_t sig_counter = 0;
+    bool need_decide = true;
 
-  // Counter for the number of discovered significant sets.
-  //    If no significant subset is found yet, and we're already looking at the last subset,
-  //    then we know that this last subset IS significant.
-  size_t sig_counter = 0;
-  for (auto it = subsets.begin(); it != set_end; ++it) {
-    bool need_decide = (sig_counter != 0 || it + 1 != set_end);
-    if (it->num_elem() == 1) {
-      auto idx = it->start_z * m_dims[0] * m_dims[1] + it->start_y * m_dims[0] + it->start_x;
-      m_LIP_mask.wtrue(idx);
-      m_process_P(idx, it->get_morton(), sig_counter, need_decide);
-    }
-    else {
-      m_LIS[next_lev].emplace_back(*it);
-      const auto newidx2 = m_LIS[next_lev].size() - 1;
-      m_process_S(next_lev, newidx2, sig_counter, need_decide);
+    // Element (0, 0, 0)
+    const auto id = set.start_z * m_dims[0] * m_dims[1] + set.start_y * m_dims[0] + set.start_x;
+    auto mort = set.get_morton();
+    m_LIP_mask.wtrue(id);
+    m_process_P(id, mort, sig_counter, need_decide);
+
+    // Element (1, 0, 0)
+    auto id2 = id + 1;
+    m_LIP_mask.wtrue(id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+
+    // Element (0, 1, 0)
+    id2 = id + m_dims[0];
+    m_LIP_mask.wtrue(id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+
+    // Element (1, 1, 0)
+    m_LIP_mask.wtrue(++id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+
+    // Element (0, 0, 1)
+    id2 = id + m_dims[0] * m_dims[1];
+    m_LIP_mask.wtrue(id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+
+    // Element (1, 0, 1)
+    m_LIP_mask.wtrue(++id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+
+    // Element (0, 1, 1)
+    id2 = id + m_dims[0] * (m_dims[1] + 1);
+    m_LIP_mask.wtrue(id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+
+    // Element (1, 1, 1)
+    need_decide = sig_counter != 0;
+    m_LIP_mask.wtrue(++id2);
+    m_process_P(id2, ++mort, sig_counter, need_decide);
+  }
+  else {  // normal recursion case
+          // Get its 8 subsets, and move the empty ones to the end.
+    auto [subsets, next_lev] = m_partition_S_XYZ(set, uint16_t(idx1));
+    const auto set_end =
+        std::remove_if(subsets.begin(), subsets.end(), [](auto& s) { return s.num_elem() == 0; });
+
+    // Counter for the number of discovered significant sets.
+    //    If no significant subset is found yet, and we're already looking at the last subset,
+    //    then we know that this last subset IS significant.
+    size_t sig_counter = 0;
+    for (auto it = subsets.begin(); it != set_end; ++it) {
+      bool need_decide = (sig_counter != 0 || it + 1 != set_end);
+      if (it->num_elem() == 1) {
+        auto idx = it->start_z * m_dims[0] * m_dims[1] + it->start_y * m_dims[0] + it->start_x;
+        m_LIP_mask.wtrue(idx);
+        m_process_P(idx, it->get_morton(), sig_counter, need_decide);
+      }
+      else {
+        m_LIS[next_lev].emplace_back(*it);
+        const auto newidx2 = m_LIS[next_lev].size() - 1;
+        m_process_S(next_lev, newidx2, sig_counter, need_decide);
+      }
     }
   }
 }
@@ -171,15 +230,13 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
 
   auto subsets = std::tuple<std::array<Set3D, 8>, uint16_t>();
   std::get<1>(subsets) = lev;
-  constexpr auto offsets = std::array<size_t, 3>{1, 2, 4};
   auto morton_offset = set.get_morton();
 
   //
   // The actual figuring out where it starts/ends part...
   //
   // subset (0, 0, 0)
-  constexpr auto idx0 = 0 * offsets[0] + 0 * offsets[1] + 0 * offsets[2];
-  auto& sub0 = std::get<0>(subsets)[idx0];
+  auto& sub0 = std::get<0>(subsets)[0];
   sub0.set_morton(morton_offset);
   sub0.start_x = set.start_x;
   sub0.start_y = set.start_y;
@@ -189,8 +246,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub0.length_z = split_z[0];
 
   // subset (1, 0, 0)
-  constexpr auto idx1 = 1 * offsets[0] + 0 * offsets[1] + 0 * offsets[2];
-  auto& sub1 = std::get<0>(subsets)[idx1];
+  auto& sub1 = std::get<0>(subsets)[1];
   morton_offset += sub0.num_elem();
   sub1.set_morton(morton_offset);
   sub1.start_x = set.start_x + split_x[0];
@@ -201,8 +257,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub1.length_z = split_z[0];
 
   // subset (0, 1, 0)
-  constexpr auto idx2 = 0 * offsets[0] + 1 * offsets[1] + 0 * offsets[2];
-  auto& sub2 = std::get<0>(subsets)[idx2];
+  auto& sub2 = std::get<0>(subsets)[2];
   morton_offset += sub1.num_elem();
   sub2.set_morton(morton_offset);
   sub2.start_x = set.start_x;
@@ -213,8 +268,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub2.length_z = split_z[0];
 
   // subset (1, 1, 0)
-  constexpr auto idx3 = 1 * offsets[0] + 1 * offsets[1] + 0 * offsets[2];
-  auto& sub3 = std::get<0>(subsets)[idx3];
+  auto& sub3 = std::get<0>(subsets)[3];
   morton_offset += sub2.num_elem();
   sub3.set_morton(morton_offset);
   sub3.start_x = set.start_x + split_x[0];
@@ -225,8 +279,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub3.length_z = split_z[0];
 
   // subset (0, 0, 1)
-  constexpr auto idx4 = 0 * offsets[0] + 0 * offsets[1] + 1 * offsets[2];
-  auto& sub4 = std::get<0>(subsets)[idx4];
+  auto& sub4 = std::get<0>(subsets)[4];
   morton_offset += sub3.num_elem();
   sub4.set_morton(morton_offset);
   sub4.start_x = set.start_x;
@@ -237,8 +290,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub4.length_z = split_z[1];
 
   // subset (1, 0, 1)
-  constexpr auto idx5 = 1 * offsets[0] + 0 * offsets[1] + 1 * offsets[2];
-  auto& sub5 = std::get<0>(subsets)[idx5];
+  auto& sub5 = std::get<0>(subsets)[5];
   morton_offset += sub4.num_elem();
   sub5.set_morton(morton_offset);
   sub5.start_x = set.start_x + split_x[0];
@@ -249,8 +301,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub5.length_z = split_z[1];
 
   // subset (0, 1, 1)
-  constexpr auto idx6 = 0 * offsets[0] + 1 * offsets[1] + 1 * offsets[2];
-  auto& sub6 = std::get<0>(subsets)[idx6];
+  auto& sub6 = std::get<0>(subsets)[6];
   morton_offset += sub5.num_elem();
   sub6.set_morton(morton_offset);
   sub6.start_x = set.start_x;
@@ -261,8 +312,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   sub6.length_z = split_z[1];
 
   // subset (1, 1, 1)
-  constexpr auto idx7 = 1 * offsets[0] + 1 * offsets[1] + 1 * offsets[2];
-  auto& sub7 = std::get<0>(subsets)[idx7];
+  auto& sub7 = std::get<0>(subsets)[7];
   morton_offset += sub6.num_elem();
   sub7.set_morton(morton_offset);
   sub7.start_x = set.start_x + split_x[0];

@@ -259,7 +259,9 @@ auto sperr::SPERR3D_OMP_C::m_gather_chunk(const T* vol,
   // Will be subject to Named Return Value Optimization.
   return chunk_buf;
 }
-template auto sperr::SPERR3D_OMP_C::m_gather_chunk(const float*, dims_type, std::array<size_t, 6>)
-    -> vecd_type;
-template auto sperr::SPERR3D_OMP_C::m_gather_chunk(const double*, dims_type, std::array<size_t, 6>)
-    -> vecd_type;
+template auto sperr::SPERR3D_OMP_C::m_gather_chunk(const float*,
+                                                   dims_type,
+                                                   std::array<size_t, 6>) -> vecd_type;
+template auto sperr::SPERR3D_OMP_C::m_gather_chunk(const double*,
+                                                   dims_type,
+                                                   std::array<size_t, 6>) -> vecd_type;

@@ -1,9 +1,6 @@
 [![clang-format](https://github.com/NCAR/SPERR/actions/workflows/clang-format.yml/badge.svg)](https://github.com/NCAR/SPERR/actions/workflows/clang-format.yml)
-[![clang-tidy](https://github.com/NCAR/SPERR/actions/workflows/clang-tidy.yml/badge.svg)](https://github.com/NCAR/SPERR/actions/workflows/clang-tidy.yml)
 [![unit-test](https://github.com/NCAR/SPERR/actions/workflows/unit-test.yml/badge.svg)](https://github.com/NCAR/SPERR/actions/workflows/unit-test.yml)
 [![CodeQL](https://github.com/NCAR/SPERR/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/NCAR/SPERR/actions/workflows/codeql-analysis.yml)
-
-
 [![DOI](https://zenodo.org/badge/225491235.svg)](https://zenodo.org/badge/latestdoi/225491235)
 
 
@@ -19,6 +16,31 @@ and a custom outlier coding algorithm in its compression pipeline.
 This combination gives SPERR flexibility to compress targetting different quality controls, namely 1) bit-per-pixel (BPP), 
 2) peak signal-to-noise ratio (PSNR), and 3) point-wise error (PWE).
 The name of SPERR stands for **SP**eck with **ERR**or bounding.
+
+## Quick Build
+SPERR requires 1) a working C++ compiler and 2) CMake tools to build. On a Unix-like system,
+the build steps are the following:
+
+```bash
+git clone https://github.com/NCAR/SPERR.git     # clone the repo
+mkdir SPERR/build                               # create the build directory
+cd SPERR/build                                  # enter the build directory
+cmake ..                                        # use cmake to configure the project
+cmake -DUSE_OMP=ON ..                           # Optional: enable OpenMP on 3D volumes.
+cmake -DCMAKE_INSTALL_PREFIX=/my/install/dir .. # Optional: specify a directory to install SPERR. The default is /usr/local .
+cmake -DCMAKE_CXX_STANDARD=17 ..                # Optional: use C++17 rather than C++20. The code is slightly faster with C++20.
+make -j 8                                       # build the project
+ctest .                                         # run unit tests, which should have 100% tests passed
+make install                                    # install the library and CLI tools to a specified directory.
+```
+
+## Plugin for HDF5
+SPERR is available as a *dynamically loaded plugin* for HDF5 with a registered ID of `32028`.
+This plugin is available at this [repo](https://github.com/NCAR/H5Z-SPERR).
+
+## Wrapper for Fortran
+A Fortran wrapper for SPERR has also been created by [ofmla](https://github.com/ofmla) 
+at this [repo](https://github.com/ofmla/fortran-sperr).
 
 ## Documentation
 
@@ -45,5 +67,6 @@ If SPERR benefits your work, please kindly cite [this publication](https://ieeex
 (Author's copy is available [here](https://vast.ucar.edu/pdfs/SPERR_IPDPS.pdf).)
 
 ## Presentations
+- FZ Workshop Hands-on: Feb 15 2024, Sarasota, FL. ([handout and examples](https://vast.ucar.edu/pdfs/Li_FZ2024.pdf))
 - SC'23 Tutorial on lossy scientific data compression: Nov 13 2023, Denver CO. ([slides](https://vast.ucar.edu/pdfs/Li_SC23_Slides.pdf))
 - IPDPS'23 Lossy Scientific Data Compression With SPERR: May 18 2023, St. Petersburg, FL. ([slides](https://vast.ucar.edu/pdfs/Li_IPDPS23_Slides.pdf))
