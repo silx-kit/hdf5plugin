@@ -940,20 +940,21 @@ def get_blosc2_plugin():
         f'{blosc2_dir}/include',
         f'{blosc2_dir}/plugins/codecs/zfp/include',
     ]
-    define_macros = [
-        ('HAVE_PLUGINS', 1),
-        ('SHUFFLE_SSE2_ENABLED', 1),
-        ('SHUFFLE_AVX2_ENABLED', 1),
-        ('SHUFFLE_AVX512_ENABLED', 1),
-        ('SHUFFLE_NEON_ENABLED', 1),
-        ('SHUFFLE_ALTIVEC_ENABLED', 1),
-    ]
+
+    define_macros = [('HAVE_PLUGINS', 1)]
+    if platform.machine() == 'ppc64le':
+        define_macros.append(('SHUFFLE_ALTIVEC_ENABLED', 1))
+        define_macros.append(('NO_WARN_X86_INTRINSICS', None))
+    else:
+        define_macros.append(('SHUFFLE_SSE2_ENABLED', 1))
+        define_macros.append(('SHUFFLE_AVX2_ENABLED', 1))
+        define_macros.append(('SHUFFLE_AVX512_ENABLED', 1))
+        define_macros.append(('SHUFFLE_NEON_ENABLED', 1))
+
     extra_compile_args = []
     extra_link_args = []
     libraries = []
 
-    if platform.machine() == 'ppc64le':
-        define_macros.append(('NO_WARN_X86_INTRINSICS', None))
     if HostConfig.ARCH == 'ARM_8':
         extra_compile_args += ['-flax-vector-conversions']
     if HostConfig.ARCH == 'ARM_7':
