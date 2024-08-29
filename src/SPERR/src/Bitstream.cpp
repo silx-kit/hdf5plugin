@@ -29,7 +29,7 @@ void sperr::Bitstream::reserve(size_t nbits)
   if (nbits > m_buf.size() * 64) {
     // Number of longs that's absolutely needed.
     auto num_longs = nbits / 64;
-    if (nbits % 64 != 0)
+    if (num_longs * 64 < nbits)
       num_longs++;
 
     const auto dist = std::distance(m_buf.begin(), m_itr);
@@ -54,8 +54,9 @@ auto sperr::Bitstream::rtell() const -> size_t
 
 void sperr::Bitstream::rseek(size_t offset)
 {
-  m_itr = m_buf.begin() + offset / 64;
-  const auto rem = offset % 64;
+  size_t div = offset / 64;
+  size_t rem = offset - div * 64;
+  m_itr = m_buf.begin() + div;
   if (rem) {
     m_buffer = *m_itr >> rem;
     ++m_itr;
@@ -90,8 +91,9 @@ auto sperr::Bitstream::wtell() const -> size_t
 
 void sperr::Bitstream::wseek(size_t offset)
 {
-  m_itr = m_buf.begin() + offset / 64;
-  const auto rem = offset % 64;
+  size_t div = offset / 64;
+  size_t rem = offset - div * 64;
+  m_itr = m_buf.begin() + div;
   if (rem) {
     m_buffer = *m_itr;
     m_buffer &= (uint64_t{1} << rem) - 1;
@@ -114,7 +116,7 @@ void sperr::Bitstream::wbit(bool bit)
 #endif
   {
     if (m_itr == m_buf.end()) {  // allocate memory if necessary.
-      const auto dist = m_buf.size();
+      auto dist = m_buf.size();
       m_buf.resize(std::max(size_t{1}, dist) * 2 - dist / 2);  // use a growth factor of 1.5
       m_itr = m_buf.begin() + dist;
     }
@@ -129,7 +131,7 @@ void sperr::Bitstream::flush()
 {
   if (m_bits) {  // only really flush when there are remaining bits.
     if (m_itr == m_buf.end()) {
-      const auto dist = m_buf.size();
+      auto dist = m_buf.size();
       m_buf.resize(std::max(size_t{1}, dist) * 2 - dist / 2);  // use a growth factor of 1.5
       m_itr = m_buf.begin() + dist;
     }
@@ -144,6 +146,7 @@ void sperr::Bitstream::flush()
 void sperr::Bitstream::write_bitstream(void* p, size_t num_bits) const
 {
   assert(num_bits <= m_buf.size() * 64);
+
   const auto num_longs = num_bits / 64;
   auto rem_bytes = num_bits / 8 - num_longs * sizeof(uint64_t);
   if (num_bits % 8 != 0)
@@ -162,8 +165,9 @@ void sperr::Bitstream::write_bitstream(void* p, size_t num_bits) const
 auto sperr::Bitstream::get_bitstream(size_t num_bits) const -> std::vector<std::byte>
 {
   assert(num_bits <= m_buf.size() * 64);
+
   auto num_bytes = num_bits / 8;
-  if (num_bits % 8 != 0)
+  if (num_bits - num_bytes * 8 != 0)
     num_bytes++;
 
   auto tmp = std::vector<std::byte>(num_bytes);

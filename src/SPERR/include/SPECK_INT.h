@@ -44,7 +44,7 @@ class SPECK_INT {
   // Note: `speck_int_get_num_bitplanes()` is provided as a free-standing helper function (above).
   //
   // Retrieve the number of useful bits of a SPECK bitstream from its header.
-  auto get_speck_bits(const void*) const -> uint64_t;
+  auto get_speck_num_bits(const void*) const -> uint64_t;
   // Retrieve the number of bytes of a SPECK bitstream (including header) from its header.
   auto get_stream_full_len(const void*) const -> uint64_t;
 

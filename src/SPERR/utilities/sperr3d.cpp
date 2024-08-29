@@ -12,8 +12,9 @@
 
 // This functions takes in a filename, and a full resolution. It then creates a list of
 // filenames, each has the coarsened resolution appended.
-auto create_filenames(std::string name, sperr::dims_type vdims, sperr::dims_type cdims)
-    -> std::vector<std::string>
+auto create_filenames(std::string name,
+                      sperr::dims_type vdims,
+                      sperr::dims_type cdims) -> std::vector<std::string>
 {
   auto filenames = std::vector<std::string>();
   auto resolutions = sperr::coarsened_resolutions(vdims, cdims);
@@ -141,6 +142,7 @@ int main(int argc, char* argv[])
   //
   auto bitstream = std::string();
   app.add_option("--bitstream", bitstream, "Output compressed bitstream.")
+      ->needs(cptr)
       ->group("Output settings");
 
   auto decomp_f32 = std::string();
@@ -205,6 +207,10 @@ int main(int argc, char* argv[])
   //
   // A little extra sanity check.
   //
+  if (input_file.empty()) {
+    std::cout << "What's the input file?" << std::endl;
+    return __LINE__;
+  }
   if (!cflag && !dflag) {
     std::cout << "Is this compressing (-c) or decompressing (-d) ?" << std::endl;
     return __LINE__;
@@ -232,6 +238,30 @@ int main(int argc, char* argv[])
     std::cout << "SPERR needs an output destination when decoding!" << std::endl;
     return __LINE__;
   }
+  // Also check if the chunk dims can support multi-resolution decoding.
+  if (cflag && (!decomp_lowres_f64.empty() || !decomp_lowres_f32.empty())) {
+    auto name = decomp_lowres_f64;
+    if (name.empty())
+      name = decomp_lowres_f32;
+    assert(!name.empty());
+    auto filenames = create_filenames(name, dims, chunks);
+    if (filenames.empty()) {
+      std::printf(
+          " Warning: the combo of volume dimension (%lu, %lu, %lu) and chunk dimension"
+          " (%lu, %lu, %lu)\n cannot support multi-resolution decoding. "
+          " Try to use chunk dimensions that\n are similar in length and"
+          " can divide the volume dimension.\n",
+          dims[0], dims[1], dims[2], chunks[0], chunks[1], chunks[2]);
+      return __LINE__ % 256;
+    }
+  }
+  // Print a warning message if there's no output specified
+  if (cflag && bitstream.empty())
+    std::cout << "Warning: no output file provided. Consider using --bitstream option."
+              << std::endl;
+  if (dflag && decomp_f64.empty() && decomp_f32.empty() && decomp_lowres_f64.empty() &&
+      decomp_lowres_f32.empty())
+    std::cout << "Warning: no output file provided." << std::endl;
 
   //
   // Really starting the real work!
@@ -242,7 +272,7 @@ int main(int argc, char* argv[])
     if ((ftype == 32 && (total_vals * 4 != input.size())) ||
         (ftype == 64 && (total_vals * 8 != input.size()))) {
       std::cout << "Input file size wrong!" << std::endl;
-      return __LINE__;
+      return __LINE__ % 256;
     }
     auto encoder = std::make_unique<sperr::SPERR3D_OMP_C>();
     encoder->set_dims_and_chunks(dims, chunks);
