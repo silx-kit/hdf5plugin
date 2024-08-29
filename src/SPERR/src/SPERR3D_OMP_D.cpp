@@ -144,6 +144,11 @@ auto sperr::SPERR3D_OMP_D::release_hierarchy() -> std::vector<vecd_type>&&
   return std::move(m_hierarchy);
 }
 
+auto sperr::SPERR3D_OMP_D::view_hierarchy() const -> const std::vector<vecd_type>&
+{
+  return m_hierarchy;
+}
+
 auto sperr::SPERR3D_OMP_D::view_decoded_data() const -> const sperr::vecd_type&
 {
   return m_vol_buf;

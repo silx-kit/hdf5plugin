@@ -2,14 +2,13 @@
 
 cmake_minimum_required(VERSION 3.14)
 
-project(SPERR VERSION 0.8.1 LANGUAGES CXX DESCRIPTION "Lossy Scientific Compression with SPERR")
+project(SPERR VERSION 0.8.2 LANGUAGES CXX DESCRIPTION "Lossy Scientific Compression with SPERR")
 
-#
-# specify the C++ standard
-# CMake will try to add a -std=c++20 flag if the compiler supports, but if it doesn't,
-# CMake will `decay` to a previous supported flag, e.g. -std=c++11.
-#
-set(CMAKE_CXX_STANDARD 20)
+if(NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD "20" CACHE STRING "Choose the C++ Standard to use." FORCE)
+    set_property(CACHE CMAKE_CXX_STANDARD PROPERTY STRINGS "20" "17")
+endif()
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo")
@@ -32,7 +31,7 @@ endif()
 option( BUILD_SHARED_LIBS "Build shared SPERR library" ON )
 option( BUILD_UNIT_TESTS "Build unit tests using GoogleTest" ON )
 option( BUILD_CLI_UTILITIES "Build a set of command line utilities" ON )
-option( USE_OMP "Use OpenMP parallelization on 3D volumes" ON )
+option( USE_OMP "Use OpenMP parallelization on 3D volumes" OFF )
 option( SPERR_PREFER_RPATH "Set RPATH; this can fight with package managers so turn off when building for them" ON )
 mark_as_advanced(FORCE SPERR_PREFER_RPATH)
 
@@ -109,8 +108,7 @@ if( BUILD_CLI_UTILITIES )
   set( CLI11_SINGLE_FILE OFF CACHE INTERNAL "Don't use single file CLI11")
   FetchContent_Declare( cli11
     GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-    GIT_TAG        291c58789c031208f08f4f261a858b5b7083e8e2 # v2.3.2
-    PATCH_COMMAND patch -N CMakeLists.txt < ${CMAKE_SOURCE_DIR}/cli11.patch || true
+    GIT_TAG        6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9 # v2.4.2
   )
   FetchContent_MakeAvailable(cli11)
 

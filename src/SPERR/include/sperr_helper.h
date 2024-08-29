@@ -37,7 +37,7 @@ using dims_type = std::array<size_t, 3>;
 //
 // Helper classes
 //
-enum class SigType : unsigned char { Insig, Sig, NewlySig, Dunno, Garbage };
+enum class SigType : unsigned char { Insig, Sig, Dunno, Garbage };
 
 enum class UINTType : unsigned char { UINT8, UINT16, UINT32, UINT64 };
 
@@ -136,8 +136,9 @@ auto read_whole_file(std::string filename) -> vec_type<T>;
 // Read sections of a file (extract sections from a memory buffer), and append those sections
 //    to the end of `dst`. The read from file version avoids reading not-requested sections.
 //    The sections are defined by pairs of offsets and lengths, both in number of bytes.
-auto read_sections(std::string filename, const std::vector<size_t>& sections, vec8_type& dst)
-    -> RTNType;
+auto read_sections(std::string filename,
+                   const std::vector<size_t>& sections,
+                   vec8_type& dst) -> RTNType;
 auto extract_sections(const void* buf,
                       size_t buf_len,
                       const std::vector<size_t>& sections,

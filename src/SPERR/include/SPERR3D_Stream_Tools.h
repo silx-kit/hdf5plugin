@@ -36,7 +36,7 @@ class SPERR3D_Stream_Tools {
 
   // Function that reads in portions of a file only to facilitate progressive access.
   // (This function does not read the whole file.)
-  auto progressive_read(std::string filename, unsigned pct) const -> vec8_type;
+  auto progressive_read(const std::string& filename, unsigned pct) const -> vec8_type;
 
   // Function that truncates a bitstream in the memory to facilitate progressive access.
   //    Note on `stream_len`: it does not need to be the full length of the original bitstream,
@@ -56,8 +56,9 @@ class SPERR3D_Stream_Tools {
   // Given the header of a bitstream and a desired percentage to truncate, return an
   //    updated header and a list of {offset, len} to access.
   //    Note: this function assumes that the header is complete.
-  auto m_progressive_helper(const void* header_buf, size_t buf_len, unsigned pct) const
-      -> std::tuple<vec8_type, std::vector<size_t>>;
+  auto m_progressive_helper(const void* header_buf,
+                            size_t buf_len,
+                            unsigned pct) const -> std::tuple<vec8_type, std::vector<size_t>>;
 };
 
 }  // End of namespace sperr

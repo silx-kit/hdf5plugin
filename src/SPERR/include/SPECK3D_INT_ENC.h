@@ -3,8 +3,6 @@
 
 #include "SPECK3D_INT.h"
 
-#include <optional>
-
 namespace sperr {
 
 //

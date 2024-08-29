@@ -90,10 +90,10 @@ auto sperr::coarsened_resolutions(dims_type vdim, dims_type cdim) -> std::vector
     auto nz = vdim[2] / cdim[2];
 
     resolutions = sperr::coarsened_resolutions(cdim);
-    for (size_t i = 0; i < resolutions.size(); i++) {
-      resolutions[i][0] *= nx;
-      resolutions[i][1] *= ny;
-      resolutions[i][2] *= nz;
+    for (auto& resolution : resolutions) {
+      resolution[0] *= nx;
+      resolution[1] *= ny;
+      resolution[2] *= nz;
     }
   }
 
@@ -333,8 +333,9 @@ auto sperr::write_n_bytes(std::string filename, size_t n_bytes, const void* buff
     return RTNType::Good;
 }
 
-auto sperr::read_sections(std::string filename, const std::vector<size_t>& sections, vec8_type& dst)
-    -> RTNType
+auto sperr::read_sections(std::string filename,
+                          const std::vector<size_t>& sections,
+                          vec8_type& dst) -> RTNType
 {
   // Calculate the farthest file location to be read.
   size_t far = 0;
@@ -494,8 +495,10 @@ auto sperr::calc_stats(const T* arr1, const T* arr2, size_t arr_len, size_t omp_
   return {rmse, linfty, psnr, arr1min, arr1max};
 }
 template auto sperr::calc_stats(const float*, const float*, size_t, size_t) -> std::array<float, 5>;
-template auto sperr::calc_stats(const double*, const double*, size_t, size_t)
-    -> std::array<double, 5>;
+template auto sperr::calc_stats(const double*,
+                                const double*,
+                                size_t,
+                                size_t) -> std::array<double, 5>;
 
 template <typename T>
 auto sperr::kahan_summation(const T* arr, size_t len) -> T
@@ -514,8 +517,8 @@ auto sperr::kahan_summation(const T* arr, size_t len) -> T
 template auto sperr::kahan_summation(const float*, size_t) -> float;
 template auto sperr::kahan_summation(const double*, size_t) -> double;
 
-auto sperr::chunk_volume(dims_type vol_dim, dims_type chunk_dim)
-    -> std::vector<std::array<size_t, 6>>
+auto sperr::chunk_volume(dims_type vol_dim,
+                         dims_type chunk_dim) -> std::vector<std::array<size_t, 6>>
 {
   // Step 1: figure out how many segments are there along each axis.
   auto n_segs = std::array<size_t, 3>();

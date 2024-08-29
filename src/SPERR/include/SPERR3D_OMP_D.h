@@ -24,6 +24,7 @@ class SPERR3D_OMP_D {
   auto decompress(const void* bitstream, bool multi_res = false) -> RTNType;
 
   auto view_decoded_data() const -> const sperr::vecd_type&;
+  auto view_hierarchy() const -> const std::vector<vecd_type>&;
   auto release_decoded_data() -> sperr::vecd_type&&;
   auto release_hierarchy() -> std::vector<vecd_type>&&;
 

@@ -360,7 +360,68 @@ TEST(Bitmask, BufferTransfer)
     EXPECT_EQ(src.rbit(i), dst.rbit(i));
 }
 
-#if defined __cpp_lib_three_way_comparison && defined __cpp_impl_three_way_comparison
+TEST(Bitmask, has_true)
+{
+  const size_t mask_size = 210;
+
+  // Loop over all positions
+  for (size_t idx = 0; idx < mask_size; idx++) {
+    auto mask = Mask(mask_size);
+    mask.wtrue(idx);
+
+    // Loop over all starting positions
+    for (size_t start = 0; start < mask_size; start++) {
+
+      // Loop over all range length
+      for (size_t len = 0; len < mask_size - start; len++) {
+        auto ans1 = mask.has_true<false>(start, len);
+        auto ans2 = -1l;
+        for (size_t i = start; i < start + len; i++)
+          if (mask.rbit(i)) {
+            ans2 = 1;
+            break;
+          }
+        EXPECT_EQ(ans1, ans2);
+      }
+
+    }
+  }
+}
+
+TEST(Bitmask, has_true_position)
+{
+  const size_t mask_size = 210;
+
+  // Loop over all positions
+  for (size_t idx = 0; idx < mask_size; idx++) {
+    auto mask = Mask(mask_size);
+    mask.wtrue(idx);
+
+    // Loop over all starting positions
+    for (size_t start = 0; start < mask_size; start++) {
+
+      // Loop over all range length
+      for (size_t len = 0; len < mask_size - start; len++) {
+        auto ans1 = mask.has_true<true>(start, len);
+        auto ans2 = -1l;
+        for (size_t i = start; i < start + len; i++)
+          if (mask.rbit(i)) {
+            ans2 = i - start;
+            break;
+          }
+        EXPECT_EQ(ans1, ans2) << "idx = " << idx << ", start = " << start << ", len = " << len << std::endl;
+        if (ans1 != ans2)
+          goto END_LABEL;
+      }
+
+    }
+  }
+
+END_LABEL:
+  {}
+}
+
+#if __cplusplus >= 201907L && defined __cpp_lib_three_way_comparison
 TEST(Bitmask, spaceship)
 {
   auto src = Mask(60);

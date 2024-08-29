@@ -24,7 +24,6 @@ class SPECK3D_INT_DEC final : public SPECK3D_INT<T> {
   void m_process_S(size_t idx1, size_t idx2, size_t& counter, bool read) final;
   void m_process_P(size_t idx, size_t no_use, size_t& counter, bool read) final;
   void m_process_P_lite(size_t idx) final;
-  void m_additional_initialization() final{};  // empty function
 };
 
 };  // namespace sperr

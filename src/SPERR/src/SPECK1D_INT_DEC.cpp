@@ -5,6 +5,10 @@
 #include <cstring>  // std::memcpy()
 #include <numeric>
 
+#if __cplusplus >= 202002L
+#include <bit>
+#endif
+
 template <typename T>
 void sperr::SPECK1D_INT_DEC<T>::m_sorting_pass()
 {
@@ -13,7 +17,15 @@ void sperr::SPECK1D_INT_DEC<T>::m_sorting_pass()
   const auto bits_x64 = m_LIP_mask.size() - m_LIP_mask.size() % 64;
 
   for (size_t i = 0; i < bits_x64; i += 64) {
-    const auto value = m_LIP_mask.rlong(i);
+    auto value = m_LIP_mask.rlong(i);
+
+#if __cplusplus >= 202002L
+    while (value) {
+      size_t j = std::countr_zero(value);
+      m_process_P(i + j, j, true);
+      value &= value - 1;
+    }
+#else
     if (value != 0) {
       for (size_t j = 0; j < 64; j++) {
         if ((value >> j) & uint64_t{1}) {
@@ -22,6 +34,7 @@ void sperr::SPECK1D_INT_DEC<T>::m_sorting_pass()
         }
       }
     }
+#endif
   }
   for (auto i = bits_x64; i < m_LIP_mask.size(); i++) {
     if (m_LIP_mask.rbit(i)) {
