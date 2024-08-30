@@ -26,7 +26,7 @@
 from typing import NamedTuple
 import re
 
-version = "5.0.0a0"
+version = "5.0.0"
 
 
 class _VersionInfo(NamedTuple):
