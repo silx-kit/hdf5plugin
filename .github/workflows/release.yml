@@ -79,7 +79,7 @@ jobs:
         if: runner.os == 'Linux'
         with:
           platforms: all
-      - uses: pypa/cibuildwheel@v2.16.5
+      - uses: pypa/cibuildwheel@v2.22.0
         env:
           # Configure hdf5plugin build
           HDF5PLUGIN_OPENMP: "False"
