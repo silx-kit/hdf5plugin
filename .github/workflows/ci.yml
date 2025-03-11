@@ -38,7 +38,7 @@ jobs:
             cibw_build: "cp38-manylinux_x86_64"
           - os: windows-2019
             cibw_build: "cp38-win_amd64"
-          - os: macos-12
+          - os: macos-13
             cibw_build: "cp38-macosx_x86_64"
           - os: ubuntu-latest
             cibw_build: "cp310-manylinux_x86_64"
@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: pypa/cibuildwheel@v2.16.5
+      - uses: pypa/cibuildwheel@v2.23.0
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
           CIBW_BUILD_VERBOSITY: 1
