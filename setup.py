@@ -671,6 +671,39 @@ PLUGIN_LIB_DEPENDENCIES = dict()
 
 # compression libs
 
+
+def _get_bzip2_clib(field=None):
+    """BZip2 static lib build config"""
+    bzip2_dir = "src/bzip2"
+
+    config = dict(
+        sources=prefix(bzip2_dir, [
+            "blocksort.c",
+            "huffman.c",
+            "crctable.c",
+            "randtable.c",
+            "compress.c",
+            "decompress.c",
+            "bzlib.c",
+        ]),
+        include_dirs=[bzip2_dir],
+        macros=[],
+        cflags=[
+            "-Wall",
+            "-Winline",
+            "-O2",
+            "-g",
+            "-D_FILE_OFFSET_BITS=64"
+        ],
+    )
+
+    if field is None:
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
+    return config[field]
+
+
 def _get_charls_clib(field=None):
     """CharLS static lib build config"""
     charls_dir = "src/charls/src"
@@ -872,6 +905,7 @@ def _get_zstd_clib(field=None):
 
 
 _EMBEDDED_CLIB_CONFIG_GETTERS = {
+    "bzip2": _get_bzip2_clib,
     "charls": _get_charls_clib,
     "lz4": _get_lz4_clib,
     "snappy": _get_snappy_clib,
@@ -1170,34 +1204,18 @@ PLUGIN_LIB_DEPENDENCIES['lz4'] = ('lz4',)
 
 def _get_bzip2_plugin():
     """BZip2 plugin build config"""
-    bzip2_dir = "src/bzip2"
-
-    bzip2_extra_compile_args = [
-        "-Wall",
-        "-Winline",
-        "-O2",
-        "-g",
-        "-D_FILE_OFFSET_BITS=64"
-    ]
-
-    sources = ['src/PyTables/src/H5Zbzip2.c', 'src/H5Zbzip2_plugin.c']
-    sources += prefix(bzip2_dir, [
-        "blocksort.c",
-        "huffman.c",
-        "crctable.c",
-        "randtable.c",
-        "compress.c",
-        "decompress.c",
-        "bzlib.c",
-    ])
-
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bzip2",
-        sources=sources,
-        include_dirs=['src/PyTables/src/', bzip2_dir],
+        sources=['src/PyTables/src/H5Zbzip2.c', 'src/H5Zbzip2_plugin.c'],
+        include_dirs=['src/PyTables/src/'] + get_clib_config('bzip2', 'include_dirs'),
         define_macros=[('HAVE_BZ2_LIB', 1)],
-        extra_compile_args=bzip2_extra_compile_args,
+        extra_compile_args=[],
+        extra_link_args=get_clib_config('bzip2', 'extra_link_args'),
+        libraries=get_clib_config('bzip2', 'libraries'),
     )
+
+
+PLUGIN_LIB_DEPENDENCIES['bzip2'] = ('bzip2',)
 
 
 def _get_fcidecomp_plugin():
