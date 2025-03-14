@@ -1308,10 +1308,14 @@ def _get_fcidecomp_plugin():
     if 'charls' not in get_system_clib_names():
         macros.append(('CHARLS_STATIC', 1))
 
+    charls_include_dirs = get_clib_config('charls', 'include_dirs')
+    # fcidecomp includes "charls.h" instead of "charls/charls.h"
+    charls_include_dirs += [os.path.join(d, "charls") for d in get_clib_config('charls', 'include_dirs')]
+
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5fcidecomp",
         sources=glob(f"{fcidecomp_dir}/fcicomp-*/src/*.c"),
-        include_dirs=glob(f"{fcidecomp_dir}/fcicomp-*/include") + get_clib_config('charls', 'include_dirs'),
+        include_dirs=glob(f"{fcidecomp_dir}/fcicomp-*/include") + charls_include_dirs,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args + get_clib_config('charls', 'extra_link_args'),
         libraries=get_clib_config('charls', 'libraries'),
