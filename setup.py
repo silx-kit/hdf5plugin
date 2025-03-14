@@ -1027,7 +1027,9 @@ def _get_zfp_clib(field=None):
 
     if field is None:
         return config
-    if field in ('extra_link_args', 'libraries'):
+    if field == 'extra_link_args':
+        return ['-fopenmp']
+    if field == 'libraries':
         return []
     return config[field]
 
@@ -1331,16 +1333,15 @@ def _get_h5zfp_plugin():
     """H5Z-ZFP plugin build config"""
     h5zfp_dir = 'src/H5Z-ZFP/src'
 
-    extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
-    extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-fopenmp']
+    extra_compile_args = ['-O3', '-ffast-math', '-std=c99']
+    extra_compile_args += ['/Ox', '/fp:fast']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zfp",
         sources=glob(f"{h5zfp_dir}/*.c"),
         include_dirs=[f"{h5zfp_dir}/src"] + get_clib_config('zfp', 'include_dirs'),
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args + get_clib_config('zfp', 'extra_link_args'),
+        extra_link_args=get_clib_config('zfp', 'extra_link_args'),
         libraries=get_clib_config('zfp', 'libraries'),
     )
 
