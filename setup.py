@@ -522,6 +522,15 @@ class BuildCLib(build_clib):
         for (lib_name, build_info) in libraries:
             config = self.distribution.get_command_obj("build").hdf5plugin_config
 
+            for option in ('sse2', 'avx2', 'cpp11'):
+                specific_build_option = build_info.pop(option, {})
+                if getattr(config, f"use_{option}"):
+                    for option_name, option_list in specific_build_option.items():
+                        current_list = build_info.get(option_name, [])
+                        if current_list is None:
+                            current_list = []
+                        build_info[option_name] = current_list + option_list
+
             cflags = list(build_info.get('cflags', []))
 
             # Add flags from build config
@@ -670,6 +679,79 @@ PLUGIN_LIB_DEPENDENCIES = dict()
 
 
 # compression libs
+
+def _get_blosc_clib(field=None):
+    """blosc static lib build config
+
+    c-blosc from https://github.com/Blosc/c-blosc
+    """
+    blosc_dir = 'src/c-blosc/blosc'
+
+    # blosc sources
+    include_dirs = ['src/c-blosc', blosc_dir]
+    macros = []
+    extra_link_args = []
+    extra_objects = []
+    libraries = []
+
+    # compression libs
+    # lz4
+    include_dirs += get_clib_config('lz4', 'include_dirs')
+    extra_link_args += get_clib_config('lz4', 'extra_link_args')
+    libraries += get_clib_config('lz4', 'libraries')
+    macros.append(('HAVE_LZ4', 1))
+
+    # snappy
+    cpp11_link_kwargs ={
+        'extra_link_args': ['-lstdc++'] + get_clib_config('snappy', 'extra_link_args'),
+        'libraries': get_clib_config('snappy', 'libraries'),
+    }
+    cpp11_build_config = {
+        'include_dirs': get_clib_config('snappy', 'include_dirs'),
+        'macros': [('HAVE_SNAPPY', 1)],
+    }
+
+    # zlib
+    include_dirs += get_clib_config('zlib', 'include_dirs')
+    extra_link_args += get_clib_config('zlib', 'extra_link_args')
+    libraries += get_clib_config('zlib', 'libraries')
+    macros.append(('HAVE_ZLIB', 1))
+
+    # zstd
+    include_dirs += get_clib_config('zstd', 'include_dirs')
+    extra_link_args += get_clib_config('zstd', 'extra_link_args')
+    extra_objects += get_clib_config('zstd', 'extra_objects')
+    libraries += get_clib_config('zstd', 'libraries')
+    macros.append(('HAVE_ZSTD', 1))
+
+    cflags = ['-std=gnu99']  # Needed to build manylinux1 wheels
+    cflags += ['-O3', '-ffast-math']
+    cflags += ['/Ox', '/fp:fast']
+    cflags += ['-pthread']
+    extra_link_args += ['-pthread']
+
+    config = dict(
+        sources=glob(f'{blosc_dir}/*.c'),
+        include_dirs=include_dirs,
+        macros=macros,
+        cflags=cflags,
+        sse2={'macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
+        avx2={'macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
+        cpp11=cpp11_build_config,
+    )
+
+    if field == 'cpp11':
+        return cpp11_link_kwargs
+    if field == 'extra_objects':
+        return extra_objects
+
+    if field is None:
+        return config
+    if field == 'extra_link_args':
+        return extra_link_args
+    if field == 'libraries':
+        return libraries
+    return config[field]
 
 
 def _get_bzip2_clib(field=None):
@@ -905,6 +987,7 @@ def _get_zstd_clib(field=None):
 
 
 _EMBEDDED_CLIB_CONFIG_GETTERS = {
+    "blosc": _get_blosc_clib,
     "bzip2": _get_bzip2_clib,
     "charls": _get_charls_clib,
     "lz4": _get_lz4_clib,
@@ -949,6 +1032,7 @@ def _get_clib_config_from_pkgconfig(libname):
         'libraries': [flag[2:] for flag in linker_flags if flag.startswith("-l")],
         'macros': [],
         'extra_objects': [],
+        'cpp11': {},
     }
 
 
@@ -968,69 +1052,25 @@ def _get_blosc_plugin():
     """blosc plugin build config
 
     Plugin from https://github.com/Blosc/hdf5-blosc
-    c-blosc from https://github.com/Blosc/c-blosc
     """
-    blosc_dir = 'src/c-blosc/blosc'
     hdf5_blosc_dir = 'src/hdf5-blosc/src'
-
-    # blosc sources
-    sources = glob(f'{blosc_dir}/*.c')
-    include_dirs = ['src/c-blosc', blosc_dir]
-    define_macros = []
-    extra_link_args = []
-    libraries = []
-
-    # compression libs
-    # lz4
-    include_dirs += get_clib_config('lz4', 'include_dirs')
-    extra_link_args += get_clib_config('lz4', 'extra_link_args')
-    libraries += get_clib_config('lz4', 'libraries')
-
-    define_macros.append(('HAVE_LZ4', 1))
-
-    # snappy
-    cpp11_kwargs = {
-        'include_dirs': get_clib_config('snappy', 'include_dirs'),
-        'extra_link_args': ['-lstdc++'] + get_clib_config('snappy', 'extra_link_args'),
-        'libraries': get_clib_config('snappy', 'libraries'),
-        'define_macros': [('HAVE_SNAPPY', 1)],
-    }
-
-    # zlib
-    include_dirs += get_clib_config('zlib', 'include_dirs')
-    extra_link_args += get_clib_config('zlib', 'extra_link_args')
-    libraries += get_clib_config('zlib', 'libraries')
-    define_macros.append(('HAVE_ZLIB', 1))
-
-    # zstd
-    include_dirs += get_clib_config('zstd', 'include_dirs')
-    extra_link_args += get_clib_config('zstd', 'extra_link_args')
-    libraries += get_clib_config('zstd', 'libraries')
-    define_macros.append(('HAVE_ZSTD', 1))
-
-    extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
-    extra_compile_args += ['-O3', '-ffast-math']
-    extra_compile_args += ['/Ox', '/fp:fast']
-    extra_compile_args += ['-pthread']
-    extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc",
-        sources=sources + prefix(
+        sources=prefix(
             hdf5_blosc_dir, ['blosc_filter.c', 'blosc_plugin.c']),
-        extra_objects=get_clib_config('zstd', 'extra_objects'),
-        include_dirs=include_dirs + [hdf5_blosc_dir],
-        define_macros=define_macros,
-        extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
-        libraries=libraries,
-        sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
-        avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
-        cpp11=cpp11_kwargs,
+        extra_objects=get_clib_config('blosc', 'extra_objects'),
+        include_dirs=[hdf5_blosc_dir] + get_clib_config('blosc', 'include_dirs'),
+        extra_compile_args=['-std=gnu99'],  # Needed to build manylinux1 wheels
+        extra_link_args=get_clib_config('blosc', 'extra_link_args'),
+        libraries=get_clib_config('blosc', 'libraries'),
+        cpp11=get_clib_config('blosc', 'cpp11'),
     )
 
-
-PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib', 'zstd'
+if 'blosc' in get_system_clib_names():
+    PLUGIN_LIB_DEPENDENCIES['blosc'] = ('blosc',)
+else:
+    PLUGIN_LIB_DEPENDENCIES['blosc'] = 'blosc', 'snappy', 'lz4', 'zlib', 'zstd'
 
 
 def _get_blosc2_plugin():
