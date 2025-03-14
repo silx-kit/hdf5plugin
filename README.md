@@ -24,6 +24,66 @@ export HDF5_PLUGIN_PATH=/path/to/install/this/plugin
 ```
 The user program does not need to link to this plugin or SPERR; it only needs to specify the plugin ID of `32028`.
 
+<!--
+## Use in NetCDF-4 APIs
+`H5Z-SPERR` also facilitates the application of SPERR compression on 
+[NetCDF-4 files](https://docs.unidata.ucar.edu/netcdf/NUG/md_filters.html#filters_enable);
+one simply needs to define the filter on a variable:
+```C
+nc_def_var_filter(ncid, varid, 32028, 1, &cd_values);
+```
+See a complete example [here](https://github.com/NCAR/H5Z-SPERR/blob/main/example/simple_xy_nc4_wr.c).
+-->
+
+## Use in Python
+`H5Z-SPERR` version `0.1.3` is supported by the Python package [hdf5plugin](https://github.com/silx-kit/hdf5plugin)
+since version `5.0.0`.
+One can install the package by issuing 
+```bash
+pip install hdf5plugin [--user]           # using pip
+conda install -c conda-forge hdf5plugin   # using conda
+```
+and use it by importing these two packages:
+```python
+import h5py         # provide general HDF5 support
+import hdf5plugin   # provide HDF5 plugin support
+```
+
+## Handling of Missing Values
+Simulation models sometimes use a special value (i.e., missing value) to indicate that there's no meaningful value at that specific location.
+For example, in an ocean simulation, all the land area is marked by missing values.
+The most often seen missing values are either `NaN`, or an extremely large value, such as `1e35` or `-9.9e35`.
+When these missing values participate in compression, they easily introduce numeric error and result in data corruption.
+
+`H5Z-SPERR` can handle common missing values with a little help from the user.
+Specifically, a user can indicate that there's potentially missing values, 
+and `H5Z-SPERR` will use a compact bitmask to keep track of where exactly those missing values are.
+`H5Z-SPERR` then replaces them with a value that is friendly to SPERR compression before passing the field to the SPERR compressor.
+
+During decompression, `H5Z-SPERR` fills the original missing value at locations indicated by the compact bitmask.
+Specifically, if the original missing values are `NaN`, then `NaN` will be filled. If the orignal missing values
+are values with a magnitude larger than `1e35`, then the *first occurance* of such values will be used to fill 
+in all missing value locations.
+
+Users use an integer to indicate the potential existance of missing values:
+- Mode `0`: no missing values;
+- Mode `1`: there are potential `NaN`s;
+- Mode `2`: there are potential values with a magnitude larger than `1e35`.
+
+`H5Z-SPERR` behaves accordingly: (`1e35` denotes the *first occurance* of such values)
+| Mode      | Actual Input Data    |  Filter Behavior |
+|-----------|----------------------|------------------|
+| 0         | No `NaN`, no `1e35`  | :heavy_check_mark: Normal SPERR compression |
+| 0         | Has `NaN` or `1e35`  | :x: Likely numeric error  |
+| 1         | No `NaN`, no `1e35`  | :heavy_check_mark: Normal SPERR compression  |
+| 1         | Has `NaN`, no `1e35` | :heavy_check_mark: Normal SPERR compression; `NaN` is restored at its exact locations  |
+| 1         | Regardless of `NaN`, has `1e35` |  :x: Likely numeric error  |
+| 2         | No `NaN`, no `1e35`  | :heavy_check_mark: Normal SPERR compression  |
+| 2         | No `NaN`, has `1e35` | :heavy_check_mark: Normal SPERR compression; `1e35` is restored at its exact locations  |
+| 2         | Has `NaN`, regardless of `1e35` | :x: Likely numeric error |
+
+**Final note:** if a variable is indicated to have missing values, but it actually does not, then there's no bitmasks involved thus no storage overhead! 
+
 ##  Find `cd_values[]`
 To apply SPERR compression using the HDF5 plugin, one needs to specify 1) what compression mode and 2)
 what compression quality to use. Supported compression modes and qualities are summarized below:
@@ -42,7 +102,8 @@ and the `Z` rank to be varying the slowest, before the data is passed to the com
 
 The HDF5 libraries takes in these compression parameters as one or more 32-bit `unsigned int` values,
 which are named `cd_values[]` in most HDF5 routines.
-In the case of `H5Z-SPERR`, there is exactly one `unsigned int` used to carry this information.
+In the case of `H5Z-SPERR`, there is exactly one `unsigned int` used to carry compression-related information, and 
+possibly one more `unsigned int` to indicate the potential existance of missing values.
 
 ### Find  `cd_values[]` Using the Programming Interface
 Using the HDF5 programming interface, `cd_values[]` carrying the compression parameters are passed
@@ -75,11 +136,17 @@ Please use this value as a single 32-bit unsigned integer in your applications.
 Note: an integer produced by `generate_cd_values` can be decoded by another command line tool, `decode_cd_values`,
 to show the coded compression parameters.
 
-## Use in NetCDF-4 APIs
-`H5Z-SPERR` also facilitates the application of SPERR compression on 
-[NetCDF-4 files](https://docs.unidata.ucar.edu/netcdf/NUG/md_filters.html#filters_enable);
-one simply needs to define the filter on a variable:
-```C
-nc_def_var_filter(ncid, varid, 32028, 1, &cd_values);
+### Examples
+Assume using the `nccopy` tool:
+```Bash
+# Compress variable VAR0, using fixed-rate compression, bitrate = 3.3, no special handling of missing values.
+nccopy -F "VAR0, 268651725u" <input_file> <output_file>
+nccopy -F "VAR0, 268651725u, 0" <input_file> <output_file>
+
+# Compress variable VAR1, using fixed-rate compression, bitrate = 3.3. VAR1 might have NaNs!
+nccopy -F "VAR1, 268651725u, 1" <input_file> <output_file>
+
+# Compress variable VAR2, using fixed-rate compression, bitrate = 3.3. VAR2 might have values such as 1e35!
+nccopy -F "VAR2, 268651725u, 2" <input_file> <output_file> 
 ```
-See a complete example [here](https://github.com/NCAR/H5Z-SPERR/blob/main/example/simple_xy_nc4_wr.c).
+
