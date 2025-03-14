@@ -1,7 +1,7 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016-2024 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2025 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -734,7 +734,8 @@ def get_lz4_clib(field=None):
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
-    lz4_dir = glob('src/c-blosc2/internal-complibs/lz4*')[0]
+    folders = glob('src/c-blosc2/internal-complibs/lz4*')
+    lz4_dir = folders[0] if folders else "src/no-folder"
 
     config = dict(
         sources=glob(f'{lz4_dir}/*.c'),
@@ -815,7 +816,8 @@ def get_zlib_clib(field=None):
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
-    zlib_dir = glob('src/c-blosc/internal-complibs/zlib*')[0]
+    folders = glob('src/c-blosc/internal-complibs/zlib*')
+    zlib_dir = folders[0] if folders else "src/no-folder"
 
     config = dict(
         sources=glob(f'{zlib_dir}/*.c'),
@@ -833,7 +835,8 @@ def get_zstd_clib(field=None):
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
 
-    zstd_dir = glob('src/c-blosc2/internal-complibs/zstd*')[0]
+    folders = glob('src/c-blosc2/internal-complibs/zstd*')
+    zstd_dir = folders[0] if folders else "src/no-folder"
 
     config = dict(
         sources=glob(f'{zstd_dir}/*/*.c'),
