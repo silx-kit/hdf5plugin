@@ -32,11 +32,13 @@ if(BUILD_SHARED)
         SOVERSION 4  # Change this when an ABI change happens
     )
     target_compile_definitions(blosc2_shared PUBLIC BLOSC_SHARED_LIBRARY)
+    target_include_directories(blosc2_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_include_directories(blosc2_shared PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
         $<INSTALL_INTERFACE:include>)
 endif()
 if(BUILD_STATIC)
+    add_compile_definitions(BUILD_STATIC)
     add_library(blosc2_static STATIC)
     # ALIAS for superbuilds that use Blosc2 as sub-project
     # must be the same as the NAMESPACE in Blosc2Targets
@@ -52,8 +54,9 @@ if(BUILD_STATIC)
     if(MSVC OR MINGW)
         set_target_properties(blosc2_static PROPERTIES PREFIX lib)
     endif()
+    target_include_directories(blosc2_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_include_directories(blosc2_static PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
         $<INSTALL_INTERFACE:include>)
 endif()
 # When the option has been selected to compile the test suite,
@@ -152,7 +155,7 @@ if(NOT DEACTIVATE_ZSTD)
             target_link_libraries(blosc_testing PUBLIC ${ZSTD_LIBRARY})
         endif()
     else()
-        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.6)
+        set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.5.7)
         if(BUILD_SHARED)
             target_include_directories(blosc2_shared PRIVATE ${ZSTD_LOCAL_DIR} ${ZSTD_LOCAL_DIR}/common)
         endif()
