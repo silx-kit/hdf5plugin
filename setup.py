@@ -1024,12 +1024,11 @@ def _get_clib_config_from_pkgconfig(libname):
             raise RuntimeError(f"pkgconfig: (lib){libname} not found")
 
     include_dir = pkgconfig.variables(libname).get('includedir', None)
-    linker_flags = pkgconfig.libs(libname).split(" ")
 
     return {
         'include_dirs': [include_dir] if include_dir is not None else [],
-        'extra_link_args': [flag for flag in linker_flags if not flag.startswith("-l")],
-        'libraries': [flag[2:] for flag in linker_flags if flag.startswith("-l")],
+        'extra_link_args': pkgconfig.libs(libname).split(" "),
+        'libraries': [],
         'macros': [],
         'extra_objects': [],
         'cpp11': {},
