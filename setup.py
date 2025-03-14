@@ -1233,7 +1233,7 @@ def get_sperr_plugin():
             ]
         ),
         include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
-        extra_link_args=['-lstdc++'],
+        extra_link_args=['-lstdc++', "-std=c++20", "/std:c++20"],
         define_macros=get_sperr_clib("macros"),
         cpp20_required=True,
     )
