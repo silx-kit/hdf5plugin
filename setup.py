@@ -1275,13 +1275,13 @@ def _get_sz_plugin():
     extra_compile_args += ['/Ox', '/openmp']
 
     extra_link_args = ['-fopenmp', "-lm"]
-    extra_link_args += get_clib_config('zfp', 'extra_link_args')
+    extra_link_args += get_clib_config('zlib', 'extra_link_args')
     extra_link_args += get_clib_config('zstd', 'extra_link_args')
 
     include_dirs = [f'{h5zsz_dir}/include']
     include_dirs += [sz_dir, f"{sz_dir}/include"]
     include_dirs += glob('src/SZ_extra/')
-    include_dirs += get_clib_config('zfp', 'include_dirs')
+    include_dirs += get_clib_config('zlib', 'include_dirs')
     include_dirs += get_clib_config('zstd', 'include_dirs')
 
     return HDF5PluginExtension(
@@ -1290,7 +1290,7 @@ def _get_sz_plugin():
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        libraries=get_clib_config('zfp', 'libraries') + get_clib_config('zstd', 'libraries'),
+        libraries=get_clib_config('zlib', 'libraries') + get_clib_config('zstd', 'libraries'),
         extra_objects=get_clib_config('zstd', 'extra_objects'),
     )
 
