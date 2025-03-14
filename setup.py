@@ -1474,6 +1474,13 @@ def get_libraries_and_extensions():
             if filter_name not in stripped_filters
         )
     )
+
+    # lib_names order matters for linking:
+    # - libs depending on other libs must be put before libs they depend on so all symbols are found
+    # - zfp lib is placed before blosc2 since blosc2 uses it's own copy of zfp
+    first_lib_names = [name for name in ("zfp", "blosc", "blosc2") if name in lib_names]
+    lib_names = first_lib_names + list(lib_names - set(first_lib_names))
+
     # Filter-out used system libraries
     # Add a prefix to library names to prevent the compiler to use the dynamic library if it exists
     libraries = [
