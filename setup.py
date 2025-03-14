@@ -1223,7 +1223,15 @@ def get_sperr_plugin():
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5sperr",
-        sources=[f"{h5z_sperr_dir}/src/h5z-sperr.c"],
+        sources=prefix(
+            f"{h5z_sperr_dir}/src",
+            [
+                "h5z-sperr.c",
+                "h5zsperr_helper.cpp",
+                "icecream.c",
+                "compactor.c",
+            ]
+        ),
         include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
         extra_link_args=['-lstdc++'],
         define_macros=get_sperr_clib("macros"),
