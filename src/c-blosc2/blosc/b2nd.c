@@ -355,7 +355,6 @@ int array_new(b2nd_context_t *ctx, int special_value, b2nd_array_t **array) {
   if ((*array)->nitems != 0) {
     int64_t nchunks = (*array)->extnitems / (*array)->chunknitems;
     int64_t nitems = nchunks * (*array)->extchunknitems;
-    // blosc2_schunk_fill_special(sc, nitems, BLOSC2_SPECIAL_ZERO, chunksize);
     BLOSC_ERROR(blosc2_schunk_fill_special(sc, nitems, special_value, chunksize));
   }
   (*array)->sc = sc;
@@ -706,6 +705,10 @@ int64_t nchunk_fastpath(const b2nd_array_t *array, const int64_t *start,
   int ndim = (int) array->ndim;
   int inner_dim = ndim - 1;
   int64_t partial_slice_size = 1;
+  int outer_dims = 0;
+  for (int j = 0; j < inner_dim; ++j) {
+    outer_dims += (array->blockshape[j] != 1);
+   }
   int64_t partial_chunk_size = 1;
   for (int i = ndim - 1; i >= 0; --i) {
     // We need to check if the slice is contiguous in the C order
@@ -724,11 +727,13 @@ int64_t nchunk_fastpath(const b2nd_array_t *array, const int64_t *start,
         }
       }
       else {
-        if (array->chunkshape[i] != array->blockshape[i]) {
+        // A block is still contiguous in the C order if the outer dimensions are 1 and the inner is
+        // a divisor of the chunkshape
+        if ( ! (array->chunkshape[i] == array->blockshape[i] ||
+                (outer_dims == 0 && array->chunkshape[i] % array->blockshape[i] == 0))) {
           return -1;
         }
       }
-      inner_dim = i;
     }
 
     // We need start and stop to be aligned with the chunkshape
@@ -743,7 +748,6 @@ int64_t nchunk_fastpath(const b2nd_array_t *array, const int64_t *start,
       return -1;
     }
   }
-
   // Compute the chunk number
   int64_t *chunks_idx;
   int nchunks = b2nd_get_slice_nchunks(array, start, stop, &chunks_idx);
@@ -771,7 +775,7 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
   }
 
-  uint8_t *buffer_b = (uint8_t *) buffer;
+  uint8_t *buffer_b = buffer;
   const int64_t *buffer_start = start;
   const int64_t *buffer_stop = stop;
   const int64_t *buffer_shape = shape;
@@ -1065,13 +1069,13 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
       }
 
       if (set_slice) {
-        b2nd_copy_buffer(ndim, array->sc->typesize,
-                         src, src_pad_shape, src_start, src_stop,
-                         dst, dst_pad_shape, dst_start);
+        b2nd_copy_buffer2(ndim, array->sc->typesize,
+                          src, src_pad_shape, src_start, src_stop,
+                          dst, dst_pad_shape, dst_start);
       } else {
-        b2nd_copy_buffer(ndim, array->sc->typesize,
-                         dst, dst_pad_shape, dst_start, dst_stop,
-                         src, src_pad_shape, src_start);
+        b2nd_copy_buffer2(ndim, array->sc->typesize,
+                          dst, dst_pad_shape, dst_start, dst_stop,
+                          src, src_pad_shape, src_start);
       }
     }
 
@@ -2099,13 +2103,15 @@ b2nd_create_ctx(const blosc2_storage *b2_storage, int8_t ndim, const int64_t *sh
   }
 
   if (dtype == NULL) {
-    ctx->dtype = strdup(B2ND_DEFAULT_DTYPE);
-    ctx->dtype_format = 0;  // The default is NumPy format
+    // ctx->dtype = strdup(B2ND_DEFAULT_DTYPE);
+    char buf[16] = {0};
+    snprintf(buf, sizeof(buf), "|S%d", cparams->typesize);
+    ctx->dtype = strdup(buf);
   }
   else {
     ctx->dtype = strdup(dtype);
-    ctx->dtype_format = dtype_format;
   }
+  ctx->dtype_format = dtype_format;
 
   params_b2_storage->cparams = cparams;
   ctx->b2_storage = params_b2_storage;

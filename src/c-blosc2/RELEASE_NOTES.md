@@ -1,6 +1,54 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.16.0 to 2.17.0
+=============================
+
+* New b2nd_copy_buffer2() function for copying buffers with typesizes
+  larger than 255.  The previous b2nd_copy_buffer() function is now
+  deprecated and will be removed in a future release.
+
+* Support repeated values larger than 8-bit, also for n-dim arrays.
+  This is useful for compressing arrays with large runs of repeated
+  values, like in the case of images with large areas of the same color.
+
+* Fix a leak in the pthreads emulation for Windows.  Fixes #647.
+  Thanks to @jocbeh for the report and fix (#655).
+
+* Update zstd to 1.5.7.  Thanks to Tom Birch.
+
+* Add BLOSC2_MAXTYPESIZE constant.
+
+### Deprecated Functions
+
+- `int b2nd_copy_buffer(...)` is deprecated and will be removed in
+  a future release. Please use `b2nd_copy_buffer2(...)` instead.
+
+
+Changes from 2.15.2 to 2.16.0
+=============================
+
+* Use _fseeki64/_ftelli64/_stat64 on Windows for large file (>2 GB) support.
+  Thanks to Abhi Jaiantilal (@ajaiantilal) for the report and help.
+* Add 12-byte unshuffle for avx2. Thanks to Tom Birch (@froody).
+* Add 12-byte sse2 unshuffle implementation. Thanks to Tom Birch (@froody).
+* Better description of the Blosc2 format as a whole.
+
+
+Changes from 2.15.1 to 2.15.2
+=============================
+
+* Support wasm32 by disabling ZLIB WITH_OPTIM option. Thanks to Miles Granger.
+
+* Avoid rip-relative addressing for OSX x86_64. Thanks to Miles Granger.
+
+* Added support for nvcc (NVidia Cuda Compiler) in CMake. Thanks to @dqwu.
+
+* Fix public include directories for blosc2 targets. Thanks to Dmitry Mikushin.
+
+* Fix ub in shuffle and unshuffle by marking _dst non-const. Thanks to Emil Dohne.
+
+
 Changes from 2.15.0 to 2.15.1
 =============================
 

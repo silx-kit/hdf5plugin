@@ -725,14 +725,30 @@ int read_chunk_header(const uint8_t* src, int32_t srcsize, bool extended_header,
 
     int32_t special_type = (header->blosc2_flags >> 4) & BLOSC2_SPECIAL_MASK;
     if (special_type != 0) {
-      if (header->nbytes % header->typesize != 0) {
-        BLOSC_TRACE_ERROR("`nbytes` is not a multiple of typesize");
-        return BLOSC2_ERROR_INVALID_HEADER;
-      }
       if (special_type == BLOSC2_SPECIAL_VALUE) {
-        if (header->cbytes < BLOSC_EXTENDED_HEADER_LENGTH + header->typesize) {
-          BLOSC_TRACE_ERROR("`cbytes` is too small for run length encoding");
-          return BLOSC2_ERROR_READ_BUFFER;
+        // In this case, the actual type size must be derived from the cbytes
+        int32_t typesize = header->cbytes - BLOSC_EXTENDED_HEADER_LENGTH;
+        if (typesize <= 0) {
+          BLOSC_TRACE_ERROR("`typesize` is zero or negative");
+          return BLOSC2_ERROR_INVALID_HEADER;
+        }
+        if (typesize > BLOSC2_MAXTYPESIZE) {
+          BLOSC_TRACE_ERROR("`typesize` is greater than maximum allowed");
+          return BLOSC2_ERROR_INVALID_HEADER;
+        }
+        if (typesize > header->nbytes) {
+          BLOSC_TRACE_ERROR("`typesize` is greater than `nbytes`");
+          return BLOSC2_ERROR_INVALID_HEADER;
+        }
+        if (header->nbytes % typesize != 0) {
+          BLOSC_TRACE_ERROR("`nbytes` is not a multiple of typesize");
+          return BLOSC2_ERROR_INVALID_HEADER;
+        }
+      }
+      else {
+        if (header->nbytes % header->typesize != 0) {
+          BLOSC_TRACE_ERROR("`nbytes` is not a multiple of typesize");
+          return BLOSC2_ERROR_INVALID_HEADER;
         }
       }
     }
@@ -1581,6 +1597,10 @@ static int blosc_d(
   if (rc < 0) {
     return rc;
   }
+  if (context->special_type == BLOSC2_SPECIAL_VALUE) {
+    // We need the actual typesize in this case, but it cannot be encoded in the header, so derive it from cbytes
+    typesize = chunk_cbytes - context->header_overhead;
+  }
 
   // In some situations (lazychunks) the context can arrive uninitialized
   // (but BITSHUFFLE needs it for accessing the format of the chunk)
@@ -1674,7 +1694,7 @@ static int blosc_d(
     switch (context->special_type) {
       case BLOSC2_SPECIAL_VALUE:
         // All repeated values
-        rc = set_values(context->typesize, context->src, _dest, bsize_);
+        rc = set_values(typesize, context->src, _dest, bsize_);
         if (rc < 0) {
           BLOSC_TRACE_ERROR("set_values failed");
           return BLOSC2_ERROR_DATA;
@@ -1749,7 +1769,7 @@ static int blosc_d(
 
   /* The number of compressed data streams for this block */
   if (!dont_split && !leftoverblock) {
-    nstreams = (int32_t)typesize;
+    nstreams = context->typesize;
   }
   else {
     nstreams = 1;
@@ -2160,7 +2180,7 @@ static int initialize_context_compression(
   context->output_bytes = 0;
   context->destsize = destsize;
   context->sourcesize = srcsize;
-  context->typesize = (int32_t)typesize;
+  context->typesize = typesize;
   context->filter_flags = filters_to_flags(filters);
   for (int i = 0; i < BLOSC2_MAX_FILTERS; i++) {
     context->filters[i] = filters[i];
@@ -2258,6 +2278,12 @@ static int initialize_context_compression(
   }
 
   /* Check typesize limits */
+  if (context->typesize > BLOSC2_MAXTYPESIZE) {
+    // If typesize is too large for Blosc2, return an error
+    BLOSC_TRACE_ERROR("Typesize cannot exceed %d bytes.", BLOSC2_MAXTYPESIZE);
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+  /* Now, cap typesize so that blosc2 split machinery can continue to work */
   if (context->typesize > BLOSC_MAX_TYPESIZE) {
     /* If typesize is too large, treat buffer as an 1-byte stream. */
     context->typesize = 1;
@@ -4417,8 +4443,7 @@ int blosc2_chunk_nans(blosc2_cparams cparams, const int32_t nbytes, void* dest, 
 /* Create a chunk made of repeated values */
 int blosc2_chunk_repeatval(blosc2_cparams cparams, const int32_t nbytes,
                            void* dest, int32_t destsize, const void* repeatval) {
-  uint8_t typesize = cparams.typesize;
-  if (destsize < BLOSC_EXTENDED_HEADER_LENGTH + typesize) {
+  if (destsize < BLOSC_EXTENDED_HEADER_LENGTH + cparams.typesize) {
     BLOSC_TRACE_ERROR("dest buffer is not long enough");
     return BLOSC2_ERROR_DATA;
   }
@@ -4450,17 +4475,17 @@ int blosc2_chunk_repeatval(blosc2_cparams cparams, const int32_t nbytes,
   header.version = BLOSC2_VERSION_FORMAT;
   header.versionlz = BLOSC_BLOSCLZ_VERSION_FORMAT;
   header.flags = BLOSC_DOSHUFFLE | BLOSC_DOBITSHUFFLE;  // extended header
-  header.typesize = (uint8_t)typesize;
+  header.typesize = context->typesize;
   header.nbytes = (int32_t)nbytes;
   header.blocksize = context->blocksize;
-  header.cbytes = BLOSC_EXTENDED_HEADER_LENGTH + (int32_t)typesize;
+  header.cbytes = BLOSC_EXTENDED_HEADER_LENGTH + cparams.typesize;
   header.blosc2_flags = BLOSC2_SPECIAL_VALUE << 4;  // mark chunk as all repeated value
   memcpy((uint8_t *)dest, &header, sizeof(header));
-  memcpy((uint8_t *)dest + sizeof(header), repeatval, typesize);
+  memcpy((uint8_t *)dest + sizeof(header), repeatval, cparams.typesize);
 
   blosc2_free_ctx(context);
 
-  return BLOSC_EXTENDED_HEADER_LENGTH + (uint8_t)typesize;
+  return BLOSC_EXTENDED_HEADER_LENGTH + cparams.typesize;
 }
 
 
@@ -4646,6 +4671,11 @@ int blosc2_register_io_cb(const blosc2_io_cb *io) {
 }
 
 blosc2_io_cb *blosc2_get_io_cb(uint8_t id) {
+  // If g_initlib is not set by blosc2_init() this function will try to read
+  // uninitialized memory. We should therefore always return NULL in that case
+  if (!g_initlib) {
+    return NULL;
+  }
   for (uint64_t i = 0; i < g_nio; ++i) {
     if (g_ios[i].id == id) {
       return &g_ios[i];
