@@ -847,7 +847,7 @@ def _get_blosc2_clib(field=None):
     return config[field]
 
 
-def _get_bzip2_clib(field=None):
+def _get_bz2_clib(field=None):
     """BZip2 static lib build config"""
     bzip2_dir = "src/bzip2"
 
@@ -1082,7 +1082,7 @@ def _get_zstd_clib(field=None):
 _EMBEDDED_CLIB_CONFIG_GETTERS = {
     "blosc": _get_blosc_clib,
     "blosc2": _get_blosc2_clib,
-    "bzip2": _get_bzip2_clib,
+    "bz2": _get_bz2_clib,
     "charls": _get_charls_clib,
     "lz4": _get_lz4_clib,
     "snappy": _get_snappy_clib,
@@ -1285,15 +1285,15 @@ def _get_bzip2_plugin():
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bzip2",
         sources=['src/PyTables/src/H5Zbzip2.c', 'src/H5Zbzip2_plugin.c'],
-        include_dirs=['src/PyTables/src/'] + get_clib_config('bzip2', 'include_dirs'),
+        include_dirs=['src/PyTables/src/'] + get_clib_config('bz2', 'include_dirs'),
         define_macros=[('HAVE_BZ2_LIB', 1)],
         extra_compile_args=[],
-        extra_link_args=get_clib_config('bzip2', 'extra_link_args'),
-        libraries=get_clib_config('bzip2', 'libraries'),
+        extra_link_args=get_clib_config('bz2', 'extra_link_args'),
+        libraries=get_clib_config('bz2', 'libraries'),
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['bzip2'] = ('bzip2',)
+PLUGIN_LIB_DEPENDENCIES['bzip2'] = ('bz2',)
 
 
 def _get_fcidecomp_plugin():
