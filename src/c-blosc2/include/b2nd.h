@@ -35,6 +35,13 @@ extern "C" {
 extern "C" {
 #endif
 
+#if defined(_MSC_VER)
+#define B2ND_DEPRECATED(msg) __declspec(deprecated(msg))
+#elif defined(__GNUC__) || defined(__clang__)
+#define B2ND_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#else
+#define B2ND_DEPRECATED(msg)
+#endif
 
 /* The version for metalayer format; starts from 0 and it must not exceed 127 */
 #define B2ND_METALAYER_VERSION 0
@@ -562,16 +569,53 @@ BLOSC_EXPORT int b2nd_deserialize_meta(const uint8_t *smeta, int32_t smeta_len, 
  *
  * @return An error code.
  *
+ * @note This is kept for backward compatibility with existing code out there.  New code should use
+ * b2nd_copy_buffer2 instead.
+ *
  * @note Please make sure that slice boundaries fit within the source and
  * destination arrays before using this function, as it does not perform these
  * checks itself.
  */
+B2ND_DEPRECATED("Use b2nd_copy_buffer2 instead.")
 BLOSC_EXPORT int b2nd_copy_buffer(int8_t ndim,
                                   uint8_t itemsize,
                                   const void *src, const int64_t *src_pad_shape,
                                   const int64_t *src_start, const int64_t *src_stop,
                                   void *dst, const int64_t *dst_pad_shape,
                                   const int64_t *dst_start);
+
+/**
+ * @brief Copy a slice of a source array into another array. The arrays have
+ * the same number of dimensions (though their shapes may differ), the same
+ * item size, and they are stored as C buffers with contiguous data (any
+ * padding is considered part of the array).
+ *
+ * @param ndim The number of dimensions in both arrays.
+ * @param itemsize The size of the individual data item in both arrays.
+ * @param src The buffer for getting the data from the source array.
+ * @param src_pad_shape The shape of the source array, including padding.
+ * @param src_start The source coordinates where the slice will begin.
+ * @param src_stop The source coordinates where the slice will end.
+ * @param dst The buffer for setting the data into the destination array.
+ * @param dst_pad_shape The shape of the destination array, including padding.
+ * @param dst_start The destination coordinates where the slice will be placed.
+ *
+ * @return An error code.
+ *
+ * @note This is a version of (now deprecated) b2nd_copy_buffer() that uses
+ * signed 32-bit integers for copying data. This is useful when data is stored
+ * in a buffer that uses itemsizes that are larger than 255 bytes.
+ *
+ * @note Please make sure that slice boundaries fit within the source and
+ * destination arrays before using this function, as it does not perform these
+ * checks itself.
+ */
+BLOSC_EXPORT int b2nd_copy_buffer2(int8_t ndim,
+                                   int32_t itemsize,
+                                   const void *src, const int64_t *src_pad_shape,
+                                   const int64_t *src_start, const int64_t *src_stop,
+                                   void *dst, const int64_t *dst_pad_shape,
+                                   const int64_t *dst_start);
 
 
 #ifdef __cplusplus

@@ -11,12 +11,11 @@
 #include "b2nd.h"
 
 #include <stdint.h>
-#include <string.h>
 
 // copyNdim where N = {2-8} - specializations of copy loops to be used by b2nd_copy_buffer
 // since we don't have c++ templates, substitute manual specializations for up to known B2ND_MAX_DIM (8)
 // it's not pretty, but it substantially reduces overhead vs. the generic method
-void copy8dim(const uint8_t itemsize,
+void copy8dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -58,7 +57,7 @@ void copy8dim(const uint8_t itemsize,
   } while (copy_start[0] < copy_shape[0]);
 }
 
-void copy7dim(const uint8_t itemsize,
+void copy7dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -96,7 +95,7 @@ void copy7dim(const uint8_t itemsize,
   } while (copy_start[0] < copy_shape[0]);
 }
 
-void copy6dim(const uint8_t itemsize,
+void copy6dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -130,7 +129,7 @@ void copy6dim(const uint8_t itemsize,
   } while (copy_start[0] < copy_shape[0]);
 }
 
-void copy5dim(const uint8_t itemsize,
+void copy5dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -160,7 +159,7 @@ void copy5dim(const uint8_t itemsize,
   } while (copy_start[0] < copy_shape[0]);
 }
 
-void copy4dim(const uint8_t itemsize,
+void copy4dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -186,7 +185,7 @@ void copy4dim(const uint8_t itemsize,
   } while (copy_start[0] < copy_shape[0]);
 }
 
-void copy3dim(const uint8_t itemsize,
+void copy3dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -208,7 +207,7 @@ void copy3dim(const uint8_t itemsize,
   } while (copy_start[0] < copy_shape[0]);
 }
 
-void copy2dim(const uint8_t itemsize,
+void copy2dim(const int32_t itemsize,
               const int64_t *copy_shape,
               const uint8_t *bsrc, const int64_t *src_strides,
               uint8_t *bdst, const int64_t *dst_strides) {
@@ -224,7 +223,7 @@ void copy2dim(const uint8_t itemsize,
 
 
 void copy_ndim_fallback(const int8_t ndim,
-                        const uint8_t itemsize,
+                        const int32_t itemsize,
                         int64_t *copy_shape,
                         const uint8_t *bsrc, int64_t *src_strides,
                         uint8_t *bdst, int64_t *dst_strides) {
@@ -253,12 +252,12 @@ void copy_ndim_fallback(const int8_t ndim,
   }
 }
 
-int b2nd_copy_buffer(int8_t ndim,
-                     uint8_t itemsize,
-                     const void *src, const int64_t *src_pad_shape,
-                     const int64_t *src_start, const int64_t *src_stop,
-                     void *dst, const int64_t *dst_pad_shape,
-                     const int64_t *dst_start) {
+int b2nd_copy_buffer2(int8_t ndim,
+                      int32_t itemsize,
+                      const void *src, const int64_t *src_pad_shape,
+                      const int64_t *src_start, const int64_t *src_stop,
+                      void *dst, const int64_t *dst_pad_shape,
+                      const int64_t *dst_start) {
   // Compute the shape of the copy
   int64_t copy_shape[B2ND_MAX_DIM] = {0};
   for (int i = 0; i < ndim; ++i) {
@@ -269,13 +268,13 @@ int b2nd_copy_buffer(int8_t ndim,
   }
 
   // Compute the strides
-  int64_t src_strides[B2ND_MAX_DIM];
+  int64_t src_strides[B2ND_MAX_DIM] = {0};
   src_strides[ndim - 1] = 1;
   for (int i = ndim - 2; i >= 0; --i) {
     src_strides[i] = src_strides[i + 1] * src_pad_shape[i + 1];
   }
 
-  int64_t dst_strides[B2ND_MAX_DIM];
+  int64_t dst_strides[B2ND_MAX_DIM] = {0};
   dst_strides[ndim - 1] = 1;
   for (int i = ndim - 2; i >= 0; --i) {
     dst_strides[i] = dst_strides[i + 1] * dst_pad_shape[i + 1];
@@ -324,4 +323,17 @@ int b2nd_copy_buffer(int8_t ndim,
   }
 
   return BLOSC2_ERROR_SUCCESS;
+}
+
+
+// Keep the old signature for API compatibility
+int b2nd_copy_buffer(int8_t ndim,
+                     uint8_t itemsize,
+                     const void *src, const int64_t *src_pad_shape,
+                     const int64_t *src_start, const int64_t *src_stop,
+                     void *dst, const int64_t *dst_pad_shape,
+                     const int64_t *dst_start) {
+  // Simply cast itemsize to int32_t and delegate
+  return b2nd_copy_buffer2(ndim, (int32_t)itemsize, src, src_pad_shape,
+                          src_start, src_stop, dst, dst_pad_shape, dst_start);
 }

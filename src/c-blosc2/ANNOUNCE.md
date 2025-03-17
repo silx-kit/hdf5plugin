@@ -1,27 +1,34 @@
-# Announcing C-Blosc2 2.15.1
+# Announcing C-Blosc2 2.17.0
 A fast, compressed and persistent binary data store library for C.
 
 ## What is new?
 
-This is a maintenance release in which we are fixing calling instructions
-more advanced than available in current CPU, causing a SIGKILL.
-Furthermore, a new `b2nd_nans` function has been added. In addition,
-the internal LZ4 sources were updated to 1.10.0 and some
-other improvements were made.
+This introduces some new features and improvements:
+
+* New b2nd_copy_buffer2() function for copying buffers with typesizes
+  larger than 255.  The previous b2nd_copy_buffer() function is now
+  deprecated and will be removed in a future release.
+
+* Support repeated values larger than 8-bit, also for n-dim arrays.
+  This is useful for compressing arrays with large runs of repeated
+  values, like in the case of images with large areas of the same color.
+
+* Fix a leak in the pthreads emulation for Windows.  Fixes #647.
+  Thanks to @jocbeh for the report and fix (#655).
+
+* Update zstd to 1.5.7.  Thanks to Tom Birch.
 
 For more info, please see the release notes in:
 
 https://github.com/Blosc/c-blosc2/blob/main/RELEASE_NOTES.md
 
-Also, there is blog post introducing the most relevant changes in Blosc2:
-
-https://www.blosc.org/posts/blosc2-ready-general-review/
-
 ## What is it?
 
 Blosc2 is a high performance data container optimized for binary data.
 It builds on the shoulders of Blosc, the high performance meta-compressor
-(https://github.com/Blosc/c-blosc).
+(https://github.com/Blosc/c-blosc).  Blosc2 is the next generation of Blosc,
+an award-winning (https://www.blosc.org/posts/prize-push-Blosc2)` library
+that has been around for more than a decade.
 
 Blosc2 expands the capabilities of Blosc by providing a higher lever
 container that is able to store many chunks on it (hence the super-block name).

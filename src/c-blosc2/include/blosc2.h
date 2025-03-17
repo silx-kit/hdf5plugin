@@ -82,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    15   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    17   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.15.1"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2024-07-30 #$"    /* date version year-month-day */
+#define BLOSC2_VERSION_STRING   "2.17.0"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2025-02-26 #$"    /* date version year-month-day */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -291,7 +291,8 @@ enum {
  */
 enum {
   BLOSC2_MAXDICTSIZE = 128 * 1024, //!< maximum size for compression dicts
-  BLOSC2_MAXBLOCKSIZE = 536866816  //!< maximum size for blocks
+  BLOSC2_MAXBLOCKSIZE = 536866816, //!< maximum size for blocks
+  BLOSC2_MAXTYPESIZE = BLOSC2_MAXBLOCKSIZE, //!< maximum size for types
 };
 
 
@@ -429,7 +430,7 @@ enum {
   BLOSC2_NO_SPECIAL = 0x0,       //!< no special value
   BLOSC2_SPECIAL_ZERO = 0x1,     //!< zero special value
   BLOSC2_SPECIAL_NAN = 0x2,      //!< NaN special value
-  BLOSC2_SPECIAL_VALUE = 0x3,    //!< generic special value
+  BLOSC2_SPECIAL_VALUE = 0x3,    //!< repeated special value
   BLOSC2_SPECIAL_UNINIT = 0x4,   //!< non initialized values
   BLOSC2_SPECIAL_LASTID = 0x4,   //!< last valid ID for special value (update this adequately)
   BLOSC2_SPECIAL_MASK = 0x7      //!< special value mask (prev IDs cannot be larger than this)
