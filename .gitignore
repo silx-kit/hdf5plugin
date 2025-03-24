@@ -1,3 +1,6 @@
+# vim temp files
+*.sw?
+
 # Prerequisites
 *.d
 
