@@ -786,6 +786,11 @@ def get_sperr_clib(field=None):
         ],
         cflags=["-std=c++20", "/std:c++20"],
     )
+
+    if sys.platform == 'win32':
+        # h5zsperr_helper.cpp is part of the plugin
+        config["macros"].append(('H5_BUILT_AS_DYNAMIC_LIB', None))
+
     if field is None:
         return 'sperr', config
     return config[field]
