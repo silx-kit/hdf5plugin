@@ -817,15 +817,32 @@ def _get_snappy_clib(field=None):
 def _get_sperr_clib(field=None):
     """sperr static lib and sperr filter C++20 source file build config"""
     sperr_dir = "src/SPERR"
-    h5z_sperr_dir = "src/H5Z-SPERR"
 
     config = dict(
-        sources=glob(f"{sperr_dir}/src/*.cpp") + [f"{h5z_sperr_dir}/src/h5zsperr_helper.cpp"],
-        include_dirs=BuildConfig.get_hdf5_include_dirs() + [f"{sperr_dir}/include", f"{h5z_sperr_dir}/include"],
+        sources=glob(f"{sperr_dir}/src/*.cpp"),
+        include_dirs=[f"{sperr_dir}/include"],
         macros=[
             ("SPERR_VERSION_MAJOR", 0),  # Check project(SPERR VERSION ... in src/SPERR/CMakeLists.txt
             ("USE_VANILLA_CONFIG", 1),
         ],
+        cflags=["-std=c++20", "/std:c++20"],
+    )
+
+    if field is None:
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
+    return config[field]
+
+
+def _get_sperr_filter_clib(field=None):
+    """sperr filter C++20 source file build config"""
+    h5z_sperr_dir = "src/H5Z-SPERR"
+
+    config = dict(
+        sources=[f"{h5z_sperr_dir}/src/h5zsperr_helper.cpp"],
+        include_dirs=BuildConfig.get_hdf5_include_dirs() + ["src/SPERR/include", f"{h5z_sperr_dir}/include"],
+        macros=[],
         cflags=["-std=c++20", "/std:c++20"],
     )
 
@@ -835,9 +852,7 @@ def _get_sperr_clib(field=None):
 
     if field is None:
         return config
-    if field in ('extra_link_args', 'libraries'):
-        return []
-    return config[field]
+    raise RuntimeError("SPERR filter C++ source lib config is not expected to be used this way")
 
 
 def _get_zfp_clib(field=None):
@@ -918,11 +933,12 @@ _EMBEDDED_CLIB_CONFIG_GETTERS = {
     "lz4": _get_lz4_clib,
     "snappy": _get_snappy_clib,
     "sperr": _get_sperr_clib,
+    "sperr_filter": _get_sperr_filter_clib,
     "zfp": _get_zfp_clib,
     "zlib": _get_zlib_clib,
     "zstd": _get_zstd_clib,
 }
-_CLIB_NAMES = {"blosc", "blosc2"} | set(_EMBEDDED_CLIB_CONFIG_GETTERS.keys())
+_CLIB_NAMES = {"blosc", "blosc2"} | set(_EMBEDDED_CLIB_CONFIG_GETTERS.keys()) - {"sperr_filter"}
 
 
 @lru_cache()
@@ -1372,7 +1388,6 @@ def _get_sperr_plugin():
                 "compactor.c",
             ]
         ),
-        sources=[f"{h5z_sperr_dir}/src/h5z-sperr.c"],
         include_dirs=get_clib_config("sperr", "include_dirs") + [f"{h5z_sperr_dir}/include"],
         extra_link_args=['-lstdc++'] + get_clib_config("sperr", "extra_link_args"),
         libraries=get_clib_config("sperr", "libraries"),
@@ -1381,7 +1396,7 @@ def _get_sperr_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['sperr'] = ("sperr",)
+PLUGIN_LIB_DEPENDENCIES['sperr'] = ("sperr", "sperr_filter")
 
 
 _EMBEDDED_PLUGIN_EXTENSIONS = {
