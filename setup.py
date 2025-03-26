@@ -48,6 +48,11 @@ from setuptools.command.build import build
 from setuptools.errors import CompileError
 from wheel.bdist_wheel import bdist_wheel
 
+try:
+    import pkgconfig
+except ImportError:
+    pkgconfig = None
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -666,7 +671,40 @@ PLUGIN_LIB_DEPENDENCIES = dict()
 
 # compression libs
 
-def get_charls_clib(field=None):
+
+def _get_bz2_clib(field=None):
+    """BZip2 static lib build config"""
+    bzip2_dir = "src/bzip2"
+
+    config = dict(
+        sources=prefix(bzip2_dir, [
+            "blocksort.c",
+            "huffman.c",
+            "crctable.c",
+            "randtable.c",
+            "compress.c",
+            "decompress.c",
+            "bzlib.c",
+        ]),
+        include_dirs=[bzip2_dir],
+        macros=[],
+        cflags=[
+            "-Wall",
+            "-Winline",
+            "-O2",
+            "-g",
+            "-D_FILE_OFFSET_BITS=64"
+        ],
+    )
+
+    if field is None:
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
+    return config[field]
+
+
+def _get_charls_clib(field=None):
     """CharLS static lib build config"""
     charls_dir = "src/charls/src"
 
@@ -678,7 +716,9 @@ def get_charls_clib(field=None):
     )
 
     if field is None:
-        return 'charls', config
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
     return config[field]
 
 
@@ -714,7 +754,7 @@ def _get_lz4_ipp_clib(field=None):
     )
 
     if field is None:
-        return 'lz4', config
+        return config
     if field == 'extra_link_args':
         return INTEL_IPP_EXTRA_LINK_ARGS
     if field == 'libraries':
@@ -723,7 +763,7 @@ def _get_lz4_ipp_clib(field=None):
     return config[field]
 
 
-def get_lz4_clib(field=None):
+def _get_lz4_clib(field=None):
     """LZ4 static lib build config
 
     If HDFPLUGIN_IPP_DIR is set, it will use a patched LZ4 library to use Intel IPP.
@@ -740,19 +780,18 @@ def get_lz4_clib(field=None):
     config = dict(
         sources=glob(f'{lz4_dir}/*.c'),
         include_dirs=[lz4_dir],
+        macros=[],
         cflags=cflags,
     )
 
     if field is None:
-        return 'lz4', config
-    if field == 'extra_link_args':
-        return []
-    if field == 'libraries':
+        return config
+    if field in ('extra_link_args', 'libraries'):
         return []
     return config[field]
 
 
-def get_snappy_clib(field=None):
+def _get_snappy_clib(field=None):
     """snappy static lib build config"""
     snappy_dir = 'src/snappy'
 
@@ -764,26 +803,46 @@ def get_snappy_clib(field=None):
             'snappy.cc',
         ]),
         include_dirs=[snappy_dir],
+        macros=[],
         cflags=['-std=c++11'],
     )
 
     if field is None:
-        return 'snappy', config
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
     return config[field]
 
 
-def get_sperr_clib(field=None):
+def _get_sperr_clib(field=None):
     """sperr static lib and sperr filter C++20 source file build config"""
     sperr_dir = "src/SPERR"
-    h5z_sperr_dir = "src/H5Z-SPERR"
 
     config = dict(
-        sources=glob(f"{sperr_dir}/src/*.cpp") + [f"{h5z_sperr_dir}/src/h5zsperr_helper.cpp"],
-        include_dirs=BuildConfig.get_hdf5_include_dirs() + [f"{sperr_dir}/include", f"{h5z_sperr_dir}/include"],
+        sources=glob(f"{sperr_dir}/src/*.cpp"),
+        include_dirs=[f"{sperr_dir}/include"],
         macros=[
             ("SPERR_VERSION_MAJOR", 0),  # Check project(SPERR VERSION ... in src/SPERR/CMakeLists.txt
             ("USE_VANILLA_CONFIG", 1),
         ],
+        cflags=["-std=c++20", "/std:c++20"],
+    )
+
+    if field is None:
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
+    return config[field]
+
+
+def _get_sperr_filter_clib(field=None):
+    """sperr filter C++20 source file build config"""
+    h5z_sperr_dir = "src/H5Z-SPERR"
+
+    config = dict(
+        sources=[f"{h5z_sperr_dir}/src/h5zsperr_helper.cpp"],
+        include_dirs=BuildConfig.get_hdf5_include_dirs() + ["src/SPERR/include", f"{h5z_sperr_dir}/include"],
+        macros=[],
         cflags=["-std=c++20", "/std:c++20"],
     )
 
@@ -792,11 +851,11 @@ def get_sperr_clib(field=None):
         config["macros"].append(('H5_BUILT_AS_DYNAMIC_LIB', None))
 
     if field is None:
-        return 'sperr', config
-    return config[field]
+        return config
+    raise RuntimeError("SPERR filter C++ source lib config is not expected to be used this way")
 
 
-def get_zfp_clib(field=None):
+def _get_zfp_clib(field=None):
     """ZFP static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
     # Use /Ob1 to fix ZFP test failing with Visual Studio 2022: MSVC 14.40.33807
@@ -813,11 +872,15 @@ def get_zfp_clib(field=None):
     )
 
     if field is None:
-        return 'zfp', config
+        return config
+    if field == 'extra_link_args':
+        return ['-fopenmp']
+    if field == 'libraries':
+        return []
     return config[field]
 
 
-def get_zlib_clib(field=None):
+def _get_zlib_clib(field=None):
     """ZLib static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
@@ -828,15 +891,18 @@ def get_zlib_clib(field=None):
     config = dict(
         sources=glob(f'{zlib_dir}/*.c'),
         include_dirs=[zlib_dir],
+        macros=[],
         cflags=cflags,
     )
 
     if field is None:
-        return 'zlib', config
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
     return config[field]
 
 
-def get_zstd_clib(field=None):
+def _get_zstd_clib(field=None):
     """zstd static lib build config"""
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
@@ -851,66 +917,136 @@ def get_zstd_clib(field=None):
         cflags=cflags,
     )
 
-    if field is None:
-        return 'zstd', config
     if field == 'extra_objects':
         return glob(f'{zstd_dir}/*/*.S') if BuildConfig.USE_BMI2 else []
+
+    if field is None:
+        return config
+    if field in ('extra_link_args', 'libraries'):
+        return []
     return config[field]
+
+
+_EMBEDDED_CLIB_CONFIG_GETTERS = {
+    "bz2": _get_bz2_clib,
+    "charls": _get_charls_clib,
+    "lz4": _get_lz4_clib,
+    "snappy": _get_snappy_clib,
+    "sperr": _get_sperr_clib,
+    "sperr_filter": _get_sperr_filter_clib,
+    "zfp": _get_zfp_clib,
+    "zlib": _get_zlib_clib,
+    "zstd": _get_zstd_clib,
+}
+_CLIB_NAMES = {"blosc", "blosc2"} | set(_EMBEDDED_CLIB_CONFIG_GETTERS.keys()) - {"sperr_filter"}
+
+
+@lru_cache()
+def get_system_clib_names():
+    """Returns the set of clib names that should not be embedded"""
+    system_clibs = set(
+        name.strip().lower()
+        for name in os.environ.get('HDF5PLUGIN_SYSTEM_LIBRARIES', '').split(',')
+        if name.strip()
+    )
+    if not system_clibs <= _CLIB_NAMES:
+        raise RuntimeError(f"Unexpected names in HDF5PLUGIN_SYSTEM_LIBRARIES: {system_clibs - _CLIB_NAMES}")
+    return system_clibs
+
+
+@lru_cache()
+def _get_clib_config_from_pkgconfig(libname):
+    if pkgconfig is None:
+        raise RuntimeError("pkgconfig is required to build against system libraries")
+    if not pkgconfig.exists(libname):
+        if pkgconfig.exists(f"lib{libname}"):
+            libname = f"lib{libname}"
+        else:
+            raise RuntimeError(f"pkgconfig: (lib){libname} not found")
+
+    include_dir = pkgconfig.variables(libname).get('includedir', None)
+
+    return {
+        'include_dirs': [include_dir] if include_dir is not None else [],
+        'extra_link_args': pkgconfig.libs(libname).split(" "),
+        'libraries': [],
+        'macros': [],
+        'extra_objects': [],
+    }
+
+
+def get_clib_config(libname, field=None):
+    """Returns the configuration or one of it's field for the given clib"""
+    if libname in get_system_clib_names():
+        return _get_clib_config_from_pkgconfig(libname)[field]
+
+    get_embedded_config = _EMBEDDED_CLIB_CONFIG_GETTERS[libname]
+    return get_embedded_config(field)
 
 
 # compression filter plugins
 
 
-def get_blosc_plugin():
+def _get_blosc_plugin():
     """blosc plugin build config
 
     Plugin from https://github.com/Blosc/hdf5-blosc
     c-blosc from https://github.com/Blosc/c-blosc
     """
-    blosc_dir = 'src/c-blosc/blosc'
     hdf5_blosc_dir = 'src/hdf5-blosc/src'
-
-    # blosc sources
-    sources = glob(f'{blosc_dir}/*.c')
-    include_dirs = ['src/c-blosc', blosc_dir]
-    define_macros = []
-    extra_link_args = []
-    libraries = []
-
-    # compression libs
-    # lz4
-    include_dirs += get_lz4_clib('include_dirs')
-    extra_link_args += get_lz4_clib('extra_link_args')
-    libraries += get_lz4_clib('libraries')
-
-    define_macros.append(('HAVE_LZ4', 1))
-
-    # snappy
-    cpp11_kwargs = {
-        'include_dirs': get_snappy_clib('include_dirs'),
-        'extra_link_args': ['-lstdc++'],
-        'define_macros': [('HAVE_SNAPPY', 1)],
-    }
-
-    # zlib
-    include_dirs += get_zlib_clib('include_dirs')
-    define_macros.append(('HAVE_ZLIB', 1))
-
-    # zstd
-    include_dirs += get_zstd_clib('include_dirs')
-    define_macros.append(('HAVE_ZSTD', 1))
+    hdf5_blosc_sources = prefix(hdf5_blosc_dir, ['blosc_filter.c', 'blosc_plugin.c'])
 
     extra_compile_args = ['-std=gnu99']  # Needed to build manylinux1 wheels
     extra_compile_args += ['-O3', '-ffast-math']
     extra_compile_args += ['/Ox', '/fp:fast']
     extra_compile_args += ['-pthread']
-    extra_link_args += ['-pthread']
+    extra_link_args = ['-pthread']
+
+    if "blosc" in get_system_clib_names():
+        return HDF5PluginExtension(
+            "hdf5plugin.plugins.libh5blosc",
+            sources=hdf5_blosc_sources,
+            include_dirs=get_clib_config("blosc", "include_dirs") + [hdf5_blosc_dir],
+            extra_compile_args=extra_compile_args,
+            extra_link_args=get_clib_config("blosc", "extra_link_args") + extra_link_args,
+            libraries=get_clib_config("blosc", "libraries"),
+        )
+
+    blosc_dir = 'src/c-blosc/blosc'
+
+    # blosc sources
+    sources = glob(f'{blosc_dir}/*.c')
+    include_dirs = ['src/c-blosc', blosc_dir]
+    define_macros = []
+    libraries = []
+
+    # compression libs
+    # lz4
+    include_dirs += get_clib_config('lz4', 'include_dirs')
+    extra_link_args += get_clib_config('lz4', 'extra_link_args')
+    libraries += get_clib_config('lz4', 'libraries')
+    define_macros.append(('HAVE_LZ4', 1))
+    # snappy
+    cpp11_kwargs = {
+        'include_dirs': get_clib_config('snappy', 'include_dirs'),
+        'extra_link_args': ['-lstdc++'],
+        'define_macros': [('HAVE_SNAPPY', 1)],
+    }
+    # zlib
+    include_dirs += get_clib_config('zlib', 'include_dirs')
+    extra_link_args += get_clib_config('zlib', 'extra_link_args')
+    libraries += get_clib_config('zlib', 'libraries')
+    define_macros.append(('HAVE_ZLIB', 1))
+    # zstd
+    include_dirs += get_clib_config('zstd', 'include_dirs')
+    extra_link_args += get_clib_config('zstd', 'extra_link_args')
+    libraries += get_clib_config('zstd', 'libraries')
+    define_macros.append(('HAVE_ZSTD', 1))
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc",
-        sources=sources + prefix(
-            hdf5_blosc_dir, ['blosc_filter.c', 'blosc_plugin.c']),
-        extra_objects=get_zstd_clib('extra_objects'),
+        sources=sources + hdf5_blosc_sources,
+        extra_objects=get_clib_config('zstd', 'extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -919,22 +1055,42 @@ def get_blosc_plugin():
         sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
         avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
         cpp11=cpp11_kwargs,
-    )
+)
 
 
-PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib', 'zstd'
+if 'blosc' in get_system_clib_names():
+    PLUGIN_LIB_DEPENDENCIES['blosc'] = ()
+else:
+    PLUGIN_LIB_DEPENDENCIES['blosc'] = 'snappy', 'lz4', 'zlib', 'zstd'
 
 
-def get_blosc2_plugin():
+def _get_blosc2_plugin():
     """blosc2 plugin build config
 
     Source from PyTables and c-blosc2
     """
     hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src'
+    hdf5_blosc2_sources = prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c'])
+
+    extra_compile_args = ['-O3', '-std=gnu99']
+    extra_compile_args += ['/Ox']
+    extra_compile_args += ['-pthread']
+    extra_link_args = ['-pthread']
+
+    if "blosc2" in get_system_clib_names():
+        return HDF5PluginExtension(
+            "hdf5plugin.plugins.libh5blosc2",
+            sources=hdf5_blosc2_sources,
+            include_dirs=get_clib_config("blosc2", "include_dirs") + [hdf5_blosc2_dir],
+            extra_compile_args=extra_compile_args,
+            extra_link_args=get_clib_config("blosc2", "extra_link_args") + extra_link_args,
+            libraries=get_clib_config("blosc2", "libraries"),
+        )
+
+    # blosc sources
     blosc2_dir = 'src/c-blosc2'
     plugins_dir = f'{blosc2_dir}/plugins'
 
-    # blosc sources
     sources = glob(f'{blosc2_dir}/blosc/*.c')
     sources += [  # Add embedded codecs, filters and tuners
         src_file
@@ -942,14 +1098,12 @@ def get_blosc2_plugin():
         if not os.path.basename(src_file).startswith("test")
     ]
     sources += glob(f'{plugins_dir}/codecs/zfp/src/*.c')  # Add ZFP embedded sources
-
     include_dirs = [
         blosc2_dir,
         f'{blosc2_dir}/blosc',
         f'{blosc2_dir}/include',
         f'{blosc2_dir}/plugins/codecs/zfp/include',
     ]
-
     define_macros = [('HAVE_PLUGINS', 1)]
     if platform.machine() == 'ppc64le':
         define_macros.append(('SHUFFLE_ALTIVEC_ENABLED', 1))
@@ -960,44 +1114,38 @@ def get_blosc2_plugin():
         define_macros.append(('SHUFFLE_AVX512_ENABLED', 1))
         define_macros.append(('SHUFFLE_NEON_ENABLED', 1))
 
-    extra_compile_args = []
-    extra_link_args = []
     libraries = []
 
     if HostConfig.ARCH == 'ARM_8':
         extra_compile_args += ['-flax-vector-conversions']
     if HostConfig.ARCH == 'ARM_7':
         extra_compile_args += ['-mfpu=neon', '-flax-vector-conversions']
-
     # compression libs
     # lz4
-    include_dirs += get_lz4_clib('include_dirs')
+    include_dirs += get_clib_config('lz4', 'include_dirs')
     if BuildConfig.INTEL_IPP_DIR is None:
-        extra_link_args += get_lz4_clib('extra_link_args')
-        libraries += get_lz4_clib('libraries')
+        extra_link_args += get_clib_config('lz4', 'extra_link_args')
+        libraries += get_clib_config('lz4', 'libraries')
     else:
         include_dirs += INTEL_IPP_INCLUDE_DIRS
         extra_link_args += INTEL_IPP_EXTRA_LINK_ARGS
         libraries += INTEL_IPP_LIBRARIES
         define_macros.append(('HAVE_IPP', 1))
-
     # zlib
-    include_dirs += get_zlib_clib('include_dirs')
+    include_dirs += get_clib_config('zlib', 'include_dirs')
+    extra_link_args += get_clib_config('zlib', 'extra_link_args')
+    libraries += get_clib_config('zlib', 'libraries')
     define_macros.append(('HAVE_ZLIB', 1))
-
     # zstd
-    include_dirs += get_zstd_clib('include_dirs')
+    include_dirs += get_clib_config('zstd', 'include_dirs')
+    extra_link_args += get_clib_config('zstd', 'extra_link_args')
+    libraries += get_clib_config('zstd', 'libraries')
     define_macros.append(('HAVE_ZSTD', 1))
-
-    extra_compile_args += ['-O3', '-std=gnu99']
-    extra_compile_args += ['/Ox']
-    extra_compile_args += ['-pthread']
-    extra_link_args += ['-pthread']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5blosc2",
-        sources=sources + prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c']),
-        extra_objects=get_zstd_clib('extra_objects'),
+        sources=sources + hdf5_blosc2_sources,
+        extra_objects=get_clib_config('zstd', 'extra_objects'),
         include_dirs=include_dirs + [hdf5_blosc2_dir],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
@@ -1008,25 +1156,30 @@ def get_blosc2_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['blosc2'] = 'lz4', 'zlib', 'zstd'
+if 'blosc2' in get_system_clib_names():
+    PLUGIN_LIB_DEPENDENCIES['blosc2'] = ()
+else:
+    PLUGIN_LIB_DEPENDENCIES['blosc2'] = 'lz4', 'zlib', 'zstd'
 
 
-def get_zstandard_plugin():
+def _get_zstandard_plugin():
     """HDF5Plugin-Zstandard plugin build config"""
     zstandard_dir = 'src/HDF5Plugin-Zstandard'
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zstd",
         sources=[f'{zstandard_dir}/zstd_h5plugin.c'],
-        extra_objects=get_zstd_clib('extra_objects'),
-        include_dirs=[zstandard_dir] + get_zstd_clib('include_dirs'),
+        extra_objects=get_clib_config('zstd', 'extra_objects'),
+        include_dirs=[zstandard_dir] + get_clib_config('zstd', 'include_dirs'),
+        extra_link_args=get_clib_config('zstd', 'extra_link_args'),
+        libraries=get_clib_config('zstd', 'libraries'),
     )
 
 
 PLUGIN_LIB_DEPENDENCIES['zstd'] = ('zstd',)
 
 
-def get_bitshuffle_plugin():
+def _get_bitshuffle_plugin():
     """bitshuffle (+lz4 or zstd) plugin build config
 
     Plugins from https://github.com/kiyo-masui/bitshuffle
@@ -1050,19 +1203,19 @@ def get_bitshuffle_plugin():
             "bitshuffle_core.c",
             "iochain.c",
         ]),
-        extra_objects=get_zstd_clib('extra_objects'),
-        include_dirs=[bithsuffle_dir] + get_lz4_clib('include_dirs') + get_zstd_clib('include_dirs'),
+        extra_objects=get_clib_config('zstd', 'extra_objects'),
+        include_dirs=[bithsuffle_dir] + get_clib_config('lz4', 'include_dirs') + get_clib_config('zstd', 'include_dirs'),
         define_macros=define_macros,
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args + get_lz4_clib('extra_link_args'),
-        libraries=get_lz4_clib('libraries')
+        extra_link_args=extra_link_args + get_clib_config('lz4', 'extra_link_args') + get_clib_config('zstd', 'extra_link_args'),
+        libraries=get_clib_config('lz4', 'libraries') + get_clib_config('zstd', 'libraries'),
     )
 
 
 PLUGIN_LIB_DEPENDENCIES['bshuf'] = ('lz4', 'zstd')
 
 
-def get_lz4_plugin():
+def _get_lz4_plugin():
     """lz4 plugin build config
 
     Source from https://github.com/nexusformat/HDF5-External-Filter-Plugins
@@ -1073,14 +1226,14 @@ def get_lz4_plugin():
         extra_compile_args = []
 
     libraries = ['Ws2_32'] if sys.platform == 'win32' else []
-    libraries.extend(get_lz4_clib('libraries'))
+    libraries.extend(get_clib_config('lz4', 'libraries'))
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5lz4",
         sources=['src/LZ4/H5Zlz4.c', 'src/LZ4/lz4_h5plugin.c'],
-        include_dirs=get_lz4_clib('include_dirs'),
+        include_dirs=get_clib_config('lz4', 'include_dirs'),
         extra_compile_args=extra_compile_args,
-        extra_link_args=get_lz4_clib('extra_link_args'),
+        extra_link_args=get_clib_config('lz4', 'extra_link_args'),
         libraries=libraries,
     )
 
@@ -1088,39 +1241,23 @@ def get_lz4_plugin():
 PLUGIN_LIB_DEPENDENCIES['lz4'] = ('lz4',)
 
 
-def get_bzip2_plugin():
+def _get_bzip2_plugin():
     """BZip2 plugin build config"""
-    bzip2_dir = "src/bzip2"
-
-    bzip2_extra_compile_args = [
-        "-Wall",
-        "-Winline",
-        "-O2",
-        "-g",
-        "-D_FILE_OFFSET_BITS=64"
-    ]
-
-    sources = ['src/PyTables/src/H5Zbzip2.c', 'src/H5Zbzip2_plugin.c']
-    sources += prefix(bzip2_dir, [
-        "blocksort.c",
-        "huffman.c",
-        "crctable.c",
-        "randtable.c",
-        "compress.c",
-        "decompress.c",
-        "bzlib.c",
-    ])
-
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5bzip2",
-        sources=sources,
-        include_dirs=['src/PyTables/src/', bzip2_dir],
+        sources=['src/PyTables/src/H5Zbzip2.c', 'src/H5Zbzip2_plugin.c'],
+        include_dirs=['src/PyTables/src/'] + get_clib_config('bz2', 'include_dirs'),
         define_macros=[('HAVE_BZ2_LIB', 1)],
-        extra_compile_args=bzip2_extra_compile_args,
+        extra_compile_args=[],
+        extra_link_args=get_clib_config('bz2', 'extra_link_args'),
+        libraries=get_clib_config('bz2', 'libraries'),
     )
 
 
-def get_fcidecomp_plugin():
+PLUGIN_LIB_DEPENDENCIES['bzip2'] = ('bz2',)
+
+
+def _get_fcidecomp_plugin():
     """FCIDECOMP plugin build config"""
     fcidecomp_dir = 'src/fcidecomp/src/fcidecomp'
 
@@ -1128,54 +1265,66 @@ def get_fcidecomp_plugin():
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
     extra_link_args = ['-lstdc++', '-fopenmp']
 
+    macros = [('LOGGING', 1)]
+    if 'charls' not in get_system_clib_names():
+        macros.append(('CHARLS_STATIC', 1))
+
+    charls_include_dirs = get_clib_config('charls', 'include_dirs')
+    # fcidecomp includes "charls.h" instead of "charls/charls.h"
+    charls_include_dirs += [os.path.join(d, "charls") for d in get_clib_config('charls', 'include_dirs')]
+
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5fcidecomp",
         sources=glob(f"{fcidecomp_dir}/fcicomp-*/src/*.c"),
-        include_dirs=glob(f"{fcidecomp_dir}/fcicomp-*/include") + get_charls_clib('include_dirs'),
+        include_dirs=glob(f"{fcidecomp_dir}/fcicomp-*/include") + charls_include_dirs,
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
+        extra_link_args=extra_link_args + get_clib_config('charls', 'extra_link_args'),
+        libraries=get_clib_config('charls', 'libraries'),
         cpp14_required=True,
-        define_macros=[('CHARLS_STATIC', 1), ('LOGGING', 1)],
+        define_macros=macros,
     )
 
 
 PLUGIN_LIB_DEPENDENCIES['fcidecomp'] = ('charls',)
 
 
-def get_h5zfp_plugin():
+def _get_h5zfp_plugin():
     """H5Z-ZFP plugin build config"""
     h5zfp_dir = 'src/H5Z-ZFP/src'
 
-    extra_compile_args = ['-O3', '-ffast-math', '-std=c99', '-fopenmp']
-    extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
-    extra_link_args = ['-fopenmp']
+    extra_compile_args = ['-O3', '-ffast-math', '-std=c99']
+    extra_compile_args += ['/Ox', '/fp:fast']
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zfp",
         sources=glob(f"{h5zfp_dir}/*.c"),
-        include_dirs=[f"{h5zfp_dir}/src"] + get_zfp_clib('include_dirs'),
+        include_dirs=[f"{h5zfp_dir}/src"] + get_clib_config('zfp', 'include_dirs'),
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
+        extra_link_args=get_clib_config('zfp', 'extra_link_args'),
+        libraries=get_clib_config('zfp', 'libraries'),
     )
 
 
 PLUGIN_LIB_DEPENDENCIES['zfp'] = ('zfp',)
 
 
-def get_sz_plugin():
+def _get_sz_plugin():
     """SZ library and its hdf5 filter plugin build config"""
     sz_dir = "src/SZ/sz"
     h5zsz_dir = "src/SZ/hdf5-filter/H5Z-SZ"
 
     extra_compile_args = ['-O3', '-std=c99', '-fopenmp']
     extra_compile_args += ['/Ox', '/openmp']
+
     extra_link_args = ['-fopenmp', "-lm"]
+    extra_link_args += get_clib_config('zlib', 'extra_link_args')
+    extra_link_args += get_clib_config('zstd', 'extra_link_args')
 
     include_dirs = [f'{h5zsz_dir}/include']
     include_dirs += [sz_dir, f"{sz_dir}/include"]
     include_dirs += glob('src/SZ_extra/')
-    include_dirs += get_zlib_clib('include_dirs')
-    include_dirs += get_zstd_clib('include_dirs')
+    include_dirs += get_clib_config('zlib', 'include_dirs')
+    include_dirs += get_clib_config('zstd', 'include_dirs')
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5sz",
@@ -1183,14 +1332,15 @@ def get_sz_plugin():
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        extra_objects=get_zstd_clib('extra_objects'),
+        libraries=get_clib_config('zlib', 'libraries') + get_clib_config('zstd', 'libraries'),
+        extra_objects=get_clib_config('zstd', 'extra_objects'),
     )
 
 
 PLUGIN_LIB_DEPENDENCIES['sz'] = ('zlib', 'zstd')
 
 
-def get_sz3_plugin():
+def _get_sz3_plugin():
     # SZ3 library and its hdf5 filter
     sz3_dir = "src/SZ3"
     h5z_sz3_dir = "src/SZ3/tools/H5Z-SZ3"
@@ -1204,7 +1354,7 @@ def get_sz3_plugin():
         # provide dummy omp.h
         include_dirs.append("src/SZ3_extra/darwin")
     include_dirs.append(f"{h5z_sz3_dir}/include")
-    include_dirs += get_zstd_clib('include_dirs')
+    include_dirs += get_clib_config('zstd', 'include_dirs')
 
     extra_compile_args = ['-std=c++14', '-O3', '-ffast-math', '-fopenmp']
     extra_compile_args += ['/Ox', '/fp:fast', '/openmp']
@@ -1213,10 +1363,11 @@ def get_sz3_plugin():
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5sz3",
         sources=[f"{h5z_sz3_dir}/src/H5Z_SZ3.cpp"],
-        extra_objects=get_zstd_clib('extra_objects'),
+        extra_objects=get_clib_config('zstd', 'extra_objects'),
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
+        extra_link_args=extra_link_args + get_clib_config('zstd', 'extra_link_args'),
+        libraries=get_clib_config('zstd', 'libraries'),
         cpp11_required=True,
     )
 
@@ -1224,7 +1375,7 @@ def get_sz3_plugin():
 PLUGIN_LIB_DEPENDENCIES['sz3'] = ('zstd',)
 
 
-def get_sperr_plugin():
+def _get_sperr_plugin():
     h5z_sperr_dir = "src/H5Z-SPERR"
 
     return HDF5PluginExtension(
@@ -1237,18 +1388,39 @@ def get_sperr_plugin():
                 "compactor.c",
             ]
         ),
-        include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
-        extra_link_args=['-lstdc++'],
-        define_macros=get_sperr_clib("macros"),
+        include_dirs=get_clib_config("sperr", "include_dirs") + [f"{h5z_sperr_dir}/include"],
+        extra_link_args=['-lstdc++'] + get_clib_config("sperr", "extra_link_args"),
+        libraries=get_clib_config("sperr", "libraries"),
+        define_macros=get_clib_config("sperr", "macros"),
         cpp20_required=True,
     )
 
 
-PLUGIN_LIB_DEPENDENCIES['sperr'] = ("sperr",)
+PLUGIN_LIB_DEPENDENCIES['sperr'] = ("sperr", "sperr_filter")
 
 
-def apply_filter_strip(libraries, extensions, dependencies):
-    """Strip C libraries and extensions according to HDF5PLUGIN_STRIP env. var."""
+_EMBEDDED_PLUGIN_EXTENSIONS = {
+    "blosc": _get_blosc_plugin,
+    "blosc2": _get_blosc2_plugin,
+    "bshuf": _get_bitshuffle_plugin,
+    "bzip2": _get_bzip2_plugin,
+    "fcidecomp": _get_fcidecomp_plugin,
+    "lz4": _get_lz4_plugin,
+    "sperr": _get_sperr_plugin,
+    "sz": _get_sz_plugin,
+    "sz3": _get_sz3_plugin,
+    "zfp": _get_h5zfp_plugin,
+    "zstd": _get_zstandard_plugin,
+}
+
+PLUGIN_NAMES = set(_EMBEDDED_PLUGIN_EXTENSIONS.keys())
+
+
+def get_libraries_and_extensions():
+    """Returns lists of static libraries and extensions to build.
+
+    Strip libraries and extensions according to HDF5PLUGIN_STRIP env. var.
+    """
     stripped_filters = set(
         name.strip().lower()
         for name in os.environ.get('HDF5PLUGIN_STRIP', '').split(',')
@@ -1258,70 +1430,47 @@ def apply_filter_strip(libraries, extensions, dependencies):
     if 'all' in stripped_filters:
         return [], []
 
+    if not stripped_filters <= PLUGIN_NAMES:
+        raise ValueError(f"Unexpected names in HDF5PLUGIN_STRIP: {stripped_filters - PLUGIN_NAMES}")
+
     # Filter out library that won't be used because of stripped filters
     lib_names = set(
         itertools.chain.from_iterable(
-            lib_names for filter_name, lib_names in dependencies.items()
+            lib_names for filter_name, lib_names in PLUGIN_LIB_DEPENDENCIES.items()
             if filter_name not in stripped_filters
         )
     )
 
+    # Filter-out used system libraries
+    # Add a prefix to library names to prevent the compiler to use the dynamic library if it exists
     libraries = [
-        lib for lib in libraries if lib[0] in lib_names
+        (f"hdf5plugin_static_clib_{name}", get_clib_config(name))
+        for name in lib_names if name not in get_system_clib_names()
     ]
 
-    # Filter out stripped filters
-    extensions = [
-        ext for ext in extensions
-        if isinstance(ext, HDF5PluginExtension) and ext.hdf5_plugin_name not in stripped_filters
-    ]
+    # Create Python extensions
+    embedded_extension_names = PLUGIN_NAMES - stripped_filters
+    extensions = [_EMBEDDED_PLUGIN_EXTENSIONS[name]() for name in embedded_extension_names]
+
+    if extensions and not sys.platform == 'win32':
+        # Add hdf5 dynamic loading lib
+        libraries.append(
+            (
+                'hdf5_dl',
+                {
+                    'sources': ['src/hdf5_dl.c'],
+                    'include_dirs': BuildConfig.get_hdf5_include_dirs(),
+                    'macros': [('H5_USE_18_API', None)],
+                    'cflags': [],
+                }
+            )
+        )
+
     return libraries, extensions
 
 
-library_list = [
-    get_charls_clib(),
-    get_lz4_clib(),
-    get_snappy_clib(),
-    get_sperr_clib(),
-    get_zfp_clib(),
-    get_zlib_clib(),
-    get_zstd_clib(),
-]
-libraries, extensions = apply_filter_strip(
-    libraries=library_list,
-    extensions=[
-        get_bzip2_plugin(),
-        get_lz4_plugin(),
-        get_bitshuffle_plugin(),
-        get_blosc_plugin(),
-        get_blosc2_plugin(),
-        get_fcidecomp_plugin(),
-        get_h5zfp_plugin(),
-        get_zstandard_plugin(),
-        get_sz_plugin(),
-        get_sz3_plugin(),
-        get_sperr_plugin(),
-    ],
-    dependencies=PLUGIN_LIB_DEPENDENCIES,
-)
-
-
-if extensions and not sys.platform == 'win32':
-    # Add hdf5 dynamic loading lib
-    libraries.append(
-        (
-            'hdf5_dl',
-            {
-                'sources': ['src/hdf5_dl.c'],
-                'include_dirs': BuildConfig.get_hdf5_include_dirs(),
-                'macros': [('H5_USE_18_API', None)],
-                'cflags': [],
-            }
-        )
-    )
-
-
 if __name__ == "__main__":
+    libraries, extensions = get_libraries_and_extensions()
     setup(
         cmdclass=dict(
             bdist_wheel=BDistWheel,
