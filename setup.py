@@ -773,18 +773,24 @@ def get_snappy_clib(field=None):
 
 
 def get_sperr_clib(field=None):
-    """sperr static lib build config"""
+    """sperr static lib and sperr filter C++20 source file build config"""
     sperr_dir = "src/SPERR"
+    h5z_sperr_dir = "src/H5Z-SPERR"
 
     config = dict(
-        sources=glob(f"{sperr_dir}/src/*.cpp"),
-        include_dirs=[f"{sperr_dir}/include"],
+        sources=glob(f"{sperr_dir}/src/*.cpp") + [f"{h5z_sperr_dir}/src/h5zsperr_helper.cpp"],
+        include_dirs=BuildConfig.get_hdf5_include_dirs() + [f"{sperr_dir}/include", f"{h5z_sperr_dir}/include"],
         macros=[
             ("SPERR_VERSION_MAJOR", 0),  # Check project(SPERR VERSION ... in src/SPERR/CMakeLists.txt
             ("USE_VANILLA_CONFIG", 1),
         ],
         cflags=["-std=c++20", "/std:c++20"],
     )
+
+    if sys.platform == 'win32':
+        # h5zsperr_helper.cpp is part of the plugin
+        config["macros"].append(('H5_BUILT_AS_DYNAMIC_LIB', None))
+
     if field is None:
         return 'sperr', config
     return config[field]
@@ -1223,7 +1229,14 @@ def get_sperr_plugin():
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5sperr",
-        sources=[f"{h5z_sperr_dir}/src/h5z-sperr.c"],
+        sources=prefix(
+            f"{h5z_sperr_dir}/src",
+            [
+                "h5z-sperr.c",
+                "icecream.c",
+                "compactor.c",
+            ]
+        ),
         include_dirs=get_sperr_clib("include_dirs") + [f"{h5z_sperr_dir}/include"],
         extra_link_args=['-lstdc++'],
         define_macros=get_sperr_clib("macros"),

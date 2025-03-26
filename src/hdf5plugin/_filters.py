@@ -487,6 +487,8 @@ class Sperr(h5py.filters.FilterRefBase):
 
     If the ``swap`` argument is True (False by default) a "rank order swap" pre-filtering is performed.
 
+    The ``missing_value_mode`` argument indicates which value is used to indicate missing data.
+
     For more details, see `H5Z-SPERR <https://github.com/NCAR/H5Z-SPERR>`_.
     """
     filter_name = "sperr"
@@ -495,14 +497,30 @@ class Sperr(h5py.filters.FilterRefBase):
     _FRACTIONAL_BITS = 16
     _INTEGER_BITS = 12
 
+    NO_MISSING = 0
+    """No missing value."""
+
+    MISSING_NAN = 1
+    """Any NAN is a missing value."""
+
+    MISSING_1E35 = 2
+    """Any value where abs(value) >= 1e35 is a missing value.
+
+    The first occurance of a value with a magnitude larger than 1e35 will be used to fill in all missing value locations.
+    """
+
     def __init__(
             self,
             rate: float | None = None,
             peak_signal_to_noise_ratio: float | None = None,
             absolute: float | None = None,
-            swap: bool = False):
+            swap: bool = False,
+            missing_value_mode: int = NO_MISSING,
+        ):
         if (rate, peak_signal_to_noise_ratio, absolute).count(None) < 2:
             raise TypeError("hdf5plugin.Sperr() takes at most one not None argument")
+        if missing_value_mode not in (self.NO_MISSING, self.MISSING_NAN, self.MISSING_1E35):
+            raise ValueError(f"Unsupported missing_value_mode: {missing_value_mode}")
 
         if peak_signal_to_noise_ratio is not None:
             assert peak_signal_to_noise_ratio > 0
@@ -517,10 +535,10 @@ class Sperr(h5py.filters.FilterRefBase):
             mode = 1
             quality = 16 if rate is None else rate
 
-        self.filter_options = self.__pack_options(mode, quality, swap)
+        self.filter_options = self.__pack_options(mode, quality, swap, missing_value_mode)
 
     @classmethod
-    def __pack_options(cls, mode: int, quality: float, swap: bool) -> tuple[int]:
+    def __pack_options(cls, mode: int, quality: float, swap: bool, missing_value_mode: int) -> tuple[int]:
         assert mode in (1, 2, 3)
         assert quality > 0
 
@@ -548,7 +566,7 @@ class Sperr(h5py.filters.FilterRefBase):
         if swap:
             ret |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 3)
 
-        return (ret,)
+        return ret, missing_value_mode
 
 
 class SZ(h5py.filters.FilterRefBase):

@@ -269,6 +269,8 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         tests = [
             {'lossless': False, 'rate': 16},
             {'lossless': False, 'rate': 16, 'swap': True},
+            {'lossless': False, 'rate': 16, 'swap': True, 'missing_value_mode': hdf5plugin.Sperr.MISSING_NAN},
+            {'lossless': False, 'rate': 16, 'swap': True, 'missing_value_mode': hdf5plugin.Sperr.MISSING_1E35},
             {'lossless': False, 'peak_signal_to_noise_ratio': 1e-4},
             {'lossless': False, 'peak_signal_to_noise_ratio': 1e-4, 'swap': True},
             {'lossless': False, 'absolute': 1e-4},
