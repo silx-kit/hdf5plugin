@@ -91,7 +91,7 @@ static inline int32_t sw32_(const void* pa) {
 
   bool little_endian = is_little_endian();
   if (little_endian) {
-    idest = *(int32_t *)pa;
+    memcpy(&idest, pa, sizeof(idest));
   }
   else {
 #if defined (__GNUC__)
@@ -116,7 +116,7 @@ static inline void _sw32(void* dest, int32_t a) {
 
   bool little_endian = is_little_endian();
   if (little_endian) {
-    *(int32_t *)dest_ = a;
+    memcpy(dest_, &a, sizeof(a));;
   }
   else {
 #if defined (__GNUC__)
@@ -280,7 +280,7 @@ static inline void* load_lib(char *plugin_name, char *libpath) {
         return loaded_lib;
     } else {
 #if defined(_WIN32)
-        BLOSC_TRACE_INFO("Failed to load %s directly, error: %s\n", libpath, GetLastError());
+        BLOSC_TRACE_INFO("Failed to load %s directly, error: %lu\n", libpath, GetLastError());
 #else
         BLOSC_TRACE_INFO("Failed to load %s directly, error: %s\n", libpath, dlerror());
 #endif
