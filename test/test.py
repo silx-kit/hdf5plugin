@@ -145,22 +145,37 @@ class TestHDF5PluginRead(unittest.TestCase):
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SPERR_ID),
                          "Sperr filter not available")
-    def testSperr(self):
-        """Test reading Sperr compressed data"""
+    def testSperrV0_1(self):
+        """Test reading Sperr compressed data with v0.1 of the filter"""
         dirname = os.path.abspath(os.path.dirname(__file__))
-        for fname in ["sperr.h5"]:
-            fname = os.path.join(dirname, fname)
-            self.assertTrue(os.path.exists(fname),
-                            "Cannot find %s file" % fname)
-            with h5py.File(fname, "r") as h5:
-                compressed = h5["f64_sperr"][()]
-                original = h5["f64_original"][()]
-            self.assertTrue(original.shape == compressed.shape,
-                            "Incorrect shape")
-            self.assertTrue(original.dtype == compressed.dtype,
-                            "Incorrect dtype")
-            self.assertTrue(numpy.allclose(original, compressed, atol=1e-3),
-                            "Values should be close")
+        fname = os.path.join(dirname, "sperr_v0.1.h5")
+        self.assertTrue(os.path.exists(fname),
+                        "Cannot find %s file" % fname)
+        with h5py.File(fname, "r") as h5:
+            compressed = h5["f64_sperr"][()]
+            original = h5["f64_original"][()]
+        self.assertTrue(original.shape == compressed.shape,
+                        "Incorrect shape")
+        self.assertTrue(original.dtype == compressed.dtype,
+                        "Incorrect dtype")
+        self.assertTrue(numpy.allclose(original, compressed, atol=1e-3),
+                        "Values should be close")
+
+    @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SPERR_ID),
+                         "Sperr filter not available")
+    def testSperrV0_2MissingValue(self):
+        """Test reading Sperr compressed data with NaN values"""
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        fname = os.path.join(dirname, "sperr_v0.2_missing_val.h5")
+        self.assertTrue(os.path.exists(fname),
+                        "Cannot find %s file" % fname)
+        with h5py.File(fname, "r") as h5:
+            compressed = h5["f64_sperr"][()]
+        self.assertTrue(compressed.shape == (128, 64), "Incorrect shape")
+        self.assertTrue(compressed.dtype == numpy.float64, "Incorrect dtype")
+        self.assertTrue(numpy.isnan(compressed[0, 1]))
+        self.assertTrue(numpy.isnan(compressed[0, 10]))
+        self.assertTrue(numpy.isnan(compressed[1, 36]))
 
     @unittest.skipUnless(h5py.h5z.filter_avail(hdf5plugin.SZ_ID),
                          "SZ filter not available")
