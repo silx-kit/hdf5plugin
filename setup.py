@@ -424,11 +424,9 @@ build_config = HDF5PluginBuildConfig(**{build_config})
 
     def has_config_changed(self) -> bool:
         """Returns whether config file needs to be changed or not."""
-        try:
-            return self.__config_file.read_text() != self.get_config_string()
-        except:  # noqa
-            pass
-        return True
+        if not self.__config_file.exists():
+            return True
+        return self.__config_file.read_text() != self.get_config_string()
 
     def save_config(self) -> None:
         """Save config as a dict in a python file"""
