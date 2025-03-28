@@ -103,8 +103,10 @@ class Bitshuffle(h5py.filters.FilterRefBase):
 
     def __init__(self, nelems=0, cname=None, clevel=3, lz4=None):
         nelems = int(nelems)
-        assert nelems % 8 == 0
-        assert clevel <= 22
+        if nelems % 8 != 0:
+            raise ValueError("nelems must be a multiple of 8")
+        if clevel > 22:
+            raise ValueError("clevel must be below or equal to 22")
 
         if lz4 is not None:
             if cname is not None and lz4 is not False:
@@ -180,8 +182,10 @@ class Blosc(h5py.filters.FilterRefBase):
     def __init__(self, cname='lz4', clevel=5, shuffle=SHUFFLE):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
-        assert 0 <= clevel <= 9
-        assert shuffle in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE)
+        if not 0 <= clevel <= 9:
+            raise ValueError("clevel must be in the range [0, 9]")
+        if shuffle not in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE):
+            raise ValueError(f"shuffle={shuffle} is not supported")
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
 
 
@@ -240,8 +244,10 @@ class Blosc2(h5py.filters.FilterRefBase):
     def __init__(self, cname='blosclz', clevel=5, filters=SHUFFLE):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
-        assert 0 <= clevel <= 9
-        assert filters in (self.NOFILTER, self.SHUFFLE, self.BITSHUFFLE, self.DELTA, self.TRUNC_PREC)
+        if not 0 <= clevel <= 9:
+            raise ValueError("clevel must be in the range [0, 9]")
+        if filters not in (self.NOFILTER, self.SHUFFLE, self.BITSHUFFLE, self.DELTA, self.TRUNC_PREC):
+            raise ValueError(f"filters={filters} is not supported")
         self.filter_options = (0, 0, 0, 0, clevel, filters, compression)
 
 
@@ -264,7 +270,8 @@ class BZip2(h5py.filters.FilterRefBase):
 
     def __init__(self, blocksize=9) -> None:
         blocksize = int(blocksize)
-        assert 1 <= blocksize <= 9
+        if not 1 <= blocksize <= 9:
+            raise ValueError("blocksize must be in the range [1, 9]")
         self.filter_options = (blocksize,)
 
 
@@ -311,7 +318,8 @@ class LZ4(h5py.filters.FilterRefBase):
 
     def __init__(self, nbytes=0):
         nbytes = int(nbytes)
-        assert 0 <= nbytes <= 0x7E000000
+        if not 0 <= nbytes <= 0x7E000000:
+            raise ValueError("clevel must be in the range [0, 2113929216]")
         self.filter_options = (nbytes,)
 
 
@@ -523,15 +531,18 @@ class Sperr(h5py.filters.FilterRefBase):
             raise ValueError(f"Unsupported missing_value_mode: {missing_value_mode}")
 
         if peak_signal_to_noise_ratio is not None:
-            assert peak_signal_to_noise_ratio > 0
+            if peak_signal_to_noise_ratio <= 0:
+                raise ValueError("peak_signal_to_noise_ratio must be strictly positive")
             mode = 2
             quality = peak_signal_to_noise_ratio
         elif absolute is not None:
-            assert absolute > 0
+            if absolute <= 0:
+                raise ValueError("absolute must be strictly positive")
             mode = 3
             quality = absolute
         else:
-            assert rate is None or 0 < rate < 64
+            if rate is not None and not 0 < rate < 64:
+                raise ValueError("rate must be None or in the range ]0, 64[")
             mode = 1
             quality = 16 if rate is None else rate
 
@@ -539,8 +550,10 @@ class Sperr(h5py.filters.FilterRefBase):
 
     @classmethod
     def __pack_options(cls, mode: int, quality: float, swap: bool, missing_value_mode: int) -> tuple[int]:
-        assert mode in (1, 2, 3)
-        assert quality > 0
+        if mode not in (1, 2, 3):
+            raise ValueError("mode must be 1, 2 or 3")
+        if quality <= 0:
+            raise ValueError("quality must be strictly positive")
 
         if mode in (1, 2):
             ret = int(round(quality * (1 << cls._FRACTIONAL_BITS)))
@@ -748,7 +761,8 @@ class Zstd(h5py.filters.FilterRefBase):
     filter_id = ZSTD_ID
 
     def __init__(self, clevel=3):
-        assert 1 <= clevel <= 22
+        if not 1 <= clevel <= 22:
+            raise ValueError("clevel must be in the range [1, 22]")
         self.filter_options = (clevel,)
 
 

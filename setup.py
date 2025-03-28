@@ -349,7 +349,8 @@ class BuildConfig:
         It first checks if the corresponding HDF5PLUGIN_* environment variable is set.
         If it is not set, it checks if both the compiler and the host support the feature.
         """
-        assert feature in ("cpp11", "cpp14", "cpp20", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
+        if feature not in ("cpp11", "cpp14", "cpp20", "sse2", "ssse3", "avx2", "avx512", "openmp", "native"):
+            raise ValueError("feature is not supported")
         try:
             return os.environ[f"HDF5PLUGIN_{feature.upper()}"] == "True"
         except KeyError:
@@ -656,7 +657,8 @@ class HDF5PluginExtension(Extension):
     def hdf5_plugin_name(self):
         """Return HDF5 plugin short name"""
         module_name = self.name.split('.')[-1]
-        assert module_name.startswith('libh5')
+        if not module_name.startswith('libh5'):
+            raise RuntimeError("Module name must start with libh5")
         return module_name[5:]  # Strip libh5
 
 
@@ -744,7 +746,8 @@ if BuildConfig.INTEL_IPP_DIR is not None:
 
 def _get_lz4_ipp_clib(field=None):
     """LZ4 static lib using Intel IPP build config"""
-    assert BuildConfig.INTEL_IPP_DIR is not None
+    if BuildConfig.INTEL_IPP_DIR is None:
+        raise RuntimeError("HDF5PLUGIN_INTEL_IPP_DIR env. var. must be set")
 
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
