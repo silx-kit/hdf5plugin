@@ -1,3 +1,20 @@
+5.1.0: 31/04/2025
+-----------------
+
+- Compression filters and libraries:
+
+  * Updated **bitshuffle** filter (v0.5.2) (PR #334)
+  * Updated **h5z-sperr** filter (v0.2.3) (PR #335, #336)
+  * Updated **c-blosc2** compression library (v2.17.1) (PR #334, #337)
+
+- Build:
+
+  * Added ``HDF5PLUGIN_SYSTEM_LIBRARIES`` environment variable to build filters with system libraries (PR #333)
+  * Fixed ``HDF5PLUGIN_STRIP=all`` environment variable to support missing folders (PR #331)
+
+- Updated documentation (PR #323, #338)
+- Updated continuous integration configuration (PR #331)
+
 5.0.0: 30/08/2024
 -----------------
 
