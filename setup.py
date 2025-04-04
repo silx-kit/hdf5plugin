@@ -598,8 +598,13 @@ class PluginBuildExt(build_ext):
             prefix = '/' if self.compiler.compiler_type == 'msvc' else '-'
             e.extra_compile_args = [
                 arg for arg in e.extra_compile_args if arg.startswith(prefix)]
-            e.extra_link_args = [
-                arg for arg in e.extra_link_args if arg.startswith(prefix)]
+
+            if self.compiler.compiler_type == 'msvc':
+                e.extra_link_args = [
+                    arg for arg in e.extra_link_args if arg.startswith(prefix) or arg.endswith(".lib")]
+            else:
+                e.extra_link_args = [
+                    arg for arg in e.extra_link_args if arg.startswith(prefix)]
 
         build_ext.build_extensions(self)
 
@@ -965,10 +970,16 @@ def _get_clib_config_from_pkgconfig(libname):
             raise RuntimeError(f"pkgconfig: (lib){libname} not found")
 
     include_dir = pkgconfig.variables(libname).get('includedir', None)
+    extra_link_args = pkgconfig.libs(libname).split(" ")
+    for arg in extra_link_args:
+        if arg.startswith("-L"):
+            extra_link_args.append(f"/LIBPATH:{arg[2:]}")
+        elif arg.startswith("-l"):
+            extra_link_args.append(f"{arg[2:]}.lib")
 
     return {
         'include_dirs': [include_dir] if include_dir is not None else [],
-        'extra_link_args': pkgconfig.libs(libname).split(" "),
+        'extra_link_args': extra_link_args,
         'libraries': [],
         'macros': [],
         'extra_objects': [],
