@@ -1,4 +1,3 @@
-# coding: utf-8
 # /*##########################################################################
 #
 # Copyright (c) 2019-2024 European Synchrotron Radiation Facility
@@ -22,7 +21,8 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
-"""Provides tests """
+"""Provides tests"""
+
 from __future__ import annotations
 
 import importlib.util
@@ -431,7 +431,7 @@ class TestGetFilters(unittest.TestCase):
         filters = hdf5plugin.get_filters("registered")
         self.assertTrue(set(filters).issubset(_filters.FILTER_CLASSES))
 
-        filter_names = set(f.filter_name for f in filters)
+        filter_names = {f.filter_name for f in filters}
         registered_names = set(hdf5plugin.get_config().registered_filters.keys())
         self.assertEqual(filter_names, registered_names)
 
@@ -508,22 +508,21 @@ class TestBlosc2Plugins(unittest.TestCase):
         )
 
         # Write blosc2 array as a hdf5 dataset
-        with io.BytesIO() as buffer:
-            with h5py.File(buffer, 'w') as f:
-                dataset = f.create_dataset(
-                    'data',
-                    shape=data.shape,
-                    dtype=data.dtype,
-                    chunks=data.shape,
-                    compression=hdf5plugin.Blosc2(),
-                )
-                dataset.id.write_direct_chunk(
-                    (0,) * data.ndim,
-                    blosc_array.schunk.to_cframe(),
-                )
-                f.flush()
+        with io.BytesIO() as buffer, h5py.File(buffer, 'w') as f:
+            dataset = f.create_dataset(
+                'data',
+                shape=data.shape,
+                dtype=data.dtype,
+                chunks=data.shape,
+                compression=hdf5plugin.Blosc2(),
+            )
+            dataset.id.write_direct_chunk(
+                (0,) * data.ndim,
+                blosc_array.schunk.to_cframe(),
+            )
+            f.flush()
 
-                return dataset[()]
+            return dataset[()]
 
     def test_blosc2_filter_int_trunc(self):
         """Read blosc2 dataset written with int truncate filter plugin"""

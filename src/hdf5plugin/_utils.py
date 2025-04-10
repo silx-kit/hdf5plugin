@@ -1,4 +1,3 @@
-# coding: utf-8
 # /*##########################################################################
 #
 # Copyright (c) 2016-2023 European Synchrotron Radiation Facility
@@ -99,10 +98,9 @@ def register_filter(name):
     # Unregister existing filter
     filter_id = FILTERS[name]
     is_avail = is_filter_available(name)
-    if is_avail is True:
-        if not h5py.h5z.unregister_filter(filter_id):
-            logger.error(f"Failed to unregister filter {name} ({filter_id})")
-            return False
+    if is_avail is True and not h5py.h5z.unregister_filter(filter_id):
+        logger.error(f"Failed to unregister filter {name} ({filter_id})")
+        return False
     if is_avail is None:  # Cannot probe filter availability
         try:
             h5py.h5z.unregister_filter(filter_id)

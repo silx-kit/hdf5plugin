@@ -1,4 +1,3 @@
-# coding: utf-8
 # /*##########################################################################
 #
 # Copyright (c) 2016-2022 European Synchrotron Radiation Facility
@@ -92,6 +91,7 @@ class Bitshuffle(h5py.filters.FilterRefBase):
         Can be negative, and must be below or equal to 22 (maximum compression).
         Default: 3.
     """
+
     filter_name = "bshuf"
     filter_id = BSHUF_ID
 
@@ -265,6 +265,7 @@ class BZip2(h5py.filters.FilterRefBase):
 
     :param int blocksize: Size of the blocks as a multiple of 100k
     """
+
     filter_name = "bzip2"
     filter_id = BZIP2_ID
 
@@ -287,6 +288,7 @@ class FciDecomp(h5py.filters.FilterRefBase):
             compression=hdf5plugin.FciDecomp())
         f.close()
     """
+
     filter_name = "fcidecomp"
     filter_id = FCIDECOMP_ID
 
@@ -313,6 +315,7 @@ class LZ4(h5py.filters.FilterRefBase):
         It needs to be in the range of 0 < nbytes < 2113929216 (1,9GB).
         Default: 0 (for 1GB per block).
     """
+
     filter_name = "lz4"
     filter_id = LZ4_ID
 
@@ -402,6 +405,7 @@ class Zfp(h5py.filters.FilterRefBase):
     :param int minexp: Smallest absolute bit plane number encoded.
         It controls the absolute error.
     """
+
     filter_name = "zfp"
     filter_id = ZFP_ID
 
@@ -499,6 +503,7 @@ class Sperr(h5py.filters.FilterRefBase):
 
     For more details, see `H5Z-SPERR <https://github.com/NCAR/H5Z-SPERR>`_.
     """
+
     filter_name = "sperr"
     filter_id = SPERR_ID
 
@@ -524,7 +529,7 @@ class Sperr(h5py.filters.FilterRefBase):
             absolute: float | None = None,
             swap: bool = False,
             missing_value_mode: int = NO_MISSING,
-        ):
+    ):
         if (rate, peak_signal_to_noise_ratio, absolute).count(None) < 2:
             raise TypeError("hdf5plugin.Sperr() takes at most one not None argument")
         if missing_value_mode not in (self.NO_MISSING, self.MISSING_NAN, self.MISSING_1E35):
@@ -629,6 +634,7 @@ class SZ(h5py.filters.FilterRefBase):
 
     For more details about the compressor, see `SZ compressor <https://github.com/szcompressor/SZ>`_.
     """
+
     filter_name = "sz"
     filter_id = SZ_ID
 
@@ -687,6 +693,7 @@ class SZ3(h5py.filters.FilterRefBase):
        Backward compatibility is currently not guaranteed:
        See `this discussion <https://github.com/szcompressor/SZ3/issues/50#issuecomment-1901170917>`_.
     """
+
     filter_name = "sz3"
     filter_id = SZ3_ID
 
@@ -757,6 +764,7 @@ class Zstd(h5py.filters.FilterRefBase):
             compression=hdf5plugin.Zstd(clevel=22))
         f.close()
     """
+
     filter_name = "zstd"
     filter_id = ZSTD_ID
 
@@ -769,5 +777,5 @@ class Zstd(h5py.filters.FilterRefBase):
 FILTER_CLASSES = Bitshuffle, Blosc, Blosc2, BZip2, FciDecomp, LZ4, Sperr, SZ, SZ3, Zfp, Zstd
 
 
-FILTERS = dict((cls.filter_name, cls.filter_id) for cls in FILTER_CLASSES)
+FILTERS = {cls.filter_name: cls.filter_id for cls in FILTER_CLASSES}
 """Mapping of provided filter's name to their HDF5 filter ID."""
