@@ -54,3 +54,32 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
 version = {attr = "hdf5plugin._version.version"}
+
+[tool.bandit]
+exclude_dirs = [
+    "build",
+    "doc/hdf5plugin_EuropeanHUG2023",
+    "src/bitshuffle",
+    "src/bzip2",
+    "src/c-blosc",
+    "src/c-blosc2",
+    "src/charls",
+    "src/fcidecomp",
+    "src/H5Z-SPERR",
+    "src/H5Z-ZFP",
+    "src/hdf5-blosc",
+    "src/HDF5PLUGIN_Zstandard",
+    "src/LZ4",
+    "src/lz4_ipp",
+    "src/PyTables",
+    "src/snappy",
+    "src/SPERR",
+    "src/SZ",
+    "src/SZ3",
+    "src/SZ3_extra",
+    "src/SZ_extra",
+    "src/zfp",
+]
+
+[tool.bandit.assert_used]
+skips = ["*test.py"]
