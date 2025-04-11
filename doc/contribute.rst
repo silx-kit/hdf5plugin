@@ -24,6 +24,13 @@ To also run tests relying on actual HDF5 files, run from the source directory::
 
 This tests the installed version of `hdf5plugin`.
 
+Linting
+=======
+
+Run `bandit <https://github.com/PyCQA/bandit/>_` security linter from the source directory::
+
+   bandit -c pyproject.toml -r .
+
 Building documentation
 ======================
 

@@ -1,4 +1,3 @@
-# coding: utf-8
 # /*##########################################################################
 #
 # Copyright (c) 2016-2025 European Synchrotron Radiation Facility
@@ -191,7 +190,7 @@ class HostConfig:
             return True
         return check_compile_flags(self.__compiler, '-std=c++14', extension='.cc')
 
-    @lru_cache()
+    @lru_cache
     def get_cpp20_flag(self) -> str | None:
         """Returns C++20 compiler flag or None if not supported"""
         if self.__compiler.compiler_type == 'msvc':
@@ -284,6 +283,7 @@ class HostConfig:
 
 class BuildConfig:
     """Describe build configuration"""
+
     def __init__(self, config_file: Path, compiler=None):
         self.__config_file = config_file
         self.__host_config = HostConfig(compiler)
@@ -349,7 +349,8 @@ class BuildConfig:
         It first checks if the corresponding HDF5PLUGIN_* environment variable is set.
         If it is not set, it checks if both the compiler and the host support the feature.
         """
-        assert feature in ("cpp11", "cpp14", "cpp20", "sse2", "ssse3", "avx2", "avx512", "openmp", "native")
+        if feature not in ("cpp11", "cpp14", "cpp20", "sse2", "ssse3", "avx2", "avx512", "openmp", "native"):
+            raise ValueError("feature is not supported")
         try:
             return os.environ[f"HDF5PLUGIN_{feature.upper()}"] == "True"
         except KeyError:
@@ -423,11 +424,9 @@ build_config = HDF5PluginBuildConfig(**{build_config})
 
     def has_config_changed(self) -> bool:
         """Returns whether config file needs to be changed or not."""
-        try:
-            return self.__config_file.read_text() != self.get_config_string()
-        except:  # noqa
-            pass
-        return True
+        if not self.__config_file.exists():
+            return True
+        return self.__config_file.read_text() != self.get_config_string()
 
     def save_config(self) -> None:
         """Save config as a dict in a python file"""
@@ -472,7 +471,7 @@ class Build(build):
             ]
 
         if not self.hdf5plugin_config.use_cpp20:
-            cpp20_flags = set(["/std:c++20", "-std=c++20"])
+            cpp20_flags = {"/std:c++20", "-std=c++20"}
 
             # Filter out C++20 libraries
             self.distribution.libraries = [
@@ -509,6 +508,7 @@ class Build(build):
 
 class BuildPy(build_py):
     """build_py command also writing hdf5plugin._config"""
+
     def run(self):
         super().run()
         build_cmd = self.distribution.get_command_obj("build")
@@ -517,6 +517,7 @@ class BuildPy(build_py):
 
 class BuildCLib(build_clib):
     """build_clib command adding/patching compile args"""
+
     def build_libraries(self, libraries):
         updated_libraries = []
         for (lib_name, build_info) in libraries:
@@ -632,10 +633,9 @@ class HDF5PluginExtension(Extension):
                 glob(f"{self.include_dirs}/*.hpp")))
 
         self.export_symbols.append('H5PLget_plugin_info')
-        if not sys.platform == 'win32':
+        if sys.platform != 'win32':
             self.export_symbols.append('init_filter')
-
-        if sys.platform == 'win32':
+        else:
             self.define_macros.append(('H5_BUILT_AS_DYNAMIC_LIB', None))
             self.libraries.append('hdf5')
 
@@ -656,7 +656,8 @@ class HDF5PluginExtension(Extension):
     def hdf5_plugin_name(self):
         """Return HDF5 plugin short name"""
         module_name = self.name.split('.')[-1]
-        assert module_name.startswith('libh5')
+        if not module_name.startswith('libh5'):
+            raise RuntimeError("Module name must start with libh5")
         return module_name[5:]  # Strip libh5
 
 
@@ -744,7 +745,8 @@ if BuildConfig.INTEL_IPP_DIR is not None:
 
 def _get_lz4_ipp_clib(field=None):
     """LZ4 static lib using Intel IPP build config"""
-    assert BuildConfig.INTEL_IPP_DIR is not None
+    if BuildConfig.INTEL_IPP_DIR is None:
+        raise RuntimeError("HDF5PLUGIN_INTEL_IPP_DIR env. var. must be set")
 
     cflags = ['-O3', '-ffast-math', '-std=gnu99']
     cflags += ['/Ox', '/fp:fast']
@@ -946,20 +948,20 @@ _EMBEDDED_CLIB_CONFIG_GETTERS = {
 _CLIB_NAMES = {"blosc", "blosc2"} | set(_EMBEDDED_CLIB_CONFIG_GETTERS.keys()) - {"sperr_filter"}
 
 
-@lru_cache()
+@lru_cache
 def get_system_clib_names():
     """Returns the set of clib names that should not be embedded"""
-    system_clibs = set(
+    system_clibs = {
         name.strip().lower()
         for name in os.environ.get('HDF5PLUGIN_SYSTEM_LIBRARIES', '').split(',')
         if name.strip()
-    )
+    }
     if not system_clibs <= _CLIB_NAMES:
         raise RuntimeError(f"Unexpected names in HDF5PLUGIN_SYSTEM_LIBRARIES: {system_clibs - _CLIB_NAMES}")
     return system_clibs
 
 
-@lru_cache()
+@lru_cache
 def _get_clib_config_from_pkgconfig(libname):
     if pkgconfig is None:
         raise RuntimeError("pkgconfig is required to build against system libraries")
@@ -1066,7 +1068,7 @@ def _get_blosc_plugin():
         sse2={'define_macros': [('SHUFFLE_SSE2_ENABLED', 1)]},
         avx2={'define_macros': [('SHUFFLE_AVX2_ENABLED', 1)]},
         cpp11=cpp11_kwargs,
-)
+    )
 
 
 if 'blosc' in get_system_clib_names():
@@ -1432,11 +1434,11 @@ def get_libraries_and_extensions():
 
     Strip libraries and extensions according to HDF5PLUGIN_STRIP env. var.
     """
-    stripped_filters = set(
+    stripped_filters = {
         name.strip().lower()
         for name in os.environ.get('HDF5PLUGIN_STRIP', '').split(',')
         if name.strip()
-    )
+    }
 
     if 'all' in stripped_filters:
         return [], []
@@ -1463,7 +1465,7 @@ def get_libraries_and_extensions():
     embedded_extension_names = PLUGIN_NAMES - stripped_filters
     extensions = [_EMBEDDED_PLUGIN_EXTENSIONS[name]() for name in embedded_extension_names]
 
-    if extensions and not sys.platform == 'win32':
+    if extensions and sys.platform != 'win32':
         # Add hdf5 dynamic loading lib
         libraries.append(
             (

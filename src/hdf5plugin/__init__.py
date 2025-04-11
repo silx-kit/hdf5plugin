@@ -1,4 +1,3 @@
-# coding: utf-8
 # /*##########################################################################
 #
 # Copyright (c) 2016-2024 European Synchrotron Radiation Facility
@@ -23,7 +22,9 @@
 #
 # ###########################################################################*/
 """This module provides compiled shared libraries for their use as HDF5 filters
-under windows, MacOS and linux."""
+
+It works under Windows, MacOS and Linux.
+"""
 
 from ._version import version, version_info  # noqa
 
