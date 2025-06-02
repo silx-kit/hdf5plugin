@@ -1082,7 +1082,7 @@ def _get_blosc2_plugin():
 
     Source from PyTables and c-blosc2
     """
-    hdf5_blosc2_dir = 'src/PyTables/hdf5-blosc2/src'
+    hdf5_blosc2_dir = 'src/HDF5-Blosc2/src'
     hdf5_blosc2_sources = prefix(hdf5_blosc2_dir, ['blosc2_filter.c', 'blosc2_plugin.c'])
 
     extra_compile_args = ['-O3', '-std=gnu99']
