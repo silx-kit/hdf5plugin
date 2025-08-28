@@ -100,8 +100,8 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
           # Use Python3.12 to build wheels that are compatible with all supported version of Python
           CIBW_BUILD: cp312-*
-          # Do not build for pypy and muslinux
-          CIBW_SKIP: pp* *-musllinux_*
+          # Do not build for muslinux
+          CIBW_SKIP: "*-musllinux_*"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
 
           # Use silx wheelhouse for ppc64le
