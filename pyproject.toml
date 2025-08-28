@@ -9,7 +9,7 @@ authors = [
 ]
 description = "HDF5 Plugins for Windows, MacOS, and Linux"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -44,8 +44,9 @@ doc = [
     "sphinx_rtd_theme",
 ]
 test = [
-    "blosc2>=2.5.1;python_version>='3.9'",
-    "blosc2-grok>=0.2.2;python_version>='3.9'",
+    "numpy<2 ; python_version == '3.9'",
+    "blosc2>=2.5.1",
+    "blosc2-grok>=0.2.2",
 ]
 
 [tool.setuptools]
