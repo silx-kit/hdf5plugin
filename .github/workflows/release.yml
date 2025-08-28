@@ -58,16 +58,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             cibw_archs: "auto64"
             with_sse2: true
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04-arm
             cibw_archs: "aarch64"
             with_sse2: false
-          - os: ubuntu-20.04
+          - os: ubuntu-24.04
             cibw_archs: "ppc64le"
             with_sse2: false
-          - os: windows-2019
+          - os: windows-2022
             cibw_archs: "auto64"
             with_sse2: true
           - os: macos-13
@@ -77,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && runner.arch == 'X64'
         with:
           platforms: all
       - uses: pypa/cibuildwheel@v2.23.0
