@@ -98,8 +98,8 @@ jobs:
           CIBW_ENVIRONMENT_PASS_LINUX: HDF5PLUGIN_OPENMP HDF5PLUGIN_NATIVE HDF5PLUGIN_SSE2 HDF5PLUGIN_SSSE3 HDF5PLUGIN_AVX2 HDF5PLUGIN_AVX512 HDF5PLUGIN_BMI2 HDF5PLUGIN_CPP11 HDF5PLUGIN_CPP14 HDF5PLUGIN_CPP20
 
           CIBW_BUILD_VERBOSITY: 1
-          # Use Python3.11 to build wheels that are compatible with all supported version of Python
-          CIBW_BUILD: cp311-*
+          # Use Python3.12 to build wheels that are compatible with all supported version of Python
+          CIBW_BUILD: cp312-*
           # Do not build for pypy and muslinux
           CIBW_SKIP: pp* *-musllinux_*
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
@@ -121,15 +121,15 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
-        python-version: ['3.8', '3.12']
+        python-version: ['3.9', '3.13']
         include:
-          - python-version: '3.8'
+          - python-version: '3.9'
             OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
-          - python-version: '3.8'
+          - python-version: '3.9'
             os: 'macos-latest'
             OLDEST_DEPENDENCIES: 'h5py==3.7.0 "numpy<2"'
-          - python-version: '3.12'
-            OLDEST_DEPENDENCIES: 'h5py==3.10.0 "numpy<2"'
+          - python-version: '3.13'
+            OLDEST_DEPENDENCIES: 'h5py==3.12.1 numpy==2.1.0'
 
     steps:
       - uses: actions/checkout@v4
