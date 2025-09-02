@@ -47,21 +47,18 @@ class Result(NamedTuple):
     read_duration: float
     chunks: tuple[int]
 
-    compression_rate = property(
-        lambda self: self.raw_nbytes / self.compressed_nbytes)
+    compression_rate = property(lambda self: self.raw_nbytes / self.compressed_nbytes)
     write_speed = property(
         lambda self: (self.raw_nbytes / 1024**2) / self.write_duration,
-        doc="Unit: MB/sec")
+        doc="Unit: MB/sec",
+    )
     read_speed = property(
         lambda self: (self.raw_nbytes / 1024**2) / self.read_duration,
-        doc="Unit: MB/sec")
+        doc="Unit: MB/sec",
+    )
 
 
-def benchmark(
-    data: numpy.ndarray,
-    directory: Optional[str] = None,
-    **kwargs
-) -> Result:
+def benchmark(data: numpy.ndarray, directory: Optional[str] = None, **kwargs) -> Result:
     """Run benchmark for given conditions
 
     :param data: Dataset to use
@@ -74,7 +71,7 @@ def benchmark(
     else:
         dirname = directory
 
-    filename = os.path.join(dirname, 'hdf5plugin_benchmark.h5')
+    filename = os.path.join(dirname, "hdf5plugin_benchmark.h5")
 
     if os.path.exists(filename):
         os.remove(filename)
@@ -82,7 +79,8 @@ def benchmark(
     # Compression
     with h5py.File(filename, "w") as h5file:
         dataset = h5file.create_dataset(
-            "data", shape=data.shape, dtype=data.dtype, **kwargs)
+            "data", shape=data.shape, dtype=data.dtype, **kwargs
+        )
         start_write_time = time.perf_counter()
         dataset[:] = data
         dataset.flush()
@@ -99,7 +97,9 @@ def benchmark(
 
     os.remove(filename)
 
-    return Result(data.nbytes, storage_size, write_duration, read_duration, chunks=chunks)
+    return Result(
+        data.nbytes, storage_size, write_duration, read_duration, chunks=chunks
+    )
 
 
 DEFAULT_FILTERS = {  # Filters available with h5py/libhdf5
@@ -115,30 +115,34 @@ LOSSLESS_FILTERS = {
 }
 
 BITSHUFFLE_FILTERS = {
-    "Bitshuffle-lz4": hdf5plugin.Bitshuffle(cname='lz4'),
-    "Bitshuffle-zstd": hdf5plugin.Bitshuffle(cname='zstd'),
+    "Bitshuffle-lz4": hdf5plugin.Bitshuffle(cname="lz4"),
+    "Bitshuffle-zstd": hdf5plugin.Bitshuffle(cname="zstd"),
 }
 
 BLOSC_FILTERS = {}
-for cname in ('lz4', 'blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd'):
-    for shuffle_name, shuffle in [('NoShuffle', hdf5plugin.Blosc.NOSHUFFLE),
-                                  ('Shuffle', hdf5plugin.Blosc.SHUFFLE),
-                                  ('BitShuffle', hdf5plugin.Blosc.BITSHUFFLE)]:
+for cname in ("lz4", "blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"):
+    for shuffle_name, shuffle in [
+        ("NoShuffle", hdf5plugin.Blosc.NOSHUFFLE),
+        ("Shuffle", hdf5plugin.Blosc.SHUFFLE),
+        ("BitShuffle", hdf5plugin.Blosc.BITSHUFFLE),
+    ]:
         for clevel in [5]:  # (1, 3, 5, 9):
             BLOSC_FILTERS[f"Blosc-{cname}-{shuffle_name}-{clevel}"] = hdf5plugin.Blosc(
-                cname=cname, clevel=clevel, shuffle=shuffle)
+                cname=cname, clevel=clevel, shuffle=shuffle
+            )
 
 
 BLOSC2_FILTERS = {}
-for cname in ('lz4', 'blosclz', 'lz4', 'lz4hc', 'zlib', 'zstd'):
+for cname in ("lz4", "blosclz", "lz4", "lz4hc", "zlib", "zstd"):
     for filters_name, filters in [
-        ('NoFilter', hdf5plugin.Blosc2.NOFILTER),
-        ('Shuffle', hdf5plugin.Blosc2.SHUFFLE),
-        ('BitShuffle', hdf5plugin.Blosc2.BITSHUFFLE),
+        ("NoFilter", hdf5plugin.Blosc2.NOFILTER),
+        ("Shuffle", hdf5plugin.Blosc2.SHUFFLE),
+        ("BitShuffle", hdf5plugin.Blosc2.BITSHUFFLE),
     ]:
         for clevel in [5]:  # (1, 3, 5, 9):
-            BLOSC2_FILTERS[f"Blosc2-{cname}-{filters_name}-{clevel}"] = hdf5plugin.Blosc2(
-                cname=cname, clevel=clevel, filters=filters)
+            BLOSC2_FILTERS[f"Blosc2-{cname}-{filters_name}-{clevel}"] = (
+                hdf5plugin.Blosc2(cname=cname, clevel=clevel, filters=filters)
+            )
 
 
 FILTERS = {
