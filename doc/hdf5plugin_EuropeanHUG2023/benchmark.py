@@ -28,13 +28,14 @@ else:
 # Directory where to run read/write benchmarks
 DIRECTORY = "/dev/shm"
 
+
 # Function to get data to use for tests
 def get_data():
     with h5py.File("/dev/shm/kevlar.h5") as h5file:
         return h5file["/entry/data/data"][::10]  # Take 100 frames
 
 
-import hdf5plugin
+import hdf5plugin  # noqa: E402
 
 
 class Result(NamedTuple):
@@ -55,7 +56,7 @@ class Result(NamedTuple):
         lambda self: (self.raw_nbytes / 1024**2) / self.read_duration,
         doc="Unit: MB/sec")
 
-    
+
 def benchmark(
     data: numpy.ndarray,
     directory: Optional[str] = None,
@@ -91,16 +92,16 @@ def benchmark(
     with h5py.File(filename, "r") as h5file:
         dataset = h5file["data"]
         start_time = time.perf_counter()
-        read_data = dataset[()]
+        dataset[()]
         read_duration = time.perf_counter() - start_time
         storage_size = dataset.id.get_storage_size()
         chunks = dataset.chunks
-    
+
     os.remove(filename)
 
     return Result(data.nbytes, storage_size, write_duration, read_duration, chunks=chunks)
 
-    
+
 DEFAULT_FILTERS = {  # Filters available with h5py/libhdf5
     "Raw": None,
     "GZip": "gzip",
@@ -117,23 +118,25 @@ BITSHUFFLE_FILTERS = {
     "Bitshuffle-lz4": hdf5plugin.Bitshuffle(cname='lz4'),
     "Bitshuffle-zstd": hdf5plugin.Bitshuffle(cname='zstd'),
 }
-    
+
 BLOSC_FILTERS = {}
 for cname in ('lz4', 'blosclz', 'lz4', 'lz4hc', 'snappy', 'zlib', 'zstd'):
     for shuffle_name, shuffle in [('NoShuffle', hdf5plugin.Blosc.NOSHUFFLE),
                                   ('Shuffle', hdf5plugin.Blosc.SHUFFLE),
                                   ('BitShuffle', hdf5plugin.Blosc.BITSHUFFLE)]:
-        for clevel in [5]: #(1, 3, 5, 9):
+        for clevel in [5]:  # (1, 3, 5, 9):
             BLOSC_FILTERS[f"Blosc-{cname}-{shuffle_name}-{clevel}"] = hdf5plugin.Blosc(
                 cname=cname, clevel=clevel, shuffle=shuffle)
 
 
 BLOSC2_FILTERS = {}
 for cname in ('lz4', 'blosclz', 'lz4', 'lz4hc', 'zlib', 'zstd'):
-    for filters_name, filters in [('NoFilter', hdf5plugin.Blosc2.NOFILTER),
-                                ('Shuffle', hdf5plugin.Blosc2.SHUFFLE),
-                                ('BitShuffle', hdf5plugin.Blosc2.BITSHUFFLE)]:
-        for clevel in [5]: # (1, 3, 5, 9):
+    for filters_name, filters in [
+        ('NoFilter', hdf5plugin.Blosc2.NOFILTER),
+        ('Shuffle', hdf5plugin.Blosc2.SHUFFLE),
+        ('BitShuffle', hdf5plugin.Blosc2.BITSHUFFLE),
+    ]:
+        for clevel in [5]:  # (1, 3, 5, 9):
             BLOSC2_FILTERS[f"Blosc2-{cname}-{filters_name}-{clevel}"] = hdf5plugin.Blosc2(
                 cname=cname, clevel=clevel, filters=filters)
 
