@@ -689,13 +689,12 @@ class SZ(h5py.filters.FilterRefBase):
 
     @staticmethod
     def __pack_float64(error: float) -> tuple:
-        packed = struct.pack(">d", error)  # Pack as big-endian IEEE 754 double
-        high = struct.unpack(">I", packed[0:4])[
-            0
-        ]  # Unpack most-significant bits as unsigned int
-        low = struct.unpack(">I", packed[4:8])[
-            0
-        ]  # Unpack least-significant bits as unsigned int
+        # Pack as big-endian IEEE 754 double
+        packed = struct.pack(">d", error)
+        # Unpack most-significant bits as unsigned int
+        high = struct.unpack(">I", packed[0:4])[0]
+        # Unpack least-significant bits as unsigned int
+        low = struct.unpack(">I", packed[4:8])[0]
         return high, low
 
 
@@ -764,13 +763,12 @@ class SZ3(h5py.filters.FilterRefBase):
 
     @staticmethod
     def __pack_float64(error: float) -> tuple:
-        packed = struct.pack(">d", error)  # Pack as big-endian IEEE 754 double
-        high = struct.unpack(">I", packed[0:4])[
-            0
-        ]  # Unpack most-significant bits as unsigned int
-        low = struct.unpack(">I", packed[4:8])[
-            0
-        ]  # Unpack least-significant bits as unsigned int
+        # Pack as big-endian IEEE 754 double
+        packed = struct.pack(">d", error)
+        # Unpack most-significant bits as unsigned int
+        high = struct.unpack(">I", packed[0:4])[0]
+        # Unpack least-significant bits as unsigned int
+        low = struct.unpack(">I", packed[4:8])[0]
         return high, low
 
 
