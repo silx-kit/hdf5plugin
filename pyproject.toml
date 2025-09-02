@@ -68,3 +68,11 @@ exclude_dirs = [
 
 [tool.bandit.assert_used]
 skips = ["*test.py"]
+
+[tool.black]
+extend-exclude = '''
+(
+    lib
+    | .*\.ipynb
+)
+'''
