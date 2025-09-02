@@ -31,8 +31,10 @@ import os
 import shutil
 import tempfile
 import unittest
-import numpy
+
 import h5py
+import numpy
+
 import hdf5plugin
 
 try:
@@ -41,7 +43,6 @@ except ImportError:
     blosc2 = None
 
 from hdf5plugin import _filters
-
 
 BUILD_CONFIG = hdf5plugin.get_config().build_config
 

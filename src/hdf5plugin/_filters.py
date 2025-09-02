@@ -26,10 +26,10 @@ from __future__ import annotations
 import logging
 import math
 import struct
+
 import h5py
 
 from ._config import build_config
-
 
 logger = logging.getLogger(__name__)
 

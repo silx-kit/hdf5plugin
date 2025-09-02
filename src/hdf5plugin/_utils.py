@@ -29,11 +29,11 @@ import os
 import sys
 import traceback
 from collections import namedtuple
+
 import h5py
 
-from ._filters import FILTER_CLASSES, FILTERS
 from ._config import build_config
-
+from ._filters import FILTER_CLASSES, FILTERS
 
 logger = logging.getLogger(__name__)
 

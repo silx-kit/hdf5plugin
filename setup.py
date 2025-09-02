@@ -28,22 +28,22 @@ __license__ = "MIT"
 __date__ = "05/12/2022"
 
 
-from functools import lru_cache
-from glob import glob
-from pathlib import Path
 import itertools
 import logging
 import os
+import platform
 import sys
 import sysconfig
 import tempfile
-import platform
-from functools import cached_property
-from setuptools import setup, Distribution, Extension
+from functools import cached_property, lru_cache
+from glob import glob
+from pathlib import Path
+
+from setuptools import Distribution, Extension, setup
+from setuptools.command.build import build
+from setuptools.command.build_clib import build_clib
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
-from setuptools.command.build_clib import build_clib
-from setuptools.command.build import build
 from setuptools.errors import CompileError
 from wheel.bdist_wheel import bdist_wheel
 

@@ -7,11 +7,10 @@ import os
 import sys
 import tempfile
 import time
-from typing import Optional, NamedTuple
+from typing import NamedTuple, Optional
 
 import h5py
 import numpy
-
 
 # Set affinity and env. var. before importing hdf5plugin
 

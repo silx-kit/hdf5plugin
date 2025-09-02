@@ -27,12 +27,13 @@ __date__ = "06/12/2022"
 
 
 import os
-import unittest
-import tempfile
 import shutil
+import tempfile
+import unittest
 
-import numpy
 import h5py
+import numpy
+
 import hdf5plugin
 from hdf5plugin.test import suite as hdf5plugin_suite
 
