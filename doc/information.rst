@@ -105,16 +105,16 @@ See `LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/LICENSE>`_.
 The source code of the embedded HDF5 filter plugin libraries is licensed under different open-source licenses.
 Please read the different licenses:
 
-* bitshuffle: See `src/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/bitshuffle/LICENSE>`_
-* blosc: See `src/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/src/hdf5-blosc/LICENSES/>`_, `src/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc/LICENSES/>`_ and `src/snappy/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/snappy/COPYING>`_
-* blosc2: See `src/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/PyTables/LICENSE.txt>`_  and `src/c-blosc2/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc2/LICENSES/>`_
-* bzip2: See `src/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/PyTables/LICENSE.txt>`_ and `src/bzip2/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/bzip2/LICENSE>`_
-* lz4: See `src/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/COPYING>`_, `src/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/LZ4/LICENSE>`_ and `src/c-blosc/LICENSES/LZ4.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/c-blosc/LICENSES/LZ4.txt>`_
-* FCIDECOMP: See `src/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/fcidecomp/LICENSE>`_ and `src/charls/LICENSE.md  <https://github.com/silx-kit/hdf5plugin/blob/main/src/charls/LICENSE.md>`_
-* SPERR: See `src/H5Z-SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/H5Z-SPERR/LICENSE>`_ and `src/SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/SPERR/LICENSE>`_
-* SZ: See `src/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/SZ/copyright-and-BSD-license.txt>`_
-* SZ3: See `src/SZ3/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/src/SZ3/copyright-and-BSD-license.txt>`_
-* zfp: See `src/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/H5Z-ZFP/LICENSE>`_ and `src/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/zfp/LICENSE>`_
-* zstd: See `src/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/src/HDF5Plugin-Zstandard/LICENSE>`_
+* bitshuffle: See `lib/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/bitshuffle/LICENSE>`_
+* blosc: See `lib/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/hdf5-blosc/LICENSES/>`_, `lib/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc/LICENSES/>`_ and `lib/snappy/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/snappy/COPYING>`_
+* blosc2: See `lib/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/PyTables/LICENSE.txt>`_  and `lib/c-blosc2/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc2/LICENSES/>`_
+* bzip2: See `lib/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/PyTables/LICENSE.txt>`_ and `lib/bzip2/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/bzip2/LICENSE>`_
+* lz4: See `lib/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/LZ4/COPYING>`_, `lib/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/LZ4/LICENSE>`_ and `lib/c-blosc/LICENSES/LZ4.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc/LICENSES/LZ4.txt>`_
+* FCIDECOMP: See `lib/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/fcidecomp/LICENSE>`_ and `lib/charls/LICENSE.md  <https://github.com/silx-kit/hdf5plugin/blob/main/lib/charls/LICENSE.md>`_
+* SPERR: See `lib/H5Z-SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-SPERR/LICENSE>`_ and `lib/SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SPERR/LICENSE>`_
+* SZ: See `lib/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ/copyright-and-BSD-license.txt>`_
+* SZ3: See `lib/SZ3/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ3/copyright-and-BSD-license.txt>`_
+* zfp: See `lib/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-ZFP/LICENSE>`_ and `lib/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/zfp/LICENSE>`_
+* zstd: See `lib/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/HDF5Plugin-Zstandard/LICENSE>`_
 
-The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `src/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/src/hdf5/COPYING>`_.
+The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `lib/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/hdf5/COPYING>`_.
