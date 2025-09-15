@@ -5,6 +5,7 @@ include pyproject.toml
 include README.rst
 include setup.py
 recursive-include doc *
+recursive-include lib *
 recursive-include src *
 recursive-include test *.py *.h5
 global-exclude *__pycache__/*
