@@ -1260,8 +1260,8 @@ def _get_bitshuffle_plugin():
     """
     bithsuffle_dir = "lib/bitshuffle/src"
 
-    extra_compile_args = ["-O3", "-ffast-math", "-std=c99", "-fopenmp"]
-    extra_compile_args += ["/Ox", "/fp:fast", "/openmp"]
+    extra_compile_args = ["-O3", "-std=c99", "-fopenmp"]
+    extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-fopenmp"]
 
     define_macros = [("ZSTD_SUPPORT", 1)]
