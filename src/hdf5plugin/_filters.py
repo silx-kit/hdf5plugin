@@ -26,10 +26,10 @@ from __future__ import annotations
 import logging
 import math
 import struct
+
 import h5py
 
 from ._config import build_config
-
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +96,9 @@ class Bitshuffle(h5py.filters.FilterRefBase):
     filter_id = BSHUF_ID
 
     __COMPRESSIONS = {
-        'none': 0,
-        'lz4': 2,
-        'zstd': 3,
+        "none": 0,
+        "lz4": 2,
+        "zstd": 3,
     }
 
     def __init__(self, nelems=0, cname=None, clevel=3, lz4=None):
@@ -110,24 +110,28 @@ class Bitshuffle(h5py.filters.FilterRefBase):
 
         if lz4 is not None:
             if cname is not None and lz4 is not False:
-                raise ValueError("Providing both cname and lz4 arguments is not supported")
+                raise ValueError(
+                    "Providing both cname and lz4 arguments is not supported"
+                )
             logger.warning(
                 "Deprecation: hdf5plugin.Bitshuffle's lz4 argument is deprecated, "
-                "use cname='lz4' or 'none' instead.")
-            cname = 'lz4' if lz4 else 'none'
+                "use cname='lz4' or 'none' instead."
+            )
+            cname = "lz4" if lz4 else "none"
 
         if cname in (True, False):
             logger.warning(
                 "Depreaction: hdf5plugin.Bitshuffle's boolean argument is deprecated, "
-                "use cname='lz4' or 'none' instead.")
-            cname = 'lz4' if cname else 'none'
+                "use cname='lz4' or 'none' instead."
+            )
+            cname = "lz4" if cname else "none"
 
         if cname is None:
-            cname = 'lz4'
+            cname = "lz4"
         if cname not in self.__COMPRESSIONS:
             raise ValueError(f"Unsupported compression: {cname}")
 
-        if cname == 'zstd':
+        if cname == "zstd":
             self.filter_options = (nelems, self.__COMPRESSIONS[cname], clevel)
         else:
             self.filter_options = (nelems, self.__COMPRESSIONS[cname])
@@ -171,15 +175,15 @@ class Blosc(h5py.filters.FilterRefBase):
     filter_id = BLOSC_ID
 
     __COMPRESSIONS = {
-        'blosclz': 0,
-        'lz4': 1,
-        'lz4hc': 2,
-        'snappy': 3,
-        'zlib': 4,
-        'zstd': 5,
+        "blosclz": 0,
+        "lz4": 1,
+        "lz4hc": 2,
+        "snappy": 3,
+        "zlib": 4,
+        "zstd": 5,
     }
 
-    def __init__(self, cname='lz4', clevel=5, shuffle=SHUFFLE):
+    def __init__(self, cname="lz4", clevel=5, shuffle=SHUFFLE):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
         if not 0 <= clevel <= 9:
@@ -234,19 +238,25 @@ class Blosc2(h5py.filters.FilterRefBase):
     filter_name = "blosc2"
 
     __COMPRESSIONS = {
-        'blosclz': 0,
-        'lz4': 1,
-        'lz4hc': 2,
-        'zlib': 4,
-        'zstd': 5,
+        "blosclz": 0,
+        "lz4": 1,
+        "lz4hc": 2,
+        "zlib": 4,
+        "zstd": 5,
     }
 
-    def __init__(self, cname='blosclz', clevel=5, filters=SHUFFLE):
+    def __init__(self, cname="blosclz", clevel=5, filters=SHUFFLE):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
         if not 0 <= clevel <= 9:
             raise ValueError("clevel must be in the range [0, 9]")
-        if filters not in (self.NOFILTER, self.SHUFFLE, self.BITSHUFFLE, self.DELTA, self.TRUNC_PREC):
+        if filters not in (
+            self.NOFILTER,
+            self.SHUFFLE,
+            self.BITSHUFFLE,
+            self.DELTA,
+            self.TRUNC_PREC,
+        ):
             raise ValueError(f"filters={filters} is not supported")
         self.filter_options = (0, 0, 0, 0, clevel, filters, compression)
 
@@ -297,7 +307,8 @@ class FciDecomp(h5py.filters.FilterRefBase):
         if not build_config.cpp11:
             logger.error(
                 "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
-                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler.")
+                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler."
+            )
 
 
 class LZ4(h5py.filters.FilterRefBase):
@@ -409,17 +420,19 @@ class Zfp(h5py.filters.FilterRefBase):
     filter_name = "zfp"
     filter_id = ZFP_ID
 
-    def __init__(self,
-                 rate=None,
-                 precision=None,
-                 accuracy=None,
-                 reversible=False,
-                 minbits=None,
-                 maxbits=None,
-                 maxprec=None,
-                 minexp=None):
+    def __init__(
+        self,
+        rate=None,
+        precision=None,
+        accuracy=None,
+        reversible=False,
+        minbits=None,
+        maxbits=None,
+        maxprec=None,
+        minexp=None,
+    ):
         if rate is not None:
-            rateHigh, rateLow = struct.unpack('II', struct.pack('d', float(rate)))
+            rateHigh, rateLow = struct.unpack("II", struct.pack("d", float(rate)))
             self.filter_options = 1, 0, rateHigh, rateLow, 0, 0
             logger.info("ZFP mode 1 used. H5Z_ZFP_MODE_RATE")
 
@@ -429,7 +442,8 @@ class Zfp(h5py.filters.FilterRefBase):
 
         elif accuracy is not None:
             accuracyHigh, accuracyLow = struct.unpack(
-                'II', struct.pack('d', float(accuracy)))
+                "II", struct.pack("d", float(accuracy))
+            )
             self.filter_options = 3, 0, accuracyHigh, accuracyLow, 0, 0
             logger.info("ZFP mode 3 used. H5Z_ZFP_MODE_ACCURACY")
 
@@ -441,7 +455,7 @@ class Zfp(h5py.filters.FilterRefBase):
             minbits = int(minbits)
             maxbits = int(maxbits)
             maxprec = int(maxprec)
-            minexp = struct.unpack('I', struct.pack('i', int(minexp)))[0]
+            minexp = struct.unpack("I", struct.pack("i", int(minexp)))[0]
             self.filter_options = 4, 0, minbits, maxbits, maxprec, minexp
             logger.info("ZFP mode 4 used. H5Z_ZFP_MODE_EXPERT")
 
@@ -523,16 +537,20 @@ class Sperr(h5py.filters.FilterRefBase):
     """
 
     def __init__(
-            self,
-            rate: float | None = None,
-            peak_signal_to_noise_ratio: float | None = None,
-            absolute: float | None = None,
-            swap: bool = False,
-            missing_value_mode: int = NO_MISSING,
+        self,
+        rate: float | None = None,
+        peak_signal_to_noise_ratio: float | None = None,
+        absolute: float | None = None,
+        swap: bool = False,
+        missing_value_mode: int = NO_MISSING,
     ):
         if (rate, peak_signal_to_noise_ratio, absolute).count(None) < 2:
             raise TypeError("hdf5plugin.Sperr() takes at most one not None argument")
-        if missing_value_mode not in (self.NO_MISSING, self.MISSING_NAN, self.MISSING_1E35):
+        if missing_value_mode not in (
+            self.NO_MISSING,
+            self.MISSING_NAN,
+            self.MISSING_1E35,
+        ):
             raise ValueError(f"Unsupported missing_value_mode: {missing_value_mode}")
 
         if peak_signal_to_noise_ratio is not None:
@@ -551,10 +569,14 @@ class Sperr(h5py.filters.FilterRefBase):
             mode = 1
             quality = 16 if rate is None else rate
 
-        self.filter_options = self.__pack_options(mode, quality, swap, missing_value_mode)
+        self.filter_options = self.__pack_options(
+            mode, quality, swap, missing_value_mode
+        )
 
     @classmethod
-    def __pack_options(cls, mode: int, quality: float, swap: bool, missing_value_mode: int) -> tuple[int]:
+    def __pack_options(
+        cls, mode: int, quality: float, swap: bool, missing_value_mode: int
+    ) -> tuple[int]:
         if mode not in (1, 2, 3):
             raise ValueError("mode must be 1, 2 or 3")
         if quality <= 0:
@@ -654,10 +676,10 @@ class SZ(h5py.filters.FilterRefBase):
 
         compression_opts = (
             sz_mode,
-            *self.__pack_float64(absolute or 0.),
-            *self.__pack_float64(relative or 0.),
-            *self.__pack_float64(pointwise_relative or 0.),
-            *self.__pack_float64(0.),  # psnr
+            *self.__pack_float64(absolute or 0.0),
+            *self.__pack_float64(relative or 0.0),
+            *self.__pack_float64(pointwise_relative or 0.0),
+            *self.__pack_float64(0.0),  # psnr
         )
 
         logger.info(f"SZ mode {sz_mode} used.")
@@ -667,9 +689,12 @@ class SZ(h5py.filters.FilterRefBase):
 
     @staticmethod
     def __pack_float64(error: float) -> tuple:
-        packed = struct.pack('>d', error)  # Pack as big-endian IEEE 754 double
-        high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
-        low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
+        # Pack as big-endian IEEE 754 double
+        packed = struct.pack(">d", error)
+        # Unpack most-significant bits as unsigned int
+        high = struct.unpack(">I", packed[0:4])[0]
+        # Unpack least-significant bits as unsigned int
+        low = struct.unpack(">I", packed[4:8])[0]
         return high, low
 
 
@@ -697,13 +722,17 @@ class SZ3(h5py.filters.FilterRefBase):
     filter_name = "sz3"
     filter_id = SZ3_ID
 
-    def __init__(self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None):
+    def __init__(
+        self, absolute=None, relative=None, norm2=None, peak_signal_to_noise_ratio=None
+    ):
         n_nones = (absolute, relative, norm2, peak_signal_to_noise_ratio).count(None)
         if n_nones < 3:
             raise TypeError("hdf5plugin.SZ3() takes at most one not None argument")
         elif n_nones == 4:
             absolute = 0.0001
-            logger.warning(f"Defaulting to absolute={absolute}. This default might not be kept in future releases")
+            logger.warning(
+                f"Defaulting to absolute={absolute}. This default might not be kept in future releases"
+            )
 
         # Get SZ3 encoding options: range [0, 5]
         if absolute is not None:
@@ -719,10 +748,10 @@ class SZ3(h5py.filters.FilterRefBase):
 
         compression_opts = (
             sz_mode,
-            *self.__pack_float64(absolute or 0.),
-            *self.__pack_float64(relative or 0.),
-            *self.__pack_float64(norm2 or 0.),
-            *self.__pack_float64(peak_signal_to_noise_ratio or 0.),
+            *self.__pack_float64(absolute or 0.0),
+            *self.__pack_float64(relative or 0.0),
+            *self.__pack_float64(norm2 or 0.0),
+            *self.__pack_float64(peak_signal_to_noise_ratio or 0.0),
         )
         logger.info(f"SZ3 mode {sz_mode} used.")
         logger.info(f"filter options {compression_opts}")
@@ -734,9 +763,12 @@ class SZ3(h5py.filters.FilterRefBase):
 
     @staticmethod
     def __pack_float64(error: float) -> tuple:
-        packed = struct.pack('>d', error)  # Pack as big-endian IEEE 754 double
-        high = struct.unpack('>I', packed[0:4])[0]  # Unpack most-significant bits as unsigned int
-        low = struct.unpack('>I', packed[4:8])[0]  # Unpack least-significant bits as unsigned int
+        # Pack as big-endian IEEE 754 double
+        packed = struct.pack(">d", error)
+        # Unpack most-significant bits as unsigned int
+        high = struct.unpack(">I", packed[0:4])[0]
+        # Unpack least-significant bits as unsigned int
+        low = struct.unpack(">I", packed[4:8])[0]
         return high, low
 
 
@@ -774,7 +806,19 @@ class Zstd(h5py.filters.FilterRefBase):
         self.filter_options = (clevel,)
 
 
-FILTER_CLASSES = Bitshuffle, Blosc, Blosc2, BZip2, FciDecomp, LZ4, Sperr, SZ, SZ3, Zfp, Zstd
+FILTER_CLASSES = (
+    Bitshuffle,
+    Blosc,
+    Blosc2,
+    BZip2,
+    FciDecomp,
+    LZ4,
+    Sperr,
+    SZ,
+    SZ3,
+    Zfp,
+    Zstd,
+)
 
 
 FILTERS = {cls.filter_name: cls.filter_id for cls in FILTER_CLASSES}

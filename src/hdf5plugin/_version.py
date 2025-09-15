@@ -23,8 +23,8 @@
 # ###########################################################################*/
 
 
-from typing import NamedTuple
 import re
+from typing import NamedTuple
 
 version = "6.0.0"
 

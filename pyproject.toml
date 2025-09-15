@@ -45,6 +45,13 @@ test = [
     "blosc2>=2.5.1",
     "blosc2-grok>=0.2.2",
 ]
+dev = [
+    "hdf5plugin[doc,test]",
+    "bandit",
+    "black",
+    "flake8",
+    "isort",
+]
 
 [tool.setuptools]
 packages = ["hdf5plugin"]
@@ -62,3 +69,15 @@ exclude_dirs = [
 
 [tool.bandit.assert_used]
 skips = ["*test.py"]
+
+[tool.black]
+extend-exclude = '''
+(
+    lib
+    | .*\.ipynb
+)
+'''
+
+[tool.isort]
+profile = "black"
+skip_glob = ["lib"]

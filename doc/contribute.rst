@@ -24,12 +24,26 @@ To also run tests relying on actual HDF5 files, run from the source directory::
 
 This tests the installed version of `hdf5plugin`.
 
-Linting
-=======
+Formatting/Linting
+==================
 
-Run `bandit <https://github.com/PyCQA/bandit/>_` security linter from the source directory::
+From the source directory:
 
-   bandit -c pyproject.toml -r .
+* Format code with `black <https://black.readthedocs.io/>`_::
+
+    black .
+
+* Sort imports with `isort <https://pycqa.github.io/isort/>`_::
+
+    isort .
+
+* Check code with `flake8 <https://flake8.pycqa.org/>`_::
+
+    flake8
+
+* Check code with `bandit <https://bandit.readthedocs.io/>`_ security linter::
+
+    bandit -c pyproject.toml -r .
 
 Building documentation
 ======================

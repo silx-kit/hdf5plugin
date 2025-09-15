@@ -29,17 +29,16 @@ import os
 import sys
 import traceback
 from collections import namedtuple
+
 import h5py
 
-from ._filters import FILTER_CLASSES, FILTERS
 from ._config import build_config
-
+from ._filters import FILTER_CLASSES, FILTERS
 
 logger = logging.getLogger(__name__)
 
 
-PLUGIN_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), 'plugins'))
+PLUGIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "plugins"))
 """Directory where the provided HDF5 filter plugins are stored."""
 
 
@@ -110,19 +109,20 @@ def register_filter(name):
     registered_filters.pop(name, None)
 
     # Load DLL
-    filenames = glob.glob(os.path.join(
-        PLUGIN_PATH, f"libh5{name}*{build_config.filter_file_extension}"))
+    filenames = glob.glob(
+        os.path.join(PLUGIN_PATH, f"libh5{name}*{build_config.filter_file_extension}")
+    )
     if len(filenames):
-        if name == 'blosc':  # Handle name prefix conflict with blosc2
+        if name == "blosc":  # Handle name prefix conflict with blosc2
             for filename in filenames:
-                if not os.path.basename(filename).startswith('libh5blosc2'):
+                if not os.path.basename(filename).startswith("libh5blosc2"):
                     break  # That's the blosc(1) filename
             else:
                 logger.error("Cannot initialize filter %s: File not found", name)
                 return False
-        elif name == 'sz':  # Handle name prefix conflict with sz3
+        elif name == "sz":  # Handle name prefix conflict with sz3
             for filename in filenames:
-                if not os.path.basename(filename).startswith('libh5sz3'):
+                if not os.path.basename(filename).startswith("libh5sz3"):
                     break  # That's the sz filename
             else:
                 logger.error("Cannot initialize filter %s: File not found", name)
@@ -139,17 +139,19 @@ def register_filter(name):
         logger.error(traceback.format_exc())
         return False
 
-    if not sys.platform.startswith('win'):
+    if not sys.platform.startswith("win"):
         # Use init_filter function to initialize DLL
         try:
             init_filter = lib.init_filter
         except AttributeError:
-            logger.debug(f"init_filter not found for filter {name}: Init phase skipped.")
+            logger.debug(
+                f"init_filter not found for filter {name}: Init phase skipped."
+            )
         else:
             init_filter.argtypes = [ctypes.c_char_p]
             init_filter.restype = ctypes.c_int
 
-            retval = init_filter(bytes(h5py.h5z.__file__, encoding='utf-8'))
+            retval = init_filter(bytes(h5py.h5z.__file__, encoding="utf-8"))
             if retval < 0:
                 logger.error(f"Cannot initialize filter {name}: {retval}")
                 return False
@@ -175,14 +177,13 @@ def register_filter(name):
 
 
 HDF5PluginConfig = namedtuple(
-    'HDF5PluginConfig',
-    ('build_config', 'registered_filters'),
+    "HDF5PluginConfig",
+    ("build_config", "registered_filters"),
 )
 
 
 def get_config():
-    """Provides information about build configuration and filters registered by hdf5plugin.
-    """
+    """Provides information about build configuration and filters registered by hdf5plugin."""
     filters = {}
     for name in FILTERS:
         info = registered_filters.get(name)

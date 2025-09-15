@@ -26,22 +26,33 @@
 It works under Windows, MacOS and Linux.
 """
 
-from ._version import version, version_info  # noqa
-
 from ._filters import FILTERS  # noqa
-from ._filters import BLOSC_ID, Blosc  # noqa
-from ._filters import BLOSC2_ID, Blosc2  # noqa
-from ._filters import BSHUF_ID, Bitshuffle  # noqa
-from ._filters import BZIP2_ID, BZip2  # noqa
-from ._filters import LZ4_ID, LZ4  # noqa
-from ._filters import FCIDECOMP_ID, FciDecomp  # noqa
-from ._filters import ZFP_ID, Zfp  # noqa
-from ._filters import ZSTD_ID, Zstd  # noqa
-from ._filters import SZ_ID, SZ  # noqa
-from ._filters import SZ3_ID, SZ3  # noqa
-from ._filters import SPERR_ID, Sperr  # noqa
-
-from ._utils import get_config, get_filters, PLUGIN_PATH, register  # noqa
+from ._filters import (  # noqa
+    BLOSC2_ID,
+    BLOSC_ID,
+    BSHUF_ID,
+    BZIP2_ID,
+    FCIDECOMP_ID,
+    LZ4,
+    LZ4_ID,
+    SPERR_ID,
+    SZ,
+    SZ3,
+    SZ3_ID,
+    SZ_ID,
+    ZFP_ID,
+    ZSTD_ID,
+    Bitshuffle,
+    Blosc,
+    Blosc2,
+    BZip2,
+    FciDecomp,
+    Sperr,
+    Zfp,
+    Zstd,
+)
+from ._utils import PLUGIN_PATH, get_config, get_filters, register  # noqa
+from ._version import version, version_info  # noqa
 
 # Backward compatibility
 PLUGINS_PATH = PLUGIN_PATH
