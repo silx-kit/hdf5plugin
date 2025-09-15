@@ -790,8 +790,8 @@ def _get_lz4_ipp_clib(field=None):
     if BuildConfig.INTEL_IPP_DIR is None:
         raise RuntimeError("HDF5PLUGIN_INTEL_IPP_DIR env. var. must be set")
 
-    cflags = ["-O3", "-ffast-math", "-std=gnu99"]
-    cflags += ["/Ox", "/fp:fast"]
+    cflags = ["-O3", "-std=gnu99"]
+    cflags += ["/Ox"]
 
     lz4_dir = "lib/lz4_ipp"
 
@@ -820,8 +820,8 @@ def _get_lz4_clib(field=None):
     if BuildConfig.INTEL_IPP_DIR is not None:
         return _get_lz4_ipp_clib(field)
 
-    cflags = ["-O3", "-ffast-math", "-std=gnu99"]
-    cflags += ["/Ox", "/fp:fast"]
+    cflags = ["-O3", "-std=gnu99"]
+    cflags += ["/Ox"]
 
     folders = glob("lib/c-blosc2/internal-complibs/lz4*")
     lz4_dir = folders[0] if folders else "lib/no-folder"
@@ -915,10 +915,10 @@ def _get_sperr_filter_clib(field=None):
 
 def _get_zfp_clib(field=None):
     """ZFP static lib build config"""
-    cflags = ["-O3", "-ffast-math", "-std=c99", "-fopenmp"]
+    cflags = ["-O3", "-std=c99", "-fopenmp"]
     # Use /Ob1 to fix ZFP test failing with Visual Studio 2022: MSVC 14.40.33807
     # See https://github.com/LLNL/zfp/issues/222
-    cflags += ["/Ob1", "/fp:fast", "/openmp"]
+    cflags += ["/Ob1", "/openmp"]
 
     zfp_dir = "lib/zfp"
 
@@ -940,8 +940,8 @@ def _get_zfp_clib(field=None):
 
 def _get_zlib_clib(field=None):
     """ZLib static lib build config"""
-    cflags = ["-O3", "-ffast-math", "-std=gnu99"]
-    cflags += ["/Ox", "/fp:fast"]
+    cflags = ["-O3", "-std=gnu99"]
+    cflags += ["/Ox"]
 
     folders = glob("lib/c-blosc/internal-complibs/zlib*")
     zlib_dir = folders[0] if folders else "lib/no-folder"
@@ -962,8 +962,8 @@ def _get_zlib_clib(field=None):
 
 def _get_zstd_clib(field=None):
     """zstd static lib build config"""
-    cflags = ["-O3", "-ffast-math", "-std=gnu99"]
-    cflags += ["/Ox", "/fp:fast"]
+    cflags = ["-O3", "-std=gnu99"]
+    cflags += ["/Ox"]
 
     folders = glob("lib/c-blosc2/internal-complibs/zstd*")
     zstd_dir = folders[0] if folders else "lib/no-folder"
@@ -1065,8 +1065,8 @@ def _get_blosc_plugin():
     hdf5_blosc_sources = prefix(hdf5_blosc_dir, ["blosc_filter.c", "blosc_plugin.c"])
 
     extra_compile_args = ["-std=gnu99"]  # Needed to build manylinux1 wheels
-    extra_compile_args += ["-O3", "-ffast-math"]
-    extra_compile_args += ["/Ox", "/fp:fast"]
+    extra_compile_args += ["-O3"]
+    extra_compile_args += ["/Ox"]
     extra_compile_args += ["-pthread"]
     extra_link_args = ["-pthread"]
 
@@ -1343,8 +1343,8 @@ def _get_fcidecomp_plugin():
     """FCIDECOMP plugin build config"""
     fcidecomp_dir = "lib/fcidecomp/src/fcidecomp"
 
-    extra_compile_args = ["-O3", "-ffast-math", "-std=c99", "-fopenmp"]
-    extra_compile_args += ["/Ox", "/fp:fast", "/openmp"]
+    extra_compile_args = ["-O3", "-std=c99", "-fopenmp"]
+    extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-lstdc++", "-fopenmp"]
 
     macros = [("LOGGING", 1)]
@@ -1376,8 +1376,8 @@ def _get_h5zfp_plugin():
     """H5Z-ZFP plugin build config"""
     h5zfp_dir = "lib/H5Z-ZFP/src"
 
-    extra_compile_args = ["-O3", "-ffast-math", "-std=c99"]
-    extra_compile_args += ["/Ox", "/fp:fast"]
+    extra_compile_args = ["-O3", "-std=c99"]
+    extra_compile_args += ["/Ox"]
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zfp",
@@ -1441,8 +1441,8 @@ def _get_sz3_plugin():
     include_dirs.append(f"{h5z_sz3_dir}/include")
     include_dirs += get_clib_config("zstd", "include_dirs")
 
-    extra_compile_args = ["-std=c++14", "-O3", "-ffast-math", "-fopenmp"]
-    extra_compile_args += ["/Ox", "/fp:fast", "/openmp"]
+    extra_compile_args = ["-std=c++14", "-O3", "-fopenmp"]
+    extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-fopenmp", "-lm"]
 
     return HDF5PluginExtension(
