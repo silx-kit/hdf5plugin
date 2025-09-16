@@ -17,11 +17,12 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: python -m pip install --upgrade pip bandit black build flake8 isort twine
+      - run: python -m pip install --upgrade pip bandit black build flake8 isort mypy numpy twine
       - run: bandit -c pyproject.toml -r .
       - run: black --check .
       - run: flake8
       - run: isort --check .
+      - run: mypy
       - run: python -m build --sdist
       - run: python -m twine check dist/*
       # Build documentation
