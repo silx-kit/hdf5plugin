@@ -866,6 +866,7 @@ blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io,
     }
     int trailer_offset = FRAME_TRAILER_MINLEN - FRAME_TRAILER_LEN_OFFSET;
     if (trailer_ptr[trailer_offset - 1] != 0xce) {
+        BLOSC_TRACE_ERROR("Invalid trailer in file '%s'.", urlpath);
         free(urlpath_cpy);
         free(frame);
         return NULL;
@@ -2146,7 +2147,7 @@ int frame_get_chunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, bool
     return rc;
   }
 
-  if (nchunk >= nchunks) {
+  if ((nchunks > 0) && (nchunk >= nchunks)) {
     BLOSC_TRACE_ERROR("nchunk ('%" PRId64 "') exceeds the number of chunks "
                     "('%" PRId64 "') in frame.", nchunk, nchunks);
     return BLOSC2_ERROR_INVALID_PARAM;
