@@ -656,7 +656,7 @@ class SZ(h5py.filters.FilterRefBase):
 
     For more details about the compressor, see `SZ2 compressor <https://github.com/szcompressor/SZ2>`_.
 
-    .. warning:: The SZ2 compressor is deprecated, see `SZ <https://github.com/szcompressor/SZ>`_
+    .. warning:: The SZ2 compressor is deprecated, see `SZ <https://github.com/szcompressor/SZ?tab=readme-ov-file#deprecatedlegacy-version-sz2>`_
     """
 
     filter_name = "sz"
