@@ -105,11 +105,13 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
 
         # Write
         f = h5py.File(filename, "w")
+        if options is None:
+            options = {}
         f.create_dataset(
             "data",
             data=data,
             chunks=data.shape,
-            compression=compression_class(**(options if options else {})),
+            compression=compression_class(**options),
         )
         f.close()
 
