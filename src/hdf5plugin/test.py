@@ -309,68 +309,65 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     def testSperr(self):
         """Write/read test with Sperr filter plugin"""
         tests: List[Dict[str, int | float | bool]] = [
-            {"lossless": False, "rate": 16},
-            {"lossless": False, "rate": 16, "swap": True},
+            {"rate": 16},
+            {"rate": 16, "swap": True},
             {
-                "lossless": False,
                 "rate": 16,
                 "swap": True,
                 "missing_value_mode": hdf5plugin.Sperr.MISSING_NAN,
             },
             {
-                "lossless": False,
                 "rate": 16,
                 "swap": True,
                 "missing_value_mode": hdf5plugin.Sperr.MISSING_1E35,
             },
-            {"lossless": False, "peak_signal_to_noise_ratio": 1e-4},
-            {"lossless": False, "peak_signal_to_noise_ratio": 1e-4, "swap": True},
-            {"lossless": False, "absolute": 1e-4},
-            {"lossless": False, "absolute": 1e-4, "swap": True},
+            {"peak_signal_to_noise_ratio": 1e-4},
+            {"peak_signal_to_noise_ratio": 1e-4, "swap": True},
+            {"absolute": 1e-4},
+            {"absolute": 1e-4, "swap": True},
         ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("sperr", dtype=dtype, options=options)
+                    self._test("sperr", dtype=dtype, lossless=False, options=options)
 
     @unittest.skipUnless(should_test("sz"), "SZ filter not available")
     def testSZ(self):
         """Write/read test with SZ filter plugin"""
         # TODO: Options mission
         tests = [
-            {"lossless": False, "absolute": 0.0001},
-            {"lossless": False, "relative": 0.01},
+            {"absolute": 0.0001},
+            {"relative": 0.01},
         ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("sz", dtype=dtype, options=options)
+                    self._test("sz", dtype=dtype, lossless=False, options=options)
 
     @unittest.skipUnless(should_test("sz3"), "SZ3 filter not available")
     def testSZ3(self):
         """Write/read test with SZ3 filter plugin"""
         # TODO: Options mission
         tests = [
-            {"lossless": False, "absolute": 0.001},
-            # {'lossless': False, 'relative': 0.0001},
+            {"absolute": 0.001},
+            # {'relative': 0.0001},
         ]
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("sz3", dtype=dtype, options=options)
+                    self._test("sz3", dtype=dtype, lossless=False, options=options)
 
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
         tests: List[Dict[str, int | float | bool]] = [
-            {"lossless": False},  # Default config
-            {"lossless": False, "rate": 10.0},  # Fixed-rate
-            {"lossless": False, "precision": 10},  # Fixed-precision
-            {"lossless": False, "accuracy": 1e-8},  # Fixed-accuracy
-            {"lossless": True, "reversible": True},  # Reversible
+            {},  # Default config
+            {"rate": 10.0},  # Fixed-rate
+            {"precision": 10},  # Fixed-precision
+            {"accuracy": 1e-8},  # Fixed-accuracy
+            {"reversible": True},  # Reversible
             # Expert: with default parameters
             {
-                "lossless": False,
                 "minbits": 1,
                 "maxbits": 16657,
                 "maxprec": 64,
@@ -380,7 +377,12 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("zfp", dtype=dtype, options=options)
+                    self._test(
+                        "zfp",
+                        dtype=dtype,
+                        lossless=bool(options.get("reversible", False)),
+                        options=options,
+                    )
 
         self._test("zfp", dtype=numpy.int32, options={"reversible": True})
 
@@ -443,7 +445,7 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
         if filter_name == "fcidecomp":
             self._test("fcidecomp", dtype=numpy.uint8)
         elif filter_name in ("sz", "zfp"):
-            self._test(filter_name, dtype=numpy.float32, options={"lossless": False})
+            self._test(filter_name, dtype=numpy.float32, lossless=False)
         else:
             self._test(filter_name)
 
