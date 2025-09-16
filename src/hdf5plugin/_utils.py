@@ -30,7 +30,7 @@ import os
 import sys
 import traceback
 from collections import namedtuple
-from typing import Dict, Tuple
+from typing import Dict, Tuple, cast
 
 import h5py
 
@@ -71,7 +71,7 @@ def H5Zregister_ctypes(filter_struct_p: ctypes.c_void_p) -> int:
         libhdf5 = ctypes.CDLL(h5py.h5z.__file__)
     libhdf5.H5Zregister.argtypes = [ctypes.c_void_p]
     libhdf5.H5Zregister.restype = ctypes.c_int
-    return int(libhdf5.H5Zregister(filter_struct_p))
+    return cast(int, libhdf5.H5Zregister(filter_struct_p))
 
 
 registered_filters: Dict[str, Tuple[str, ctypes.CDLL]] = {}
