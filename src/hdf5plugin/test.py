@@ -31,6 +31,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from typing import Any, Dict, List, Tuple
 
 import h5py
 import numpy
@@ -42,12 +43,14 @@ try:
 except ImportError:
     blosc2 = None
 
+from numpy.typing import DTypeLike
+
 from hdf5plugin import _filters
 
 BUILD_CONFIG = hdf5plugin.get_config().build_config
 
 
-def should_test(filter_name):
+def should_test(filter_name: str) -> bool:
     """Returns True if the given filter should be tested"""
     filter_id = hdf5plugin.FILTERS[filter_name]
     return filter_name in BUILD_CONFIG.embedded_filters or h5py.h5z.filter_avail(
@@ -70,13 +73,17 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
         shutil.rmtree(cls.tempdir)
 
     def _test(
-        self, filter_name, dtype=numpy.int32, lossless=True, compressed=True, **options
+        self,
+        filter_name: str,
+        dtype: DTypeLike = numpy.int32,
+        lossless: bool = True,
+        compressed: str | bool = True,
+        options: dict[str, Any] = None,
     ):
         """Run test for a particular filter
 
-        :param str filter_name: The name of the filter to use
-        :param Union[None,tuple(int)] options:
-            create_dataset's compression_opts argument
+        :param filter_name: The name of the filter to use
+        :param options: create_dataset's compression_opts argument
         :return: The tuple describing the filter
         """
         data = numpy.ones((self._data_natoms,), dtype=dtype).reshape(self._data_shape)
@@ -102,7 +109,7 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
             "data",
             data=data,
             chunks=data.shape,
-            compression=compression_class(**options),
+            compression=compression_class(**(options if options else {})),
         )
         f.close()
 
@@ -149,15 +156,18 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                 for nelems in (1024, 2048):
                     with self.subTest(lz4=lz4, dtype=dtype, nelems=nelems):
                         filter_ = self._test(
-                            "bshuf", dtype, compressed=lz4, nelems=nelems, lz4=lz4
+                            "bshuf",
+                            dtype,
+                            compressed=lz4,
+                            options={"nelems": nelems, "lz4": lz4},
                         )
                         self.assertEqual(filter_[2][3:], (nelems, 2 if lz4 else 0))
 
-    def _get_bitshuffle_version(self):
+    def _get_bitshuffle_version(self) -> tuple[int, int]:
         filename = os.path.join(self.tempdir, "get_bitshuffle_version.h5")
         with h5py.File(filename, "w", driver="core", backing_store=False) as h5f:
             h5f.create_dataset(
-                "data", numpy.arange(10), compression=hdf5plugin.Bitshuffle()
+                "data", data=numpy.arange(10), compression=hdf5plugin.Bitshuffle()
             )
             plist = h5f["data"].id.get_create_plist()
             assert plist.get_nfilters() == 1
@@ -186,8 +196,10 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                             "bshuf",
                             dtype,
                             compressed=cname != "none",
-                            nelems=nelems,
-                            cname=cname,
+                            options={
+                                "nelems": nelems,
+                                "cname": cname,
+                            },
                         )
                         self.assertEqual(filter_[2][3:5], (nelems, compression_id))
 
@@ -214,9 +226,11 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                         filter_ = self._test(
                             "blosc",
                             compressed=clevel != 0,  # No compression for clevel=0
-                            cname=cname,
-                            clevel=clevel,
-                            shuffle=shuffle,
+                            options={
+                                "cname": cname,
+                                "clevel": clevel,
+                                "shuffle": shuffle,
+                            },
                         )
                         self.assertEqual(
                             filter_[2][4:], (clevel, shuffle, compression_id)
@@ -247,11 +261,17 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                             compressed=(
                                 "nocheck" if clevel == 0 else True
                             ),  # For clevel=0, chunks are larger
-                            cname=cname,
-                            clevel=clevel,
-                            filters=filters,
+                            options={
+                                "cname": cname,
+                                "clevel": clevel,
+                                "filters": filters,
+                            },
                         )
-                        filter_params = (clevel, filters, compression_id)
+                        filter_params: Tuple[int | str, ...] = (
+                            clevel,
+                            filters,
+                            compression_id,
+                        )
                         if len(self._data_shape) >= 2:
                             # Chunk shape passed to filter code
                             filter_params += (len(self._data_shape),) + self._data_shape
@@ -265,7 +285,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         # Specify options
         for blocksize in range(1, 10):
             with self.subTest(blocksize=blocksize):
-                filter_ = self._test("bzip2", blocksize=blocksize)
+                filter_ = self._test("bzip2", options={"blocksize": blocksize})
                 self.assertEqual(filter_[2][0], blocksize)
 
     @unittest.skipUnless(should_test("lz4"), "LZ4 filter not available")
@@ -274,7 +294,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         self._test("lz4")
 
         # Specify options
-        filter_ = self._test("lz4", nbytes=1024)
+        filter_ = self._test("lz4", options={"nbytes": 1024})
         self.assertEqual(filter_[2], (1024,))
 
     @unittest.skipUnless(should_test("fcidecomp"), "FCIDECOMP filter not available")
@@ -288,7 +308,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     @unittest.skipUnless(should_test("sperr"), "Sperr filter not available")
     def testSperr(self):
         """Write/read test with Sperr filter plugin"""
-        tests = [
+        tests: List[Dict[str, int | float | bool]] = [
             {"lossless": False, "rate": 16},
             {"lossless": False, "rate": 16, "swap": True},
             {
@@ -311,7 +331,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("sperr", dtype=dtype, **options)
+                    self._test("sperr", dtype=dtype, options=options)
 
     @unittest.skipUnless(should_test("sz"), "SZ filter not available")
     def testSZ(self):
@@ -324,7 +344,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("sz", dtype=dtype, **options)
+                    self._test("sz", dtype=dtype, options=options)
 
     @unittest.skipUnless(should_test("sz3"), "SZ3 filter not available")
     def testSZ3(self):
@@ -337,12 +357,12 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("sz3", dtype=dtype, **options)
+                    self._test("sz3", dtype=dtype, options=options)
 
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
-        tests = [
+        tests: List[Dict[str, int | float | bool]] = [
             {"lossless": False},  # Default config
             {"lossless": False, "rate": 10.0},  # Fixed-rate
             {"lossless": False, "precision": 10},  # Fixed-precision
@@ -360,9 +380,9 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("zfp", dtype=dtype, **options)
+                    self._test("zfp", dtype=dtype, options=options)
 
-        self._test("zfp", dtype=numpy.int32, reversible=True)
+        self._test("zfp", dtype=numpy.int32, options={"reversible": True})
 
     @unittest.skipUnless(should_test("zstd"), "Zstd filter not available")
     def testZstd(self):
@@ -372,7 +392,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for options in tests:
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
-                    self._test("zstd", dtype=dtype, **options)
+                    self._test("zstd", dtype=dtype, options=options)
 
 
 class TestPackage(unittest.TestCase):
@@ -419,11 +439,11 @@ class TestPackage(unittest.TestCase):
 class TestRegisterFilter(BaseTestHDF5PluginRW):
     """Test usage of the register function"""
 
-    def _simple_test(self, filter_name):
+    def _simple_test(self, filter_name: str):
         if filter_name == "fcidecomp":
             self._test("fcidecomp", dtype=numpy.uint8)
         elif filter_name in ("sz", "zfp"):
-            self._test(filter_name, dtype=numpy.float32, lossless=False)
+            self._test(filter_name, dtype=numpy.float32, options={"lossless": False})
         else:
             self._test(filter_name)
 
@@ -474,7 +494,10 @@ class TestGetFilters(unittest.TestCase):
 
     def testSelection(self):
         """Get selected filters"""
-        tests = {
+        tests: Dict[
+            int | str | Tuple[int | str, ...],
+            Tuple[type[_filters.FilterBase], ...],
+        ] = {
             "blosc": (hdf5plugin.Blosc,),
             ("blosc", "zfp"): (hdf5plugin.Blosc, hdf5plugin.Zfp),
             307: (hdf5plugin.BZip2,),
@@ -504,7 +527,9 @@ class TestSZ(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             filename = os.path.join(tempdir, "testsz.h5")
             with h5py.File(filename, "w", driver="core", backing_store=False) as f:
-                f.create_dataset("var", data=data, chunks=data.shape, **compression)
+                f.create_dataset(
+                    "var", data=data, chunks=data.shape, compression=compression
+                )
                 f.flush()
 
                 recovered_data = f["var"][:]
@@ -525,8 +550,11 @@ class TestBlosc2Plugins(unittest.TestCase):
             self.skipTest("Blosc2 package not available")
 
     def _readback_hdf5_blosc2_dataset(
-        self, data: numpy.ndarray, blocks: tuple[int, ...] | None = None, **cparams
-    ) -> numpy.ndarray:
+        self,
+        data: numpy.ndarray[Any, Any],
+        blocks: tuple[int, ...] = None,
+        **cparams,
+    ):
         """Compress data with blosc2, write it as HDF5 file with direct chunk write and read it back with h5py
 
         :param data: data array to compress
@@ -605,7 +633,7 @@ class TestBlosc2Plugins(unittest.TestCase):
         assert numpy.array_equal(read_data, data)
 
 
-def suite():
+def suite() -> unittest.TestSuite:
     test_suite = unittest.TestSuite()
     for cls in (
         TestHDF5PluginRW,
@@ -619,7 +647,7 @@ def suite():
     return test_suite
 
 
-def run_tests(*args, **kwargs):
+def run_tests(*args, **kwargs) -> bool:
     """Run test complete test_suite"""
     runner = unittest.TextTestRunner(*args, **kwargs)
     success = runner.run(suite()).wasSuccessful()
