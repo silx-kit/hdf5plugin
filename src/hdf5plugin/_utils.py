@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
+from __future__ import annotations
 
 import ctypes
 import glob
@@ -29,26 +30,26 @@ import os
 import sys
 import traceback
 from collections import namedtuple
+from typing import Dict, Tuple, cast
 
 import h5py
 
 from ._config import build_config
-from ._filters import FILTER_CLASSES, FILTERS
+from ._filters import FILTER_CLASSES, FILTERS, FilterBase
 
 logger = logging.getLogger(__name__)
 
 
-PLUGIN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "plugins"))
+PLUGIN_PATH: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "plugins"))
 """Directory where the provided HDF5 filter plugins are stored."""
 
 
-def is_filter_available(name):
+def is_filter_available(name: str) -> bool | None:
     """Returns whether filter is already registered or not.
 
-    :param str name: Name of the filter (See `hdf5plugin.FILTERS`)
+    :param name: Name of the filter (See `hdf5plugin.FILTERS`)
     :return: True if filter is registered, False if not and
         None if it cannot be checked (libhdf5 not supporting it)
-    :rtype: Union[bool,None]
     """
     filter_id = FILTERS[name]
 
@@ -58,12 +59,11 @@ def is_filter_available(name):
     return h5py.h5z.filter_avail(filter_id) > 0
 
 
-def H5Zregister_ctypes(filter_struct_p):
+def H5Zregister_ctypes(filter_struct_p: ctypes.c_void_p) -> int:
     """Register a new filter with libHDF5 using ctypes wrapping.
 
-    :param ctypes.c_void_p filter_struct_p: Pointer to filter definition struct
+    :param filter_struct_p: Pointer to filter definition struct
     :return: A non-negative value if successful, else a negative value
-    :rtype: int
     """
     if sys.platform.startswith("win"):
         libhdf5 = ctypes.cdll.LoadLibrary("hdf5")
@@ -71,21 +71,20 @@ def H5Zregister_ctypes(filter_struct_p):
         libhdf5 = ctypes.CDLL(h5py.h5z.__file__)
     libhdf5.H5Zregister.argtypes = [ctypes.c_void_p]
     libhdf5.H5Zregister.restype = ctypes.c_int
-    return libhdf5.H5Zregister(filter_struct_p)
+    return cast(int, libhdf5.H5Zregister(filter_struct_p))
 
 
-registered_filters = {}
+registered_filters: Dict[str, Tuple[str, ctypes.CDLL]] = {}
 """Store hdf5plugin registered filters as a mapping: name: (filename, ctypes.CDLL)"""
 
 
-def register_filter(name):
+def register_filter(name: str) -> bool:
     """Register a filter given its name
 
     Unregister the previously registered filter if any.
 
-    :param str name: Name of the filter (See `hdf5plugin.FILTERS`)
+    :param name: Name of the filter (See `hdf5plugin.FILTERS`)
     :return: True if successfully registered, False otherwise
-    :rtype: bool
     """
     if name not in FILTERS:
         raise ValueError(f"Unknown filter name: {name}")
@@ -182,7 +181,7 @@ HDF5PluginConfig = namedtuple(
 )
 
 
-def get_config():
+def get_config() -> HDF5PluginConfig:
     """Provides information about build configuration and filters registered by hdf5plugin."""
     filters = {}
     for name in FILTERS:
@@ -196,12 +195,14 @@ def get_config():
     return HDF5PluginConfig(build_config, filters)
 
 
-def get_filters(filters=tuple(FILTERS.keys())):
+def get_filters(
+    filters: int | str | tuple[int | str, ...] = tuple(FILTERS.keys()),
+) -> tuple[type[FilterBase], ...]:
     """Returns selected filter classes.
 
     By default it returns all filter classes.
 
-    :param Union[str,int,Tuple[Union[str,int]] filters:
+    :param filters:
         Filter name or ID or sequence of filter names or IDs (default: all filters).
         It also supports the value `"registered"` which selects
         currently available filters.
@@ -229,16 +230,18 @@ def get_filters(filters=tuple(FILTERS.keys())):
     return tuple(filter_classes)
 
 
-def register(filters=tuple(FILTERS.keys()), force=True):
+def register(
+    filters: int | str | tuple[int | str, ...] = tuple(FILTERS.keys()),
+    force: bool = True,
+) -> bool:
     """Initialise and register `hdf5plugin` embedded filters given their names or IDs.
 
-    :param Union[str,int,Tuple[Union[str,int]] filters:
+    :param filters:
         Filter name or ID or sequence of filter names or IDs.
-    :param bool force:
+    :param force:
         True to register the filter even if a corresponding one if already available.
         False to skip already available filters.
     :return: True if all filters were registered successfully, False otherwise.
-    :rtype: bool
     """
     filter_classes = get_filters(filters)
 

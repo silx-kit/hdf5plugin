@@ -38,6 +38,7 @@ doc = [
     "ipython",
     "nbsphinx",
     "sphinx",
+    "sphinx-autodoc-typehints",
     "sphinx_rtd_theme",
 ]
 test = [
@@ -81,3 +82,24 @@ extend-exclude = '''
 [tool.isort]
 profile = "black"
 skip_glob = ["lib"]
+
+[tool.mypy]
+mypy_path = ["src"]
+packages = ["hdf5plugin"]
+strict = true
+implicit_optional = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["hdf5plugin.test"]
+disable_error_code = [
+    "attr-defined",
+    "no-untyped-def",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "blosc2",
+    "hdf5plugin._config",
+]
+ignore_missing_imports = true

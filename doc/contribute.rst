@@ -45,6 +45,10 @@ From the source directory:
 
     bandit -c pyproject.toml -r .
 
+* Check typing with `mypy <https://mypy.readthedocs.io>`_`::
+
+    mypy
+
 Building documentation
 ======================
 
