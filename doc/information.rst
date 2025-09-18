@@ -77,7 +77,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `SZ plugin <https://github.com/szcompressor/SZ2>`_
   (commit `f466775 <https://github.com/szcompressor/SZ2/tree/f4667759ead6a902110e80ff838ccdfddbc8dcd7>`_)
   using `SZ <https://github.com/szcompressor/SZ2>`_, ZLib and ZStd.
-* `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.2.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.2).
+* `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.2.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.4).
 * `SZ3 plugin <https://github.com/szcompressor/SZ3>`_
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
