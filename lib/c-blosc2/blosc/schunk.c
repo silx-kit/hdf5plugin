@@ -129,6 +129,7 @@ static bool file_exists (char *filename) {
 blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
   blosc2_schunk* schunk = calloc(1, sizeof(blosc2_schunk));
   schunk->version = 0;     /* pre-first version */
+  schunk->view = false;  /* not a view by default */
 
   // Get the storage with proper defaults
   schunk->storage = get_new_storage(storage, &BLOSC2_CPARAMS_DEFAULTS, &BLOSC2_DPARAMS_DEFAULTS, &BLOSC2_IO_DEFAULTS);
@@ -253,6 +254,8 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
     BLOSC_TRACE_ERROR("Can not create a new schunk");
     return NULL;
   }
+  // Set the chunksize for the schunk, as it cannot be derived from storage
+  new_schunk->chunksize = schunk->chunksize;
 
   // Copy metalayers
   for (int nmeta = 0; nmeta < schunk->nmetalayers; ++nmeta) {
@@ -336,6 +339,11 @@ blosc2_schunk* blosc2_schunk_open_offset_udio(const char* urlpath, int64_t offse
     return NULL;
   }
   blosc2_schunk* schunk = frame_to_schunk(frame, false, udio);
+  if (schunk == NULL) {
+    frame_free(frame);
+    BLOSC_TRACE_ERROR("Error converting frame to super-chunk");
+    return NULL;
+  }
 
   // Set the storage with proper defaults
   size_t pathlen = strlen(urlpath);
@@ -484,7 +492,10 @@ int64_t blosc2_schunk_append_file(blosc2_schunk* schunk, const char* urlpath) {
 
 /* Free all memory from a super-chunk. */
 int blosc2_schunk_free(blosc2_schunk *schunk) {
-  if (schunk->data != NULL) {
+  int err = 0;
+
+  // If it is a view, the data belongs to original array and should not be freed
+  if (schunk->data != NULL && !schunk->view) {
     for (int i = 0; i < schunk->nchunks; i++) {
       free(schunk->data[i]);
     }
@@ -516,6 +527,7 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
       int rc = io_cb->destroy(schunk->storage->io->params);
       if (rc < 0) {
         BLOSC_TRACE_ERROR("Could not free the I/O resources.");
+        err = 1;
       }
     }
 
@@ -528,7 +540,8 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
     free(schunk->storage);
   }
 
-  if (schunk->frame != NULL) {
+  // If it is a view, the frame belongs to original array and should not be freed
+  if (schunk->frame != NULL && !schunk->view) {
     frame_free((blosc2_frame_s *) schunk->frame);
   }
 
@@ -546,7 +559,7 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
 
   free(schunk);
 
-  return 0;
+  return err;
 }
 
 
@@ -1118,9 +1131,9 @@ int blosc2_schunk_decompress_chunk(blosc2_schunk *schunk, int64_t nchunk,
 */
 int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk, bool *needs_free) {
   if (schunk->dctx->threads_started > 1) {
-    pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
     schunk->current_nchunk = nchunk;
-    pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
   }
   else {
     schunk->current_nchunk = nchunk;
@@ -1164,9 +1177,9 @@ int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chu
 */
 int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk, bool *needs_free) {
   if (schunk->dctx->threads_started > 1) {
-    pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
     schunk->current_nchunk = nchunk;
-    pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
   }
   else {
     schunk->current_nchunk = nchunk;

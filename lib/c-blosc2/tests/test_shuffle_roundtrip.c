@@ -11,11 +11,10 @@
 **********************************************************************/
 
 #include "test_common.h"
-#include "../blosc/shuffle-generic.h"
 
 
-/** Roundtrip tests for the generic shuffle/unshuffle. */
-static int test_shuffle_roundtrip_generic(size_t type_size, size_t num_elements,
+/** Roundtrip tests for the public shuffle/unshuffle API. */
+static int test_shuffle_roundtrip(size_t type_size, size_t num_elements,
                                           size_t buffer_alignment) {
   size_t buffer_size = type_size * num_elements;
 
@@ -28,8 +27,8 @@ static int test_shuffle_roundtrip_generic(size_t type_size, size_t num_elements,
   blosc_test_fill_seq(original, buffer_size);
 
   /* Generic shuffle, then generic unshuffle. */
-  shuffle_generic((int32_t)type_size, (int32_t)buffer_size, original, shuffled);
-  unshuffle_generic((int32_t)type_size, (int32_t)buffer_size, shuffled, unshuffled);
+  blosc2_shuffle((int32_t)type_size, (int32_t)buffer_size, original, shuffled);
+  blosc2_unshuffle((int32_t)type_size, (int32_t)buffer_size, shuffled, unshuffled);
 
   /* The round-tripped data matches the original data when the
      result of memcmp is 0. */
@@ -81,5 +80,5 @@ int main(int argc, char** argv) {
   }
 
   /* Run the test. */
-  return test_shuffle_roundtrip_generic(type_size, num_elements, buffer_align_size);
+  return test_shuffle_roundtrip(type_size, num_elements, buffer_align_size);
 }

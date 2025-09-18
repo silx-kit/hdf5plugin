@@ -1,17 +1,10 @@
-# Announcing C-Blosc2 2.17.1
+# Announcing C-Blosc2 2.21.2
 A fast, compressed and persistent binary data store library for C.
 
 ## What is new?
 
-Several fixes affecting uninitialized memory access and others:
-
-* Fix uninitialized memory access in newly added unshuffle12_sse2 and unshuffle12_avx2 functions
-* Fix unaligned access in _sw32 and sw32_
-* Fix DWORD being printed as %s in sprintf call
-* Fix warning on unused variable (since this variable was only being used in the linux branch)
-* `splitmode` variable was uninitialized if goto was triggered
-
-See PR #658.  Many thanks to @EmilDohne for this nice job.
+This is a maintenance release, with a few fixes and some optimizations.
+Thanks to Barak Ugav and Preeyan Parmar for their contributions.
 
 For more info, see the release notes in:
 
@@ -19,11 +12,10 @@ https://github.com/Blosc/c-blosc2/blob/main/RELEASE_NOTES.md
 
 ## What is it?
 
-Blosc2 is a high performance data container optimized for binary data.
-It builds on the shoulders of Blosc, the high performance meta-compressor
-(https://github.com/Blosc/c-blosc).  Blosc2 is the next generation of Blosc,
-an award-winning (https://www.blosc.org/posts/prize-push-Blosc2)` library
-that has been around for more than a decade.
+Blosc2 is a high-performance data container optimized for binary data.
+Blosc2 is the next generation of Blosc, an [award-winning]
+(https://www.blosc.org/posts/prize-push-Blosc2)` library that has been
+around for more than a decade.
 
 Blosc2 expands the capabilities of Blosc by providing a higher lever
 container that is able to store many chunks on it (hence the super-block name).
@@ -46,9 +38,9 @@ There is an official Blosc mailing list at:
 blosc@googlegroups.com
 https://groups.google.com/g/blosc
 
-## Tweeter feed
+## Fosstodon feed
 
-Please follow @Blosc2 to get informed about the latest developments.
+Please follow https://fosstodon.org/@Blosc2 to get informed about the latest developments.
 
 
 Enjoy Data!

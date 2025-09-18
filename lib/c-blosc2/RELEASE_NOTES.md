@@ -1,6 +1,100 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 2.21.1 to 2.21.2
+=============================
+
+* Allocate strides array on stack if ndim <= B2ND_MAX_DIM in unidim_to_multidim.
+  Should allow to speed up code.  Thanks to Barak Ugav.
+* Handle frame_to_schunk failure in schunk_open. Thanks to Barak Ugav.
+* Fix fastpath decision logic for ndarray slicing. Thanks to Preeyan Parmar.
+
+Changes from 2.21.0 to 2.21.1
+=============================
+
+* Fixed a regression introduced in PR #682 causing incompatibility
+  at least with Fedora and Gentoo.  Fixed in PR #690. Thanks to
+  Michał Górny (@mgorny) for reporting and Teodor Tsirpanis
+  (@teo-tsirpanis) for the actual fix.
+
+* Restrict overmatching MACH ifdef to only trigger on OSX and Mach.
+  Thanks to Maximilian Downey Twiss (@Zopolis4) for the PR (#688).
+
+Changes from 2.20.0 to 2.21.0
+=============================
+
+* New public API `b2nd_save_append`. It is useful for appending a b2nd
+  array into a file. Thanks to Barak Ugav (@barakugav) for the PR (#683).
+
+* Added new public APIs for the shuffling filters:
+  * `blosc2_shuffle`
+  * `blosc2_unshuffle`
+  * `blosc2_bitshuffle`
+  * `blosc2_bitunshuffle`
+
+  Thanks to Theodore Tsirpanis (@teo-tsirpanis) for the PR (#681).
+
+* Fix a potential nullptr exception on `b2nd_create_ctx` with null storage.
+  Thanks to Barak Ugav (@barakugav) for the PR (#684).
+
+* The CMake dependency acquisition has been improved.
+  Thanks to Theodore Tsirpanis (@teo-tsirpanis) for the PR (#682).
+
+* Now, a blosc/config.h is generated in the binary directory. Fixes
+  failures when configuring from the same source directory in parallel.
+  Thanks to Theodore Tsirpanis (@teo-tsirpanis) for the PR (#679).
+
+
+Changes from 2.19.1 to 2.20.0
+=============================
+
+* Extended `b2nd_expand_dims()` to allow for list of axes like NumPy.
+  See PR #676. This represents a breaking change for the API, but as
+  it was introduced in 2.18.0, it is unlikely to be used in practice.
+  Thanks to Luke Shaw (@lshaw8317).
+
+* Fix detection of AVX512 in MSVC. See PR #678.
+  Thanks to Theodore Tsirpanis (@teo-tsirpanis).
+
+* Add unified Blosc2::blosc2 CMake target. See PR #677.
+  Thanks to Theodore Tsirpanis (@teo-tsirpanis).
+
+* Rename windows pthread functions and blosc_pthread_{xyz}. Fixes #673
+  (Duplicate symbols for pthread functions on Windows).
+  Thanks to Barak Ugav (@barakugav).
+
+
+Changes from 2.19.0 to 2.19.1
+=============================
+
+* New `blosc2_error_string()` public function for getting the error string
+  corresponding to a given error code.  This is useful for debugging purposes.
+  Thanks to Barak Ugav (@barakugav).
+* Support BLOSC2_ERROR_TUNER in print_error. Thanks to Barak Ugav (@barakugav).
+* Eagerly register io_cb's to avoid race. Thanks to Tom Birch (@froody).
+
+
+Changes from 2.18.0 to 2.19.0
+=============================
+
+* New `b2nd_expand_dims()` function for expanding the dimensions of a b2nd array.
+  This is useful for adding new dimensions to an existing b2nd array, e.g.,
+  when you want to add a new dimension to a 2D array to make it 3D.
+  Thanks to @lshaw8317 for the PR (#666 and #667).
+
+* New internal view object that allows accessing the data in a b2nd array
+  without copying it.  The new `b2nd_expand_dims()` function makes use of this.
+  In the future, it can also be useful for implementing e.g. a view on a slice
+  of a b2nd array.
+
+Changes from 2.17.1 to 2.18.0
+=============================
+
+* New `b2nd_concatenate()` function for concatenating two b2nd arrays.
+  See PR #661 and #663.
+* Flush modified pages only in write mode for mmap files. Thanks to Jan Sellner.
+
+
 Changes from 2.17.0 to 2.17.1
 =============================
 

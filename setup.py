@@ -1164,6 +1164,8 @@ def _get_blosc2_plugin():
     plugins_dir = f"{blosc2_dir}/plugins"
 
     sources = glob(f"{blosc2_dir}/blosc/*.c")
+    if sys.platform == "win32":
+        sources += glob(f"{blosc2_dir}/blosc/win32/*.c")
     sources += [  # Add embedded codecs, filters and tuners
         src_file
         for src_file in glob(f"{plugins_dir}/*.c")
