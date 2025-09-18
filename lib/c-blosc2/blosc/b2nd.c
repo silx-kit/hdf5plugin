@@ -694,8 +694,7 @@ int b2nd_get_slice_nchunks(const b2nd_array_t *array, const int64_t *start, cons
 
 
 // Check whether the slice defined by start and stop is a single chunk and contiguous
-// in the C order. We also need blocks inside a chunk, and chunks inside an array,
-// are C contiguous. This is a fast path for the get_slice and set_slice functions.
+// in the C order. This is a fast path for the get_slice and set_slice functions.
 int64_t nchunk_fastpath(const b2nd_array_t *array, const int64_t *start,
                         const int64_t *stop, const int64_t slice_size) {
   if (slice_size != array->chunknitems) {
@@ -703,49 +702,29 @@ int64_t nchunk_fastpath(const b2nd_array_t *array, const int64_t *start,
   }
 
   int ndim = (int) array->ndim;
-  int inner_dim = ndim - 1;
-  int64_t partial_slice_size = 1;
-  int outer_dims = 0;
-  for (int j = 0; j < inner_dim; ++j) {
-    outer_dims += (array->blockshape[j] != 1);
-   }
-  int64_t partial_chunk_size = 1;
-  for (int i = ndim - 1; i >= 0; --i) {
-    // We need to check if the slice is contiguous in the C order
-    if (array->extshape[i] != array->shape[i]) {
-      return -1;
-    }
-    if (array->extchunkshape[i] != array->chunkshape[i]) {
-      return -1;
-    }
 
-    // blocks need to be C contiguous inside the chunk as well
-    if (array->chunkshape[i] > array->blockshape[i]) {
-      if (i < inner_dim) {
-        if (array->chunkshape[i] % array->blockshape[i] != 0) {
-          return -1;
-        }
-      }
-      else {
-        // A block is still contiguous in the C order if the outer dimensions are 1 and the inner is
-        // a divisor of the chunkshape
-        if ( ! (array->chunkshape[i] == array->blockshape[i] ||
-                (outer_dims == 0 && array->chunkshape[i] % array->blockshape[i] == 0))) {
-          return -1;
-        }
-      }
-    }
-
-    // We need start and stop to be aligned with the chunkshape
-    // Do that by computing the slice size in reverse order and compare with the chunkshape
-    partial_slice_size *= stop[i] - start[i];
-    partial_chunk_size *= array->chunkshape[i];
-    if (partial_slice_size != partial_chunk_size) {
-      return -1;
-    }
-    // Ensure that the slice starts at the beginning of the chunk
+  int k = 0;
+  for (int i = 0; i < ndim; ++i) {
+    // The slice needs to correspond to a whole chunk (without padding)
     if (start[i] % array->chunkshape[i] != 0) {
       return -1;
+    }
+    if (stop[i] - start[i] != array->chunkshape[i]) {
+      return -1;
+    }
+
+    // There needs to exist 0 <= k <= ndim such that:
+    // - for i < k, blockshape[i] == 1
+    // - for i == k, blockshape[i] divides chunkshape[i]
+    // - for i > k, blockshape[i] == chunkshape[i]
+    if (array->chunkshape[i] % array->blockshape[i] != 0) {
+      return -1;
+    }
+    if (i > k && array->chunkshape[i] != array->blockshape[i]) {
+      return -1;
+    }
+    if (i == k && array->blockshape[i] == 1) {
+      k++;
     }
   }
   // Compute the chunk number
@@ -776,10 +755,6 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
   }
 
   uint8_t *buffer_b = buffer;
-  const int64_t *buffer_start = start;
-  const int64_t *buffer_stop = stop;
-  const int64_t *buffer_shape = shape;
-
   int8_t ndim = array->ndim;
 
   // 0-dim case
@@ -884,11 +859,11 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
   int64_t update_nchunks = 1;
   for (int i = 0; i < ndim; ++i) {
     int64_t pos = 0;
-    while (pos <= buffer_start[i]) {
+    while (pos <= start[i]) {
       pos += array->chunkshape[i];
     }
     update_start[i] = pos / array->chunkshape[i] - 1;
-    while (pos < buffer_stop[i]) {
+    while (pos < stop[i]) {
       pos += array->chunkshape[i];
     }
     update_shape[i] = pos / array->chunkshape[i] - update_start[i];
@@ -916,7 +891,7 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     }
     bool chunk_empty = false;
     for (int i = 0; i < ndim; ++i) {
-      chunk_empty |= (chunk_stop[i] <= buffer_start[i] || chunk_start[i] >= buffer_stop[i]);
+      chunk_empty |= (chunk_stop[i] <= start[i] || chunk_start[i] >= stop[i]);
     }
     if (chunk_empty) {
       continue;
@@ -927,7 +902,7 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
       // Check if all the chunk is going to be updated and avoid the decompression
       bool decompress_chunk = false;
       for (int i = 0; i < ndim; ++i) {
-        decompress_chunk |= (chunk_start[i] < buffer_start[i] || chunk_stop[i] > buffer_stop[i]);
+        decompress_chunk |= (chunk_start[i] < start[i] || chunk_stop[i] > stop[i]);
       }
 
       if (decompress_chunk) {
@@ -1022,8 +997,8 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
       // compute the start of the slice inside the block
       int64_t slice_start[B2ND_MAX_DIM] = {0};
       for (int i = 0; i < ndim; ++i) {
-        if (block_start[i] < buffer_start[i]) {
-          slice_start[i] = buffer_start[i] - block_start[i];
+        if (block_start[i] < start[i]) {
+          slice_start[i] = start[i] - block_start[i];
         } else {
           slice_start[i] = 0;
         }
@@ -1032,8 +1007,8 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
 
       int64_t slice_stop[B2ND_MAX_DIM] = {0};
       for (int i = 0; i < ndim; ++i) {
-        if (block_stop[i] > buffer_stop[i]) {
-          slice_stop[i] = block_shape[i] - (block_stop[i] - buffer_stop[i]);
+        if (block_stop[i] > stop[i]) {
+          slice_stop[i] = block_shape[i] - (block_stop[i] - stop[i]);
         } else {
           slice_stop[i] = block_stop[i] - block_start[i];
         }
@@ -1046,13 +1021,12 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
       }
 
       uint8_t *src = &buffer_b[0];
-      const int64_t *src_pad_shape = buffer_shape;
 
       int64_t src_start[B2ND_MAX_DIM] = {0};
       int64_t src_stop[B2ND_MAX_DIM] = {0};
       for (int i = 0; i < ndim; ++i) {
-        src_start[i] = slice_start[i] - buffer_start[i];
-        src_stop[i] = slice_stop[i] - buffer_start[i];
+        src_start[i] = slice_start[i] - start[i];
+        src_stop[i] = slice_stop[i] - start[i];
       }
 
       uint8_t *dst = &data[nblock * array->blocknitems * array->sc->typesize];
@@ -1070,12 +1044,12 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
 
       if (set_slice) {
         b2nd_copy_buffer2(ndim, array->sc->typesize,
-                          src, src_pad_shape, src_start, src_stop,
+                          src, shape, src_start, src_stop,
                           dst, dst_pad_shape, dst_start);
       } else {
         b2nd_copy_buffer2(ndim, array->sc->typesize,
                           dst, dst_pad_shape, dst_start, dst_stop,
-                          src, src_pad_shape, src_start);
+                          src, shape, src_start);
       }
     }
 
@@ -1194,6 +1168,94 @@ int b2nd_get_slice(b2nd_context_t *ctx, b2nd_array_t **array, const b2nd_array_t
                                        chunk_stop, *array));
     free(buffer);
   }
+
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+/**
+ * @brief Return a view of a b2nd array.
+ *
+ * @param array The memory pointer of the array which will be viewed.
+ * @param view The memory pointer where the view will be created.
+ * @param ctx1 The b2nd context for the new array, containing new shape and other metadata.
+ *
+ * @return An error code.
+ *
+ * @note This doesn't support slices of arrays and is only useful for adding (or removing) dimensions.
+ *
+ */
+int view_new(const b2nd_array_t *array, b2nd_array_t **view, b2nd_context_t *ctx1) {
+
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(view, BLOSC2_ERROR_NULL_POINTER);
+
+  // The view is not contiguous (points to the original contiguous cframe which has different shape)
+  // so we set contiguous to false, which forces a copy when calling to_cframe
+  ctx1->b2_storage->contiguous = false;
+
+
+  /* Fill view with zeros */
+  BLOSC_ERROR(b2nd_zeros(ctx1, view));
+  // Free the chunks in base array
+  for (int i = 0; i < (*view)->sc->nchunks; i++) {
+    free((*view)->sc->data[i]);
+  }
+  free((*view)->sc->data);
+  (*view)->sc->view = true;
+  (*view)->sc->data = array->sc->data; // point view to the same data
+  (*view)->sc->frame = array->sc->frame; // if original array is contiguous, point to frame
+  (*view)->sc->nvlmetalayers = array->sc->nvlmetalayers; //
+  for (int i = 0; i< array->sc->nvlmetalayers; i++) {
+    (*view)->sc->vlmetalayers[i] = array->sc->vlmetalayers[i]; // add ptrs to vlmetalayers
+  }
+
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+int b2nd_expand_dims(const b2nd_array_t *array, b2nd_array_t **view, const bool *axis, const uint8_t final_dims) {
+  for (int i = 0; i < array->sc->nmetalayers; ++i) {
+    if (strcmp(array->sc->metalayers[i]->name, "b2nd") != 0) {
+      BLOSC_TRACE_ERROR("Cannot expand dimensions of an array with non-b2nd metalayers");
+      return BLOSC2_ERROR_INVALID_PARAM;
+    }
+  }
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(view, BLOSC2_ERROR_NULL_POINTER);
+
+  uint8_t old_idx = 0;
+  int64_t newshape[B2ND_MAX_DIM];
+  int32_t newchunkshape[B2ND_MAX_DIM];
+  int32_t newblockshape[B2ND_MAX_DIM];
+
+  for (int i = 0; i < final_dims; ++i) {
+    if (axis[i] == true) {
+      newshape[i] = 1;
+      newchunkshape[i] = 1;
+      newblockshape[i] = 1;
+    }
+    else {
+      if (old_idx == array->ndim) {
+        BLOSC_TRACE_ERROR("Error in axis list: original array has fewer dimensions than the axis list implies!");
+        return BLOSC2_ERROR_INVALID_PARAM;
+      }
+      newshape[i] = array->shape[old_idx];
+      newchunkshape[i] = array->chunkshape[old_idx];
+      newblockshape[i] = array->blockshape[old_idx];
+      old_idx++;
+    }
+  }
+
+  //views only deal with cparams/dparams; storage is always in-memory (ephemeral).
+  blosc2_cparams cparams = *(array->sc->storage->cparams);
+  blosc2_dparams dparams = *(array->sc->storage->dparams);
+  blosc2_storage b2_storage1 = {.cparams=&cparams, .dparams=&dparams};
+
+  b2nd_context_t *ctx1 = b2nd_create_ctx(&b2_storage1, final_dims, newshape,
+                                        newchunkshape, newblockshape, array->dtype,
+                                        array->dtype_format, NULL, 0);
+
+  view_new(array, view, ctx1);
+  b2nd_free_ctx(ctx1);
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -1330,6 +1392,161 @@ int b2nd_copy(b2nd_context_t *ctx, const b2nd_array_t *src, b2nd_array_t **array
 }
 
 
+int b2nd_concatenate(b2nd_context_t *ctx, const b2nd_array_t *src1, const b2nd_array_t *src2,
+                     int8_t axis, bool copy, b2nd_array_t **array) {
+  BLOSC_ERROR_NULL(src1, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(src2, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+
+  // Validate the axis parameter
+  if (axis < 0 || axis >= src1->ndim) {
+    BLOSC_TRACE_ERROR("axis parameter is out of bounds: axis=%d, expected range=[0, %d)", axis, src1->ndim - 1);
+    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+  }
+
+  // typesize must be the same for both arrays
+  if (src1->sc->typesize != src2->sc->typesize) {
+    BLOSC_TRACE_ERROR("The two arrays must have the same typesize");
+    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+  }
+
+  // Keep the src1 shape for later use
+  int64_t src1_shape[B2ND_MAX_DIM];
+  for (int i = 0; i < src1->ndim; ++i) {
+    src1_shape[i] = src1->shape[i];
+  }
+
+  // Support for 0-dim arrays is not implemented
+  if (src1->ndim == 0 || src2->ndim == 0) {
+    BLOSC_TRACE_ERROR("Concatenation of 0-dim arrays is not supported");
+    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+  }
+
+  // Check that the shapes are compatible for concatenation
+  if (src1->ndim != src2->ndim) {
+    BLOSC_TRACE_ERROR("The two arrays must have the same number of dimensions");
+    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+  }
+  // Compute the new shape
+  int64_t newshape[B2ND_MAX_DIM];
+  for (int8_t i = 0; i < src1->ndim; ++i) {
+    if (i == axis) {
+      newshape[i] = src1->shape[i] + src2->shape[i];
+    } else {
+      if (src1->shape[i] != src2->shape[i]) {
+        BLOSC_TRACE_ERROR("The two arrays must have the same shape in all dimensions except the concatenation axis");
+        BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+      }
+      newshape[i] = src1->shape[i];
+    }
+  }
+
+  if (copy) {
+    BLOSC_ERROR(b2nd_copy(ctx, src1, array));
+  }
+  else {
+    *array = (b2nd_array_t *)src1;
+  }
+
+  // Extend the array, we don't need to specify the start in resize, as we are extending the shape from the end
+  BLOSC_ERROR(b2nd_resize(*array, newshape, NULL));
+
+  // Copy the data from the second array
+  int64_t start[B2ND_MAX_DIM];
+  int64_t stop[B2ND_MAX_DIM];
+
+  // Check if the chunk is aligned with dest chunks, and has the same blockshape
+  bool aligned = true;
+  for (int8_t i = 0; i < src2->ndim; ++i) {
+    if (src1->chunkshape[i] != src2->chunkshape[i] ||
+        src2->blockshape[i] != (*array)->blockshape[i] ||
+        (i == axis && (src1_shape[i]) % (*array)->chunkshape[i] != 0)
+        ) {
+      aligned = false;
+      break;
+        }
+  }
+  // ...and get the chunk index in the dest array if aligned
+  int64_t chunks_in_array_strides[B2ND_MAX_DIM];
+  // Calculate strides for destination array
+  chunks_in_array_strides[(*array)->ndim - 1] = 1;
+  for (int i = (*array)->ndim - 2; i >= 0; --i) {
+    chunks_in_array_strides[i] = chunks_in_array_strides[i + 1] *
+                                ((*array)->extshape[i + 1] / (*array)->chunkshape[i + 1]);
+  }
+
+  // Copy chunk by chunk
+  void *buffer = malloc(src2->sc->typesize * src2->extchunknitems);
+  BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_MEMORY_ALLOC);
+  for (int64_t nchunk = 0; nchunk < src2->sc->nchunks; ++nchunk) {
+    // Get multidimensional chunk position
+    int64_t nchunk_ndim[B2ND_MAX_DIM] = {0};
+    int64_t chunkshape[B2ND_MAX_DIM] = {0};
+    for (int8_t i = 0; i < src2->ndim; ++i) {
+      chunkshape[i] = src2->chunkshape[i];
+    }
+    int64_t chunks_in_dim[B2ND_MAX_DIM] = {0};
+    for (int8_t i = 0; i < src2->ndim; ++i) {
+      chunks_in_dim[i] = src2->extshape[i] / src2->chunkshape[i];
+    }
+    blosc2_unidim_to_multidim(src2->ndim, chunks_in_dim, nchunk, nchunk_ndim);
+
+    if (aligned) {
+      // Get the uncompressed chunk buffer from the source array
+      bool needs_free = false;
+      uint8_t *chunk;
+      int32_t cbytes = blosc2_schunk_get_chunk(src2->sc, nchunk, &chunk, &needs_free);
+      if (cbytes < 0) {
+        BLOSC_TRACE_ERROR("Error getting chunk from source array");
+        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+      }
+      // Update the chunk in the destination array
+      // We need to free only if needs_free is true or copy is false
+      // bool needs_copy = !needs_free || copy;
+      // BLOSC_ERROR(blosc2_schunk_update_chunk((*array)->sc, nchunk_dest, chunk, needs_copy));
+      // if (needs_free && !copy) {
+      //   free(chunk);
+      // }
+      // TODO: the above makes some tests to crash, so always force a copy; try to optimize this later
+      int64_t nchunk_dest = 0;
+      nchunk_ndim[axis] += src1_shape[axis] / (*array)->chunkshape[axis];
+      for ( int i =0; i< src2->ndim; i++) {
+        nchunk_dest += nchunk_ndim[i] * chunks_in_array_strides[i];
+      }
+      BLOSC_ERROR(blosc2_schunk_update_chunk((*array)->sc, nchunk_dest, chunk, true));
+      if (needs_free) {
+        free(chunk);
+      }
+    }
+    else {
+
+      // Set positions for each dimension
+      for (int8_t i = 0; i < src2->ndim; ++i) {
+        start[i] = nchunk_ndim[i] * src2->chunkshape[i];
+        stop[i] = start[i] + src2->chunkshape[i];
+        if (stop[i] > src2->shape[i]) {
+          stop[i] = src2->shape[i];  // Handle boundary chunks
+        }
+      }
+      // Load chunk into buffer
+      BLOSC_ERROR(b2nd_get_slice_cbuffer(src2, start, stop, buffer, chunkshape, src2->sc->chunksize));
+
+      // Apply chunk offset only for concatenation axis
+      start[axis] += src1_shape[axis];
+      stop[axis] += src1_shape[axis];
+
+      // Copy the chunk to the correct position
+      BLOSC_ERROR(b2nd_set_slice_cbuffer(buffer, chunkshape,
+                                         src2->sc->typesize * src2->extchunknitems,
+                                         start, stop, *array));
+    }
+  }
+
+  free(buffer);
+
+  return BLOSC2_ERROR_SUCCESS;
+}
+
 int b2nd_save(const b2nd_array_t *array, char *urlpath) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(urlpath, BLOSC2_ERROR_NULL_POINTER);
@@ -1351,6 +1568,10 @@ int b2nd_save(const b2nd_array_t *array, char *urlpath) {
   return BLOSC2_ERROR_SUCCESS;
 }
 
+int64_t b2nd_save_append(const b2nd_array_t *array, const char *urlpath) {
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  return blosc2_schunk_append_file(array->sc, urlpath);
+}
 
 int b2nd_print_meta(const b2nd_array_t *array) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
@@ -2095,11 +2316,11 @@ b2nd_create_ctx(const blosc2_storage *b2_storage, int8_t ndim, const int64_t *sh
   blosc2_cparams *cparams = malloc(sizeof(blosc2_cparams));
   BLOSC_ERROR_NULL(cparams, NULL);
   // We need a copy of cparams mainly to be able to modify blocksize
-  if (b2_storage->cparams == NULL) {
+  if (params_b2_storage->cparams == NULL) {
     memcpy(cparams, &BLOSC2_CPARAMS_DEFAULTS, sizeof(blosc2_cparams));
   }
   else {
-    memcpy(cparams, b2_storage->cparams, sizeof(blosc2_cparams));
+    memcpy(cparams, params_b2_storage->cparams, sizeof(blosc2_cparams));
   }
 
   if (dtype == NULL) {

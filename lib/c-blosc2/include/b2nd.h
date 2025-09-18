@@ -302,6 +302,17 @@ BLOSC_EXPORT int b2nd_open_offset(const char *urlpath, b2nd_array_t **array, int
 BLOSC_EXPORT int b2nd_save(const b2nd_array_t *array, char *urlpath);
 
 /**
+ * @brief Append a b2nd array into a file.
+ *
+ * @param array The array to write.
+ * @param urlpath The path for persistent storage.
+ *
+ * @return If successful, return the offset where @p array has been appended in @p urlpath.
+ * Else, a negative value.
+ */
+BLOSC_EXPORT int64_t b2nd_save_append(const b2nd_array_t *array, const char *urlpath);
+
+/**
  * @brief Create a b2nd array from a C buffer.
  *
  * @param ctx The b2nd context for the new array.
@@ -366,6 +377,19 @@ BLOSC_EXPORT int b2nd_squeeze_index(b2nd_array_t *array, const bool *index);
 BLOSC_EXPORT int b2nd_squeeze(b2nd_array_t *array);
 
 /**
+ * @brief Add a newaxis to a b2nd array at location @p axis.
+ *
+ * @param array The b2nd array to be expanded.
+ * @param axis The axes where the new dimensions will be added.
+ * @param view The memory pointer where the new view will be created.
+ * @param final_dims The final number of dimensions. Should be same as the number of elements in @p axis.
+ *
+ * @return An error code.
+ */
+BLOSC_EXPORT int b2nd_expand_dims(const b2nd_array_t *array, b2nd_array_t **view, const bool *axis,
+    const uint8_t final_dims);
+
+/**
  * @brief Get a slice from an array and store it into a C buffer.
  *
  * @param array The array from which the slice will be extracted.
@@ -408,6 +432,30 @@ BLOSC_EXPORT int b2nd_set_slice_cbuffer(const void *buffer, const int64_t *buffe
  *
  */
 BLOSC_EXPORT int b2nd_copy(b2nd_context_t *ctx, const b2nd_array_t *src, b2nd_array_t **array);
+
+/**
+ * @brief Concatenate arrays. The result is stored in a new b2nd array, or an enlarged one.
+ *
+ * @param ctx The b2nd context for the new array.
+ * @param src1 The first array from which data is copied.
+ * @param src2 The second array from which data is copied.
+ * @param axis The axis along which the arrays will be concatenated.
+ * @param copy Whether the data should be copied or not. If false, the @p src1 array
+ *   will be expanded as needed to keep the result.
+ * @param array The memory pointer where the array will be created.  It will have the same
+ *   metalayers of @p src1, except for the b2nd metalayer, which will be updated with the
+ *   new shape.
+ *
+ * @ note The two arrays must have the same shape in all dimensions except the concatenation axis.
+ * Also, the typesize of the two arrays must be the same.
+ *
+ * @return An error code
+ *
+ * @note The ndim and shape in ctx will be overwritten by the src1 ctx.
+ *
+ */
+BLOSC_EXPORT int b2nd_concatenate(b2nd_context_t *ctx, const b2nd_array_t *src1, const b2nd_array_t *src2,
+                                  int8_t axis, bool copy, b2nd_array_t **array);
 
 /**
  * @brief Print metalayer parameters.

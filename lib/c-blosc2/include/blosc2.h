@@ -82,11 +82,11 @@ extern "C" {
 
 /* Version numbers */
 #define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    17   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  1    /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MINOR    21   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  2    /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.17.1"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2025-04-26 #$"    /* date version year-month-day */
+#define BLOSC2_VERSION_STRING   "2.21.2"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2025-09-10 #$"    /* date version year-month-day */
 
 
 /* The maximum number of dimensions for Blosc2 NDim arrays */
@@ -488,82 +488,33 @@ enum {
 #define BLOSC_ATTRIBUTE_UNUSED
 #endif
 
+/**
+ * @brief Get the string representation of an error code.
+ *
+ * The returned string is a static string, so it should not be modified or freed.
+ * For unknown error codes, it returns "Unknown error".
+ *
+ * @param error_code The error code to get the string representation for.
+ * @return A pointer to a static string representing the error code.
+ */
+BLOSC_EXPORT const char *blosc2_error_string(int error_code);
+
+/**
+ * @brief Get the string representation of an error code.
+ *
+ * This function is identical to #blosc2_error_string, but with a legacy interface.
+ * The returned string is a static read only string, so it should not be modified or freed,
+ * although it is not const.
+ *
+ * Prefer using #blosc2_error_string instead.
+ *
+ * @param rc The error code to get the string representation for.
+ * @return A pointer to a static string representing the error code.
+ */
 static char *print_error(int rc) BLOSC_ATTRIBUTE_UNUSED;
 static char *print_error(int rc) {
-  switch (rc) {
-    case BLOSC2_ERROR_FAILURE:
-      return (char *) "Generic failure";
-    case BLOSC2_ERROR_STREAM:
-      return (char *) "Bad stream";
-    case BLOSC2_ERROR_DATA:
-      return (char *) "Invalid data";
-    case BLOSC2_ERROR_MEMORY_ALLOC:
-      return (char *) "Memory alloc/realloc failure";
-    case BLOSC2_ERROR_READ_BUFFER:
-      return (char *) "Not enough space to read";
-    case BLOSC2_ERROR_WRITE_BUFFER:
-      return (char *) "Not enough space to write";
-    case BLOSC2_ERROR_CODEC_SUPPORT:
-      return (char *) "Codec not supported";
-    case BLOSC2_ERROR_CODEC_PARAM:
-      return (char *) "Invalid parameter supplied to codec";
-    case BLOSC2_ERROR_CODEC_DICT:
-      return (char *) "Codec dictionary error";
-    case BLOSC2_ERROR_VERSION_SUPPORT:
-      return (char *) "Version not supported";
-    case BLOSC2_ERROR_INVALID_HEADER:
-      return (char *) "Invalid value in header";
-    case BLOSC2_ERROR_INVALID_PARAM:
-      return (char *) "Invalid parameter supplied to function";
-    case BLOSC2_ERROR_FILE_READ:
-      return (char *) "File read failure";
-    case BLOSC2_ERROR_FILE_WRITE:
-      return (char *) "File write failure";
-    case BLOSC2_ERROR_FILE_OPEN:
-      return (char *) "File open failure";
-    case BLOSC2_ERROR_NOT_FOUND:
-      return (char *) "Not found";
-    case BLOSC2_ERROR_RUN_LENGTH:
-      return (char *) "Bad run length encoding";
-    case BLOSC2_ERROR_FILTER_PIPELINE:
-      return (char *) "Filter pipeline error";
-    case BLOSC2_ERROR_CHUNK_INSERT:
-      return (char *) "Chunk insert failure";
-    case BLOSC2_ERROR_CHUNK_APPEND:
-      return (char *) "Chunk append failure";
-    case BLOSC2_ERROR_CHUNK_UPDATE:
-      return (char *) "Chunk update failure";
-    case BLOSC2_ERROR_2GB_LIMIT:
-      return (char *) "Sizes larger than 2gb not supported";
-    case BLOSC2_ERROR_SCHUNK_COPY:
-      return (char *) "Super-chunk copy failure";
-    case BLOSC2_ERROR_FRAME_TYPE:
-      return (char *) "Wrong type for frame";
-    case BLOSC2_ERROR_FILE_TRUNCATE:
-      return (char *) "File truncate failure";
-    case BLOSC2_ERROR_THREAD_CREATE:
-      return (char *) "Thread or thread context creation failure";
-    case BLOSC2_ERROR_POSTFILTER:
-      return (char *) "Postfilter failure";
-    case BLOSC2_ERROR_FRAME_SPECIAL:
-      return (char *) "Special frame failure";
-    case BLOSC2_ERROR_SCHUNK_SPECIAL:
-      return (char *) "Special super-chunk failure";
-    case BLOSC2_ERROR_PLUGIN_IO:
-      return (char *) "IO plugin error";
-    case BLOSC2_ERROR_FILE_REMOVE:
-      return (char *) "Remove file failure";
-    case BLOSC2_ERROR_NULL_POINTER:
-      return (char *) "Pointer is null";
-    case BLOSC2_ERROR_INVALID_INDEX:
-      return (char *) "Invalid index";
-    case BLOSC2_ERROR_METALAYER_NOT_FOUND:
-      return (char *) "Metalayer has not been found";
-    case BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED:
-      return (char *) "Maximum buffersize exceeded";
-    default:
-      return (char *) "Unknown error";
-  }
+  // TODO: remove this function, use blosc2_error_string only
+  return (char *) blosc2_error_string(rc);
 }
 
 
@@ -1775,6 +1726,8 @@ typedef struct blosc2_schunk {
   //<! The ndim (mainly for ZFP usage)
   int64_t *blockshape;
   //<! The blockshape (mainly for ZFP usage)
+  bool view;
+  //<! Whether the schunk is a view or not.
 } blosc2_schunk;
 
 
@@ -2319,7 +2272,7 @@ BLOSC_EXPORT int blosc2_vlmeta_get_names(blosc2_schunk *schunk, char **names);
 #if defined(_WIN32)
 /* For QueryPerformanceCounter(), etc. */
   #include <windows.h>
-#elif defined(__MACH__)
+#elif defined(__MACH__) && defined(__APPLE__)
 #include <mach/clock.h>
 #include <mach/mach.h>
 #include <time.h>
@@ -2533,6 +2486,8 @@ BLOSC_EXPORT int blosc2_rename_urlpath(char* old_urlpath, char* new_path);
 
 /*
  * @brief Convert a sequential index into a multidimensional index
+ *
+ * This function assume ndim <= B2ND_MAX_DIM.
  */
 BLOSC_EXPORT void blosc2_unidim_to_multidim(uint8_t ndim, int64_t *shape, int64_t i, int64_t *index);
 
@@ -2554,6 +2509,81 @@ BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, c
  * detected, a negative code is returned instead.
  */
 BLOSC_EXPORT int blosc2_get_slice_nchunks(blosc2_schunk* schunk, int64_t *start, int64_t *stop, int64_t **chunks_idx);
+
+
+/*********************************************************************
+  Raw shuffle functions.
+*********************************************************************/
+
+/**
+ * @brief Applies the shuffle operation to a block of data in @p src, and puts the result in @p dest.
+ *
+ * @warning The @p src buffer and the @p dest buffer can not overlap.
+ *
+ * @param typesize Is the number of bytes for the atomic type in binary @p src buffer. Only 1 < typesize
+ * < 256 is allowed.
+ * @param blocksize The size of the block.
+ * @param src The source buffer to be shuffled.
+ * @param dest The destination buffer where the shuffled data will be written.
+ *
+ * @return @p blocksize on success or a negative value if some error happens (mainly an invalid parameter).
+ */
+BLOSC_EXPORT int32_t blosc2_shuffle(const int32_t typesize, const int32_t blocksize, const void* src,
+                                    void* dest);
+
+/**
+ * @brief Applies the inverse shuffle operation to a block of data in @p src, and puts the result in @p dest.
+ *
+ * @warning The @p src buffer and the @p dest buffer can not overlap.
+ *
+ * @param typesize Is the number of bytes for the atomic type in binary @p src buffer. Only 1 < typesize
+ * < 256 is allowed.
+ * @param blocksize The size of the block.
+ * @param src The source buffer to be unshuffled.
+ * @param dest The destination buffer where the unshuffled data will be written.
+ *
+ * @return @p blocksize on success or a negative value if some error happens (mainly an invalid parameter).
+ */
+BLOSC_EXPORT int32_t blosc2_unshuffle(const int32_t typesize, const int32_t blocksize, const void* src,
+                                      void* dest);
+
+/**
+ * @brief Applies the bitshuffle operation to a block of data in @p src, and puts the result in @p dest.
+ *
+ * @warning The @p src buffer and the @p dest buffer can not overlap.
+ *
+ * @remark The function will shuffle the maximum amount of elements that can be divided by 8, and copy the
+ * rest to the destination buffer unchanged. There are @p blocksize / @p typesize elements.
+ *
+ * @param typesize Is the number of bytes for the atomic type in binary @p src buffer. Only 1 < typesize
+ * < 256 is allowed.
+ * @param blocksize The size of the block.
+ * @param src The source buffer to be shuffled.
+ * @param dest The destination buffer where the shuffled data will be written.
+ *
+ * @return @p blocksize on success or a negative value if some error happens (mainly an invalid parameter).
+ */
+BLOSC_EXPORT int32_t blosc2_bitshuffle(const int32_t typesize, const int32_t blocksize, const void* src,
+                                       void* dest);
+
+/**
+ * @brief Applies the inverse bitshuffle operation to a block of data in @p src, and puts the result in @p dest.
+ *
+ * @warning The @p src buffer and the @p dest buffer can not overlap.
+ *
+ * @remark The function will shuffle the maximum amount of elements that can be divided by 8, and copy the
+ * rest to the destination buffer unchanged. There are @p blocksize / @p typesize elements.
+ *
+ * @param typesize Is the number of bytes for the atomic type in binary @p src buffer. Only 1 < typesize
+ * < 256 is allowed.
+ * @param blocksize The size of the block.
+ * @param src The source buffer to be unshuffled.
+ * @param dest The destination buffer where the unshuffled data will be written.
+ *
+ * @return @p blocksize on success or a negative value if some error happens (mainly an invalid parameter).
+ */
+BLOSC_EXPORT int32_t blosc2_bitunshuffle(const int32_t typesize, const int32_t blocksize, const void* src,
+                                         void* dest);
 
 
 /*********************************************************************

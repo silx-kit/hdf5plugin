@@ -70,7 +70,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.1)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.6), LZ4, Snappy, ZLib and ZStd.
 * `hdf5-blosc2 plugin <https://github.com/Blosc/HDF5-Blosc2>`_ (v2.0.0)
-  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.17.1), LZ4, ZLib and ZStd.
+  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.21.2), LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.1.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/2.1.1>`_)
   using `CharLS <https://github.com/team-charls/charls>`_ (v2.1.0).
@@ -88,9 +88,9 @@ HDF5 compression filters and compression libraries sources were obtained from:
 
 Sources of compression libraries shared accross multiple filters were obtained from:
 
-* `LZ4 v1.10.0 <https://github.com/Blosc/c-blosc2/tree/v2.17.1/internal-complibs/lz4-1.10.0>`_
-* `Snappy v1.2.1 <https://github.com/google/snappy>`_
-* `ZStd v1.5.6 <https://github.com/Blosc/c-blosc2/tree/v2.17.1/internal-complibs/zstd-1.5.7>`_
+* `LZ4 v1.10.0 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/lz4-1.10.0>`_
+* `Snappy v1.2.2 <https://github.com/google/snappy>`_
+* `ZStd v1.5.6 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/zstd-1.5.7>`_
 * `ZLib v1.3.1 <https://github.com/Blosc/c-blosc/tree/v1.21.6/internal-complibs/zlib-1.3.1>`_
 
 When compiled with Intel IPP, the LZ4 compression library is replaced with `LZ4 v1.9.3 <https://github.com/lz4/lz4/releases/tag/v1.9.3>`_ patched with a patch from Intel IPP 2021.7.0.
