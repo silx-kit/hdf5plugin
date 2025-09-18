@@ -45,7 +45,6 @@ from setuptools.command.build_clib import build_clib
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 from setuptools.errors import CompileError
-from wheel.bdist_wheel import bdist_wheel
 
 try:
     import pkgconfig
@@ -67,14 +66,6 @@ except Exception:  # cpuinfo raises Exception for unsupported architectures
     cpuinfo_parse_arch = None
 else:
     from cpuinfo.cpuinfo import _parse_arch as cpuinfo_parse_arch
-
-
-class BDistWheel(bdist_wheel):
-    """Override bdist_wheel to handle as pure python package"""
-
-    def get_tag(self):
-        """Override the python and abi tag generation"""
-        return self.python_tag, "none", super().get_tag()[-1]
 
 
 # Probe host capabilities and manage build config
@@ -1567,7 +1558,6 @@ if __name__ == "__main__":
     libraries, extensions = get_libraries_and_extensions()
     setup(
         cmdclass=dict(
-            bdist_wheel=BDistWheel,
             build=Build,
             build_clib=BuildCLib,
             build_ext=PluginBuildExt,
@@ -1575,4 +1565,5 @@ if __name__ == "__main__":
         ),
         ext_modules=extensions,
         libraries=libraries,
+        options={"bdist_wheel": {"py_limited_api": "cp39"}},
     )
