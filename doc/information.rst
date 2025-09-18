@@ -74,9 +74,9 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.1.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/2.1.1>`_)
   using `CharLS <https://github.com/team-charls/charls>`_ (v2.1.0).
-* `SZ plugin <https://github.com/szcompressor/SZ>`_
-  (commit `f466775 <https://github.com/szcompressor/SZ/tree/f4667759ead6a902110e80ff838ccdfddbc8dcd7>`_)
-  using `SZ <https://github.com/szcompressor/SZ>`_, ZLib and ZStd.
+* `SZ plugin <https://github.com/szcompressor/SZ2>`_
+  (commit `f466775 <https://github.com/szcompressor/SZ2/tree/f4667759ead6a902110e80ff838ccdfddbc8dcd7>`_)
+  using `SZ <https://github.com/szcompressor/SZ2>`_, ZLib and ZStd.
 * `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.2.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.2).
 * `SZ3 plugin <https://github.com/szcompressor/SZ3>`_
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
@@ -88,9 +88,10 @@ HDF5 compression filters and compression libraries sources were obtained from:
 
 Sources of compression libraries shared accross multiple filters were obtained from:
 
+
 * `LZ4 v1.10.0 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/lz4-1.10.0>`_
 * `Snappy v1.2.2 <https://github.com/google/snappy>`_
-* `ZStd v1.5.6 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/zstd-1.5.7>`_
+* `ZStd v1.5.7 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/zstd-1.5.7>`_
 * `ZLib v1.3.1 <https://github.com/Blosc/c-blosc/tree/v1.21.6/internal-complibs/zlib-1.3.1>`_
 
 When compiled with Intel IPP, the LZ4 compression library is replaced with `LZ4 v1.9.3 <https://github.com/lz4/lz4/releases/tag/v1.9.3>`_ patched with a patch from Intel IPP 2021.7.0.

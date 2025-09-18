@@ -610,7 +610,7 @@ class Sperr(h5py.filters.FilterRefBase):
 
 
 class SZ(h5py.filters.FilterRefBase):
-    """``h5py.Group.create_dataset``'s compression arguments for using SZ filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using SZ2 filter.
 
     .. code-block:: python
 
@@ -654,7 +654,9 @@ class SZ(h5py.filters.FilterRefBase):
               data=numpy.random.random(100),
               compression=hdf5plugin.SZ(pointwise_relative=0.01))
 
-    For more details about the compressor, see `SZ compressor <https://github.com/szcompressor/SZ>`_.
+    For more details about the compressor, see `SZ2 compressor <https://github.com/szcompressor/SZ2>`_.
+
+    .. warning:: The SZ2 compressor is deprecated, see `SZ <https://github.com/szcompressor/SZ?tab=readme-ov-file#deprecatedlegacy-version-sz2>`_
     """
 
     filter_name = "sz"
