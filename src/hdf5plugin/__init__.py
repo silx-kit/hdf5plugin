@@ -26,6 +26,7 @@
 It works under Windows, MacOS and Linux.
 """
 
+from . import _version
 from ._filters import FILTERS  # noqa
 from ._filters import (  # noqa
     BLOSC2_ID,
@@ -52,7 +53,13 @@ from ._filters import (  # noqa
     Zstd,
 )
 from ._utils import PLUGIN_PATH, get_config, get_filters, register  # noqa
-from ._version import version, version_info  # noqa
+from ._version import version  # noqa
 
 # Backward compatibility
 PLUGINS_PATH = PLUGIN_PATH
+
+
+def __getattr__(name: str) -> _version.VersionInfo:
+    if name == "version_info":
+        return _version.get_version_info()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
