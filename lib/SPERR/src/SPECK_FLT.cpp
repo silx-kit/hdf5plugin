@@ -465,7 +465,7 @@ FIXED_RATE_HIGH_PREC_LABEL:
     m_inverse_wavelet_xform(false);  // No multi-resolution needed!
     m_vals_d = m_cdf.release_data();
     auto LOS = std::vector<Outlier>();
-    LOS.reserve(0.04 * total_vals);  // Reserve space to hold about 4% of total values.
+    LOS.reserve(total_vals / 20);  // Reserve space to hold about 5% of total values.
     for (size_t i = 0; i < total_vals; i++) {
       auto diff = m_vals_orig[i] - m_vals_d[i];
       if (std::abs(diff) > m_quality)

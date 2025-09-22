@@ -66,6 +66,11 @@ enum class RTNType {
 //
 // Helper functions
 //
+
+// Allocate and deallocate a chunk of ALIGNED memory, for both UNIX and Windows.
+auto aligned_malloc(size_t alignment, size_t size) -> void*;
+void aligned_free(void* p);
+
 // Given a certain length, how many transforms to be performed?
 auto num_of_xforms(size_t len) -> size_t;
 
@@ -178,6 +183,9 @@ auto chunk_volume(dims_type vol_dim, dims_type chunk_dim) -> std::vector<std::ar
 // ret[1] : variance
 template <typename T>
 auto calc_mean_var(const T*, size_t len, size_t omp_nthreads = 0) -> std::array<T, 2>;
+
+template <typename T>
+auto any_ge(const T* buf, size_t len, T threshold) -> bool;
 
 };  // namespace sperr
 
