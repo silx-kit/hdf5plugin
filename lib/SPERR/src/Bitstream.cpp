@@ -4,6 +4,10 @@
 #include <cstring>
 #include <iterator>  // std::distance()
 
+#ifdef __SSE2__
+#include <immintrin.h>
+#endif
+
 // Constructor
 sperr::Bitstream::Bitstream(size_t nbits)
 {
@@ -27,11 +31,10 @@ auto sperr::Bitstream::capacity() const -> size_t
 void sperr::Bitstream::reserve(size_t nbits)
 {
   if (nbits > m_buf.size() * 64) {
-    // Number of longs that's absolutely needed.
-    auto num_longs = nbits / 64;
-    if (num_longs * 64 < nbits)
-      num_longs++;
-
+#ifdef __SSE2__
+    _mm_sfence();
+#endif
+    auto num_longs = (nbits + 63) / 64;
     const auto dist = std::distance(m_buf.begin(), m_itr);
     m_buf.resize(num_longs);         // trigger a memroy allocation.
     m_buf.resize(m_buf.capacity());  // be able to make use of all available capacity.
@@ -54,8 +57,8 @@ auto sperr::Bitstream::rtell() const -> size_t
 
 void sperr::Bitstream::rseek(size_t offset)
 {
-  size_t div = offset / 64;
-  size_t rem = offset - div * 64;
+  size_t div = offset >> 6;
+  size_t rem = offset & 63;
   m_itr = m_buf.begin() + div;
   if (rem) {
     m_buffer = *m_itr >> rem;
@@ -91,8 +94,8 @@ auto sperr::Bitstream::wtell() const -> size_t
 
 void sperr::Bitstream::wseek(size_t offset)
 {
-  size_t div = offset / 64;
-  size_t rem = offset - div * 64;
+  size_t div = offset >> 6;
+  size_t rem = offset & 63;
   m_itr = m_buf.begin() + div;
   if (rem) {
     m_buffer = *m_itr;
@@ -109,18 +112,22 @@ void sperr::Bitstream::wbit(bool bit)
 {
   m_buffer |= uint64_t{bit} << m_bits;
 
-#if __has_cpp_attribute(unlikely)
-  if (++m_bits == 64) [[unlikely]]
-#else
-  if (++m_bits == 64)
-#endif
-  {
+  if (++m_bits == 64) {
     if (m_itr == m_buf.end()) {  // allocate memory if necessary.
+#ifdef __SSE2__
+      _mm_sfence();
+#endif
       auto dist = m_buf.size();
-      m_buf.resize(std::max(size_t{1}, dist) * 2 - dist / 2);  // use a growth factor of 1.5
+      m_buf.resize(std::max(size_t{1}, dist) * 2);
       m_itr = m_buf.begin() + dist;
     }
+#ifdef __SSE2__
+    auto dist = m_itr - m_buf.begin();
+    long long int* ptr = reinterpret_cast<long long int*>(&m_buf[dist]);
+    _mm_stream_si64(ptr, m_buffer);
+#else
     *m_itr = m_buffer;
+#endif
     ++m_itr;
     m_buffer = 0;
     m_bits = 0;
@@ -129,10 +136,13 @@ void sperr::Bitstream::wbit(bool bit)
 
 void sperr::Bitstream::flush()
 {
+#ifdef __SSE2__
+  _mm_sfence();
+#endif
   if (m_bits) {  // only really flush when there are remaining bits.
     if (m_itr == m_buf.end()) {
       auto dist = m_buf.size();
-      m_buf.resize(std::max(size_t{1}, dist) * 2 - dist / 2);  // use a growth factor of 1.5
+      m_buf.resize(m_buf.size() + 1);
       m_itr = m_buf.begin() + dist;
     }
     *m_itr = m_buffer;
@@ -166,10 +176,7 @@ auto sperr::Bitstream::get_bitstream(size_t num_bits) const -> std::vector<std::
 {
   assert(num_bits <= m_buf.size() * 64);
 
-  auto num_bytes = num_bits / 8;
-  if (num_bits - num_bytes * 8 != 0)
-    num_bytes++;
-
+  auto num_bytes = (num_bits + 7) / 8;
   auto tmp = std::vector<std::byte>(num_bytes);
   this->write_bitstream(tmp.data(), num_bits);
 

@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.14)
 
-project(SPERR VERSION 0.8.2 LANGUAGES CXX DESCRIPTION "Lossy Scientific Compression with SPERR")
+project(SPERR VERSION 0.8.4 LANGUAGES CXX DESCRIPTION "Lossy Scientific Compression with SPERR")
 
 if(NOT CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD "20" CACHE STRING "Choose the C++ Standard to use." FORCE)
@@ -32,6 +32,7 @@ option( BUILD_SHARED_LIBS "Build shared SPERR library" ON )
 option( BUILD_UNIT_TESTS "Build unit tests using GoogleTest" ON )
 option( BUILD_CLI_UTILITIES "Build a set of command line utilities" ON )
 option( USE_OMP "Use OpenMP parallelization on 3D volumes" OFF )
+option( ENABLE_AVX2 "Enable AVX2 instruction set compilation" ON )
 option( SPERR_PREFER_RPATH "Set RPATH; this can fight with package managers so turn off when building for them" ON )
 mark_as_advanced(FORCE SPERR_PREFER_RPATH)
 
