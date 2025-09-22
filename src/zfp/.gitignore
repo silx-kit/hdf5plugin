@@ -1,9 +1,0 @@
-*.a
-*.o
-bin
-build
-lib
-dist
-wheelhouse
-zfpy.egg-info
-modules

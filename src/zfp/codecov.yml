@@ -1,8 +1,0 @@
-coverage:
-  ignore:
-    - docs/*
-    - examples/*
-    - src/cuda_zfp/*
-    - src/template/cuda*
-    - tests/*
-    - utils/*
