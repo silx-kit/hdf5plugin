@@ -1,32 +1,27 @@
 #ifndef SZ3_IMPL_SZ_HPP
 #define SZ3_IMPL_SZ_HPP
 
-#include "SZ3/def.hpp"
 #include "SZ3/api/impl/SZDispatcher.hpp"
 #include "SZ3/api/impl/SZImplOMP.hpp"
-#include <cmath>
+#include "SZ3/def.hpp"
 
-template<class T, SZ::uint N>
-char *SZ_compress_impl(SZ::Config &conf, const T *data, size_t &outSize) {
+namespace SZ3 {
+template <class T, uint N>
+size_t SZ_compress_impl(Config &conf, const T *data, uchar *cmpData, size_t cmpCap) {
 #ifndef _OPENMP
-    conf.openmp=false;
+    conf.openmp = false;
 #endif
     if (conf.openmp) {
-        //dataCopy for openMP is handled by each thread
-        return SZ_compress_OMP<T, N>(conf, data, outSize);
+        return SZ_compress_OMP<T, N>(conf, data, cmpData, cmpCap);
     } else {
-        std::vector<T> dataCopy(data, data + conf.num);
-        return SZ_compress_dispatcher<T, N>(conf, dataCopy.data(), outSize);
+        return SZ_compress_dispatcher<T, N>(conf, data, cmpData, cmpCap);
     }
 }
 
-
-template<class T, SZ::uint N>
-void SZ_decompress_impl(SZ::Config &conf, char *cmpData, size_t cmpSize, T *decData) {
-
-
+template <class T, uint N>
+void SZ_decompress_impl(Config &conf, const uchar *cmpData, size_t cmpSize, T *decData) {
 #ifndef _OPENMP
-    conf.openmp=false;
+    conf.openmp = false;
 #endif
     if (conf.openmp) {
         SZ_decompress_OMP<T, N>(conf, cmpData, cmpSize, decData);
@@ -35,4 +30,18 @@ void SZ_decompress_impl(SZ::Config &conf, char *cmpData, size_t cmpSize, T *decD
     }
 }
 
+template <class T>
+size_t SZ_compress_size_bound(const Config &conf) {
+    bool omp = conf.openmp;
+#ifndef _OPENMP
+    omp = false;
+#endif
+    if (omp) {
+        return 4096 + SZ_compress_size_bound_omp<T>(conf);
+    } else {
+        return 4096 + conf.size_est() + ZSTD_compressBound(conf.num * sizeof(T));
+    }
+}
+
+}  // namespace SZ3
 #endif

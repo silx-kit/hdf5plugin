@@ -1,49 +1,42 @@
-#ifndef _SZ_BYPASS_ENCODER_HPP
-#define _SZ_BYPASS_ENCODER_HPP
+#ifndef SZ3_BYPASS_ENCODER_HPP
+#define SZ3_BYPASS_ENCODER_HPP
+
+#include <cassert>
+#include <vector>
 
 #include "Encoder.hpp"
 #include "SZ3/def.hpp"
-#include <vector>
 
-namespace SZ {
+namespace SZ3 {
 
-    template<class T>
-    class BypassEncoder : public concepts::EncoderInterface<T> {
-    public:
+template <class T>
+class BypassEncoder : public concepts::EncoderInterface<T> {
+   public:
+    void preprocess_encode(const std::vector<T> &bins, int stateNum) override {
+    }
 
-        ~BypassEncoder() = default;
+    size_t encode(const std::vector<T> &bins, uchar *&bytes) override {
+        memcpy(bytes, &bins[0], sizeof(T) * bins.size());
+        bytes += sizeof(T) * bins.size();
+        return 0;
+    }
 
-        void preprocess_encode(const std::vector<T> &bins, int stateNum) {
-            assert(stateNum <= 256 && "stateNum should be no more than 256.");
-        };
+    void postprocess_encode() override {}
 
-        size_t encode(const std::vector<T> &bins, uchar *&bytes) {
-            for (auto &bin: bins) {
-                *bytes++ = uchar(bin);
-            }
-            return 0;
-        };
+    void preprocess_decode() override {}
 
-        void postprocess_encode() {};
+    std::vector<T> decode(const uchar *&bytes, size_t targetLength) override {
+        std::vector<T> bins(targetLength);
+        memcpy(bins.data(), bytes, sizeof(T) * targetLength);
+        bytes += sizeof(T) * targetLength;
+        return bins;
+    }
 
-        void preprocess_decode() {};
+    void postprocess_decode() override {}
 
-        std::vector<T> decode(const uchar *&bytes, size_t targetLength) {
-            std::vector<T> bins(targetLength);
-            for (auto &bin: bins) {
-                bin = *bytes++;
-            }
-            return bins;
-        };
+    void save(uchar *&c) override {}
 
-        void postprocess_decode() {};
-
-        uint save(uchar *&c) {
-            return 0;
-        };
-
-        void load(const uchar *&c, size_t &remaining_length) {};
-
-    };
-}
+    void load(const uchar *&c, size_t &remaining_length) override {}
+};
+}  // namespace SZ3
 #endif

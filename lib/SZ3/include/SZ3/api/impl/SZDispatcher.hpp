@@ -1,50 +1,94 @@
 #ifndef SZ3_IMPL_SZDISPATCHER_HPP
 #define SZ3_IMPL_SZDISPATCHER_HPP
 
-#include "SZ3/utils/MemoryUtil.hpp"
-#include "SZ3/utils/Statistic.hpp"
+#include "SZ3/api/impl/SZAlgoInterp.hpp"
+#include "SZ3/api/impl/SZAlgoLorenzoReg.hpp"
+#include "SZ3/api/impl/SZAlgoNopred.hpp"
 #include "SZ3/utils/Config.hpp"
-#include "SZ3/api/impl/SZInterp.hpp"
-#include "SZ3/api/impl/SZLorenzoReg.hpp"
-#include <cmath>
+#include "SZ3/utils/Statistic.hpp"
 
-
-template<class T, SZ::uint N>
-char *SZ_compress_dispatcher(SZ::Config &conf, T *data, size_t &outSize) {
-
+namespace SZ3 {
+template <class T, uint N>
+size_t SZ_compress_dispatcher(Config &conf, const T *data, uchar *cmpData, size_t cmpCap) {
     assert(N == conf.N);
-    SZ::calAbsErrorBound(conf, data);
+    calAbsErrorBound(conf, data);
+    size_t cmpSize = 0;
 
-    char *cmpData;
+    // if absErrorBound is 0, use lossless only mode
     if (conf.absErrorBound == 0) {
-        auto zstd = SZ::Lossless_zstd();
-        cmpData = (char *) zstd.compress((SZ::uchar *) data, conf.num * sizeof(T), outSize);
-    } else if (conf.cmprAlgo == SZ::ALGO_LORENZO_REG) {
-        cmpData = (char *) SZ_compress_LorenzoReg<T, N>(conf, data, outSize);
-    } else if (conf.cmprAlgo == SZ::ALGO_INTERP) {
-        cmpData = (char *) SZ_compress_Interp<T, N>(conf, data, outSize);
-    } else if (conf.cmprAlgo == SZ::ALGO_INTERP_LORENZO) {
-        cmpData = (char *) SZ_compress_Interp_lorenzo<T, N>(conf, data, outSize);
+        conf.cmprAlgo = ALGO_LOSSLESS;
     }
-    return cmpData;
+
+    // do lossy compression
+    bool isCmpCapSufficient = true;
+    if (conf.cmprAlgo != ALGO_LOSSLESS) {
+        try {
+            std::vector<T> dataCopy(data, data + conf.num);
+            if (conf.cmprAlgo == ALGO_LORENZO_REG) {
+                cmpSize = SZ_compress_LorenzoReg<T, N>(conf, dataCopy.data(), cmpData, cmpCap);
+            } else if (conf.cmprAlgo == ALGO_INTERP) {
+                cmpSize = SZ_compress_Interp<T, N>(conf, dataCopy.data(), cmpData, cmpCap);
+            } else if (conf.cmprAlgo == ALGO_INTERP_LORENZO) {
+                cmpSize = SZ_compress_Interp_lorenzo<T, N>(conf, dataCopy.data(), cmpData, cmpCap);
+            } else if (conf.cmprAlgo == ALGO_NOPRED) {
+                cmpSize = SZ_compress_nopred<T, N>(conf, dataCopy.data(), cmpData, cmpCap);
+            } else {
+                throw std::invalid_argument("Unknown compression algorithm");
+            }
+
+        } catch (std::length_error &e) {
+            if (std::string(e.what()) == SZ3_ERROR_COMP_BUFFER_NOT_LARGE_ENOUGH) {
+                isCmpCapSufficient = false;
+                printf("SZ is downgraded to lossless mode.\n");
+            } else {
+                throw;
+            }
+        }
+    }
+
+    // do lossless only compression if 1) cmpr algorithm is lossless or 2) compressed buffer not large enough for lossy
+    if (conf.cmprAlgo == ALGO_LOSSLESS || !isCmpCapSufficient) {
+        conf.cmprAlgo = ALGO_LOSSLESS;
+        auto zstd = Lossless_zstd();
+        return zstd.compress(reinterpret_cast<const uchar *>(data), conf.num * sizeof(T), cmpData, cmpCap);
+    }
+
+    // if lossy compression ratio < 3, test if lossless only mode has a better ratio than lossy
+    if (conf.num * sizeof(T) / 1.0 / cmpSize < 3) {
+        auto zstd = Lossless_zstd();
+        auto zstdCmpCap = ZSTD_compressBound(conf.num * sizeof(T)) + sizeof(size_t);
+        auto zstdCmpData = static_cast<uchar *>(malloc(zstdCmpCap));
+        size_t zstdCmpSize =
+            zstd.compress(reinterpret_cast<const uchar *>(data), conf.num * sizeof(T), zstdCmpData, zstdCmpCap);
+        if (zstdCmpSize < cmpSize && zstdCmpSize <= cmpCap) {
+            conf.cmprAlgo = ALGO_LOSSLESS;
+            memcpy(cmpData, zstdCmpData, zstdCmpSize);
+            cmpSize = zstdCmpSize;
+        }
+        free(zstdCmpData);
+    }
+    return cmpSize;
 }
 
-
-template<class T, SZ::uint N>
-void SZ_decompress_dispatcher(SZ::Config &conf, char *cmpData, size_t cmpSize, T *decData) {
-    if (conf.absErrorBound == 0) {
-        auto zstd = SZ::Lossless_zstd();
-        auto zstdOut = zstd.decompress((SZ::uchar *) cmpData, cmpSize);
-        memcpy(decData, zstdOut, conf.num * sizeof(T));
-    } else if (conf.cmprAlgo == SZ::ALGO_LORENZO_REG) {
+template <class T, uint N>
+void SZ_decompress_dispatcher(Config &conf, const uchar *cmpData, size_t cmpSize, T *decData) {
+    if (conf.cmprAlgo == ALGO_LOSSLESS) {
+        auto zstd = Lossless_zstd();
+        size_t decDataSize = 0;
+        auto decDataPos = reinterpret_cast<uchar *>(decData);
+        zstd.decompress(cmpData, cmpSize, decDataPos, decDataSize);
+        if (decDataSize != conf.num * sizeof(T)) {
+            throw std::runtime_error("Decompressed data size does not match the original data size");
+        }
+    } else if (conf.cmprAlgo == ALGO_LORENZO_REG) {
         SZ_decompress_LorenzoReg<T, N>(conf, cmpData, cmpSize, decData);
-    } else if (conf.cmprAlgo == SZ::ALGO_INTERP) {
+    } else if (conf.cmprAlgo == ALGO_INTERP) {
         SZ_decompress_Interp<T, N>(conf, cmpData, cmpSize, decData);
+    } else if (conf.cmprAlgo == ALGO_NOPRED) {
+        SZ_decompress_nopred<T, N>(conf, cmpData, cmpSize, decData);
     } else {
-        printf("SZ_decompress_dispatcher, Method not supported\n");
-        exit(0);
+        throw std::invalid_argument("Unknown compression algorithm");
     }
-
 }
-
+}  // namespace SZ3
 #endif

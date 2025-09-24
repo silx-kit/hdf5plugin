@@ -1,12 +1,12 @@
 #ifndef SZ3_WAVELET_HPP
 #define SZ3_WAVELET_HPP
 
-#ifdef ENABLE_GSL
+#ifdef SZ3_ENABLE_GSL
 
 #include "SZ3/preprocessor/PreProcessor.hpp"
 #include <gsl/gsl_wavelet.h>
 
-namespace SZ {
+namespace SZ3 {
     template<class T, uint N>
 
     class Wavelet : public concepts::PreprocessorInterface<T, N> {
@@ -34,8 +34,7 @@ namespace SZ {
             int status = gsl_wavelet_transform_forward(w, dwtdata.data(), 1, m, work);
 
             if (status != GSL_SUCCESS) {
-                printf("Error: wavelets transform failed.\n");
-                exit(0);
+                throw std::runtime_error("Error: wavelets transform failed.");
             }
 
             for (size_t i = 0; i < n; i++) {
@@ -70,8 +69,7 @@ namespace SZ {
             int status = gsl_wavelet_transform_inverse(w, dwtdata.data(), 1, m, work);
 
             if (status != GSL_SUCCESS) {
-                printf("Error: wavelets transform failed.\n");
-                exit(0);
+                throw std::runtime_error("Error: wavelets transform failed.");
             }
 
             for (size_t i = 0; i < n; i++) {
