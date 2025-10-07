@@ -31,7 +31,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import h5py
 import numpy
@@ -269,7 +269,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                                 "filters": filters,
                             },
                         )
-                        filter_params: Tuple[int | str, ...] = (
+                        filter_params: tuple[int | str, ...] = (
                             clevel,
                             filters,
                             compression_id,
@@ -310,7 +310,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     @unittest.skipUnless(should_test("sperr"), "Sperr filter not available")
     def testSperr(self):
         """Write/read test with Sperr filter plugin"""
-        tests: List[Dict[str, int | float | bool]] = [
+        tests: list[dict[str, int | float | bool]] = [
             {"rate": 16},
             {"rate": 16, "swap": True},
             {
@@ -362,7 +362,7 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
-        tests: List[Dict[str, int | float | bool]] = [
+        tests: list[dict[str, int | float | bool]] = [
             {},  # Default config
             {"rate": 10.0},  # Fixed-rate
             {"precision": 10},  # Fixed-precision
@@ -498,9 +498,9 @@ class TestGetFilters(unittest.TestCase):
 
     def testSelection(self):
         """Get selected filters"""
-        tests: Dict[
-            int | str | Tuple[int | str, ...],
-            Tuple[type[_filters.FilterBase], ...],
+        tests: dict[
+            int | str | tuple[int | str, ...],
+            tuple[type[_filters.FilterBase], ...],
         ] = {
             "blosc": (hdf5plugin.Blosc,),
             ("blosc", "zfp"): (hdf5plugin.Blosc, hdf5plugin.Zfp),

@@ -30,7 +30,7 @@ import os
 import sys
 import traceback
 from collections import namedtuple
-from typing import Dict, Tuple, cast
+from typing import cast
 
 import h5py
 
@@ -74,7 +74,7 @@ def H5Zregister_ctypes(filter_struct_p: ctypes.c_void_p) -> int:
     return cast(int, libhdf5.H5Zregister(filter_struct_p))
 
 
-registered_filters: Dict[str, Tuple[str, ctypes.CDLL]] = {}
+registered_filters: dict[str, tuple[str, ctypes.CDLL]] = {}
 """Store hdf5plugin registered filters as a mapping: name: (filename, ctypes.CDLL)"""
 
 
