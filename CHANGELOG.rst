@@ -1,3 +1,30 @@
+6.0.0: 08/10/2025
+-----------------
+
+This release requires Python >= 3.9 (PR #345).
+
+- Compression filters and libraries:
+
+  * Updated filter: **hdf5-blosc2** (PR #342)
+  * Updated libraries:
+
+    - **SPERR** (v0.8.4) (PR #356)
+    - **snappy** (v1.2.2) (PR #353)
+    - **c-blosc2** (v2.21.2) (PR #353)
+
+  * Deprecated **SZ** filter (PR #352)
+
+- Build:
+
+  * Removed ``-ffast-math`` and ``/fp:fast`` compilation flags (PR #349)
+  * Fixed build with system libraries on Windows (PR #339)
+  * Moved embedded filters source code to a dedicated folder (PR #348)
+
+* Deprecated ``hdf5plugin.version_info`` (PR #358)
+* Added Python typing (PR #350, #360)
+* Code formatting and linting (PR #340, #347)
+* Updated project description and changelog (PR #344, #361)
+
 5.1.0: 31/03/2025
 -----------------
 
