@@ -5,7 +5,7 @@ hdf5plugin
 
 
 * Supported operating systems: Linux, Windows, macOS.
-* Supported versions of Python: >= 3.8
+* Supported versions of Python: >= 3.9
 * Supported architectures: All.
   Specific optimizations are available for *x86* family, *arm64* and *ppc64le*.
 
