@@ -104,8 +104,8 @@ jobs:
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
 
-          # Use silx wheelhouse for ppc64le
-          CIBW_BEFORE_TEST: pip install h5py --only-binary ":all:" --find-links=https://www.silx.org/pub/wheelhouse/ --trusted-host=www.silx.org
+          CIBW_TEST_SKIP: "*-*linux_ppc64le"
+          CIBW_BEFORE_TEST: pip install h5py --only-binary ":all:"
           CIBW_TEST_COMMAND: python {project}/test/test.py
       - uses: actions/upload-artifact@v4
         with:
