@@ -26,7 +26,6 @@ from __future__ import annotations
 import logging
 import math
 import struct
-from typing import Dict, Tuple
 
 import h5py
 
@@ -824,7 +823,7 @@ class Zstd(FilterBase):
         self.filter_options = (clevel,)
 
 
-FILTER_CLASSES: Tuple[type[FilterBase], ...] = (
+FILTER_CLASSES: tuple[type[FilterBase], ...] = (
     Bitshuffle,
     Blosc,
     Blosc2,
@@ -839,5 +838,5 @@ FILTER_CLASSES: Tuple[type[FilterBase], ...] = (
 )
 
 
-FILTERS: Dict[str, int] = {cls.filter_name: cls.filter_id for cls in FILTER_CLASSES}
+FILTERS: dict[str, int] = {cls.filter_name: cls.filter_id for cls in FILTER_CLASSES}
 """Mapping of provided filter's name to their HDF5 filter ID."""
