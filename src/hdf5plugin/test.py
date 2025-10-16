@@ -471,13 +471,11 @@ class TestStrings(unittest.TestCase):
                 self.assertEqual(len(filters), 1)
                 self.assertEqual(filters[0][0], hdf5plugin.FILTERS[filter_name])
 
-    @unittest.skip(reason="segfault")
     @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
     def testStringsBlosc(self):
         """Strings write/read test with blosc filter plugin"""
         self._test_strings("blosc")  # Default options
 
-    @unittest.skip(reason="segfault")
     @unittest.skipUnless(should_test("blosc2"), "Blosc filter not available")
     def testStringsBlosc2(self):
         """Strings write/read test with blosc2 filter plugin"""

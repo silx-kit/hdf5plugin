@@ -191,6 +191,11 @@ size_t blosc_filter(unsigned flags, size_t cd_nelmts,
     }
   }
 
+  /* Special case for variable-length types (e.g. char**)
+     https://portal.hdfgroup.org/documentation/hdf5/latest/group___v_l_e_n.html
+   */
+  if (typesize == 0) typesize = 1;
+
   /* We're compressing */
   if (!(flags & H5Z_FLAG_REVERSE)) {
 
