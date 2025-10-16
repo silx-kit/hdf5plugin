@@ -42,6 +42,7 @@ doc = [
     "sphinx_rtd_theme",
 ]
 test = [
+    "packaging",
     "numpy<2 ; python_version == '3.9'",
     "blosc2>=2.5.1",
     "blosc2-grok>=0.2.2",
