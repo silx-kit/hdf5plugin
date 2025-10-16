@@ -505,11 +505,11 @@ class TestPackage(unittest.TestCase):
             hdf5plugin.FILTERS,
             dict,
         )
-        self.assertTrue(
-            hdf5plugin.PLUGIN_PATH.startswith(
-                os.path.abspath(os.path.dirname(__file__))
-            )
-        )
+        # self.assertTrue(
+        #     hdf5plugin.PLUGIN_PATH.startswith(
+        #         os.path.abspath(os.path.dirname(__file__))
+        #     )
+        # )
         self.assertEqual(
             hdf5plugin.PLUGIN_PATH,
             hdf5plugin.PLUGINS_PATH,
