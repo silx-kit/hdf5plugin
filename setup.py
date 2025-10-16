@@ -742,7 +742,7 @@ def _get_bz2_clib(field=None):
         ),
         include_dirs=[bzip2_dir],
         macros=[],
-        cflags=["-Wall", "-Winline", "-O0", "-ggdb", "-D_FILE_OFFSET_BITS=64"],
+        cflags=["-Wall", "-Winline", "-O2", "-g", "-D_FILE_OFFSET_BITS=64"],
     )
 
     if field is None:
@@ -760,7 +760,7 @@ def _get_charls_clib(field=None):
         sources=glob(f"{charls_dir}/*.cpp"),
         include_dirs=["lib/charls/include", "lib/charls/include/charls", charls_dir],
         macros=[("CHARLS_STATIC", 1), ("CHARLS_LIBRARY_BUILD", 1)],
-        cflags=["-O0", "-ggdb", "-std=c++14"],
+        cflags=["-std=c++14"],
     )
 
     if field is None:
@@ -790,7 +790,7 @@ def _get_lz4_ipp_clib(field=None):
     if BuildConfig.INTEL_IPP_DIR is None:
         raise RuntimeError("HDF5PLUGIN_INTEL_IPP_DIR env. var. must be set")
 
-    cflags = ["-O0", "-ggdb", "-std=gnu99"]
+    cflags = ["-O3", "-std=gnu99"]
     cflags += ["/Ox"]
 
     lz4_dir = "lib/lz4_ipp"
@@ -820,7 +820,7 @@ def _get_lz4_clib(field=None):
     if BuildConfig.INTEL_IPP_DIR is not None:
         return _get_lz4_ipp_clib(field)
 
-    cflags = ["-O0", "-ggdb", "-std=gnu99"]
+    cflags = ["-O3", "-std=gnu99"]
     cflags += ["/Ox"]
 
     folders = glob("lib/c-blosc2/internal-complibs/lz4*")
@@ -915,7 +915,7 @@ def _get_sperr_filter_clib(field=None):
 
 def _get_zfp_clib(field=None):
     """ZFP static lib build config"""
-    cflags = ["-O0", "-ggdb", "-std=c99", "-fopenmp"]
+    cflags = ["-O3", "-std=c99", "-fopenmp"]
     # Use /Ob1 to fix ZFP test failing with Visual Studio 2022: MSVC 14.40.33807
     # See https://github.com/LLNL/zfp/issues/222
     cflags += ["/Ob1", "/openmp"]
@@ -940,7 +940,7 @@ def _get_zfp_clib(field=None):
 
 def _get_zlib_clib(field=None):
     """ZLib static lib build config"""
-    cflags = ["-O0", "-ggdb", "-std=gnu99"]
+    cflags = ["-O3", "-std=gnu99"]
     cflags += ["/Ox"]
 
     folders = glob("lib/c-blosc/internal-complibs/zlib*")
@@ -962,7 +962,7 @@ def _get_zlib_clib(field=None):
 
 def _get_zstd_clib(field=None):
     """zstd static lib build config"""
-    cflags = ["-O0", "-ggdb", "-std=gnu99"]
+    cflags = ["-O3", "-std=gnu99"]
     cflags += ["/Ox"]
 
     folders = glob("lib/c-blosc2/internal-complibs/zstd*")
@@ -1065,7 +1065,7 @@ def _get_blosc_plugin():
     hdf5_blosc_sources = prefix(hdf5_blosc_dir, ["blosc_filter.c", "blosc_plugin.c"])
 
     extra_compile_args = ["-std=gnu99"]  # Needed to build manylinux1 wheels
-    extra_compile_args += ["-O0", "-ggdb"]
+    extra_compile_args += ["-O3"]
     extra_compile_args += ["/Ox"]
     extra_compile_args += ["-pthread"]
     extra_link_args = ["-pthread"]
@@ -1143,7 +1143,7 @@ def _get_blosc2_plugin():
         hdf5_blosc2_dir, ["blosc2_filter.c", "blosc2_plugin.c"]
     )
 
-    extra_compile_args = ["-O0", "-ggdb", "-std=gnu99"]
+    extra_compile_args = ["-O3", "-std=gnu99"]
     extra_compile_args += ["/Ox"]
     extra_compile_args += ["-pthread"]
     extra_link_args = ["-pthread"]
@@ -1262,7 +1262,7 @@ def _get_bitshuffle_plugin():
     """
     bithsuffle_dir = "lib/bitshuffle/src"
 
-    extra_compile_args = ["-O0", "-ggdb", "-std=c99", "-fopenmp"]
+    extra_compile_args = ["-O3", "-std=c99", "-fopenmp"]
     extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-fopenmp"]
 
@@ -1345,7 +1345,7 @@ def _get_fcidecomp_plugin():
     """FCIDECOMP plugin build config"""
     fcidecomp_dir = "lib/fcidecomp/src/fcidecomp"
 
-    extra_compile_args = ["-O0", "-ggdb", "-std=c99", "-fopenmp"]
+    extra_compile_args = ["-O3", "-std=c99", "-fopenmp"]
     extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-lstdc++", "-fopenmp"]
 
@@ -1378,7 +1378,7 @@ def _get_h5zfp_plugin():
     """H5Z-ZFP plugin build config"""
     h5zfp_dir = "lib/H5Z-ZFP/src"
 
-    extra_compile_args = ["-O0", "-ggdb", "-std=c99"]
+    extra_compile_args = ["-O3", "-std=c99"]
     extra_compile_args += ["/Ox"]
 
     return HDF5PluginExtension(
@@ -1399,7 +1399,7 @@ def _get_sz_plugin():
     sz_dir = "lib/SZ/sz"
     h5zsz_dir = "lib/SZ/hdf5-filter/H5Z-SZ"
 
-    extra_compile_args = ["-O0", "-ggdb", "-std=c99", "-fopenmp"]
+    extra_compile_args = ["-O3", "-std=c99", "-fopenmp"]
     extra_compile_args += ["/Ox", "/openmp"]
 
     extra_link_args = ["-fopenmp", "-lm"]
@@ -1443,7 +1443,7 @@ def _get_sz3_plugin():
     include_dirs.append(f"{h5z_sz3_dir}/include")
     include_dirs += get_clib_config("zstd", "include_dirs")
 
-    extra_compile_args = ["-std=c++14", "-O0", "-ggdb", "-fopenmp"]
+    extra_compile_args = ["-std=c++14", "-O3", "-fopenmp"]
     extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-fopenmp", "-lm"]
 
