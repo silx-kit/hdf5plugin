@@ -407,7 +407,7 @@ class TestStrings(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         N = 100
-        self.datas = [
+        self.string_arrays = [
             # Note: h5py does not support dtype="U"
             numpy.array(["test", "strings", "ascii"] * N, dtype="S"),
             numpy.array([b"test", b"strings", b"binary"] * N, dtype="O"),
@@ -415,7 +415,7 @@ class TestStrings(unittest.TestCase):
         has_h5py_314 = parse_version(h5py.__version__) >= parse_version("3.14")
         has_numpy_2 = parse_version(numpy.__version__) >= parse_version("2.0")
         if has_h5py_314 and has_numpy_2:
-            self.datas.append(
+            self.string_arrays.append(
                 numpy.array(["test", "strings", "Crème brûlée"] * N, dtype="T")
             )
 
@@ -435,7 +435,7 @@ class TestStrings(unittest.TestCase):
         filename = os.path.join(self.tempdir.name, f"{filter_name}.h5")
         compression_class = compression_name_to_class[filter_name]
 
-        for data in self.datas:
+        for data in self.string_arrays:
             with self.subTest(name=data.dtype.kind):
                 ds_name = f"data{data.dtype.kind}"
                 # Write
