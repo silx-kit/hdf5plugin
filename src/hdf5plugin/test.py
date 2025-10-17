@@ -35,6 +35,7 @@ from typing import Any
 
 import h5py
 import numpy
+from packaging.version import parse as parse_version
 
 import hdf5plugin
 
@@ -56,6 +57,21 @@ def should_test(filter_name: str) -> bool:
     return filter_name in BUILD_CONFIG.embedded_filters or h5py.h5z.filter_avail(
         filter_id
     )
+
+
+compression_name_to_class = {
+    "blosc": hdf5plugin.Blosc,
+    "blosc2": hdf5plugin.Blosc2,
+    "bshuf": hdf5plugin.Bitshuffle,
+    "bzip2": hdf5plugin.BZip2,
+    "lz4": hdf5plugin.LZ4,
+    "fcidecomp": hdf5plugin.FciDecomp,
+    "sperr": hdf5plugin.Sperr,
+    "sz": hdf5plugin.SZ,
+    "sz3": hdf5plugin.SZ3,
+    "zfp": hdf5plugin.Zfp,
+    "zstd": hdf5plugin.Zstd,
+}
 
 
 class BaseTestHDF5PluginRW(unittest.TestCase):
@@ -88,30 +104,15 @@ class BaseTestHDF5PluginRW(unittest.TestCase):
         """
         data = numpy.ones((self._data_natoms,), dtype=dtype).reshape(self._data_shape)
         filename = os.path.join(self.tempdir, "test_" + filter_name + ".h5")
-
-        compression_class = {
-            "blosc": hdf5plugin.Blosc,
-            "blosc2": hdf5plugin.Blosc2,
-            "bshuf": hdf5plugin.Bitshuffle,
-            "bzip2": hdf5plugin.BZip2,
-            "lz4": hdf5plugin.LZ4,
-            "fcidecomp": hdf5plugin.FciDecomp,
-            "sperr": hdf5plugin.Sperr,
-            "sz": hdf5plugin.SZ,
-            "sz3": hdf5plugin.SZ3,
-            "zfp": hdf5plugin.Zfp,
-            "zstd": hdf5plugin.Zstd,
-        }[filter_name]
+        compression_class = compression_name_to_class[filter_name]
 
         # Write
         f = h5py.File(filename, "w")
-        if options is None:
-            options = {}
         f.create_dataset(
             "data",
             data=data,
             chunks=data.shape,
-            compression=compression_class(**options),
+            compression=compression_class(**(options or {})),
         )
         f.close()
 
@@ -399,6 +400,105 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                     self._test("zstd", dtype=dtype, options=options)
 
 
+class TestStrings(unittest.TestCase):
+    """Test strings compression"""
+
+    @classmethod
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        N = 100
+        self.string_arrays = [
+            # Note: h5py does not support dtype="U"
+            numpy.array(["test", "strings", "ascii"] * N, dtype="S"),
+            numpy.array([b"test", b"strings", b"binary"] * N, dtype="O"),
+        ]
+        has_h5py_314 = parse_version(h5py.__version__) >= parse_version("3.14")
+        has_numpy_2 = parse_version(numpy.__version__) >= parse_version("2.0")
+        if has_h5py_314 and has_numpy_2:
+            self.string_arrays.append(
+                numpy.array(["test", "strings", "Crème brûlée"] * N, dtype="T")
+            )
+
+    @classmethod
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def _test_strings(
+        self,
+        filter_name: str,
+        options: dict[str, Any] | None = None,
+    ) -> None:
+        """Test string compression for a particular filter
+
+        :param filter_name: The name of the filter to use
+        """
+        filename = os.path.join(self.tempdir.name, f"{filter_name}.h5")
+        compression_class = compression_name_to_class[filter_name]
+
+        for data in self.string_arrays:
+            with self.subTest(name=data.dtype.kind):
+                ds_name = f"data{data.dtype.kind}"
+                # Write
+                with h5py.File(filename, "w") as f:
+                    f.create_dataset(
+                        ds_name,
+                        data=data,
+                        chunks=data.shape,
+                        compression=compression_class(**(options or {})),
+                    )
+
+                # Read
+                with h5py.File(filename, "r") as f:
+                    if data.dtype.kind == "T":
+                        # Use h5py accessor. Note that this is very different from
+                        # f[ds_name][()].astype("T")
+                        saved = f[ds_name].astype("T")[()]
+                    else:
+                        saved = f[ds_name][()]
+
+                    plist = f[ds_name].id.get_create_plist()
+                    filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
+
+                    # Read chunk raw (compressed) data
+                    chunk = f[ds_name].id.read_direct_chunk((0,))[1]
+
+                    # Check if chunk is actually compressed
+                    self.assertLess(len(chunk), data.nbytes)
+
+                self.assertTrue(numpy.array_equal(saved, data))
+                self.assertEqual(saved.dtype, data.dtype)
+
+                self.assertEqual(len(filters), 1)
+                self.assertEqual(filters[0][0], hdf5plugin.FILTERS[filter_name])
+
+    @unittest.skip(reason="segfault (#364)")
+    @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
+    def testStringsBlosc(self):
+        """Strings write/read test with blosc filter plugin"""
+        self._test_strings("blosc")  # Default options
+
+    @unittest.skip(reason="segfault (#364)")
+    @unittest.skipUnless(should_test("blosc2"), "Blosc filter not available")
+    def testStringsBlosc2(self):
+        """Strings write/read test with blosc2 filter plugin"""
+        self._test_strings("blosc2")
+
+    @unittest.skipUnless(should_test("bzip2"), "BZip2 filter not available")
+    def testStringsBZip2(self):
+        """Strings write/read test with BZip2 filter plugin"""
+        self._test_strings("bzip2")
+
+    @unittest.skipUnless(should_test("lz4"), "LZ4 filter not available")
+    def testStringsLZ4(self):
+        """Strings write/read test with LZ4 filter plugin"""
+        self._test_strings("lz4")
+
+    @unittest.skipUnless(should_test("zstd"), "Zstd filter not available")
+    def testStringsZstd(self):
+        """Strings write/read test with Zstd filter plugin"""
+        self._test_strings("zstd")
+
+
 class TestPackage(unittest.TestCase):
     """Test general features of the hdf5plugin package"""
 
@@ -641,6 +741,7 @@ def suite() -> unittest.TestSuite:
     test_suite = unittest.TestSuite()
     for cls in (
         TestHDF5PluginRW,
+        TestStrings,
         TestPackage,
         TestRegisterFilter,
         TestGetFilters,
