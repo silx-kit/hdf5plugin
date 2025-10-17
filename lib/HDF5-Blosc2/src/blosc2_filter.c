@@ -295,11 +295,6 @@ size_t blosc2_filter_function(unsigned flags, size_t cd_nelmts,
   typesize = cd_values[2];      /* The datatype size */
   outbuf_size = cd_values[3];   /* Precomputed buffer guess */
 
-  /* Special case for variable-length types (e.g. char**)
-     https://portal.hdfgroup.org/documentation/hdf5/latest/group___v_l_e_n.html
-   */
-  if (typesize == 0) typesize = 1;
-
   /* Filter params that are only set for B2ND */
   int ndim = -1;
   int32_t chunkshape[BLOSC2_MAX_DIM];
