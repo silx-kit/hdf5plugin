@@ -73,6 +73,21 @@ class FilterBase(h5py.filters.FilterRefBase):
     filter_id: int
     filter_name: str
 
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> FilterBase:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :raises ValueError: Unsupported filter_options
+        """
+        raise NotImplementedError()
+
+
+def _cname_from_id(compression_id: int, compressions: dict[str, int]) -> str:
+    for cname, cid in compressions.items():
+        if compression_id == cid:
+            return cname
+    raise ValueError(f"Unsupported compression id: {compression_id}")
+
 
 class Bitshuffle(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using bitshuffle filter.
@@ -147,6 +162,32 @@ class Bitshuffle(FilterBase):
         else:
             self.filter_options = (nelems, self.__COMPRESSIONS[cname])
 
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Bitshuffle:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format:
+
+          - Zstd: (_, _, _, nelems, compression_id=3, compression_level)
+          - LZ4 and no compression: (_, _, _, nelems, compression_id)
+
+        :raises ValueError: Unsupported filter_options
+        """
+        if len(filter_options) <= 3:
+            return cls(cname="none")
+
+        nelems = filter_options[3]
+
+        if len(filter_options) <= 4:
+            return cls(nelems, cname="none")
+
+        cname = _cname_from_id(filter_options[4], cls.__COMPRESSIONS)
+
+        if cname == "zstd" and len(filter_options) > 5:
+            return cls(nelems, cname, clevel=filter_options[5])
+
+        return cls(nelems, cname)
+
 
 class Blosc(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using blosc filter.
@@ -202,6 +243,31 @@ class Blosc(FilterBase):
         if shuffle not in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE):
             raise ValueError(f"shuffle={shuffle} is not supported")
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
+
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (_, _, _, _, clevel*, shuffle*, compression*)
+        :raises ValueError: Unsupported filter_options
+        """
+        default_cname = "blosclz"
+
+        if len(filter_options) <= 4:
+            return cls(default_cname)
+
+        clevel = filter_options[4]
+
+        if len(filter_options) <= 5:
+            return cls(default_cname, clevel)
+
+        shuffle = filter_options[5]
+
+        if len(filter_options) <= 6:
+            return cls(default_cname, clevel, shuffle)
+
+        cname = _cname_from_id(filter_options[6], cls.__COMPRESSIONS)
+        return cls(cname, clevel, shuffle)
 
 
 class Blosc2(FilterBase):
@@ -271,6 +337,31 @@ class Blosc2(FilterBase):
             raise ValueError(f"filters={filters} is not supported")
         self.filter_options = (0, 0, 0, 0, clevel, filters, compression)
 
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc2:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (_, _, _, _, clevel*, filters*, compression*)
+        :raises ValueError: Unsupported filter_options
+        """
+        default_cname = "blosclz"
+
+        if len(filter_options) <= 4:
+            return cls(default_cname)
+
+        clevel = filter_options[4]
+
+        if len(filter_options) <= 5:
+            return cls(default_cname, clevel)
+
+        filters = filter_options[5]
+
+        if len(filter_options) <= 6:
+            return cls(default_cname, clevel, filters)
+
+        cname = _cname_from_id(filter_options[6], cls.__COMPRESSIONS)
+        return cls(cname=cname, clevel=clevel, filters=filters)
+
 
 class BZip2(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using BZip2 filter.
@@ -295,6 +386,18 @@ class BZip2(FilterBase):
         if not 1 <= blocksize <= 9:
             raise ValueError("blocksize must be in the range [1, 9]")
         self.filter_options = (blocksize,)
+
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> BZip2:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (blocksize,)
+        :raises ValueError: Unsupported filter_options
+        """
+        if len(filter_options) == 0:
+            return cls()
+        else:
+            return cls(blocksize=filter_options[0])
 
 
 class FciDecomp(FilterBase):
@@ -321,6 +424,14 @@ class FciDecomp(FilterBase):
                 "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler."
             )
 
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> FciDecomp:
+        """Returns compression arguments from HDF5 compression filters options
+
+        :raises ValueError: Unsupported filter_options
+        """
+        return cls()
+
 
 class LZ4(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using lz4 filter.
@@ -346,6 +457,18 @@ class LZ4(FilterBase):
         if not 0 <= nbytes <= 0x7E000000:
             raise ValueError("clevel must be in the range [0, 2113929216]")
         self.filter_options = (nbytes,)
+
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> LZ4:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (nbytes,)
+        :raises ValueError: Unsupported filter_options
+        """
+        if len(filter_options) == 0:
+            return cls()
+        else:
+            return cls(nbytes=filter_options[0])
 
 
 class Zfp(FilterBase):
@@ -821,6 +944,18 @@ class Zstd(FilterBase):
         if not 1 <= clevel <= 22:
             raise ValueError("clevel must be in the range [1, 22]")
         self.filter_options = (clevel,)
+
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Zstd:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (clevel,)
+        :raises ValueError: Unsupported filter_options
+        """
+        if len(filter_options) == 0:
+            return cls()
+        else:
+            return cls(clevel=filter_options[0])
 
 
 FILTER_CLASSES: tuple[type[FilterBase], ...] = (
