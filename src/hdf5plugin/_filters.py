@@ -712,6 +712,30 @@ class Sperr(FilterBase):
         )
 
     @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Sperr:
+        if len(filter_options) < 2:
+            raise ValueError(f"Expected at least 2 values, got {len(filter_options)}")
+
+        mode, quality, swap, missing_value_mode = cls.__unpack_options(
+            meta=filter_options[0], ret=filter_options[1]
+        )
+
+        if mode == 2:
+            return cls(
+                peak_signal_to_noise_ratio=quality,
+                swap=swap,
+                missing_value_mode=missing_value_mode,
+            )
+        if mode == 3:
+            return cls(
+                absolute=quality, swap=swap, missing_value_mode=missing_value_mode
+            )
+        if mode == 1:
+            return cls(rate=quality, swap=swap, missing_value_mode=missing_value_mode)
+
+        raise ValueError(f"Mode must be in [1, 3], got {mode}")
+
+    @classmethod
     def __pack_options(
         cls, mode: int, quality: float, swap: bool, missing_value_mode: int
     ) -> tuple[int, int]:
@@ -745,6 +769,40 @@ class Sperr(FilterBase):
             ret |= 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 3)
 
         return ret, missing_value_mode
+
+    @classmethod
+    def __unpack_options(cls, meta: int, ret: int) -> tuple[int, float, bool, int]:
+        # Unpack missing value mode from packed_info bits 6-9
+        # See h5zsperr_unpack_extra_info
+        missing_value_mode = (meta >> 6) & 0b1111
+
+        # Unpack other fields from ret
+        # See H5Z_SPERR_decode_cd_values
+        swap = bool(ret >> (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 3))
+
+        bit1 = (ret >> (cls._INTEGER_BITS + cls._FRACTIONAL_BITS)) & 1
+        bit2 = (ret >> (cls._INTEGER_BITS + cls._FRACTIONAL_BITS + 1)) & 1
+        if bit1 and not bit2:
+            mode = 1
+        elif not bit1 and bit2:
+            mode = 2
+        elif bit1 and bit2:
+            mode = 3
+        else:
+            raise ValueError("Mode must be in [1, 3], got 0")
+
+        negative = bool((ret >> (cls._INTEGER_BITS + cls._FRACTIONAL_BITS - 1)) & 1)
+
+        mask = 1 << (cls._INTEGER_BITS + cls._FRACTIONAL_BITS - 1)
+        masked_ret = ret & (mask - 1)
+
+        quality = float(masked_ret) / float(1 << cls._FRACTIONAL_BITS)
+        if negative:
+            quality *= -1.0
+        if mode == 3:
+            quality = 2**quality
+
+        return mode, quality, swap, missing_value_mode
 
 
 class SZ(FilterBase):

@@ -577,6 +577,27 @@ class TestFromFilterOptions(unittest.TestCase):
                 compression_filter = hdf5plugin.LZ4.from_filter_options(filter_options)
                 self.assertEqual(compression_filter.filter_options, expected_options)
 
+    def testSperr(self):
+        for filter_options, expected_filter in (
+            ((1043, 269484032, 128, 0, 0), hdf5plugin.Sperr()),
+            (
+                (1107, 2418016256, 256, 0, 0),
+                hdf5plugin.Sperr(rate=32, swap=True, missing_value_mode=1),
+            ),
+            ((1043, 940177214, 256, 0, 0), hdf5plugin.Sperr(absolute=1e-3)),
+            (
+                (1171, 537001984, 256, 0, 0),
+                hdf5plugin.Sperr(peak_signal_to_noise_ratio=2.0, missing_value_mode=2),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Sperr.from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
     def testZstd(self):
         for filter_options, expected_options in (
             # (clevel,)
@@ -642,6 +663,11 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
     def testLZ4(self):
         data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
         self._test(hdf5plugin.LZ4(), data)
+
+    @unittest.skipUnless(should_test("sperr"), "Sperr filter not available")
+    def testSperr(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.Sperr(), data)
 
     @unittest.skipUnless(should_test("zstd"), "Zstd filter not available")
     def testZstd(self):
