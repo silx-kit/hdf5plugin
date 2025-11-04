@@ -598,6 +598,31 @@ class TestFromFilterOptions(unittest.TestCase):
                     compression_filter.filter_options, expected_filter.filter_options
                 )
 
+    def testSZ(self):
+        for filter_options, expected_filter in (
+            (
+                (1, 0, 0, 256, 10, 0, 0, 0, 0, 1055193269, 2296604913, 0, 0),
+                hdf5plugin.SZ(),
+            ),
+            (
+                (1, 0, 0, 256, 0, 1062232653, 3539053052, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ(absolute=1e-3),
+            ),
+            (
+                (1, 0, 0, 256, 1, 0, 0, 1062232653, 3539053052, 0, 0, 0, 0),
+                hdf5plugin.SZ(relative=1e-3),
+            ),
+            (
+                (1, 0, 0, 256, 10, 0, 0, 0, 0, 1062232653, 3539053052, 0, 0),
+                hdf5plugin.SZ(pointwise_relative=1e-3),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.SZ.from_filter_options(filter_options)
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
     def testSZ3(self):
         for filter_options, expected_filter in (
             (
@@ -697,6 +722,11 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
     def testSperr(self):
         data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
         self._test(hdf5plugin.Sperr(), data)
+
+    @unittest.skipUnless(should_test("sz"), "SZ filter not available")
+    def testSZ(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.SZ(), data)
 
     @unittest.skipUnless(should_test("sz3"), "SZ3 filter not available")
     def testSZ3(self):
