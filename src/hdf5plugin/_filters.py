@@ -805,6 +805,23 @@ class Sperr(FilterBase):
         return mode, quality, swap, missing_value_mode
 
 
+def _sz_pack_float64(value: float) -> tuple[int, int]:
+    # Pack as big-endian IEEE 754 double
+    packed = struct.pack(">d", value)
+    # Unpack most-significant bits as unsigned int
+    high = struct.unpack(">I", packed[0:4])[0]
+    # Unpack least-significant bits as unsigned int
+    low = struct.unpack(">I", packed[4:8])[0]
+    return high, low
+
+
+def _sz_unpack_float64(high: int, low: int) -> float:
+    # Pack most-significant & least-significant bits
+    packed = struct.pack(">II", high, low)
+    # Unpack as big-endian IEEE 754 double
+    return float(struct.unpack(">d", packed)[0])
+
+
 class SZ(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ2 filter.
 
@@ -879,10 +896,10 @@ class SZ(FilterBase):
 
         compression_opts = (
             sz_mode,
-            *self.__pack_float64(absolute or 0.0),
-            *self.__pack_float64(relative or 0.0),
-            *self.__pack_float64(pointwise_relative or 0.0),
-            *self.__pack_float64(0.0),  # psnr
+            *_sz_pack_float64(absolute or 0.0),
+            *_sz_pack_float64(relative or 0.0),
+            *_sz_pack_float64(pointwise_relative or 0.0),
+            *_sz_pack_float64(0.0),  # psnr
         )
 
         logger.info(f"SZ mode {sz_mode} used.")
@@ -898,37 +915,20 @@ class SZ(FilterBase):
         sz_mode = filter_options[4]
         if sz_mode == 0:
             return cls(
-                absolute=cls.__unpack_float64(filter_options[5], filter_options[6])
+                absolute=_sz_unpack_float64(filter_options[5], filter_options[6])
             )
         if sz_mode == 1:
             return cls(
-                relative=cls.__unpack_float64(filter_options[7], filter_options[8])
+                relative=_sz_unpack_float64(filter_options[7], filter_options[8])
             )
         if sz_mode == 10:
             return cls(
-                pointwise_relative=cls.__unpack_float64(
+                pointwise_relative=_sz_unpack_float64(
                     filter_options[9], filter_options[10]
                 )
             )
 
         raise ValueError(f"Unsupported sz_mode: {sz_mode}")
-
-    @staticmethod
-    def __pack_float64(error: float) -> tuple[int, int]:
-        # Pack as big-endian IEEE 754 double
-        packed = struct.pack(">d", error)
-        # Unpack most-significant bits as unsigned int
-        high = struct.unpack(">I", packed[0:4])[0]
-        # Unpack least-significant bits as unsigned int
-        low = struct.unpack(">I", packed[4:8])[0]
-        return high, low
-
-    @staticmethod
-    def __unpack_float64(high: int, low: int) -> float:
-        # Pack most-significant & least-significant bits
-        packed = struct.pack(">II", high, low)
-        # Unpack as big-endian IEEE 754 double
-        return float(struct.unpack(">d", packed)[0])
 
 
 class SZ3(FilterBase):
@@ -985,10 +985,10 @@ class SZ3(FilterBase):
 
         compression_opts = (
             sz_mode,
-            *self.__pack_float64(absolute or 0.0),
-            *self.__pack_float64(relative or 0.0),
-            *self.__pack_float64(norm2 or 0.0),
-            *self.__pack_float64(peak_signal_to_noise_ratio or 0.0),
+            *_sz_pack_float64(absolute or 0.0),
+            *_sz_pack_float64(relative or 0.0),
+            *_sz_pack_float64(norm2 or 0.0),
+            *_sz_pack_float64(peak_signal_to_noise_ratio or 0.0),
         )
         logger.info(f"SZ3 mode {sz_mode} used.")
         logger.info(f"filter options {compression_opts}")
@@ -1006,38 +1006,19 @@ class SZ3(FilterBase):
         sz_mode = filter_options[4]
         if sz_mode == 0:
             return cls(
-                absolute=cls.__unpack_float64(filter_options[5], filter_options[6])
+                absolute=_sz_unpack_float64(filter_options[5], filter_options[6])
             )
         if sz_mode == 1:
             return cls(
-                relative=cls.__unpack_float64(filter_options[7], filter_options[8])
+                relative=_sz_unpack_float64(filter_options[7], filter_options[8])
             )
         if sz_mode == 2:
-            return cls(
-                norm2=cls.__unpack_float64(filter_options[9], filter_options[10])
-            )
+            return cls(norm2=_sz_unpack_float64(filter_options[9], filter_options[10]))
         if sz_mode == 3:
-            psnr = cls.__unpack_float64(filter_options[11], filter_options[12])
+            psnr = _sz_unpack_float64(filter_options[11], filter_options[12])
             return cls(peak_signal_to_noise_ratio=psnr)
 
         raise ValueError(f"Unsupported sz_mode: {sz_mode}")
-
-    @staticmethod
-    def __pack_float64(error: float) -> tuple[int, int]:
-        # Pack as big-endian IEEE 754 double
-        packed = struct.pack(">d", error)
-        # Unpack most-significant bits as unsigned int
-        high = struct.unpack(">I", packed[0:4])[0]
-        # Unpack least-significant bits as unsigned int
-        low = struct.unpack(">I", packed[4:8])[0]
-        return high, low
-
-    @staticmethod
-    def __unpack_float64(high: int, low: int) -> float:
-        # Pack most-significant & least-significant bits
-        packed = struct.pack(">II", high, low)
-        # Unpack as big-endian IEEE 754 double
-        return float(struct.unpack(">d", packed)[0])
 
 
 class Zstd(FilterBase):
