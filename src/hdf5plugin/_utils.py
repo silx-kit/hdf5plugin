@@ -230,6 +230,20 @@ def get_filters(
     return tuple(filter_classes)
 
 
+def from_filter_options(filter_id: int, filter_options: tuple[int, ...]) -> FilterBase:
+    """Returns corresponding compression filter configuration instance.
+
+    :param filter_id: HDF5 compression filter ID
+    :param filter_options: Compression filter configuration as stored in HDF5 datasets
+    :raises ValueError: Unsupported or invalid filter_id, filter_options combination
+    """
+    for filter_cls in FILTER_CLASSES:
+        if filter_id == filter_cls.filter_id:
+            return filter_cls.from_filter_options(filter_options)
+
+    raise ValueError(f"Unsupported filter id: {filter_id}")
+
+
 def register(
     filters: int | str | tuple[int | str, ...] = tuple(FILTERS.keys()),
     force: bool = True,

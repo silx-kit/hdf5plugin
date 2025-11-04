@@ -52,7 +52,13 @@ from ._filters import (  # noqa
     Zfp,
     Zstd,
 )
-from ._utils import PLUGIN_PATH, get_config, get_filters, register  # noqa
+from ._utils import (  # noqa
+    PLUGIN_PATH,
+    from_filter_options,
+    get_config,
+    get_filters,
+    register,
+)
 from ._version import version  # noqa
 
 # Backward compatibility
