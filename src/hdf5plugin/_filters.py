@@ -968,6 +968,30 @@ class SZ3(FilterBase):
 
         self.filter_options = compression_opts
 
+    @classmethod
+    def from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ3:
+        if len(filter_options) < 13:
+            raise ValueError(f"Expected 13 values, got {len(filter_options)}")
+
+        sz_mode = filter_options[4]
+        if sz_mode == 0:
+            return cls(
+                absolute=cls.__unpack_float64(filter_options[5], filter_options[6])
+            )
+        if sz_mode == 1:
+            return cls(
+                relative=cls.__unpack_float64(filter_options[7], filter_options[8])
+            )
+        if sz_mode == 2:
+            return cls(
+                norm2=cls.__unpack_float64(filter_options[9], filter_options[10])
+            )
+        if sz_mode == 3:
+            psnr = cls.__unpack_float64(filter_options[11], filter_options[12])
+            return cls(peak_signal_to_noise_ratio=psnr)
+
+        raise ValueError(f"Unsupported sz_mode: {sz_mode}")
+
     @staticmethod
     def __pack_float64(error: float) -> tuple[int, int]:
         # Pack as big-endian IEEE 754 double
@@ -977,6 +1001,13 @@ class SZ3(FilterBase):
         # Unpack least-significant bits as unsigned int
         low = struct.unpack(">I", packed[4:8])[0]
         return high, low
+
+    @staticmethod
+    def __unpack_float64(high: int, low: int) -> float:
+        # Pack most-significant & least-significant bits
+        packed = struct.pack(">II", high, low)
+        # Unpack as big-endian IEEE 754 double
+        return float(struct.unpack(">d", packed)[0])
 
 
 class Zstd(FilterBase):
