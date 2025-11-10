@@ -602,6 +602,81 @@ class Zfp(FilterBase):
 
         logger.info(f"filter options = {self.filter_options}")
 
+    # From zfp.h
+    _ZFP_MIN_BITS = 1  # minimum number of bits per block
+    _ZFP_MAX_BITS = 16658  # maximum number of bits per block
+    _ZFP_MAX_PREC = 64  # maximum precision supported
+    _ZFP_MIN_EXP = -1074  # minimum floating-point base-2 exponent
+    _ZFP_MODE_SHORT_BITS = 12
+    _ZFP_MODE_SHORT_MAX = (1 << _ZFP_MODE_SHORT_BITS) - 2
+
+    @classmethod
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Zfp:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (info, magic, meta, meta&short_mode, long_mode, long_mode)
+        :raises ValueError: Unsupported filter_options
+        """
+        # ZFP header parsing reference:
+        # zfp.c zfp_read_header() and zfp_stream_mode() functions
+
+        if len(filter_options) < 4:
+            raise ValueError(f"Expected at least 4 values, got {len(filter_options)}")
+
+        magic = filter_options[1]
+        if struct.pack("<I", magic).startswith(b"zfp"):
+            endianness = "<"
+        elif struct.pack(">I", magic).startswith(b"zfp"):
+            endianness = ">"
+        else:
+            raise ValueError("Unsupported options: Wrong Zfp magic number")
+
+        codec_version = int(struct.pack(f"{endianness}I", magic)[-1])
+        if codec_version != 5:
+            raise NotImplementedError(
+                f"Unsupported version of Zfp codec: {codec_version}"
+            )
+
+        # Last 12 bits contains the "short" config value
+        short_mode = struct.unpack(
+            "I", struct.pack(f"{endianness}I", filter_options[3] >> 20)
+        )[0]
+        if short_mode < cls._ZFP_MODE_SHORT_MAX:
+            # 12 bits encoding
+            if short_mode < 2048:  # Fixed rate
+                # Fixed rate is converted to ZFP parameters taking chunk's ndim into account
+                # this cannot be reverted here, it returns the corresponding "expert" mode config
+                # See zfp.c zfp_stream_set_rate()
+                return cls(
+                    minbits=short_mode,
+                    maxbits=short_mode,
+                    maxprec=cls._ZFP_MAX_PREC,
+                    minexp=cls._ZFP_MIN_EXP,
+                )
+            elif short_mode < (2048 + 128):  # Fixed precision
+                return cls(precision=short_mode + 1 - 2048)
+            elif short_mode == (2048 + 128):  # Reversible
+                return cls(reversible=True)
+            else:  # Fixed accuracy
+                minexp = short_mode + cls._ZFP_MIN_EXP - (2048 + 128 + 1)
+                return cls(accuracy=2**minexp)
+
+        # 64 bits encoding
+        if len(filter_options) < 6:
+            raise ValueError(f"Expected at least 6 values, got {len(filter_options)}")
+
+        long_mode = struct.unpack(
+            "Q", struct.pack(f"{endianness}II", filter_options[4], filter_options[5])
+        )[0]
+        minbits = (long_mode & 0x7FFF) + 1
+        long_mode >>= 15
+        maxbits = (long_mode & 0x7FFF) + 1
+        long_mode >>= 15
+        maxprec = (long_mode & 0x007F) + 1
+        long_mode >>= 7
+        minexp = (long_mode & 0x7FFF) - 16495
+        return cls(minbits=minbits, maxbits=maxbits, maxprec=maxprec, minexp=minexp)
+
 
 class Sperr(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SPERR filter.

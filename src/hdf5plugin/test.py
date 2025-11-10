@@ -652,6 +652,31 @@ class TestFromFilterOptions(unittest.TestCase):
                     compression_filter.filter_options, expected_filter.filter_options
                 )
 
+    def testZfp(self):
+        for filter_options, expected_filter in (
+            (
+                (269504785, 91252346, 4026532854, 2167406593),
+                hdf5plugin.Zfp(precision=20),
+            ),
+            (
+                (269504785, 91252346, 4026532854, 3404726273),
+                hdf5plugin.Zfp(accuracy=2**-4),
+            ),
+            (
+                (269504785, 91252346, 4026532854, 2281701377),
+                hdf5plugin.Zfp(reversible=True),
+            ),
+            (
+                (269504785, 91252346, 4026532854, 4293918721, 3767009280, 494351),
+                hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1047),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Zfp._from_filter_options(filter_options)
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
     def testZstd(self):
         for filter_options, expected_options in (
             # (clevel,)
@@ -688,7 +713,11 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
 
         retrieved_filter = hdf5plugin.from_filter_options(filter_id, filter_options)
 
-        self.assertEqual(compression_filter, retrieved_filter)
+        self.assertEqual(
+            compression_filter,
+            retrieved_filter,
+            msg=f"{(compression_filter.filter_id, compression_filter.filter_options)} != {(retrieved_filter.filter_id, retrieved_filter.filter_options)}",
+        )
 
     @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
     def testBitshuffle(self):
@@ -734,6 +763,20 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
     def testSZ3(self):
         data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
         self._test(hdf5plugin.SZ3(), data)
+
+    @unittest.skipUnless(should_test("zfp"), "Zfp filter not available")
+    def testZfp(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        # Roundtrip does not work for all parameters including the default
+        for mode_name, compression_filter in {
+            # rate does not roundtrip
+            "precision": hdf5plugin.Zfp(precision=10),
+            "accuracy": hdf5plugin.Zfp(accuracy=2**-3),  # roundtrip only for 2^n
+            "reversible": hdf5plugin.Zfp(reversible=True),
+            "expert": hdf5plugin.Zfp(minbits=2, maxbits=100, maxprec=32, minexp=-10),
+        }.items():
+            with self.subTest(mode_name):
+                self._test(compression_filter, data)
 
     @unittest.skipUnless(should_test("zstd"), "Zstd filter not available")
     def testZstd(self):
