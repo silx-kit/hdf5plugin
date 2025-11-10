@@ -499,7 +499,7 @@ class TestStrings(unittest.TestCase):
         self._test_strings("zstd")
 
 
-class TestFromFilterOptions(unittest.TestCase):
+class TestFromFilterOptionsMethods(unittest.TestCase):
     """Test _from_filter_options methods"""
 
     def testBitshuffle(self):
@@ -688,6 +688,14 @@ class TestFromFilterOptions(unittest.TestCase):
                     filter_options
                 )
                 self.assertEqual(compression_filter.filter_options, expected_options)
+
+
+class TestFromFilterOptions(unittest.TestCase):
+    """Test from_filter_options function"""
+
+    def test_filter_name(self):
+        compression_filter = hdf5plugin.from_filter_options("bzip2", (5,))
+        self.assertEqual(compression_filter, hdf5plugin.BZip2(blocksize=5))
 
 
 class TestFromFilterOptionsRoundtrip(unittest.TestCase):
@@ -1027,6 +1035,7 @@ def suite() -> unittest.TestSuite:
     for cls in (
         TestHDF5PluginRW,
         TestStrings,
+        TestFromFilterOptionsMethods,
         TestFromFilterOptions,
         TestFromFilterOptionsRoundtrip,
         TestPackage,

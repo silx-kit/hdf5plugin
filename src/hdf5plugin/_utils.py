@@ -230,7 +230,9 @@ def get_filters(
     return tuple(filter_classes)
 
 
-def from_filter_options(filter_id: int, filter_options: tuple[int, ...]) -> FilterBase:
+def from_filter_options(
+    filter_id: int | str, filter_options: tuple[int, ...]
+) -> FilterBase:
     """Returns corresponding compression filter configuration instance.
 
     :param filter_id: HDF5 compression filter ID
@@ -238,6 +240,12 @@ def from_filter_options(filter_id: int, filter_options: tuple[int, ...]) -> Filt
     :raises ValueError: Unsupported or invalid filter_id, filter_options combination
     :raises NotImplementedError: Given filter or version of the filter is not supported
     """
+    if isinstance(filter_id, str):
+        try:
+            filter_id = FILTERS[filter_id]
+        except KeyError:
+            raise ValueError(f"Unsupported filter id: {filter_id}")
+
     for filter_cls in FILTER_CLASSES:
         if filter_id == filter_cls.filter_id:
             return filter_cls._from_filter_options(filter_options)
