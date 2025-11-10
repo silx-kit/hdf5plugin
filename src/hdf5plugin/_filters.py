@@ -74,7 +74,7 @@ class FilterBase(h5py.filters.FilterRefBase):
     filter_name: str
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> FilterBase:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> FilterBase:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :raises ValueError: Unsupported filter_options
@@ -163,7 +163,7 @@ class Bitshuffle(FilterBase):
             self.filter_options = (nelems, self.__COMPRESSIONS[cname])
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Bitshuffle:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Bitshuffle:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :param filter_options: Expected format:
@@ -245,7 +245,7 @@ class Blosc(FilterBase):
         self.filter_options = (0, 0, 0, 0, clevel, shuffle, compression)
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :param filter_options: Expected format: (_, _, _, _, clevel*, shuffle*, compression*)
@@ -338,7 +338,7 @@ class Blosc2(FilterBase):
         self.filter_options = (0, 0, 0, 0, clevel, filters, compression)
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc2:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc2:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :param filter_options: Expected format: (_, _, _, _, clevel*, filters*, compression*)
@@ -388,7 +388,7 @@ class BZip2(FilterBase):
         self.filter_options = (blocksize,)
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> BZip2:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> BZip2:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :param filter_options: Expected format: (blocksize,)
@@ -425,7 +425,7 @@ class FciDecomp(FilterBase):
             )
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> FciDecomp:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> FciDecomp:
         """Returns compression arguments from HDF5 compression filters options
 
         :raises ValueError: Unsupported filter_options
@@ -459,7 +459,7 @@ class LZ4(FilterBase):
         self.filter_options = (nbytes,)
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> LZ4:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> LZ4:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :param filter_options: Expected format: (nbytes,)
@@ -712,7 +712,7 @@ class Sperr(FilterBase):
         )
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Sperr:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Sperr:
         if len(filter_options) < 2:
             raise ValueError(f"Expected at least 2 values, got {len(filter_options)}")
 
@@ -908,7 +908,7 @@ class SZ(FilterBase):
         self.filter_options = compression_opts
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ:
         if len(filter_options) < 13:
             raise ValueError(f"Expected 13 values, got {len(filter_options)}")
 
@@ -999,7 +999,7 @@ class SZ3(FilterBase):
         self.filter_options = compression_opts
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ3:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ3:
         if len(filter_options) < 13:
             raise ValueError(f"Expected 13 values, got {len(filter_options)}")
 
@@ -1046,7 +1046,7 @@ class Zstd(FilterBase):
         self.filter_options = (clevel,)
 
     @classmethod
-    def from_filter_options(cls, filter_options: tuple[int, ...]) -> Zstd:
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Zstd:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :param filter_options: Expected format: (clevel,)

@@ -236,10 +236,11 @@ def from_filter_options(filter_id: int, filter_options: tuple[int, ...]) -> Filt
     :param filter_id: HDF5 compression filter ID
     :param filter_options: Compression filter configuration as stored in HDF5 datasets
     :raises ValueError: Unsupported or invalid filter_id, filter_options combination
+    :raises NotImplementedError: Given filter or version of the filter is not supported
     """
     for filter_cls in FILTER_CLASSES:
         if filter_id == filter_cls.filter_id:
-            return filter_cls.from_filter_options(filter_options)
+            return filter_cls._from_filter_options(filter_options)
 
     raise ValueError(f"Unsupported filter id: {filter_id}")
 

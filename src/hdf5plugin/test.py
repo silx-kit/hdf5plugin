@@ -500,7 +500,7 @@ class TestStrings(unittest.TestCase):
 
 
 class TestFromFilterOptions(unittest.TestCase):
-    """Test from_filter_options methods"""
+    """Test _from_filter_options methods"""
 
     def testBitshuffle(self):
         for filter_options, expected_options in (
@@ -512,7 +512,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ((0, 2, 4, 0, 3, 5), (0, 3, 5)),  # Zstd with custom clevel
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.Bitshuffle.from_filter_options(
+                compression_filter = hdf5plugin.Bitshuffle._from_filter_options(
                     filter_options
                 )
                 self.assertEqual(compression_filter.filter_options, expected_options)
@@ -529,7 +529,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ((2, 2, 4, 40000, 8, 2, 1), (0, 0, 0, 0, 8, 2, 1)),  # all custom
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.Blosc.from_filter_options(
+                compression_filter = hdf5plugin.Blosc._from_filter_options(
                     filter_options
                 )
                 self.assertEqual(compression_filter.filter_options, expected_options)
@@ -546,7 +546,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ((2, 2, 4, 40000, 8, 2, 1), (0, 0, 0, 0, 8, 2, 1)),  # all custom
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.Blosc2.from_filter_options(
+                compression_filter = hdf5plugin.Blosc2._from_filter_options(
                     filter_options
                 )
                 self.assertEqual(compression_filter.filter_options, expected_options)
@@ -558,13 +558,13 @@ class TestFromFilterOptions(unittest.TestCase):
             ((5,), (5,)),
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.BZip2.from_filter_options(
+                compression_filter = hdf5plugin.BZip2._from_filter_options(
                     filter_options
                 )
                 self.assertEqual(compression_filter.filter_options, expected_options)
 
     def testFciDecomp(self):
-        compression_filter = hdf5plugin.FciDecomp.from_filter_options((1, 2, 3))
+        compression_filter = hdf5plugin.FciDecomp._from_filter_options((1, 2, 3))
         self.assertEqual(compression_filter.filter_options, ())
 
     def testLZ4(self):
@@ -574,7 +574,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ((1024,), (1024,)),
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.LZ4.from_filter_options(filter_options)
+                compression_filter = hdf5plugin.LZ4._from_filter_options(filter_options)
                 self.assertEqual(compression_filter.filter_options, expected_options)
 
     def testSperr(self):
@@ -591,7 +591,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ),
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.Sperr.from_filter_options(
+                compression_filter = hdf5plugin.Sperr._from_filter_options(
                     filter_options
                 )
                 self.assertEqual(
@@ -618,7 +618,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ),
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.SZ.from_filter_options(filter_options)
+                compression_filter = hdf5plugin.SZ._from_filter_options(filter_options)
                 self.assertEqual(
                     compression_filter.filter_options, expected_filter.filter_options
                 )
@@ -647,7 +647,7 @@ class TestFromFilterOptions(unittest.TestCase):
             ),
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.SZ3.from_filter_options(filter_options)
+                compression_filter = hdf5plugin.SZ3._from_filter_options(filter_options)
                 self.assertEqual(
                     compression_filter.filter_options, expected_filter.filter_options
                 )
@@ -659,7 +659,9 @@ class TestFromFilterOptions(unittest.TestCase):
             ((10,), (10,)),
         ):
             with self.subTest(filter_options=filter_options):
-                compression_filter = hdf5plugin.Zstd.from_filter_options(filter_options)
+                compression_filter = hdf5plugin.Zstd._from_filter_options(
+                    filter_options
+                )
                 self.assertEqual(compression_filter.filter_options, expected_options)
 
 
