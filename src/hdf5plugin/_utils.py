@@ -235,6 +235,17 @@ def from_filter_options(
 ) -> FilterBase:
     """Returns corresponding compression filter configuration instance.
 
+    .. code-block:: python
+
+       create_plist = dataset.id.get_create_plist()
+
+       compression_filters = []
+
+       for index in range(create_plist.get_nfilters()):
+           filter_id, _, filter_options, _ = create_plist.get_filter(index)
+           if filter_id in hdf5plugin.FILTERS.values():
+               compression_filters.append(hdf5plugin.from_filter_options(filter_id, filter_options))
+
     :param filter_id: HDF5 compression filter ID
     :param filter_options: Compression filter configuration as stored in HDF5 datasets
     :raises ValueError: Unsupported or invalid filter_id, filter_options combination

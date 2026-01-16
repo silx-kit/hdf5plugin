@@ -78,6 +78,7 @@ class FilterBase(h5py.filters.FilterRefBase):
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
         :raises ValueError: Unsupported filter_options
+        :raises NotImplementedError: Support of filter_options version is not implemented
         """
         raise NotImplementedError()
 
@@ -616,6 +617,7 @@ class Zfp(FilterBase):
 
         :param filter_options: Expected format: (info, magic, meta, meta&short_mode, long_mode, long_mode)
         :raises ValueError: Unsupported filter_options
+        :raises NotImplementedError: Support of filter_options version is not implemented
         """
         # ZFP header parsing reference:
         # zfp.c zfp_read_header() and zfp_stream_mode() functions
@@ -788,6 +790,11 @@ class Sperr(FilterBase):
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Sperr:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format: (extra info, compression config)
+        :raises ValueError: Unsupported filter_options
+        """
         if len(filter_options) < 2:
             raise ValueError(f"Expected at least 2 values, got {len(filter_options)}")
 
@@ -984,6 +991,12 @@ class SZ(FilterBase):
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format:
+            (_, _, _, _, mode, absolute1, absolute2, relative1, relative2, pointwise1, pointwise2)
+        :raises ValueError: Unsupported filter_options
+        """
         if len(filter_options) < 13:
             raise ValueError(f"Expected 13 values, got {len(filter_options)}")
 
@@ -1075,6 +1088,12 @@ class SZ3(FilterBase):
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ3:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :param filter_options: Expected format:
+            (_, _, _, _, mode, absolute1, absolute2, relative1, relative2, norm2_1, norm2_2, pointwise1, pointwise2)
+        :raises ValueError: Unsupported filter_options
+        """
         if len(filter_options) < 13:
             raise ValueError(f"Expected 13 values, got {len(filter_options)}")
 
