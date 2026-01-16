@@ -58,21 +58,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             cibw_archs: "auto64"
             with_sse2: true
           - os: ubuntu-24.04-arm
-            cibw_archs: "aarch64"
+            cibw_archs: "auto64"
             with_sse2: false
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             cibw_archs: "ppc64le"
             with_sse2: false
-          - os: windows-2022
+          - os: windows-latest
             cibw_archs: "auto64"
             with_sse2: true
-          - os: macos-13
-            cibw_archs: "universal2"
+          - os: macos-15-intel
+            cibw_archs: "auto64"
             with_sse2: true
+          - os: macos-14
+            cibw_archs: "auto64"
+            with_sse2: false
 
     steps:
       - uses: actions/checkout@v5
@@ -80,7 +83,7 @@ jobs:
         if: runner.os == 'Linux' && runner.arch == 'X64'
         with:
           platforms: all
-      - uses: pypa/cibuildwheel@v3.1.4
+      - uses: pypa/cibuildwheel@v3.3.1
         env:
           # Configure hdf5plugin build
           HDF5PLUGIN_OPENMP: "False"
@@ -118,16 +121,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
-        python-version: ['3.9', '3.13']
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-14]
+        python-version: ['3.9', '3.14']
         include:
           - python-version: '3.9'
             OLDEST_DEPENDENCIES: 'h5py==3.0.0 "numpy<2"'
           - python-version: '3.9'
-            os: 'macos-latest'
+            os: ubuntu-24.04-arm
+            OLDEST_DEPENDENCIES: 'h5py==3.6.0 "numpy<2"'
+          - python-version: '3.9'
+            os: macos-14
             OLDEST_DEPENDENCIES: 'h5py==3.7.0 "numpy<2"'
-          - python-version: '3.13'
-            OLDEST_DEPENDENCIES: 'h5py==3.12.1 numpy==2.1.0'
+
+          - python-version: '3.14'
+            OLDEST_DEPENDENCIES: 'h5py==3.15.1 numpy==2.4.1'
 
     steps:
       - uses: actions/checkout@v5
