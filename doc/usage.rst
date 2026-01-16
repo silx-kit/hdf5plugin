@@ -130,6 +130,34 @@ Zstd
    :members:
    :undoc-members:
 
+
+Get dataset compression
++++++++++++++++++++++++
+
+For compression filters provided by HDF5 and `h5py`_ (i.e., GZIP, LZF, SZIP),
+dataset compression configuration can be retrieved with `h5py.Dataset`_'s
+`compression <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression>`_ and
+`compression_opts <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression_opts>`_ properties.
+
+For third-party compression filters such as the one supported by `hdf5plugin`,
+the dataset compression configuration is stored in HDF5
+`filter pipeline <https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline>`_.
+This filter pipeline configuration can be retrieved with `h5py.Dataset`_ "low level" API.
+For a given `h5py.Dataset`_, ``dataset``:
+
+.. code-block:: python
+
+   create_plist = dataset.id.get_create_plist()
+
+   for index in range(create_plist.get_nfilters()):
+       filter_id, _, filter_options, _ = create_plist.get_filter(index)
+       print(filter_id, filter_options)
+
+For compression filters supported by `hdf5plugin`,
+:func:`hdf5plugin.from_filter_options` instantiates the filter configuration from the filter id and options.
+
+.. autofunction:: from_filter_options
+
 Get information about hdf5plugin
 ++++++++++++++++++++++++++++++++
 
@@ -176,3 +204,4 @@ Setting the ``HDF5_PLUGIN_PATH`` environment variable allows already existing pr
 .. _h5py: https://www.h5py.org
 .. _h5py.h5z: https://github.com/h5py/h5py/blob/master/h5py/h5z.pyx
 .. _h5py.Group.create_dataset: https://docs.h5py.org/en/stable/high/group.html#h5py.Group.create_dataset
+.. _h5py.Dataset: https://docs.h5py.org/en/stable/high/dataset.html
