@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 import math
 import struct
+from typing import Literal, TypeVar
 
 import h5py
 
@@ -83,7 +84,12 @@ class FilterBase(h5py.filters.FilterRefBase):
         raise NotImplementedError()
 
 
-def _cname_from_id(compression_id: int, compressions: dict[str, int]) -> str:
+_CNameLiteral = TypeVar("_CNameLiteral", bound=str)
+
+
+def _cname_from_id(
+    compression_id: int, compressions: dict[_CNameLiteral, int]
+) -> _CNameLiteral:
     for cname, cid in compressions.items():
         if compression_id == cid:
             return cname
@@ -106,8 +112,7 @@ class Bitshuffle(FilterBase):
         The number of elements per block.
         It needs to be divisible by eight.
         Default: 0 (for about 8 kilobytes per block).
-    :param cname:
-        `lz4` (default), `none`, `zstd`
+    :param cname: Compressor name.
     :param clevel: Compression level, used only for `zstd` compression.
         Can be negative, and must be below or equal to 22 (maximum compression).
         Default: 3.
@@ -116,7 +121,9 @@ class Bitshuffle(FilterBase):
     filter_name = "bshuf"
     filter_id = BSHUF_ID
 
-    __COMPRESSIONS = {
+    _CNameType = Literal["none", "lz4", "zstd"]
+
+    __COMPRESSIONS: dict[_CNameType, int] = {
         "none": 0,
         "lz4": 2,
         "zstd": 3,
@@ -125,7 +132,7 @@ class Bitshuffle(FilterBase):
     def __init__(
         self,
         nelems: int = 0,
-        cname: str = None,
+        cname: Bitshuffle._CNameType | None = None,
         clevel: int = 3,
         lz4: bool = None,
     ):
@@ -203,8 +210,8 @@ class Blosc(FilterBase):
         f.close()
 
     :param cname:
-        `blosclz`, `lz4` (default), `lz4hc`, `zlib`, `zstd`
-        Optional: `snappy`, depending on compilation (requires C++11).
+        Compressor name.
+        `snappy` availability depends on compilation (requires C++11).
     :param clevel:
         Compression level from 0 (no compression) to 9 (maximum compression).
         Default: 5.
@@ -227,7 +234,9 @@ class Blosc(FilterBase):
     filter_name = "blosc"
     filter_id = BLOSC_ID
 
-    __COMPRESSIONS = {
+    _CNameType = Literal["blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"]
+
+    __COMPRESSIONS: dict[_CNameType, int] = {
         "blosclz": 0,
         "lz4": 1,
         "lz4hc": 2,
@@ -236,7 +245,12 @@ class Blosc(FilterBase):
         "zstd": 5,
     }
 
-    def __init__(self, cname: str = "lz4", clevel: int = 5, shuffle: int = SHUFFLE):
+    def __init__(
+        self,
+        cname: Blosc._CNameType = "lz4",
+        clevel: int = 5,
+        shuffle: int = SHUFFLE,
+    ):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
         if not 0 <= clevel <= 9:
@@ -252,7 +266,7 @@ class Blosc(FilterBase):
         :param filter_options: Expected format: (_, _, _, _, clevel*, shuffle*, compression*)
         :raises ValueError: Unsupported filter_options
         """
-        default_cname = "blosclz"
+        default_cname: Blosc._CNameType = "blosclz"
 
         if len(filter_options) <= 4:
             return cls(default_cname)
@@ -283,8 +297,7 @@ class Blosc2(FilterBase):
             compression=hdf5plugin.Blosc2(cname='blosclz', clevel=9, filters=hdf5plugin.Blosc2.SHUFFLE))
         f.close()
 
-    :param cname:
-        `blosclz` (default), `lz4`, `lz4hc`, `zlib`, `zstd`
+    :param cname: Compressor name.
     :param clevel:
         Compression level from 0 (no compression) to 9 (maximum compression).
         Default: 5.
@@ -315,7 +328,9 @@ class Blosc2(FilterBase):
     filter_id = BLOSC2_ID
     filter_name = "blosc2"
 
-    __COMPRESSIONS = {
+    _CNameType = Literal["blosclz", "lz4", "lz4hc", "zlib", "zstd"]
+
+    __COMPRESSIONS: dict[_CNameType, int] = {
         "blosclz": 0,
         "lz4": 1,
         "lz4hc": 2,
@@ -323,7 +338,12 @@ class Blosc2(FilterBase):
         "zstd": 5,
     }
 
-    def __init__(self, cname: str = "blosclz", clevel: int = 5, filters: int = SHUFFLE):
+    def __init__(
+        self,
+        cname: Blosc2._CNameType = "blosclz",
+        clevel: int = 5,
+        filters: int = SHUFFLE,
+    ):
         compression = self.__COMPRESSIONS[cname]
         clevel = int(clevel)
         if not 0 <= clevel <= 9:
@@ -345,7 +365,7 @@ class Blosc2(FilterBase):
         :param filter_options: Expected format: (_, _, _, _, clevel*, filters*, compression*)
         :raises ValueError: Unsupported filter_options
         """
-        default_cname = "blosclz"
+        default_cname: Blosc2._CNameType = "blosclz"
 
         if len(filter_options) <= 4:
             return cls(default_cname)
