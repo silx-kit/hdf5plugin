@@ -88,6 +88,12 @@ class FilterBase(h5py.filters.FilterRefBase):
         """Returns filter configuration"""
         return self.__config.copy()
 
+    def __repr__(self) -> str:
+        arguments = ", ".join(
+            f"{name}={value!r}" for name, value in self.get_config().items()
+        )
+        return f"{self.__class__.__name__}({arguments})"
+
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> FilterBase:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
