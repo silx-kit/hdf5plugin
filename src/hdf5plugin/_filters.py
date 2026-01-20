@@ -186,6 +186,21 @@ class Bitshuffle(FilterBase):
             config["clevel"] = clevel
         super().__init__(filter_options, config)
 
+    @property
+    def nelems(self) -> int:
+        """Number of elements per block"""
+        return self.filter_options[0]
+
+    @property
+    def cname(self) -> Bitshuffle._CNameType:
+        """Compressor name"""
+        return _cname_from_id(self.filter_options[1], self.__COMPRESSIONS)
+
+    @property
+    def clevel(self) -> int | None:
+        """Compression level, only for `zstd` compressor, None for others"""
+        return self.filter_options[2] if self.cname == "zstd" else None
+
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Bitshuffle:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
@@ -278,6 +293,21 @@ class Blosc(FilterBase):
             filter_options=(0, 0, 0, 0, clevel, shuffle, compression),
             config={"cname": cname, "clevel": clevel, "shuffle": shuffle},
         )
+
+    @property
+    def cname(self) -> Blosc._CNameType:
+        """Compressor name"""
+        return _cname_from_id(self.filter_options[6], self.__COMPRESSIONS)
+
+    @property
+    def clevel(self) -> int:
+        """Compression level from 0 (no compression) to 9 (maximum compression)"""
+        return self.filter_options[4]
+
+    @property
+    def shuffle(self) -> int:
+        """Shuffle mode one of: NOSHUFFLE, SHUFFLE, BITSHUFFLE"""
+        return self.filter_options[5]
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc:
@@ -381,6 +411,21 @@ class Blosc2(FilterBase):
             config={"cname": cname, "clevel": clevel, "filters": filters},
         )
 
+    @property
+    def cname(self) -> Blosc2._CNameType:
+        """Compressor name"""
+        return _cname_from_id(self.filter_options[6], self.__COMPRESSIONS)
+
+    @property
+    def clevel(self) -> int:
+        """Compression level from 0 (no compression) to 9 (maximum compression)"""
+        return self.filter_options[4]
+
+    @property
+    def filters(self) -> int:
+        """Pre-compression filter, one of: NOFILTER, SHUFFLE, BITSHUFFLE, DELTA, TRUNC_PREC"""
+        return self.filter_options[5]
+
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Blosc2:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
@@ -434,6 +479,11 @@ class BZip2(FilterBase):
             filter_options=(blocksize,),
             config={"blocksize": blocksize},
         )
+
+    @property
+    def blocksize(self) -> int:
+        """Size of the blocks as a multiple of 100k in [1, 9]"""
+        return self.filter_options[0]
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> BZip2:
@@ -508,6 +558,13 @@ class LZ4(FilterBase):
             filter_options=(nbytes,),
             config={"nbytes": nbytes},
         )
+
+    @property
+    def nbytes(self) -> int:
+        """The number of bytes per block.
+
+        If 0, block size is 1GB."""
+        return self.filter_options[0]
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> LZ4:
@@ -1222,6 +1279,11 @@ class Zstd(FilterBase):
             filter_options=(clevel,),
             config={"clevel": clevel},
         )
+
+    @property
+    def clevel(self) -> int:
+        """Compression level from 1 (lowest compression) to 22 (maximum compression)"""
+        return self.filter_options[0]
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Zstd:
