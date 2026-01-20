@@ -134,12 +134,12 @@ Zstd
 Get dataset compression
 +++++++++++++++++++++++
 
-For compression filters provided by HDF5 and `h5py`_ (i.e., GZIP, LZF, SZIP),
+For **built-in** compression filters (i.e., GZIP, LZF, SZIP),
 dataset compression configuration can be retrieved with `h5py.Dataset`_'s
 `compression <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression>`_ and
 `compression_opts <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression_opts>`_ properties.
 
-For third-party compression filters such as the one supported by `hdf5plugin`,
+For **third-party** compression filters such as the one supported by `hdf5plugin`,
 the dataset compression configuration is stored in HDF5
 `filter pipeline <https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline>`_.
 This filter pipeline configuration can be retrieved with `h5py.Dataset`_ "low level" API.

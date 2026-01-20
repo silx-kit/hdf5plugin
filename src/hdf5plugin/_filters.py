@@ -802,6 +802,8 @@ class Sperr(FilterBase):
             meta=filter_options[0], ret=filter_options[1]
         )
 
+        if mode == 1:
+            return cls(rate=quality, swap=swap, missing_value_mode=missing_value_mode)
         if mode == 2:
             return cls(
                 peak_signal_to_noise_ratio=quality,
@@ -812,8 +814,6 @@ class Sperr(FilterBase):
             return cls(
                 absolute=quality, swap=swap, missing_value_mode=missing_value_mode
             )
-        if mode == 1:
-            return cls(rate=quality, swap=swap, missing_value_mode=missing_value_mode)
 
         raise ValueError(f"Mode must be in [1, 3], got {mode}")
 
