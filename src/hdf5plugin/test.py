@@ -792,6 +792,68 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
         self._test(hdf5plugin.Zstd(), data)
 
 
+class TestFilterGetConfig(unittest.TestCase):
+    """Test filter's get_config method"""
+
+    def testGetConfigRoundtrip(self):
+        """Test that filter's get_config method returned value roundtrips"""
+        for filter_class in _filters.FILTER_CLASSES:
+            with self.subTest(filter=filter_class.filter_name):
+                filter_instance = filter_class()
+                config = filter_instance.get_config()
+                self.assertIsInstance(config, dict)
+                self.assertEqual(filter_instance, filter_class(**config))
+
+
+class TestFilterProperties(unittest.TestCase):
+    """Test filter's parameter properties"""
+
+    def testBitshuffle(self):
+        """Test Bitshuffle filter properties"""
+        lz4_filter = hdf5plugin.Bitshuffle(nelems=512, cname="lz4")
+        self.assertEqual(lz4_filter.nelems, 512)
+        self.assertEqual(lz4_filter.cname, "lz4")
+        self.assertIsNone(lz4_filter.clevel)
+
+        zstd_filter = hdf5plugin.Bitshuffle(nelems=512, cname="zstd", clevel=5)
+        self.assertEqual(zstd_filter.nelems, 512)
+        self.assertEqual(zstd_filter.cname, "zstd")
+        self.assertEqual(zstd_filter.clevel, 5)
+
+    def testBlosc(self):
+        """Test Blosc filter properties"""
+        filter_ = hdf5plugin.Blosc(
+            cname="zlib", clevel=7, shuffle=hdf5plugin.Blosc.BITSHUFFLE
+        )
+        self.assertEqual(filter_.cname, "zlib")
+        self.assertEqual(filter_.clevel, 7)
+        self.assertEqual(filter_.shuffle, hdf5plugin.Blosc.BITSHUFFLE)
+
+    def testBlosc2(self):
+        """Test Blosc2 filter properties"""
+        filter_ = hdf5plugin.Blosc2(
+            cname="zstd", clevel=9, filters=hdf5plugin.Blosc2.NOFILTER
+        )
+        self.assertEqual(filter_.cname, "zstd")
+        self.assertEqual(filter_.clevel, 9)
+        self.assertEqual(filter_.filters, hdf5plugin.Blosc2.NOFILTER)
+
+    def testBZip2(self):
+        """Test BZip2 filter properties"""
+        filter_ = hdf5plugin.BZip2(blocksize=7)
+        self.assertEqual(filter_.blocksize, 7)
+
+    def testLZ4(self):
+        """Test LZ4 filter properties"""
+        filter_ = hdf5plugin.LZ4(nbytes=2048)
+        self.assertEqual(filter_.nbytes, 2048)
+
+    def testZstd(self):
+        """Test Zstd filter properties"""
+        filter_ = hdf5plugin.Zstd(clevel=15)
+        self.assertEqual(filter_.clevel, 15)
+
+
 class TestPackage(unittest.TestCase):
     """Test general features of the hdf5plugin package"""
 
@@ -1038,6 +1100,8 @@ def suite() -> unittest.TestSuite:
         TestFromFilterOptionsMethods,
         TestFromFilterOptions,
         TestFromFilterOptionsRoundtrip,
+        TestFilterGetConfig,
+        TestFilterProperties,
         TestPackage,
         TestRegisterFilter,
         TestGetFilters,
