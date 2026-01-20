@@ -499,6 +499,299 @@ class TestStrings(unittest.TestCase):
         self._test_strings("zstd")
 
 
+class TestFromFilterOptionsMethods(unittest.TestCase):
+    """Test _from_filter_options methods"""
+
+    def testBitshuffle(self):
+        for filter_options, expected_options in (
+            # (_, _, _, nelems, compression_id, clevel)
+            ((), (0, 0)),  # Default: no compression
+            ((0, 2, 4, 256), (256, 0)),  # custom nelems
+            ((0, 2, 4, 0, 2), (0, 2)),  # LZ4
+            ((0, 2, 4, 0, 3), (0, 3, 3)),  # Zstd with default clevel
+            ((0, 2, 4, 0, 3, 5), (0, 3, 5)),  # Zstd with custom clevel
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Bitshuffle._from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(compression_filter.filter_options, expected_options)
+
+    def testBlosc(self):
+        for filter_options, expected_options in (
+            # (_, _, _, _, clevel, shuffle, compression_id)
+            ((), (0, 0, 0, 0, 5, 1, 0)),  # Default: no compression
+            ((2, 2, 4, 40000, 3), (0, 0, 0, 0, 3, 1, 0)),  # custom clevel
+            (
+                (2, 2, 4, 40000, 3, 2),
+                (0, 0, 0, 0, 3, 2, 0),
+            ),  # custom clevel and shuffle
+            ((2, 2, 4, 40000, 8, 2, 1), (0, 0, 0, 0, 8, 2, 1)),  # all custom
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Blosc._from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(compression_filter.filter_options, expected_options)
+
+    def testBlosc2(self):
+        for filter_options, expected_options in (
+            # (_, _, _, _, clevel, filters, compression_id)
+            ((), (0, 0, 0, 0, 5, 1, 0)),  # Default: no compression
+            ((2, 2, 4, 40000, 3), (0, 0, 0, 0, 3, 1, 0)),  # custom clevel
+            (
+                (2, 2, 4, 40000, 3, 2),
+                (0, 0, 0, 0, 3, 2, 0),
+            ),  # custom clevel and filters
+            ((2, 2, 4, 40000, 8, 2, 1), (0, 0, 0, 0, 8, 2, 1)),  # all custom
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Blosc2._from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(compression_filter.filter_options, expected_options)
+
+    def testBZip2(self):
+        for filter_options, expected_options in (
+            # (blocksize,)
+            ((), (9,)),
+            ((5,), (5,)),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.BZip2._from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(compression_filter.filter_options, expected_options)
+
+    def testFciDecomp(self):
+        compression_filter = hdf5plugin.FciDecomp._from_filter_options((1, 2, 3))
+        self.assertEqual(compression_filter.filter_options, ())
+
+    def testLZ4(self):
+        for filter_options, expected_options in (
+            # (nbytes,)
+            ((), (0,)),
+            ((1024,), (1024,)),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.LZ4._from_filter_options(filter_options)
+                self.assertEqual(compression_filter.filter_options, expected_options)
+
+    def testSperr(self):
+        for filter_options, expected_filter in (
+            ((1043, 269484032, 128, 0, 0), hdf5plugin.Sperr()),
+            (
+                (1107, 2418016256, 256, 0, 0),
+                hdf5plugin.Sperr(rate=32, swap=True, missing_value_mode=1),
+            ),
+            ((1043, 940177214, 256, 0, 0), hdf5plugin.Sperr(absolute=1e-3)),
+            (
+                (1171, 537001984, 256, 0, 0),
+                hdf5plugin.Sperr(peak_signal_to_noise_ratio=2.0, missing_value_mode=2),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Sperr._from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
+    def testSZ(self):
+        for filter_options, expected_filter in (
+            (
+                (1, 0, 0, 256, 10, 0, 0, 0, 0, 1055193269, 2296604913, 0, 0),
+                hdf5plugin.SZ(),
+            ),
+            (
+                (1, 0, 0, 256, 0, 1062232653, 3539053052, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ(absolute=1e-3),
+            ),
+            (
+                (1, 0, 0, 256, 1, 0, 0, 1062232653, 3539053052, 0, 0, 0, 0),
+                hdf5plugin.SZ(relative=1e-3),
+            ),
+            (
+                (1, 0, 0, 256, 10, 0, 0, 0, 0, 1062232653, 3539053052, 0, 0),
+                hdf5plugin.SZ(pointwise_relative=1e-3),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.SZ._from_filter_options(filter_options)
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
+    def testSZ3(self):
+        for filter_options, expected_filter in (
+            (
+                (1, 0, 0, 256, 0, 1058682594, 3944497965, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ3(),
+            ),
+            (
+                (1, 0, 0, 256, 0, 1051772663, 2696277389, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ3(absolute=1e-6),
+            ),
+            (
+                (1, 0, 0, 256, 1, 0, 0, 1062232653, 3539053052, 0, 0, 0, 0),
+                hdf5plugin.SZ3(relative=1e-3),
+            ),
+            (
+                (1, 0, 0, 256, 2, 0, 0, 0, 0, 1062232653, 3539053052, 0, 0),
+                hdf5plugin.SZ3(norm2=1e-3),
+            ),
+            (
+                (1, 0, 0, 256, 3, 0, 0, 0, 0, 0, 0, 1062232653, 3539053052),
+                hdf5plugin.SZ3(peak_signal_to_noise_ratio=1e-3),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.SZ3._from_filter_options(filter_options)
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
+    def testZfp(self):
+        for filter_options, expected_filter in (
+            (
+                (269504785, 91252346, 4026532854, 2167406593),
+                hdf5plugin.Zfp(precision=20),
+            ),
+            (
+                (269504785, 91252346, 4026532854, 3404726273),
+                hdf5plugin.Zfp(accuracy=2**-4),
+            ),
+            (
+                (269504785, 91252346, 4026532854, 2281701377),
+                hdf5plugin.Zfp(reversible=True),
+            ),
+            (
+                (269504785, 91252346, 4026532854, 4293918721, 3767009280, 494351),
+                hdf5plugin.Zfp(minbits=1, maxbits=16657, maxprec=64, minexp=-1047),
+            ),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Zfp._from_filter_options(filter_options)
+                self.assertEqual(
+                    compression_filter.filter_options, expected_filter.filter_options
+                )
+
+    def testZstd(self):
+        for filter_options, expected_options in (
+            # (clevel,)
+            ((), (3,)),
+            ((10,), (10,)),
+        ):
+            with self.subTest(filter_options=filter_options):
+                compression_filter = hdf5plugin.Zstd._from_filter_options(
+                    filter_options
+                )
+                self.assertEqual(compression_filter.filter_options, expected_options)
+
+
+class TestFromFilterOptions(unittest.TestCase):
+    """Test from_filter_options function"""
+
+    def test_filter_name(self):
+        compression_filter = hdf5plugin.from_filter_options("bzip2", (5,))
+        self.assertEqual(compression_filter, hdf5plugin.BZip2(blocksize=5))
+
+
+class TestFromFilterOptionsRoundtrip(unittest.TestCase):
+    """Test from_filter_options function roundtrip"""
+
+    def _test(
+        self, compression_filter: _filters.FilterBase, data: numpy.ndarray[Any, Any]
+    ):
+        with h5py.File("in_memory", "w", driver="core", backing_store=False) as h5f:
+            h5f.create_dataset(
+                "data",
+                data=data,
+                chunks=data.shape,
+                compression=compression_filter,
+            )
+            h5f.flush()
+
+            plist = h5f["data"].id.get_create_plist()
+            filters = [plist.get_filter(i) for i in range(plist.get_nfilters())]
+
+        self.assertEqual(len(filters), 1)
+        filter_id, _, filter_options, _ = filters[0]
+
+        retrieved_filter = hdf5plugin.from_filter_options(filter_id, filter_options)
+
+        self.assertEqual(
+            compression_filter,
+            retrieved_filter,
+            msg=f"{(compression_filter.filter_id, compression_filter.filter_options)} != {(retrieved_filter.filter_id, retrieved_filter.filter_options)}",
+        )
+
+    @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
+    def testBitshuffle(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.Bitshuffle(), data)
+
+    @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
+    def testBlosc(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.Blosc(), data)
+
+    @unittest.skipUnless(should_test("blosc2"), "Blosc2 filter not available")
+    def testBlosc2(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.Blosc2(), data)
+
+    @unittest.skipUnless(should_test("bzip2"), "BZip2 filter not available")
+    def testBZip2(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.BZip2(), data)
+
+    @unittest.skipUnless(should_test("fcidecomp"), "FCIDECOMP filter not available")
+    def testFciDecomp(self):
+        data = numpy.arange(256**2, dtype=numpy.uint16).reshape(256, 256)
+        self._test(hdf5plugin.FciDecomp(), data)
+
+    @unittest.skipUnless(should_test("lz4"), "LZ4 filter not available")
+    def testLZ4(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.LZ4(), data)
+
+    @unittest.skipUnless(should_test("sperr"), "Sperr filter not available")
+    def testSperr(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.Sperr(), data)
+
+    @unittest.skipUnless(should_test("sz"), "SZ filter not available")
+    def testSZ(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.SZ(), data)
+
+    @unittest.skipUnless(should_test("sz3"), "SZ3 filter not available")
+    def testSZ3(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.SZ3(), data)
+
+    @unittest.skipUnless(should_test("zfp"), "Zfp filter not available")
+    def testZfp(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        # Roundtrip does not work for all parameters including the default
+        for mode_name, compression_filter in {
+            # rate does not roundtrip
+            "precision": hdf5plugin.Zfp(precision=10),
+            "accuracy": hdf5plugin.Zfp(accuracy=2**-3),  # roundtrip only for 2^n
+            "reversible": hdf5plugin.Zfp(reversible=True),
+            "expert": hdf5plugin.Zfp(minbits=2, maxbits=100, maxprec=32, minexp=-10),
+        }.items():
+            with self.subTest(mode_name):
+                self._test(compression_filter, data)
+
+    @unittest.skipUnless(should_test("zstd"), "Zstd filter not available")
+    def testZstd(self):
+        data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
+        self._test(hdf5plugin.Zstd(), data)
+
+
 class TestPackage(unittest.TestCase):
     """Test general features of the hdf5plugin package"""
 
@@ -742,6 +1035,9 @@ def suite() -> unittest.TestSuite:
     for cls in (
         TestHDF5PluginRW,
         TestStrings,
+        TestFromFilterOptionsMethods,
+        TestFromFilterOptions,
+        TestFromFilterOptionsRoundtrip,
         TestPackage,
         TestRegisterFilter,
         TestGetFilters,

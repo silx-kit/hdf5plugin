@@ -230,6 +230,40 @@ def get_filters(
     return tuple(filter_classes)
 
 
+def from_filter_options(
+    filter_id: int | str, filter_options: tuple[int, ...]
+) -> FilterBase:
+    """Returns corresponding compression filter configuration instance.
+
+    .. code-block:: python
+
+       create_plist = dataset.id.get_create_plist()
+
+       compression_filters = []
+
+       for index in range(create_plist.get_nfilters()):
+           filter_id, _, filter_options, _ = create_plist.get_filter(index)
+           if filter_id in hdf5plugin.FILTERS.values():
+               compression_filters.append(hdf5plugin.from_filter_options(filter_id, filter_options))
+
+    :param filter_id: HDF5 compression filter ID
+    :param filter_options: Compression filter configuration as stored in HDF5 datasets
+    :raises ValueError: Unsupported or invalid filter_id, filter_options combination
+    :raises NotImplementedError: Given filter or version of the filter is not supported
+    """
+    if isinstance(filter_id, str):
+        try:
+            filter_id = FILTERS[filter_id]
+        except KeyError:
+            raise ValueError(f"Unsupported filter id: {filter_id}")
+
+    for filter_cls in FILTER_CLASSES:
+        if filter_id == filter_cls.filter_id:
+            return filter_cls._from_filter_options(filter_options)
+
+    raise ValueError(f"Unsupported filter id: {filter_id}")
+
+
 def register(
     filters: int | str | tuple[int | str, ...] = tuple(FILTERS.keys()),
     force: bool = True,
