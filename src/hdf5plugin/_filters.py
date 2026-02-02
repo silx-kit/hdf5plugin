@@ -132,7 +132,7 @@ class Bitshuffle(FilterBase):
         It needs to be divisible by eight.
         Default: 0 (for about 8 kilobytes per block).
     :param cname: Compressor name.
-    :param clevel: Compression level, used only for `zstd` compression.
+    :param clevel: Compression level, used **only for "zstd"** compression.
         Can be negative, and must be below or equal to 22 (maximum compression).
         Default: 3.
     """
