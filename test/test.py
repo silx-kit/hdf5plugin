@@ -35,6 +35,7 @@ import h5py
 import numpy
 
 import hdf5plugin
+from hdf5plugin import _filters
 from hdf5plugin.test import suite as hdf5plugin_suite
 
 
@@ -360,9 +361,25 @@ class TestHDF5PluginRead(unittest.TestCase):
             h5.close()
 
 
+class TestRepr(unittest.TestCase):
+    """Test filter's __repr__ method"""
+
+    def testReprRoundtrip(self):
+        """Test that filter's __repr__ method return value roundtrips"""
+        for filter_class in _filters.FILTER_CLASSES:
+            with self.subTest(filter=filter_class.filter_name):
+                filter_instance = filter_class()
+                repr_string = repr(filter_instance)
+                repr_instance = eval(
+                    repr_string, {filter_class.__name__: filter_class}
+                )  # nosec
+                self.assertEqual(filter_instance, repr_instance)
+
+
 def suite():
     testSuite = unittest.TestSuite()
     testSuite.addTest(unittest.TestLoader().loadTestsFromTestCase(TestHDF5PluginRead))
+    testSuite.addTest(unittest.TestLoader().loadTestsFromTestCase(TestRepr))
     testSuite.addTest(hdf5plugin_suite())
     return testSuite
 

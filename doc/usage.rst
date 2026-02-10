@@ -58,6 +58,7 @@ Bitshuffle
 
 .. autoclass:: Bitshuffle
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 Blosc
@@ -65,6 +66,7 @@ Blosc
 
 .. autoclass:: Blosc
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 Blosc2
@@ -72,6 +74,7 @@ Blosc2
 
 .. autoclass:: Blosc2
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 BZip2
@@ -79,6 +82,7 @@ BZip2
 
 .. autoclass:: BZip2
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 FciDecomp
@@ -86,6 +90,7 @@ FciDecomp
 
 .. autoclass:: FciDecomp
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 LZ4
@@ -93,6 +98,7 @@ LZ4
 
 .. autoclass:: LZ4
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 Sperr
@@ -100,6 +106,7 @@ Sperr
 
 .. autoclass:: Sperr
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 SZ
@@ -107,6 +114,7 @@ SZ
 
 .. autoclass:: SZ
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 SZ3
@@ -114,6 +122,7 @@ SZ3
 
 .. autoclass:: SZ3
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 Zfp
@@ -121,6 +130,7 @@ Zfp
 
 .. autoclass:: Zfp
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
 
 Zstd
@@ -128,35 +138,8 @@ Zstd
 
 .. autoclass:: Zstd
    :members:
+   :inherited-members: FilterRefBase, Mapping
    :undoc-members:
-
-
-Get dataset compression
-+++++++++++++++++++++++
-
-For **built-in** compression filters (i.e., GZIP, LZF, SZIP),
-dataset compression configuration can be retrieved with `h5py.Dataset`_'s
-`compression <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression>`_ and
-`compression_opts <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression_opts>`_ properties.
-
-For **third-party** compression filters such as the one supported by `hdf5plugin`,
-the dataset compression configuration is stored in HDF5
-`filter pipeline <https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline>`_.
-This filter pipeline configuration can be retrieved with `h5py.Dataset`_ "low level" API.
-For a given `h5py.Dataset`_, ``dataset``:
-
-.. code-block:: python
-
-   create_plist = dataset.id.get_create_plist()
-
-   for index in range(create_plist.get_nfilters()):
-       filter_id, _, filter_options, _ = create_plist.get_filter(index)
-       print(filter_id, filter_options)
-
-For compression filters supported by `hdf5plugin`,
-:func:`hdf5plugin.from_filter_options` instantiates the filter configuration from the filter id and options.
-
-.. autofunction:: from_filter_options
 
 Get information about hdf5plugin
 ++++++++++++++++++++++++++++++++
@@ -185,6 +168,33 @@ This module allows checking the filter availability and registering/unregisterin
 Registering with this function is required to perform additional initialisation and enable writing compressed data with the given filter.
 
 .. autofunction:: register
+
+Get dataset compression
++++++++++++++++++++++++
+
+For **built-in** compression filters (i.e., GZIP, LZF, SZIP),
+dataset compression configuration can be retrieved with `h5py.Dataset`_'s
+`compression <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression>`_ and
+`compression_opts <https://docs.h5py.org/en/stable/high/dataset.html#h5py.Dataset.compression_opts>`_ properties.
+
+For **third-party** compression filters such as the one supported by `hdf5plugin`,
+the dataset compression configuration is stored in HDF5
+`filter pipeline <https://docs.h5py.org/en/stable/high/dataset.html#filter-pipeline>`_.
+This filter pipeline configuration can be retrieved with `h5py.Dataset`_ "low level" API.
+For a given `h5py.Dataset`_, ``dataset``:
+
+.. code-block:: python
+
+   create_plist = dataset.id.get_create_plist()
+
+   for index in range(create_plist.get_nfilters()):
+       filter_id, _, filter_options, _ = create_plist.get_filter(index)
+       print(filter_id, filter_options)
+
+For compression filters supported by `hdf5plugin`,
+:func:`hdf5plugin.from_filter_options` instantiates the filter configuration from the filter id and options.
+
+.. autofunction:: from_filter_options
 
 Use HDF5 filters in other applications
 ++++++++++++++++++++++++++++++++++++++
