@@ -31,7 +31,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from typing import Any
+from typing import Any, cast
 
 import h5py
 import numpy
@@ -702,7 +702,9 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
     """Test from_filter_options function roundtrip"""
 
     def _test(
-        self, compression_filter: _filters.FilterBase, data: numpy.ndarray[Any, Any]
+        self,
+        compression_filter: h5py.filters.FilterRefBase,
+        data: numpy.ndarray[Any, Any],
     ):
         with h5py.File("in_memory", "w", driver="core", backing_store=False) as h5f:
             h5f.create_dataset(
@@ -802,7 +804,8 @@ class TestFilterGetConfig(unittest.TestCase):
                 filter_instance = filter_class()
                 config = filter_instance.get_config()
                 self.assertIsInstance(config, dict)
-                self.assertEqual(filter_instance, filter_class(**config))
+                cls = cast(type[h5py.filters.FilterRefBase], filter_class)
+                self.assertEqual(filter_instance, cls(**config))
 
 
 class TestFilterProperties(unittest.TestCase):
@@ -921,6 +924,7 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
         for filter_name in BUILD_CONFIG.embedded_filters:
             with self.subTest(name=filter_name):
                 filter_class = hdf5plugin.get_filters(filter_name)[0]
+                assert filter_class.filter_id is not None
                 status = hdf5plugin.register(filter_class.filter_id, force=True)
                 self.assertTrue(status)
                 self._simple_test(filter_name)
@@ -955,7 +959,7 @@ class TestGetFilters(unittest.TestCase):
         """Get selected filters"""
         tests: dict[
             int | str | tuple[int | str, ...],
-            tuple[type[_filters.FilterBase], ...],
+            tuple[type[h5py.filters.FilterRefBase], ...],
         ] = {
             "blosc": (hdf5plugin.Blosc,),
             ("blosc", "zfp"): (hdf5plugin.Blosc, hdf5plugin.Zfp),

@@ -197,7 +197,7 @@ def get_config() -> HDF5PluginConfig:
 
 def get_filters(
     filters: int | str | tuple[int | str, ...] = tuple(FILTERS.keys()),
-) -> tuple[type[FilterBase], ...]:
+) -> tuple[type[h5py.filters.FilterRefBase], ...]:
     """Returns selected filter classes.
 
     By default it returns all filter classes.
@@ -232,7 +232,7 @@ def get_filters(
 
 def from_filter_options(
     filter_id: int | str, filter_options: tuple[int, ...]
-) -> FilterBase:
+) -> h5py.filters.FilterRefBase:
     """Returns corresponding compression filter configuration instance.
 
     .. code-block:: python
@@ -281,7 +281,7 @@ def register(
 
     status = True
     for filter_class in filter_classes:
-        filter_name = filter_class.filter_name
+        filter_name = cast(FilterBase, filter_class).filter_name
         if not force and is_filter_available(filter_name) is True:
             logger.info(f"{filter_name} filter already loaded, skip it.")
             continue
