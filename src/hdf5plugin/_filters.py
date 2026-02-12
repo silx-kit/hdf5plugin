@@ -75,7 +75,7 @@ class FilterBase(h5py.filters.FilterRefBase):
     filter_id: int
     filter_name: str
 
-    def _init(
+    def __init__(
         self,
         filter_options: tuple[int, ...] = (),
         config: Mapping[str, int | float | bool | str] | None = None,
@@ -189,7 +189,7 @@ class Bitshuffle(FilterBase):
         if cname == "zstd":
             filter_options += (clevel,)
             config["clevel"] = clevel
-        self._init(filter_options, config)
+        super().__init__(filter_options, config)
 
     @property
     def nelems(self) -> int:
@@ -294,7 +294,7 @@ class Blosc(FilterBase):
         if shuffle not in (self.NOSHUFFLE, self.SHUFFLE, self.BITSHUFFLE):
             raise ValueError(f"shuffle={shuffle} is not supported")
 
-        self._init(
+        super().__init__(
             filter_options=(0, 0, 0, 0, clevel, shuffle, compression),
             config={"cname": cname, "clevel": clevel, "shuffle": shuffle},
         )
@@ -411,7 +411,7 @@ class Blosc2(FilterBase):
             self.TRUNC_PREC,
         ):
             raise ValueError(f"filters={filters} is not supported")
-        self._init(
+        super().__init__(
             filter_options=(0, 0, 0, 0, clevel, filters, compression),
             config={"cname": cname, "clevel": clevel, "filters": filters},
         )
@@ -480,7 +480,7 @@ class BZip2(FilterBase):
         if not 1 <= blocksize <= 9:
             raise ValueError("blocksize must be in the range [1, 9]")
 
-        self._init(
+        super().__init__(
             filter_options=(blocksize,),
             config={"blocksize": blocksize},
         )
@@ -525,7 +525,7 @@ class FciDecomp(FilterBase):
                 "The FciDecomp filter is not available as hdf5plugin was not built with C++11.\n"
                 "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler."
             )
-        self._init(filter_options=(), config={})
+        super().__init__(filter_options=(), config={})
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> FciDecomp:
@@ -559,7 +559,7 @@ class LZ4(FilterBase):
         nbytes = int(nbytes)
         if not 0 <= nbytes <= 0x7E000000:
             raise ValueError("clevel must be in the range [0, 2113929216]")
-        self._init(
+        super().__init__(
             filter_options=(nbytes,),
             config={"nbytes": nbytes},
         )
@@ -729,7 +729,7 @@ class Zfp(FilterBase):
             filter_options = ()
             config = {}
 
-        self._init(filter_options, config)
+        super().__init__(filter_options, config)
 
     # From zfp.h
     _ZFP_MIN_BITS = 1  # minimum number of bits per block
@@ -915,7 +915,7 @@ class Sperr(FilterBase):
             mode = 1
             quality = 16 if rate is None else rate
 
-        self._init(
+        super().__init__(
             filter_options=self.__pack_options(mode, quality, swap, missing_value_mode),
             config={
                 mode_name: quality,
@@ -1126,7 +1126,7 @@ class SZ(FilterBase):
         logger.info(f"SZ mode {sz_mode} used.")
         logger.info(f"filter options {filter_options}")
 
-        self._init(filter_options, config)
+        super().__init__(filter_options, config)
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ:
@@ -1227,7 +1227,7 @@ class SZ3(FilterBase):
         if len(filter_options) != 9:
             raise IndexError("Invalid number of arguments")
 
-        self._init(filter_options, config)
+        super().__init__(filter_options, config)
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> SZ3:
@@ -1280,7 +1280,7 @@ class Zstd(FilterBase):
     def __init__(self, clevel: int = 3):
         if not 1 <= clevel <= 22:
             raise ValueError("clevel must be in the range [1, 22]")
-        self._init(
+        super().__init__(
             filter_options=(clevel,),
             config={"clevel": clevel},
         )
