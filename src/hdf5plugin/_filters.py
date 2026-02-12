@@ -1259,7 +1259,7 @@ class SZ3(FilterBase):
 
 
 class Zstd(FilterBase):
-    """``h5py.Group.create_dataset``'s compression arguments for using FciDecomp filter.
+    """``h5py.Group.create_dataset``'s compression arguments for using Zstd filter.
 
     .. code-block:: python
 
