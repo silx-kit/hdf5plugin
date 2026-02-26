@@ -41,8 +41,9 @@ static char *test_compressor(void) {
   mu_assert("ERROR: cbytes is not correct", cbytes < size);
 
   compressor = blosc1_get_compressor();
+  /* Activate the BLOSC_COMPRESSOR variable */
   mu_assert("ERROR: get_compressor (compress, after) incorrect",
-	    strcmp(compressor, "lz4") == 0);
+  strcmp(compressor, "lz4") == 0);
 
   /* Reset envvar */
   unsetenv("BLOSC_COMPRESSOR");
@@ -58,7 +59,8 @@ static char *test_compress_decompress(void) {
   setenv("BLOSC_COMPRESSOR", "lz4", 0);
 
   compressor = blosc1_get_compressor();
-  mu_assert("ERROR: get_compressor incorrect",
+  /* Activate the BLOSC_COMPRESSOR variable */
+  mu_assert("ERROR: get_compressor (compress, after) incorrect",
 	    strcmp(compressor, "lz4") == 0);
 
   /* Get a compressed buffer */

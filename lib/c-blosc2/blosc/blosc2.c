@@ -68,6 +68,7 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <math.h>
+#include <stdint.h>
 
 
 /* Synchronization variables */
@@ -398,7 +399,7 @@ static int lz4_wrap_compress(const char* input, size_t input_length,
   // I have not found any function that uses `accel` like in `LZ4_compress_fast`, but
   // the IPP LZ4Safe call does a pretty good job on compressing well, so let's use it
   IppStatus status = ippsEncodeLZ4Safe_8u((const Ipp8u*)input, &inlen,
-                                           (Ipp8u*)output, &outlen, (Ipp8u*)hash_table);
+                                          (Ipp8u*)output, &outlen, (Ipp8u*)hash_table);
   if (status == ippStsDstSizeLessExpected) {
     return 0;  // we cannot compress in required outlen
   }
@@ -849,15 +850,27 @@ int fill_codec(blosc2_codec *codec) {
     dlclose(lib);
     return BLOSC2_ERROR_FAILURE;
   }
-
   codec->encoder = dlsym(lib, info->encoder);
   codec->decoder = dlsym(lib, info->decoder);
+
   if (codec->encoder == NULL || codec->decoder == NULL) {
     BLOSC_TRACE_ERROR("encoder or decoder cannot be loaded from plugin `%s`", codec->compname);
     dlclose(lib);
     return BLOSC2_ERROR_FAILURE;
   }
 
+  /* If ever add .free function in future for codec params
+  codecparams_info *info2 = dlsym(lib, "info2");
+  if (info2 != NULL) {
+    // New plugin (e.g. openzl) with free function for codec_params defined
+    // will be used when destroying context in blosc2_free_ctx
+      codec->free = dlsym(lib, info2->free);
+  }
+  else{
+    codec->free = NULL;
+  }
+  */
+ 
   return BLOSC2_ERROR_SUCCESS;
 }
 
@@ -946,18 +959,26 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
   uint8_t* filters = context->filters;
   uint8_t* filters_meta = context->filters_meta;
   bool memcpyed = context->header_flags & (uint8_t)BLOSC_MEMCPYED;
-
+  bool output_is_disposable = (context->preparams != NULL) ? context->preparams->output_is_disposable : false;
+  
   /* Prefilter function */
   if (context->prefilter != NULL) {
-    /* Set unwritten values to zero */
-    memset(_dest, 0, bsize);
     // Create new prefilter parameters for this block (must be private for each thread)
     blosc2_prefilter_params preparams;
     memcpy(&preparams, context->preparams, sizeof(preparams));
+    // Calculate output_size based on number of elements and output typesize
+    int32_t nelems = bsize / typesize;  // number of elements in the input block
+    // If output_typesize is not set (0), default to input typesize (no type conversion)
+    int32_t output_typesize_actual = (preparams.output_typesize > 0) ? preparams.output_typesize : typesize;
+    int32_t output_size = nelems * output_typesize_actual;  // output size in bytes
+    preparams.output_typesize = output_typesize_actual;  // ensure it's set
+    /* Set unwritten values to zero */
+    if (!output_is_disposable) {
+      memset(_dest, 0, output_size);
+    }
     preparams.input = _src;
     preparams.output = _dest;
-    preparams.output_size = bsize;
-    preparams.output_typesize = typesize;
+    preparams.output_size = output_size;
     preparams.output_offset = offset;
     preparams.nblock = offset / context->blocksize;
     preparams.nchunk = context->schunk != NULL ? context->schunk->current_nchunk : -1;
@@ -965,8 +986,14 @@ uint8_t* pipeline_forward(struct thread_context* thread_context, const int32_t b
     preparams.ttmp = thread_context->tmp;
     preparams.ttmp_nbytes = thread_context->tmp_nbytes;
     preparams.ctx = context;
+    preparams.output_is_disposable = output_is_disposable;
 
     if (context->prefilter(&preparams) != 0) {
+      if (output_is_disposable) {
+        // Output is going to be discarded; no more filters are required
+        BLOSC_TRACE_INFO("Output is disposable");
+        return _dest;
+      }
       BLOSC_TRACE_ERROR("Execution of prefilter function failed");
       return NULL;
     }
@@ -1087,6 +1114,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   int32_t ctbytes = 0;              /* number of compressed bytes in block */
   int32_t maxout;
   int32_t typesize = context->typesize;
+  bool output_is_disposable = (context->preparams != NULL) ? context->preparams->output_is_disposable : false;
   const char* compname;
   int accel;
   const uint8_t* _src;
@@ -1148,6 +1176,13 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
       dest += sizeof(int32_t);
       ntbytes += sizeof(int32_t);
       ctbytes += sizeof(int32_t);
+
+      if (context->header_overhead == BLOSC_EXTENDED_HEADER_LENGTH && output_is_disposable) {
+        // Simulate a run of 0s
+        BLOSC_TRACE_INFO("Output is disposable, simulating a run of 0s");
+        memset(dest - 4, 0, sizeof(int32_t));
+        continue;
+      }
 
       const uint8_t *ip = (uint8_t *) _src + j * neblock;
       const uint8_t *ipbound = (uint8_t *) _src + (j + 1) * neblock;
@@ -2725,6 +2760,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   envvar = getenv("BLOSC_CLEVEL");
   if (envvar != NULL) {
     long value;
+    errno = 0; /* To distinguish success/failure after call */
     value = strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (value >= 0)) {
       clevel = (int)value;
@@ -2768,6 +2804,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   envvar = getenv("BLOSC_TYPESIZE");
   if (envvar != NULL) {
     long value;
+    errno = 0; /* To distinguish success/failure after call */
     value = strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (value > 0)) {
       typesize = (int32_t)value;
@@ -2790,6 +2827,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   envvar = getenv("BLOSC_BLOCKSIZE");
   if (envvar != NULL) {
     long blocksize;
+    errno = 0; /* To distinguish success/failure after call */
     blocksize = strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (blocksize > 0)) {
       blosc1_set_blocksize((size_t) blocksize);
@@ -2803,6 +2841,7 @@ int blosc2_compress(int clevel, int doshuffle, int32_t typesize,
   envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
     long nthreads;
+    errno = 0; /* To distinguish success/failure after call */
     nthreads = strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (nthreads > 0)) {
       result = blosc2_set_nthreads((int16_t) nthreads);
@@ -2986,6 +3025,7 @@ int blosc2_decompress(const void* src, int32_t srcsize, void* dest, int32_t dest
   /* Check for a BLOSC_NTHREADS environment variable */
   envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
+    errno = 0; /* To distinguish success/failure after call */
     nthreads = strtol(envvar, NULL, 10);
     if ((errno != EINVAL)) {
       if ((nthreads <= 0) || (nthreads > INT16_MAX)) {
@@ -3054,7 +3094,7 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
     return BLOSC2_ERROR_WRITE_BUFFER;
   }
 
-  context->bstarts = (int32_t*)(_src + context->header_overhead);
+  int32_t* bstarts = (int32_t*)(_src + context->header_overhead);
 
   /* Check region boundaries */
   if ((start < 0) || (start * header->typesize > header->nbytes)) {
@@ -3069,7 +3109,7 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
 
   int chunk_memcpy = header->flags & 0x1;
   if (!context->special_type && !chunk_memcpy &&
-      ((uint8_t *)(_src + srcsize) < (uint8_t *)(context->bstarts + context->nblocks))) {
+      ((uint8_t *)(_src + srcsize) < (uint8_t *)(bstarts + context->nblocks))) {
     BLOSC_TRACE_ERROR("`bstarts` out of bounds.");
     return BLOSC2_ERROR_READ_BUFFER;
   }
@@ -3173,7 +3213,7 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
 
     // If memcpyed we don't have a bstarts section (because it is not needed)
     int32_t src_offset = memcpyed ?
-      context->header_overhead + j * header->blocksize : sw32_(context->bstarts + j);
+      context->header_overhead + j * header->blocksize : sw32_(bstarts + j);
 
     int32_t cbytes = blosc_d(context->serial_context, bsize, leftoverblock, memcpyed,
                              src, srcsize, src_offset, j,
@@ -4031,6 +4071,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   envvar = getenv("BLOSC_TYPESIZE");
   if (envvar != NULL) {
     int32_t value;
+    errno = 0; /* To distinguish success/failure after call */
     value = (int32_t) strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (value > 0)) {
       context->typesize = value;
@@ -4046,6 +4087,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   envvar = getenv("BLOSC_CLEVEL");
   if (envvar != NULL) {
     int value;
+    errno = 0; /* To distinguish success/failure after call */
     value = (int)strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (value >= 0)) {
       context->clevel = value;
@@ -4073,6 +4115,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   envvar = getenv("BLOSC_BLOCKSIZE");
   if (envvar != NULL) {
     int32_t blocksize;
+    errno = 0; /* To distinguish success/failure after call */
     blocksize = (int32_t) strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (blocksize > 0)) {
       context->blocksize = blocksize;
@@ -4086,6 +4129,7 @@ blosc2_context* blosc2_create_cctx(blosc2_cparams cparams) {
   /* Check for a BLOSC_NTHREADS environment variable */
   envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
+    errno = 0; /* To distinguish success/failure after call */
     int16_t nthreads = (int16_t) strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (nthreads > 0)) {
       context->nthreads = nthreads;
@@ -4174,6 +4218,7 @@ blosc2_context* blosc2_create_dctx(blosc2_dparams dparams) {
   context->nthreads = dparams.nthreads;
   char* envvar = getenv("BLOSC_NTHREADS");
   if (envvar != NULL) {
+    errno = 0; /* To distinguish success/failure after call */
     long nthreads = strtol(envvar, NULL, 10);
     if ((errno != EINVAL) && (nthreads > 0)) {
       context->nthreads = (int16_t) nthreads;
@@ -4238,6 +4283,37 @@ void blosc2_free_ctx(blosc2_context* context) {
       return;
     }
   }
+  /* May be needed if codec_params ever contains nested objects
+  if (context->codec_params != NULL) {
+    int rc;
+    for (int i = 0; i < g_ncodecs; ++i) {
+      if (g_codecs[i].compcode == context->compcode) {
+        if (g_codecs[i].free == NULL) {
+          // Dynamically load codec plugin
+          if (fill_codec(&g_codecs[i]) < 0) {
+            BLOSC_TRACE_ERROR("Could not load codec %d.", g_codecs[i].compcode);
+            return BLOSC2_ERROR_CODEC_SUPPORT;
+          } 
+        }
+        if (g_codecs[i].free == NULL){
+          // no free func, codec_params is simple
+          my_free(context->codec_params);
+        }
+        else{ // has free function for codec_params (e.g. openzl)
+        rc = g_codecs[i].free(context->codec_params);
+          goto urcodecsuccess;
+        }
+      }
+    }
+      BLOSC_TRACE_ERROR("User-defined compressor codec %d not found", context->compcode);
+      return BLOSC2_ERROR_CODEC_SUPPORT;
+    urcodecsuccess:;
+    if (rc < 0) {
+      BLOSC_TRACE_ERROR("Error in user-defined codec free function\n");
+      return;
+    }
+  }
+  */
   if (context->prefilter != NULL) {
     my_free(context->preparams);
   }
@@ -4281,6 +4357,7 @@ int blosc2_ctx_get_dparams(blosc2_context *ctx, blosc2_dparams *dparams) {
   dparams->schunk = ctx->schunk;
   dparams->postfilter = ctx->postfilter;
   dparams->postparams = ctx->postparams;
+  dparams->typesize = ctx->typesize;
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -4706,7 +4783,7 @@ void blosc2_unidim_to_multidim(uint8_t ndim, int64_t *shape, int64_t i, int64_t 
   if (ndim == 0) {
     return;
   }
-  assert(ndim < B2ND_MAX_DIM);
+  assert(ndim <= B2ND_MAX_DIM);
   int64_t strides[B2ND_MAX_DIM];
 
   strides[ndim - 1] = 1;
