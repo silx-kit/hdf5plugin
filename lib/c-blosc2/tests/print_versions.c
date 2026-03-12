@@ -33,5 +33,6 @@ int main(int argc, char* argv[]) {
   ret = blosc_get_complib_info("zstd", &name, &version);
   if (ret >= 0) printf("  %s: %s\n", name, version);
 
+
   return (0);
 }

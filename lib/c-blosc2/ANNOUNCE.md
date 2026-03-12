@@ -1,10 +1,10 @@
-# Announcing C-Blosc2 2.21.2
+# Announcing C-Blosc2 2.23.0
 A fast, compressed and persistent binary data store library for C.
 
 ## What is new?
 
-This is a maintenance release, with a few fixes and some optimizations.
-Thanks to Barak Ugav and Preeyan Parmar for their contributions.
+The main change is in ``blosc2_prefilter_params``, which has a new field. 
+There is also a new ``typesize`` field in ``blosc2_dparams`` and some other changes to support the blosc2-openzl plugin.
 
 For more info, see the release notes in:
 

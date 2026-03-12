@@ -215,12 +215,14 @@ int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
   }
 
   // Compute strides
-  array->item_array_strides[ndim - 1] = 1;
-  array->item_extchunk_strides[ndim - 1] = 1;
-  array->item_chunk_strides[ndim - 1] = 1;
-  array->item_block_strides[ndim - 1] = 1;
-  array->block_chunk_strides[ndim - 1] = 1;
-  array->chunk_array_strides[ndim - 1] = 1;
+  if (ndim > 0) {
+    array->item_array_strides[ndim - 1] = 1;
+    array->item_extchunk_strides[ndim - 1] = 1;
+    array->item_chunk_strides[ndim - 1] = 1;
+    array->item_block_strides[ndim - 1] = 1;
+    array->block_chunk_strides[ndim - 1] = 1;
+    array->chunk_array_strides[ndim - 1] = 1;
+  }
   for (int i = ndim - 2; i >= 0; --i) {
     if (shape[i + 1] != 0) {
       array->item_array_strides[i] = array->item_array_strides[i + 1] * array->shape[i + 1];
@@ -1261,8 +1263,9 @@ int b2nd_expand_dims(const b2nd_array_t *array, b2nd_array_t **view, const bool 
 }
 
 
-int b2nd_squeeze(b2nd_array_t *array) {
+int b2nd_squeeze(b2nd_array_t *array, b2nd_array_t **view) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(view, BLOSC2_ERROR_NULL_POINTER);
 
   bool index[B2ND_MAX_DIM];
 
@@ -1273,14 +1276,21 @@ int b2nd_squeeze(b2nd_array_t *array) {
       index[i] = true;
     }
   }
-  BLOSC_ERROR(b2nd_squeeze_index(array, index));
+  BLOSC_ERROR(b2nd_squeeze_index(array, view, index));
 
   return BLOSC2_ERROR_SUCCESS;
 }
 
 
-int b2nd_squeeze_index(b2nd_array_t *array, const bool *index) {
+int b2nd_squeeze_index(b2nd_array_t *array, b2nd_array_t **view, const bool *index) {
+  for (int i = 0; i < array->sc->nmetalayers; ++i) {
+    if (strcmp(array->sc->metalayers[i]->name, "b2nd") != 0) {
+      BLOSC_TRACE_ERROR("Cannot squeeze dimensions of an array with non-b2nd metalayers");
+      return BLOSC2_ERROR_INVALID_PARAM;
+    }
+  }
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR_NULL(view, BLOSC2_ERROR_NULL_POINTER);
 
   uint8_t nones = 0;
   int64_t newshape[B2ND_MAX_DIM];
@@ -1300,17 +1310,17 @@ int b2nd_squeeze_index(b2nd_array_t *array, const bool *index) {
     }
   }
 
-  for (int i = 0; i < B2ND_MAX_DIM; ++i) {
-    if (i < nones) {
-      array->chunkshape[i] = newchunkshape[i];
-      array->blockshape[i] = newblockshape[i];
-    } else {
-      array->chunkshape[i] = 1;
-      array->blockshape[i] = 1;
-    }
-  }
+  //views only deal with cparams/dparams; storage is always in-memory (ephemeral).
+  blosc2_cparams cparams = *(array->sc->storage->cparams);
+  blosc2_dparams dparams = *(array->sc->storage->dparams);
+  blosc2_storage b2_storage1 = {.cparams=&cparams, .dparams=&dparams};
 
-  BLOSC_ERROR(update_shape(array, nones, newshape, newchunkshape, newblockshape));
+  b2nd_context_t *ctx1 = b2nd_create_ctx(&b2_storage1, nones, newshape,
+                                        newchunkshape, newblockshape, array->dtype,
+                                        array->dtype_format, NULL, 0);
+
+  view_new(array, view, ctx1);
+  b2nd_free_ctx(ctx1);
 
   return BLOSC2_ERROR_SUCCESS;
 }

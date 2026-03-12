@@ -9,6 +9,7 @@
 **********************************************************************/
 
 #include "stune.h"
+#include "blosc2/codecs-registry.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -197,6 +198,10 @@ int split_block(blosc2_context *context, int32_t typesize, int32_t blocksize) {
   }
 
   int compcode = context->compcode;
+  if (compcode == BLOSC_CODEC_OPENZL) {
+    // Never split blocks for OpenZL, as it has its own block mechanisms
+    return 0;
+  }
   return (
           // Fast codecs like blosclz, lz4 seems to prefer to split
           ((compcode == BLOSC_BLOSCLZ) || (compcode == BLOSC_LZ4)
