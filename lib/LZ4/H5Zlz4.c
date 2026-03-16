@@ -99,14 +99,15 @@ static size_t H5Z_filter_lz4(unsigned int flags, size_t cd_nelmts,
             }
             else /* do the decompression */
             {
-#if LZ4_VERSION_NUMBER > 10300
-                int compressedBytes = LZ4_decompress_fast(rpos, roBuf, blockSize);
-#else
-                int compressedBytes = LZ4_uncompress(rpos, roBuf, blockSize);
-#endif
-                if(compressedBytes != compressedBlockSize)
+                int decompressedBytes = LZ4_decompress_safe(
+                        rpos,
+                        roBuf,
+                        compressedBlockSize,
+                        blockSize);
+                if (decompressedBytes < 0 || decompressedBytes != blockSize)
                 {
-                    printf("decompressed size not the same: %d, != %d\n", compressedBytes, compressedBlockSize);
+                    printf("decompression failed or wrong size: %d != %u\n",
+                           decompressedBytes, blockSize);
                     goto error;
                 }
             }
