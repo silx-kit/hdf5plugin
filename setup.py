@@ -682,7 +682,7 @@ class HDF5PluginExtension(Extension):
             self.export_symbols.append("init_filter")
         else:
             self.define_macros.append(("H5_BUILT_AS_DYNAMIC_LIB", None))
-            self.libraries.append("hdf5")
+        self.libraries.append("hdf5")
 
         self.define_macros.append(("H5_USE_18_API", None))
 
