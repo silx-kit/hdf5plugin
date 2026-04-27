@@ -61,6 +61,29 @@ from ._utils import (  # noqa
 )
 from ._version import version  # noqa
 
+__all__ = [
+    # Filter classes
+    "Bitshuffle",
+    "Blosc",
+    "Blosc2",
+    "BZip2",
+    "FciDecomp",
+    "LZ4",
+    "Sperr",
+    "SZ",
+    "SZ3",
+    "Zfp",
+    "Zstd",
+    # Utilities
+    "FILTERS",
+    "PLUGIN_PATH",
+    "from_filter_options",
+    "get_config",
+    "get_filters",
+    "register",
+    "version",
+]
+
 # Backward compatibility
 PLUGINS_PATH = PLUGIN_PATH
 
