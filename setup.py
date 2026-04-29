@@ -1434,16 +1434,13 @@ def _get_sz3_plugin():
 
     include_dirs = [f"{sz3_dir}/include"]
     include_dirs += glob(f"{sz3_dir}/include/SZ3/*/")
-    include_dirs += glob(f"{sz3_dir}/include/SZ3/utils/*/")
+    include_dirs += glob(f"{sz3_dir}/include/SZ3/*/*/")
     # add version.hpp
     include_dirs.append("lib/SZ3_extra")
-    if sys.platform == "darwin":
-        # provide dummy omp.h
-        include_dirs.append("lib/SZ3_extra/darwin")
     include_dirs.append(f"{h5z_sz3_dir}/include")
     include_dirs += get_clib_config("zstd", "include_dirs")
 
-    extra_compile_args = ["-std=c++14", "-O3", "-fopenmp"]
+    extra_compile_args = ["-std=c++17", "-O3", "-fopenmp"]
     extra_compile_args += ["/Ox", "/openmp"]
     extra_link_args = ["-fopenmp", "-lm"]
 
