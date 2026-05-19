@@ -7,8 +7,8 @@
 #include <cstring>
 #include <numeric>
 
-#ifdef __AVX2__
-#include <immintrin.h>
+#if __cplusplus >= 202002L
+#include <bit>
 #endif
 
 #ifdef USE_OMP
@@ -643,86 +643,20 @@ template auto sperr::calc_mean_var(const float*, size_t, size_t) -> std::array<f
 template auto sperr::calc_mean_var(const double*, size_t, size_t) -> std::array<double, 2>;
 
 template <typename T>
-auto sperr::any_ge(const T* buf, size_t len, T thld) -> bool
+auto sperr::msb_position(T v) -> int8_t
 {
-#ifdef __AVX2__
-  if constexpr (sizeof(T) == 8) {  // uint64_t
-    // We use a trick here: for unsigned integers, A_unsigned > B_unsigned is equivalent to
-    // (A_unsigned XOR sign_bit)_signed > (B_unsigned XOR sign_bit)_signed.
-    //
-    const size_t simd_width = 4;
-    auto sign_flip_mask = _mm256_set1_epi64x(0x8000000000000000ULL);
-    auto thld_flipped = _mm256_set1_epi64x(thld ^ 0x8000000000000000ULL);
-
-    size_t i = 0;
-    for (; i + simd_width <= len; i += simd_width) {
-      auto data_vec = _mm256_lddqu_si256(reinterpret_cast<const __m256i*>(buf + i));
-      auto data_flipped = _mm256_xor_si256(data_vec, sign_flip_mask);
-      auto cmp_mask = _mm256_cmpgt_epi64(thld_flipped, data_flipped);  // threshold > data
-      int all_true = _mm256_movemask_epi8(cmp_mask);
-
-      if (all_true != 0xFFFFFFFF)
-        return true;
-    }
-
-    return std::any_of(buf + i, buf + len, [thld](auto v) { return v >= thld; });
-  }
-  else if constexpr (sizeof(T) == 4) {  // uint32_t
-    const size_t simd_width = 8;
-    auto thld_vec = _mm256_set1_epi32(thld);
-
-    size_t i = 0;
-    for (; i + simd_width <= len; i += simd_width) {
-      auto data_vec = _mm256_lddqu_si256(reinterpret_cast<const __m256i*>(buf + i));
-      auto min_vec = _mm256_min_epu32(data_vec, thld_vec);
-      auto cmp_vec = _mm256_cmpeq_epi32(min_vec, thld_vec);
-      int all_zeros = _mm256_testz_si256(cmp_vec, cmp_vec);
-
-      if (!all_zeros)
-        return true;
-    }
-
-    return std::any_of(buf + i, buf + len, [thld](auto v) { return v >= thld; });
-  }
-  else if constexpr (sizeof(T) == 2) {  // uint16_t
-    const size_t simd_width = 16;
-    auto thld_vec = _mm256_set1_epi16(thld);
-
-    size_t i = 0;
-    for (; i + simd_width <= len; i += simd_width) {
-      auto data_vec = _mm256_lddqu_si256(reinterpret_cast<const __m256i*>(buf + i));
-      auto min_vec = _mm256_min_epu16(data_vec, thld_vec);
-      auto cmp_vec = _mm256_cmpeq_epi16(min_vec, thld_vec);
-      int all_zeros = _mm256_testz_si256(cmp_vec, cmp_vec);
-
-      if (!all_zeros)
-        return true;
-    }
-
-    return std::any_of(buf + i, buf + len, [thld](auto v) { return v >= thld; });
-  }
-  else {  // uint8_t
-    const size_t simd_width = 32;
-    auto thld_vec = _mm256_set1_epi8(thld);
-
-    size_t i = 0;
-    for (; i + simd_width <= len; i += simd_width) {
-      auto data_vec = _mm256_lddqu_si256(reinterpret_cast<const __m256i*>(buf + i));
-      auto min_vec = _mm256_min_epu8(data_vec, thld_vec);
-      auto cmp_vec = _mm256_cmpeq_epi8(min_vec, thld_vec);
-      int all_zeros = _mm256_testz_si256(cmp_vec, cmp_vec);
-
-      if (!all_zeros)
-        return true;
-    }
-
-    return std::any_of(buf + i, buf + len, [thld](auto v) { return v >= thld; });
-  }
+#if __cplusplus >= 202002L
+  return static_cast<int8_t>(sizeof(T) * 8 - 1 - std::countl_zero(v));
 #else
-  return std::any_of(buf, buf + len, [thld](auto v) { return v >= thld; });
+  int8_t pos = -1;
+  while (v) {
+    v >>= 1;
+    pos++;
+  }
+  return pos;
 #endif
 }
-template auto sperr::any_ge(const uint8_t*, size_t, uint8_t) -> bool;
-template auto sperr::any_ge(const uint16_t*, size_t, uint16_t) -> bool;
-template auto sperr::any_ge(const uint32_t*, size_t, uint32_t) -> bool;
-template auto sperr::any_ge(const uint64_t*, size_t, uint64_t) -> bool;
+template auto sperr::msb_position(uint8_t) -> int8_t;
+template auto sperr::msb_position(uint16_t) -> int8_t;
+template auto sperr::msb_position(uint32_t) -> int8_t;
+template auto sperr::msb_position(uint64_t) -> int8_t;
