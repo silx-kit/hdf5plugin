@@ -69,7 +69,8 @@ HDF5 compression filters and compression libraries sources were obtained from:
   using `BZip2 <https://sourceware.org/git/bzip2.git>`_ (v1.0.8).
 * `hdf5-blosc plugin <https://github.com/Blosc/hdf5-blosc>`_ (v1.0.1)
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.6), LZ4, Snappy, ZLib and ZStd.
-* `hdf5-blosc2 plugin <https://github.com/Blosc/HDF5-Blosc2>`_ (v2.0.0)
+* `hdf5-blosc2 plugin <https://github.com/Blosc/HDF5-Blosc2>`_
+  (commit `e4d0f58 <https://github.com/Blosc/HDF5-Blosc2/tree/e4d0f583f39bf1d3e482aa4695b7dc95afb2b9b2>`_)
   using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.23.0), LZ4, ZLib and ZStd.
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.1.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/2.1.1>`_)
@@ -77,7 +78,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `SZ plugin <https://github.com/szcompressor/SZ2>`_
   (commit `f466775 <https://github.com/szcompressor/SZ2/tree/f4667759ead6a902110e80ff838ccdfddbc8dcd7>`_)
   using `SZ <https://github.com/szcompressor/SZ2>`_, ZLib and ZStd.
-* `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.2.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.4).
+* `H5Z-SPERR plugin <https://github.com/NCAR/H5Z-SPERR>`_ (v0.2.3) using `SPERR <https://github.com/NCAR/SPERR>`_ (v0.8.5).
 * `SZ3 plugin <https://github.com/szcompressor/SZ3>`_
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
