@@ -40,11 +40,8 @@ class Bitmask {
 
   // Functions to perform bulk tests.
   //
-  // Two versions of the `has_true()` function. Both versions return -1 in case of no true found.
-  //   1) Position == false: it returns 1 indicating finding a true.
-  //   2) Position == true:  it returns the offset relative to `start` of the first true.
-  template <bool Position>
-  auto has_true(size_t start, size_t len) const -> int64_t;
+  auto has_true(size_t start, size_t len) const -> bool;
+  auto find_true(size_t start, size_t len) const -> int64_t;
   auto count_true() const -> size_t;  // How many 1's in this mask?
 
   // Functions for write

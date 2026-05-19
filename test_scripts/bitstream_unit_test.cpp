@@ -374,11 +374,11 @@ TEST(Bitmask, has_true)
 
       // Loop over all range length
       for (size_t len = 0; len < mask_size - start; len++) {
-        auto ans1 = mask.has_true<false>(start, len);
-        auto ans2 = -1l;
+        auto ans1 = mask.has_true(start, len);
+        auto ans2 = false;
         for (size_t i = start; i < start + len; i++)
           if (mask.rbit(i)) {
-            ans2 = 1;
+            ans2 = true;
             break;
           }
         EXPECT_EQ(ans1, ans2);
@@ -402,7 +402,7 @@ TEST(Bitmask, has_true_position)
 
       // Loop over all range length
       for (size_t len = 0; len < mask_size - start; len++) {
-        auto ans1 = mask.has_true<true>(start, len);
+        auto ans1 = mask.find_true(start, len);
         auto ans2 = -1l;
         for (size_t i = start; i < start + len; i++)
           if (mask.rbit(i)) {
