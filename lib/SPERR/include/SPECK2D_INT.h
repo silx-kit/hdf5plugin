@@ -44,6 +44,7 @@ class SPECK2D_INT : public SPECK_INT<T> {
   virtual void m_process_S(size_t idx1, size_t idx2, size_t& counter, bool need_decide) = 0;
   virtual void m_process_P(size_t idx, size_t& counter, bool need_decide) = 0;
   virtual void m_process_I(bool need_decide) = 0;
+  virtual void m_additional_initialization() {};
 
   auto m_partition_S(Set2D) const -> std::array<Set2D, 4>;
   auto m_partition_I() -> std::array<Set2D, 3>;

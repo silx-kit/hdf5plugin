@@ -212,6 +212,9 @@ void sperr::SPECK2D_INT<T>::m_initialize_lists()
   m_I.length_x = m_dims[0];
   m_I.length_y = m_dims[1];
   m_I.part_level = num_of_xforms;
+
+  // Encoder and decoder might have different additional tasks.
+  m_additional_initialization();
 }
 
 template class sperr::SPECK2D_INT<uint8_t>;

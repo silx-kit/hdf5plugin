@@ -29,9 +29,17 @@ class SPECK2D_INT_ENC final : public SPECK2D_INT<T> {
   void m_process_S(size_t idx1, size_t idx2, size_t& counter, bool need_decide) final;
   void m_process_P(size_t idx, size_t& counter, bool need_decide) final;
   void m_process_I(bool need_decide) final;
+  void m_additional_initialization() final;
+  void m_bitplane_init() final;
+  void m_refinement_extra() final;
 
   auto m_decide_S_significance(const Set2D&) const -> bool;
   auto m_decide_I_significance() const -> bool;
+
+  // `m_msb_buf` stores the MSB bit position of each coefficient, in the same order as
+  // m_coeff_buf. Significance tests compare entries against `m_msb_threshold`.
+  std::vector<int8_t> m_msb_buf;
+  int8_t m_msb_threshold = -1;
 };
 
 };  // namespace sperr

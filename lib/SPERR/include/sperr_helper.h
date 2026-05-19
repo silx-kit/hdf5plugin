@@ -166,6 +166,10 @@ auto calc_stats(const T* arr1, const T* arr2, size_t arr_len, size_t omp_nthread
 template <typename T>
 auto kahan_summation(const T*, size_t) -> T;
 
+// Returns the bit position of the most significant bit (0-based), or -1 for zero.
+template <typename T>
+auto msb_position(T v) -> int8_t;
+
 // Given a whole volume size and a desired chunk size, this helper function
 // returns a list of chunks specified by 6 integers:
 // chunk[0], [2], [4]: starting index of this chunk in X, Y, and Z;
@@ -183,9 +187,6 @@ auto chunk_volume(dims_type vol_dim, dims_type chunk_dim) -> std::vector<std::ar
 // ret[1] : variance
 template <typename T>
 auto calc_mean_var(const T*, size_t len, size_t omp_nthreads = 0) -> std::array<T, 2>;
-
-template <typename T>
-auto any_ge(const T* buf, size_t len, T threshold) -> bool;
 
 };  // namespace sperr
 

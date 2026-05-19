@@ -243,10 +243,11 @@ auto sperr::SPECK_FLT::m_estimate_mse_midtread(double q) const -> double
   const size_t num_strides = len / stride_size;
   auto tmp_buf = vecd_type(num_strides + 1);
 
+  const auto rcp_q = 1.0 / q;
   for (size_t i = 0; i < num_strides; i++) {
     const auto beg = m_vals_d.cbegin() + i * stride_size;
-    tmp_buf[i] = std::accumulate(beg, beg + stride_size, 0.0, [q](auto init, auto v) {
-      auto diff = std::remainder(v, q);
+    tmp_buf[i] = std::accumulate(beg, beg + stride_size, 0.0, [q, rcp_q](auto init, auto v) {
+      auto diff = std::fma(-q, std::rint(v * rcp_q), v);
       return init + diff * diff;
     });
   }
@@ -254,8 +255,8 @@ auto sperr::SPECK_FLT::m_estimate_mse_midtread(double q) const -> double
   // Let's also process the last stride.
   tmp_buf[num_strides] = 0.0;
   tmp_buf[num_strides] = std::accumulate(m_vals_d.cbegin() + num_strides * stride_size,
-                                         m_vals_d.cend(), 0.0, [q](auto init, auto v) {
-                                           auto diff = std::remainder(v, q);
+                                         m_vals_d.cend(), 0.0, [q, rcp_q](auto init, auto v) {
+                                           auto diff = std::fma(-q, std::rint(v * rcp_q), v);
                                            return init + diff * diff;
                                          });
   const auto total_sum = std::accumulate(tmp_buf.cbegin(), tmp_buf.cend(), 0.0);

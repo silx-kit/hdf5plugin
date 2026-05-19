@@ -293,4 +293,35 @@ TEST(sperr_helper, read_sections)
   EXPECT_EQ(buf, buf2);
 }
 
+TEST(sperr_helper, msb_position)
+{
+  // Zero returns -1
+  EXPECT_EQ(sperr::msb_position(uint8_t{0}), -1);
+  EXPECT_EQ(sperr::msb_position(uint16_t{0}), -1);
+  EXPECT_EQ(sperr::msb_position(uint32_t{0}), -1);
+  EXPECT_EQ(sperr::msb_position(uint64_t{0}), -1);
+
+  // Powers of 2
+  EXPECT_EQ(sperr::msb_position(uint32_t{1}), 0);
+  EXPECT_EQ(sperr::msb_position(uint32_t{2}), 1);
+  EXPECT_EQ(sperr::msb_position(uint32_t{4}), 2);
+  EXPECT_EQ(sperr::msb_position(uint32_t{1024}), 10);
+
+  // Non-powers of 2
+  EXPECT_EQ(sperr::msb_position(uint32_t{3}), 1);
+  EXPECT_EQ(sperr::msb_position(uint32_t{5}), 2);
+  EXPECT_EQ(sperr::msb_position(uint32_t{255}), 7);
+  EXPECT_EQ(sperr::msb_position(uint32_t{256}), 8);
+
+  // Max values for each type
+  EXPECT_EQ(sperr::msb_position(std::numeric_limits<uint8_t>::max()), 7);
+  EXPECT_EQ(sperr::msb_position(std::numeric_limits<uint16_t>::max()), 15);
+  EXPECT_EQ(sperr::msb_position(std::numeric_limits<uint32_t>::max()), 31);
+  EXPECT_EQ(sperr::msb_position(std::numeric_limits<uint64_t>::max()), 63);
+
+  // Large 64-bit values
+  EXPECT_EQ(sperr::msb_position(uint64_t{1} << 40), 40);
+  EXPECT_EQ(sperr::msb_position(uint64_t{1} << 62), 62);
+}
+
 }  // namespace

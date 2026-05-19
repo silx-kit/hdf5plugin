@@ -148,7 +148,7 @@ void sperr::SPECK3D_INT<T>::m_code_S(size_t idx1, size_t idx2)
 
     // Element (0, 0, 0)
     const auto id = set.start_z * m_dims[0] * m_dims[1] + set.start_y * m_dims[0] + set.start_x;
-    auto mort = set.get_morton();
+    auto mort = set.morton_idx;
     m_LIP_mask.wtrue(id);
     m_process_P(id, mort, sig_counter, need_decide);
 
@@ -200,7 +200,7 @@ void sperr::SPECK3D_INT<T>::m_code_S(size_t idx1, size_t idx2)
       if (it->num_elem() == 1) {
         auto idx = it->start_z * m_dims[0] * m_dims[1] + it->start_y * m_dims[0] + it->start_x;
         m_LIP_mask.wtrue(idx);
-        m_process_P(idx, it->get_morton(), sig_counter, need_decide);
+        m_process_P(idx, it->morton_idx, sig_counter, need_decide);
       }
       else {
         m_LIS[next_lev].emplace_back(*it);
@@ -230,14 +230,14 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
 
   auto subsets = std::tuple<std::array<Set3D, 8>, uint16_t>();
   std::get<1>(subsets) = lev;
-  auto morton_offset = set.get_morton();
+  auto morton_offset = set.morton_idx;
 
   //
   // The actual figuring out where it starts/ends part...
   //
   // subset (0, 0, 0)
   auto& sub0 = std::get<0>(subsets)[0];
-  sub0.set_morton(morton_offset);
+  sub0.morton_idx = morton_offset;
   sub0.start_x = set.start_x;
   sub0.start_y = set.start_y;
   sub0.start_z = set.start_z;
@@ -248,7 +248,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (1, 0, 0)
   auto& sub1 = std::get<0>(subsets)[1];
   morton_offset += sub0.num_elem();
-  sub1.set_morton(morton_offset);
+  sub1.morton_idx = morton_offset;
   sub1.start_x = set.start_x + split_x[0];
   sub1.start_y = set.start_y;
   sub1.start_z = set.start_z;
@@ -259,7 +259,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (0, 1, 0)
   auto& sub2 = std::get<0>(subsets)[2];
   morton_offset += sub1.num_elem();
-  sub2.set_morton(morton_offset);
+  sub2.morton_idx = morton_offset;
   sub2.start_x = set.start_x;
   sub2.start_y = set.start_y + split_y[0];
   sub2.start_z = set.start_z;
@@ -270,7 +270,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (1, 1, 0)
   auto& sub3 = std::get<0>(subsets)[3];
   morton_offset += sub2.num_elem();
-  sub3.set_morton(morton_offset);
+  sub3.morton_idx = morton_offset;
   sub3.start_x = set.start_x + split_x[0];
   sub3.start_y = set.start_y + split_y[0];
   sub3.start_z = set.start_z;
@@ -281,7 +281,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (0, 0, 1)
   auto& sub4 = std::get<0>(subsets)[4];
   morton_offset += sub3.num_elem();
-  sub4.set_morton(morton_offset);
+  sub4.morton_idx = morton_offset;
   sub4.start_x = set.start_x;
   sub4.start_y = set.start_y;
   sub4.start_z = set.start_z + split_z[0];
@@ -292,7 +292,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (1, 0, 1)
   auto& sub5 = std::get<0>(subsets)[5];
   morton_offset += sub4.num_elem();
-  sub5.set_morton(morton_offset);
+  sub5.morton_idx = morton_offset;
   sub5.start_x = set.start_x + split_x[0];
   sub5.start_y = set.start_y;
   sub5.start_z = set.start_z + split_z[0];
@@ -303,7 +303,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (0, 1, 1)
   auto& sub6 = std::get<0>(subsets)[6];
   morton_offset += sub5.num_elem();
-  sub6.set_morton(morton_offset);
+  sub6.morton_idx = morton_offset;
   sub6.start_x = set.start_x;
   sub6.start_y = set.start_y + split_y[0];
   sub6.start_z = set.start_z + split_z[0];
@@ -314,7 +314,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XYZ(Set3D set, uint16_t lev) const
   // subset (1, 1, 1)
   auto& sub7 = std::get<0>(subsets)[7];
   morton_offset += sub6.num_elem();
-  sub7.set_morton(morton_offset);
+  sub7.morton_idx = morton_offset;
   sub7.start_x = set.start_x + split_x[0];
   sub7.start_y = set.start_y + split_y[0];
   sub7.start_z = set.start_z + split_z[0];
@@ -330,6 +330,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_XY(Set3D set, uint16_t lev) const
     -> std::tuple<std::array<Set3D, 4>, uint16_t>
 {
   // This partition scheme is only used during initialization; no need to calculate morton offset.
+  // The correct morton offset will be calculated during initialization.
 
   const auto split_x = std::array<int, 2>{set.length_x - set.length_x / 2, set.length_x / 2};
   const auto split_y = std::array<int, 2>{set.length_y - set.length_y / 2, set.length_y / 2};
@@ -392,6 +393,7 @@ auto sperr::SPECK3D_INT<T>::m_partition_S_Z(Set3D set, uint16_t lev) const
     -> std::tuple<std::array<Set3D, 2>, uint16_t>
 {
   // This partition scheme is only used during initialization; no need to calculate morton offset.
+  // The correct morton offset will be calculated during initialization.
 
   const auto split_z = std::array<int, 2>{set.length_z - set.length_z / 2, set.length_z / 2};
   if (split_z[1] != 0)

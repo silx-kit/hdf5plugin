@@ -41,46 +41,26 @@ auto sperr::Bitmask::rbit(size_t idx) const -> bool
   return word;
 }
 
-template <bool Position>
-auto sperr::Bitmask::has_true(size_t start, size_t len) const -> int64_t
+auto sperr::Bitmask::has_true(size_t start, size_t len) const -> bool
 {
   auto long_idx = start >> 6;
   auto processed_bits = int64_t{0};
   auto word = m_buf[long_idx];
-  auto answer = uint64_t{0};
 
   // Collect the remaining bits from the start long.
   auto begin_idx = start & 63;
   auto nbits = std::min(size_t{64}, begin_idx + len);
   for (auto i = begin_idx; i < nbits; i++) {
-    answer |= word & (uint64_t{1} << i);
-    if constexpr (Position) {
-      if (answer != 0)
-        return processed_bits;
-    }
+    if (word & (uint64_t{1} << i))
+      return true;
     processed_bits++;
-  }
-  if constexpr (!Position) {
-    if (answer != 0)
-      return 1;
   }
 
   // Examine the subsequent full longs.
   while (processed_bits + 64 <= len) {
     word = m_buf[++long_idx];
     if (word) {
-      if constexpr (Position) {
-#if __cplusplus >= 202002L
-        int64_t i = std::countr_zero(word);
-        return processed_bits + i;
-#else
-        for (int64_t i = 0; i < 64; i++)
-          if (word & (uint64_t{1} << i))
-            return processed_bits + i;
-#endif
-      }
-      else
-        return 1;
+      return true;
     }
     processed_bits += 64;
   }
@@ -90,24 +70,59 @@ auto sperr::Bitmask::has_true(size_t start, size_t len) const -> int64_t
     nbits = len - processed_bits;
     assert(nbits < 64);
     word = m_buf[++long_idx];
-    answer = 0;
     for (int64_t i = 0; i < nbits; i++) {
-      answer |= word & (uint64_t{1} << i);
-      if constexpr (Position) {
-        if (answer != 0)
-          return processed_bits + i;
-      }
+      if (word & (uint64_t{1} << i))
+        return true;
     }
-    if constexpr (!Position) {
-      if (answer != 0)
-        return 1;
+  }
+
+  return false;
+}
+
+auto sperr::Bitmask::find_true(size_t start, size_t len) const -> int64_t
+{
+  auto long_idx = start >> 6;
+  auto processed_bits = int64_t{0};
+  auto word = m_buf[long_idx];
+
+  // Collect the remaining bits from the start long.
+  auto begin_idx = start & 63;
+  auto nbits = std::min(size_t{64}, begin_idx + len);
+  for (auto i = begin_idx; i < nbits; i++) {
+    if (word & (uint64_t{1} << i))
+      return processed_bits;
+    processed_bits++;
+  }
+
+  // Examine the subsequent full longs.
+  while (processed_bits + 64 <= len) {
+    word = m_buf[++long_idx];
+    if (word) {
+#if __cplusplus >= 202002L
+      int64_t i = std::countr_zero(word);
+      return processed_bits + i;
+#else
+      for (int64_t i = 0; i < 64; i++)
+        if (word & (uint64_t{1} << i))
+          return processed_bits + i;
+#endif
+    }
+    processed_bits += 64;
+  }
+
+  // Examine the remaining bits
+  if (processed_bits < len) {
+    nbits = len - processed_bits;
+    assert(nbits < 64);
+    word = m_buf[++long_idx];
+    for (int64_t i = 0; i < nbits; i++) {
+      if (word & (uint64_t{1} << i))
+        return processed_bits + i;
     }
   }
 
   return -1;
 }
-template auto sperr::Bitmask::has_true<true>(size_t, size_t) const -> int64_t;
-template auto sperr::Bitmask::has_true<false>(size_t, size_t) const -> int64_t;
 
 auto sperr::Bitmask::count_true() const -> size_t
 {
