@@ -1,4 +1,0 @@
-#define BLOCK_SIDE_LEN 4
-
-#define ZFP_RATE_PARAM_BITS 19
-#define ZFP_PREC_PARAM_BITS 22
