@@ -133,7 +133,7 @@ class Bitshuffle(FilterBase):
         Default: 0 (for about 8 kilobytes per block).
     :param cname: Compressor name.
     :param clevel: Compression level, used **only for "zstd"** compression.
-        Can be negative, and must be below or equal to 22 (maximum compression).
+        Must be between 0 (default level) and 22 (maximum compression).
         Default: 3.
     """
 
@@ -158,8 +158,8 @@ class Bitshuffle(FilterBase):
         nelems = int(nelems)
         if nelems % 8 != 0:
             raise ValueError("nelems must be a multiple of 8")
-        if clevel > 22:
-            raise ValueError("clevel must be below or equal to 22")
+        if not 0 <= clevel <= 22:
+            raise ValueError("clevel must be in range [0, 22]")
 
         if lz4 is not None:
             if cname is not None and lz4 is not False:

@@ -206,6 +206,19 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                         )
                         self.assertEqual(filter_[2][3:5], (nelems, compression_id))
 
+    @unittest.skipUnless(should_test("bshuf"), "Bitshuffle filter not available")
+    def testBitshuffleZstdCLevel(self):
+        """Write/read test with bitshuffle+zstd with different compression levels"""
+        for clevel in (0, 3, 22):
+            with self.subTest(clevel=clevel):
+                filter_ = self._test(
+                    "bshuf",
+                    numpy.int32,
+                    compressed=True,
+                    options={"cname": "zstd", "clevel": clevel},
+                )
+                self.assertEqual(filter_[2][3:6], (0, 3, clevel))
+
     @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
     def testBlosc(self):
         """Write/read test with blosc filter plugin"""
