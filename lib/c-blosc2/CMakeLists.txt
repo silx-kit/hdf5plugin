@@ -36,16 +36,13 @@
 #   DEACTIVATE_ZSTD: default OFF
 #       do not include support for the Zstd library
 #   WITH_ZLIB_OPTIM: default ON
-#       set WITH_OPTIM when building Zlib library, setting OFF is useful for wasm32 targets
+#       set WITH_OPTIM when building the fetched zlib-ng library; setting OFF is useful for wasm32 targets
 #   PREFER_EXTERNAL_LZ4: default OFF
-#       when found, use the installed LZ4 libs instead of included
-#       sources
+#       when found, use the installed LZ4 libs instead of fetching upstream sources
 #   PREFER_EXTERNAL_ZLIB: default OFF
-#       when found, use the installed Zlib libs instead of included
-#       MINIZ sources
+#       when found, use the installed Zlib/Zlib-ng libs instead of fetching upstream sources
 #   PREFER_EXTERNAL_ZSTD: default OFF
-#       when found, use the installed Zstd libs instead of included
-#       sources
+#       when found, use the installed Zstd libs instead of fetching upstream sources
 #   TEST_INCLUDE_BENCH_SHUFFLE_1: default ON
 #       add a test that runs the benchmark program passing "shuffle" with 1
 #       thread as second parameter
@@ -125,18 +122,41 @@ option(DEACTIVATE_ZLIB
     "Do not include support for the Zlib library." OFF)
 option(DEACTIVATE_ZSTD
     "Do not include support for the Zstd library." OFF)
-option(DEACTIVATE_IPP
-    "Do not include support for the Intel IPP library." ON)
 option(PREFER_EXTERNAL_LZ4
-    "Find and use external LZ4 library instead of included sources." OFF)
+    "Find and use external LZ4 library instead of fetching sources." OFF)
 option(PREFER_EXTERNAL_ZLIB
-    "Find and use external ZLIB library instead of included sources." OFF)
+    "Find and use external ZLIB library instead of fetching sources." OFF)
 option(PREFER_EXTERNAL_ZSTD
-    "Find and use external ZSTD library instead of included sources." OFF)
+    "Find and use external ZSTD library instead of fetching sources." OFF)
 option(WITH_ZLIB_OPTIM
     "Set WITH_OPTIM for ZLIB, turning off is useful for compiling for wasm32 targets." ON)
 
+set(BLOSC_DEPENDENCY_MODE "BUNDLED" CACHE STRING
+    "Dependency resolution mode: BUNDLED uses fetched dependencies, EXTERNAL requires system dependencies, AUTO tries system dependencies before fetching.")
+set_property(CACHE BLOSC_DEPENDENCY_MODE PROPERTY STRINGS BUNDLED EXTERNAL AUTO)
+set(BLOSC_ENABLE_ZFP "AUTO" CACHE STRING
+    "ZFP codec support: AUTO enables it when available, ON requires it, OFF disables it.")
+set_property(CACHE BLOSC_ENABLE_ZFP PROPERTY STRINGS AUTO ON OFF)
+
+set(BLOSC_LZ4_VERSION "1.10.0" CACHE STRING
+    "lz4 version to use when fetching internal sources.")
+set(BLOSC_LZ4_SOURCE_DIR "" CACHE PATH
+    "Optional local lz4 checkout to use instead of downloading sources.")
+set(BLOSC_ZLIBNG_VERSION "2.3.3" CACHE STRING
+    "zlib-ng version to use when fetching internal sources.")
+set(BLOSC_ZLIBNG_SOURCE_DIR "" CACHE PATH
+    "Optional local zlib-ng checkout to use instead of downloading sources.")
+set(BLOSC_ZSTD_VERSION "1.5.7" CACHE STRING
+    "zstd version to use when fetching internal sources.")
+set(BLOSC_ZSTD_SOURCE_DIR "" CACHE PATH
+    "Optional local zstd checkout to use instead of downloading sources.")
+set(BLOSC_ZFP_VERSION "1.0.1" CACHE STRING
+    "zfp version to use when fetching plugin sources.")
+set(BLOSC_ZFP_SOURCE_DIR "" CACHE PATH
+    "Optional local zfp checkout to use instead of downloading plugin sources.")
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+include(GNUInstallDirs)
 
 if(MINGW)
     # This gets us DLL resource information when compiling on MinGW.
@@ -159,6 +179,24 @@ if(BUILD_LITE)
     set(DEACTIVATE_ZSTD ON)
 endif()
 
+string(TOUPPER "${BLOSC_DEPENDENCY_MODE}" BLOSC_DEPENDENCY_MODE)
+set(BLOSC_DEPENDENCY_MODE "${BLOSC_DEPENDENCY_MODE}" CACHE STRING
+    "Dependency resolution mode: BUNDLED uses fetched dependencies, EXTERNAL requires system dependencies, AUTO tries system dependencies before fetching." FORCE)
+if(NOT BLOSC_DEPENDENCY_MODE STREQUAL "BUNDLED" AND
+   NOT BLOSC_DEPENDENCY_MODE STREQUAL "EXTERNAL" AND
+   NOT BLOSC_DEPENDENCY_MODE STREQUAL "AUTO")
+    message(FATAL_ERROR "BLOSC_DEPENDENCY_MODE must be one of BUNDLED, EXTERNAL, or AUTO")
+endif()
+
+string(TOUPPER "${BLOSC_ENABLE_ZFP}" BLOSC_ENABLE_ZFP)
+set(BLOSC_ENABLE_ZFP "${BLOSC_ENABLE_ZFP}" CACHE STRING
+    "ZFP codec support: AUTO enables it when available, ON requires it, OFF disables it." FORCE)
+if(NOT BLOSC_ENABLE_ZFP STREQUAL "AUTO" AND
+   NOT BLOSC_ENABLE_ZFP STREQUAL "ON" AND
+   NOT BLOSC_ENABLE_ZFP STREQUAL "OFF")
+    message(FATAL_ERROR "BLOSC_ENABLE_ZFP must be one of AUTO, ON, or OFF")
+endif()
+
 # Threads
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE) # pre 3.1
 set(THREADS_PREFER_PTHREAD_FLAG TRUE) # CMake 3.1+
@@ -174,19 +212,85 @@ else()
     set(HAVE_THREADS OFF)
 endif()
 
-if(PREFER_EXTERNAL_LZ4)
+set(BLOSC_FIND_EXTERNAL_LZ4 FALSE)
+set(BLOSC_REQUIRE_EXTERNAL_LZ4 FALSE)
+if(BLOSC_DEPENDENCY_MODE STREQUAL "EXTERNAL")
+    set(BLOSC_FIND_EXTERNAL_LZ4 TRUE)
+    set(BLOSC_REQUIRE_EXTERNAL_LZ4 TRUE)
+elseif(BLOSC_DEPENDENCY_MODE STREQUAL "AUTO" OR PREFER_EXTERNAL_LZ4)
+    set(BLOSC_FIND_EXTERNAL_LZ4 TRUE)
+endif()
+
+if(BLOSC_FIND_EXTERNAL_LZ4)
     find_package(LZ4 CONFIG NAMES lz4)
     if(LZ4_FOUND)
         set(HAVE_LZ4_CONFIG TRUE)
     else()
         find_package(LZ4 MODULE)
     endif()
-else()
-    message(STATUS "Using LZ4 internal sources.")
+endif()
+
+if(NOT LZ4_FOUND AND BLOSC_REQUIRE_EXTERNAL_LZ4)
+    message(FATAL_ERROR "BLOSC_DEPENDENCY_MODE=EXTERNAL requires an external LZ4 package. Install LZ4 or use BLOSC_DEPENDENCY_MODE=BUNDLED/AUTO.")
+endif()
+
+if(NOT LZ4_FOUND)
+    include(FetchContent)
+    set(LZ4_BUILD_CLI OFF CACHE BOOL "" FORCE)
+    set(LZ4_BUILD_LEGACY_LZ4C OFF CACHE BOOL "" FORCE)
+    set(LZ4_BUNDLED_MODE ON CACHE BOOL "" FORCE)
+    set(LZ4_POSITION_INDEPENDENT_LIB ON CACHE BOOL "" FORCE)
+
+    if(BLOSC_LZ4_SOURCE_DIR)
+        message(STATUS "Using lz4 via FetchContent from local checkout: ${BLOSC_LZ4_SOURCE_DIR}")
+        FetchContent_Declare(
+            lz4
+            SOURCE_DIR "${BLOSC_LZ4_SOURCE_DIR}"
+            SOURCE_SUBDIR build/cmake)
+    else()
+        message(STATUS "Using lz4 ${BLOSC_LZ4_VERSION} via FetchContent download")
+        FetchContent_Declare(
+            lz4
+            URL "https://github.com/lz4/lz4/archive/refs/tags/v${BLOSC_LZ4_VERSION}.tar.gz"
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+            SOURCE_SUBDIR build/cmake)
+    endif()
+    FetchContent_GetProperties(lz4)
+    if(NOT lz4_POPULATED)
+        if(POLICY CMP0169)
+            cmake_policy(PUSH)
+            cmake_policy(SET CMP0169 OLD)
+        endif()
+        FetchContent_Populate(lz4)
+        if(POLICY CMP0169)
+            cmake_policy(POP)
+        endif()
+        add_subdirectory("${lz4_SOURCE_DIR}/build/cmake" "${lz4_BINARY_DIR}" EXCLUDE_FROM_ALL)
+    endif()
+
+    set(LZ4_FETCHED TRUE)
+    set(LZ4_FOUND TRUE)
+    set(LZ4_SOURCE_DIR "${lz4_SOURCE_DIR}")
+    set(LZ4_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/blosc2/thirdparty/lz4")
+    if(TARGET lz4_static)
+        set_target_properties(lz4_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        set_property(TARGET lz4_static PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+            "$<BUILD_INTERFACE:${LZ4_SOURCE_DIR}/lib>"
+            "$<INSTALL_INTERFACE:${LZ4_INSTALL_INCLUDEDIR}>")
+    endif()
 endif()
 
 if(NOT DEACTIVATE_ZLIB)
-    if(PREFER_EXTERNAL_ZLIB)
+    set(BLOSC_FIND_EXTERNAL_ZLIB FALSE)
+    set(BLOSC_REQUIRE_EXTERNAL_ZLIB FALSE)
+    if(BLOSC_DEPENDENCY_MODE STREQUAL "EXTERNAL")
+        set(BLOSC_FIND_EXTERNAL_ZLIB TRUE)
+        set(BLOSC_REQUIRE_EXTERNAL_ZLIB TRUE)
+    elseif(BLOSC_DEPENDENCY_MODE STREQUAL "AUTO" OR PREFER_EXTERNAL_ZLIB)
+        set(BLOSC_FIND_EXTERNAL_ZLIB TRUE)
+    endif()
+
+    if(BLOSC_FIND_EXTERNAL_ZLIB)
         find_package(ZLIB_NG CONFIG NAMES zlib-ng)
         if(ZLIB_NG_FOUND)
             set(HAVE_ZLIB_NG TRUE)
@@ -199,63 +303,203 @@ if(NOT DEACTIVATE_ZLIB)
                 find_package(ZLIB)
             endif()
         endif()
+    endif()
 
-        if(NOT (ZLIB_NG_FOUND OR ZLIB_FOUND))
-            message(STATUS "No ZLIB found.  Using ZLIB-NG internal sources.")
-        endif()
+    if(NOT (ZLIB_NG_FOUND OR ZLIB_FOUND) AND BLOSC_REQUIRE_EXTERNAL_ZLIB)
+        message(FATAL_ERROR "BLOSC_DEPENDENCY_MODE=EXTERNAL requires an external zlib-ng or zlib package. Install one or use BLOSC_DEPENDENCY_MODE=BUNDLED/AUTO.")
     endif()
 
     if(NOT (ZLIB_NG_FOUND OR ZLIB_FOUND))
-
+        include(FetchContent)
         if (NOT WITH_ZLIB_OPTIM)
-            set(WITH_OPTIM FALSE)
-            set(WITH_RUNTIME_CPU_DETECTION FALSE)
+            set(WITH_OPTIM OFF CACHE BOOL "Disable zlib-ng architecture optimizations when fetched via FetchContent" FORCE)
+            set(WITH_RUNTIME_CPU_DETECTION OFF CACHE BOOL "Disable zlib-ng runtime CPU detection when fetched via FetchContent" FORCE)
         endif()
-        message(STATUS "Using ZLIB-NG internal sources for ZLIB support.")
-        set(HAVE_ZLIB_NG TRUE)
-        add_definitions(-DZLIB_COMPAT)
-        set(ZLIB_NG_DIR "zlib-ng-2.0.7")  # update to the actual included version
-        set(ZLIB_COMPAT TRUE)
-        set(SKIP_INSTALL_ALL TRUE)
-        set(BUILD_SHARED_LIBS FALSE)
-        set(ZLIB_ENABLE_TESTS OFF)
-        add_subdirectory("internal-complibs/${ZLIB_NG_DIR}")
+        set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip zlib-ng install targets when fetched via FetchContent" FORCE)
+        set(BUILD_TESTING OFF CACHE BOOL "Disable zlib-ng tests when fetched via FetchContent" FORCE)
+        set(WITH_GTEST OFF CACHE BOOL "Disable zlib-ng GTest when fetched via FetchContent" FORCE)
+        set(WITH_FUZZERS OFF CACHE BOOL "Disable zlib-ng fuzzers when fetched via FetchContent" FORCE)
+        set(WITH_BENCHMARKS OFF CACHE BOOL "Disable zlib-ng benchmarks when fetched via FetchContent" FORCE)
+        set(WITH_BENCHMARK_APPS OFF CACHE BOOL "Disable zlib-ng benchmark apps when fetched via FetchContent" FORCE)
 
-        file(COPY
-                ${CMAKE_CURRENT_BINARY_DIR}/internal-complibs/${ZLIB_NG_DIR}/zconf.h
-                DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/internal-complibs/${ZLIB_NG_DIR}/)
+        if(BLOSC_ZLIBNG_SOURCE_DIR)
+            message(STATUS "Using zlib-ng via FetchContent from local checkout: ${BLOSC_ZLIBNG_SOURCE_DIR}")
+            FetchContent_Declare(
+                zlib_ng
+                SOURCE_DIR "${BLOSC_ZLIBNG_SOURCE_DIR}")
+        else()
+            message(STATUS "Using zlib-ng ${BLOSC_ZLIBNG_VERSION} via FetchContent download")
+            FetchContent_Declare(
+                zlib_ng
+                URL "https://github.com/zlib-ng/zlib-ng/archive/refs/tags/${BLOSC_ZLIBNG_VERSION}.tar.gz"
+                DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+        endif()
+        FetchContent_MakeAvailable(zlib_ng)
+
+        set(HAVE_ZLIB_NG TRUE)
+        set(ZLIB_NG_FETCHED TRUE)
+        set(ZLIB_NG_FOUND TRUE)
+        set(ZLIB_NG_BUILD_DIR "${zlib_ng_BINARY_DIR}")
+        set(ZLIB_NG_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/blosc2/thirdparty/zlib-ng")
+        set(ZLIB_NG_INSTALL_TARGET "")
+        if(TARGET zlib-ng-static)
+            get_target_property(ZLIB_NG_INSTALL_TARGET zlib-ng-static ALIASED_TARGET)
+            if(NOT ZLIB_NG_INSTALL_TARGET)
+                set(ZLIB_NG_INSTALL_TARGET zlib-ng-static)
+            endif()
+        elseif(TARGET zlib-ng)
+            get_target_property(ZLIB_NG_INSTALL_TARGET zlib-ng ALIASED_TARGET)
+            if(NOT ZLIB_NG_INSTALL_TARGET)
+                set(ZLIB_NG_INSTALL_TARGET zlib-ng)
+            endif()
+        endif()
+        if(ZLIB_NG_INSTALL_TARGET)
+            set_target_properties(${ZLIB_NG_INSTALL_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+            set_property(TARGET ${ZLIB_NG_INSTALL_TARGET} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                "$<BUILD_INTERFACE:${zlib_ng_SOURCE_DIR}>"
+                "$<BUILD_INTERFACE:${ZLIB_NG_BUILD_DIR}>"
+                "$<INSTALL_INTERFACE:${ZLIB_NG_INSTALL_INCLUDEDIR}>")
+        endif()
     endif()
     set(HAVE_ZLIB TRUE)
 endif()
 
 
 if(NOT DEACTIVATE_ZSTD)
-    if(PREFER_EXTERNAL_ZSTD)
+    set(BLOSC_FIND_EXTERNAL_ZSTD FALSE)
+    set(BLOSC_REQUIRE_EXTERNAL_ZSTD FALSE)
+    if(BLOSC_DEPENDENCY_MODE STREQUAL "EXTERNAL")
+        set(BLOSC_FIND_EXTERNAL_ZSTD TRUE)
+        set(BLOSC_REQUIRE_EXTERNAL_ZSTD TRUE)
+    elseif(BLOSC_DEPENDENCY_MODE STREQUAL "AUTO" OR PREFER_EXTERNAL_ZSTD)
+        set(BLOSC_FIND_EXTERNAL_ZSTD TRUE)
+    endif()
+
+    if(BLOSC_FIND_EXTERNAL_ZSTD)
         find_package(ZSTD CONFIG NAMES zstd)
         if(ZSTD_FOUND)
             set(HAVE_ZSTD_CONFIG TRUE)
         else()
             find_package(ZSTD MODULE)
-            if (NOT ZSTD_FOUND)
-                message(STATUS "No ZSTD library found.  Using internal sources.")
+        endif()
+    endif()
+
+    if(NOT ZSTD_FOUND AND BLOSC_REQUIRE_EXTERNAL_ZSTD)
+        message(FATAL_ERROR "BLOSC_DEPENDENCY_MODE=EXTERNAL requires an external Zstd package. Install Zstd or use BLOSC_DEPENDENCY_MODE=BUNDLED/AUTO.")
+    endif()
+
+    if(NOT ZSTD_FOUND)
+        include(FetchContent)
+        set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Disable zstd programs when fetched via FetchContent" FORCE)
+        set(ZSTD_BUILD_SHARED OFF CACHE BOOL "Disable shared zstd library when fetched via FetchContent" FORCE)
+        set(ZSTD_BUILD_STATIC ON CACHE BOOL "Enable static zstd library when fetched via FetchContent" FORCE)
+        set(ZSTD_BUILD_TESTS OFF CACHE BOOL "Disable zstd tests when fetched via FetchContent" FORCE)
+        set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "Disable zstd contrib targets when fetched via FetchContent" FORCE)
+        set(ZSTD_MULTITHREAD_SUPPORT OFF CACHE BOOL "Disable zstd multithread support when fetched via FetchContent" FORCE)
+
+        if(BLOSC_ZSTD_SOURCE_DIR)
+            message(STATUS "Using zstd via FetchContent from local checkout: ${BLOSC_ZSTD_SOURCE_DIR}")
+            FetchContent_Declare(
+                zstd
+                SOURCE_DIR "${BLOSC_ZSTD_SOURCE_DIR}"
+                SOURCE_SUBDIR build/cmake)
+        else()
+            message(STATUS "Using zstd ${BLOSC_ZSTD_VERSION} via FetchContent download")
+            FetchContent_Declare(
+                zstd
+                URL "https://github.com/facebook/zstd/archive/refs/tags/v${BLOSC_ZSTD_VERSION}.tar.gz"
+                DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+                SOURCE_SUBDIR build/cmake)
+        endif()
+        FetchContent_GetProperties(zstd)
+        if(NOT zstd_POPULATED)
+            if(POLICY CMP0169)
+                cmake_policy(PUSH)
+                cmake_policy(SET CMP0169 OLD)
             endif()
+            FetchContent_Populate(zstd)
+            if(POLICY CMP0169)
+                cmake_policy(POP)
+            endif()
+            add_subdirectory("${zstd_SOURCE_DIR}/build/cmake" "${zstd_BINARY_DIR}" EXCLUDE_FROM_ALL)
+        endif()
+
+        set(HAVE_ZSTD TRUE)
+        set(ZSTD_FETCHED TRUE)
+        set(ZSTD_FOUND TRUE)
+        set(ZSTD_BUILD_DIR "${zstd_BINARY_DIR}")
+        set(ZSTD_SOURCE_DIR "${zstd_SOURCE_DIR}")
+        set(ZSTD_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/blosc2/thirdparty/zstd")
+        if(TARGET libzstd_static)
+            set_target_properties(libzstd_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+            set_property(TARGET libzstd_static PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                "$<BUILD_INTERFACE:${ZSTD_SOURCE_DIR}/lib>"
+                "$<INSTALL_INTERFACE:${ZSTD_INSTALL_INCLUDEDIR}>")
+            # Silence GCC false positives in fetched legacy zstd sources on some Linux/amd64 builds.
+            target_compile_options(libzstd_static PRIVATE
+                $<$<COMPILE_LANG_AND_ID:C,GNU>:-Wno-maybe-uninitialized>)
         endif()
     else()
-        message(STATUS "Using ZSTD internal sources.")
+        set(HAVE_ZSTD TRUE)
     endif()
-    # HAVE_ZSTD will be set to true because even if the library is
-    # not found, we will use the included sources for it
-    set(HAVE_ZSTD TRUE)
 endif()
 
-if(NOT DEACTIVATE_IPP)
-    find_package(IPP)
-    if(IPP_FOUND)
-        message(STATUS "Using IPP accelerated compression.")
-        set(HAVE_IPP TRUE)
+set(HAVE_ZFP FALSE)
+set(BLOSC_ZFP_PROVIDER "NONE")
+set(BLOSC_ZFP_TARGET "")
+set(ZFP_FOUND FALSE)
+if(BUILD_PLUGINS AND NOT BLOSC_ENABLE_ZFP STREQUAL "OFF")
+    set(BLOSC_FIND_EXTERNAL_ZFP FALSE)
+    set(BLOSC_ALLOW_BUNDLED_ZFP FALSE)
+    if(BLOSC_DEPENDENCY_MODE STREQUAL "EXTERNAL")
+        set(BLOSC_FIND_EXTERNAL_ZFP TRUE)
+    elseif(BLOSC_DEPENDENCY_MODE STREQUAL "AUTO")
+        set(BLOSC_FIND_EXTERNAL_ZFP TRUE)
+        set(BLOSC_ALLOW_BUNDLED_ZFP TRUE)
     else()
-        message(STATUS "Not using IPP accelerated compression.")
-        set(HAVE_IPP FALSE)
+        set(BLOSC_ALLOW_BUNDLED_ZFP TRUE)
+    endif()
+
+    if(BLOSC_ENABLE_ZFP STREQUAL "ON" AND NOT BLOSC_DEPENDENCY_MODE STREQUAL "EXTERNAL")
+        set(BLOSC_ALLOW_BUNDLED_ZFP TRUE)
+    endif()
+
+    if(BLOSC_FIND_EXTERNAL_ZFP)
+        find_package(zfp CONFIG QUIET)
+        if(NOT zfp_FOUND)
+            find_package(ZFP CONFIG QUIET)
+        endif()
+        if(NOT zfp_FOUND AND NOT ZFP_FOUND)
+            find_package(ZFP MODULE QUIET)
+        endif()
+        if(zfp_FOUND OR ZFP_FOUND)
+            set(ZFP_FOUND TRUE)
+            set(BLOSC_ZFP_PROVIDER "EXTERNAL")
+            foreach(BLOSC_ZFP_CANDIDATE zfp ZFP::zfp zfp::zfp ZFP::ZFP)
+                if(TARGET ${BLOSC_ZFP_CANDIDATE} AND NOT BLOSC_ZFP_TARGET)
+                    set(BLOSC_ZFP_TARGET ${BLOSC_ZFP_CANDIDATE})
+                endif()
+            endforeach()
+            if(BLOSC_ZFP_TARGET AND NOT TARGET zfp)
+                add_library(zfp INTERFACE IMPORTED)
+                target_link_libraries(zfp INTERFACE ${BLOSC_ZFP_TARGET})
+            endif()
+        endif()
+    endif()
+
+    if(NOT ZFP_FOUND AND BLOSC_ALLOW_BUNDLED_ZFP)
+        set(BLOSC_ZFP_PROVIDER "BUNDLED")
+    endif()
+
+    if(BLOSC_ZFP_PROVIDER STREQUAL "NONE")
+        if(BLOSC_ENABLE_ZFP STREQUAL "ON")
+            message(FATAL_ERROR "BLOSC_ENABLE_ZFP=ON requires ZFP support, but no external ZFP package was found and bundled ZFP is disabled by BLOSC_DEPENDENCY_MODE=EXTERNAL.")
+        else()
+            message(STATUS "ZFP codec support disabled: no external ZFP package found in BLOSC_DEPENDENCY_MODE=EXTERNAL")
+        endif()
+    else()
+        set(HAVE_ZFP TRUE)
+        message(STATUS "ZFP codec support enabled (${BLOSC_ZFP_PROVIDER})")
     endif()
 endif()
 
@@ -371,7 +615,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES armv7l|aarch64|arm64)
         # Unrecognized compiler. Emit a warning message to let the user know hardware-acceleration won't be available.
         message(WARNING "Unable to determine which ${CMAKE_SYSTEM_PROCESSOR} hardware features are supported by the C compiler (${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}).")
     endif()
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64le|powerpc64le)")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)")
     if(CMAKE_C_COMPILER_ID MATCHES GNU AND CMAKE_C_COMPILER_VERSION VERSION_GREATER 8)
         set(COMPILER_SUPPORT_ALTIVEC TRUE)
     elseif(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_VERSION VERSION_GREATER 13)
@@ -452,9 +696,6 @@ endif()
 
 # include directories
 include_directories(include)
-if(BUILD_PLUGINS)
-    include_directories(plugins/codecs/zfp/include)
-endif()
 
 # subdirectories
 set(SOURCES)
@@ -462,6 +703,9 @@ set(SOURCES)
 if(BUILD_PLUGINS)
     enable_testing()
     add_subdirectory(plugins)
+    if(DEFINED ZFP_SOURCE_DIR)
+        include_directories(${ZFP_SOURCE_DIR}/include)
+    endif()
 endif()
 
 # Determine which linkage the unified target will use
@@ -550,6 +794,9 @@ if(BLOSC_INSTALL)
     if(BUILD_STATIC)
         install(TARGETS blosc2_static COMPONENT DEV)
     endif()
+    # Bundled dependency headers are private implementation details and are not
+    # installed.  Bundled dependency objects are folded into libblosc2.a for
+    # static builds and into libblosc2 shared libraries by the regular linker.
 
     # config files
     include(CMakePackageConfigHelpers)
@@ -558,14 +805,10 @@ if(BLOSC_INSTALL)
     # Blosc2Config.cmake files to. This is defined in CMake:
     # https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
     if(NOT Blosc2_INSTALL_CMAKEDIR)
-        if(CMAKE_INSTALL_CMAKEDIR)
-            set(Blosc2_INSTALL_CMAKEDIR "${CMAKE_INSTALL_CMAKEDIR}/Blosc2")
+        if(WIN32 AND NOT MINGW)
+            set(Blosc2_INSTALL_CMAKEDIR "cmake")
         else()
-            if(WIN32 AND NOT MINGW)
-                set(Blosc2_INSTALL_CMAKEDIR "cmake")
-            else()
-                set(Blosc2_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/Blosc2")
-            endif()
+            set(Blosc2_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/Blosc2")
         endif()
     endif()
 
@@ -573,6 +816,7 @@ if(BLOSC_INSTALL)
     # This stores our targets and find and populates the targets we depend on,
     # including third party interface libraries that we added.
     set(Blosc2_INSTALL_TARGET_NAMES)
+    set(Blosc2_INSTALL_THIRDPARTY_TARGET_NAMES)
     if(BUILD_SHARED)
         list(APPEND Blosc2_INSTALL_TARGET_NAMES blosc2_shared)
     endif()
@@ -595,6 +839,14 @@ if(BLOSC_INSTALL)
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
+    if(Blosc2_INSTALL_THIRDPARTY_TARGET_NAMES)
+        install(TARGETS ${Blosc2_INSTALL_THIRDPARTY_TARGET_NAMES}
+            EXPORT Blosc2Targets
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/blosc2
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/blosc2
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        )
+    endif()
     install(EXPORT Blosc2Targets
         FILE Blosc2Targets.cmake
         NAMESPACE Blosc2::
@@ -626,12 +878,14 @@ if(BLOSC_INSTALL)
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig" COMPONENT DEV)
 
     # uninstaller
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-        @ONLY)
-    add_custom_target(uninstall
-        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+    if(NOT TARGET uninstall)
+        configure_file(
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+            @ONLY)
+        add_custom_target(uninstall
+            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+    endif()
 endif()
 
 

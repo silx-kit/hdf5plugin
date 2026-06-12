@@ -61,13 +61,13 @@ CUTEST_TEST_SETUP(mmap) {
   blosc2_stdio_mmap mmap_file_default = BLOSC2_STDIO_MMAP_DEFAULTS;
 
   /* We also want to trigger the remapping */
-  CUTEST_PARAMETRIZE(initial_mapping_size, int64_t, CUTEST_DATA(
-      1, mmap_file_default.initial_mapping_size,
+  CUTEST_PARAMETRIZE(initial_mapping_size, size_t, CUTEST_DATA(
+      (size_t)1, mmap_file_default.initial_mapping_size,
   ));
 }
 
 CUTEST_TEST_TEST(mmap) {
-  CUTEST_GET_PARAMETER(initial_mapping_size, int64_t);
+  CUTEST_GET_PARAMETER(initial_mapping_size, size_t);
 
   char* urlpath_default = "test_mmap_default.b2frame";
   char* urlpath_mmap = "test_mmap_mmap.b2frame";
@@ -93,6 +93,7 @@ CUTEST_TEST_TEST(mmap) {
   blosc2_io io = {.id = BLOSC2_IO_FILESYSTEM_MMAP, .name = "filesystem_mmap", .params = &mmap_file};
   blosc2_storage storage_mmap = {.cparams=&data->cparams, .contiguous=true, .urlpath = urlpath_mmap, .io=&io};
   blosc2_schunk *schunk_write_mmap = blosc2_schunk_new(&storage_mmap);
+  CUTEST_ASSERT("Could not create mmap-backed schunk", schunk_write_mmap != NULL);
 
   cbytes = blosc2_schunk_append_buffer(schunk_write_mmap, data_buffer, sizeof(data_buffer));
   CUTEST_ASSERT("Could not write first chunk", cbytes > 0);
@@ -117,6 +118,9 @@ CUTEST_TEST_TEST(mmap) {
     blosc2_schunk* schunk_read = blosc2_schunk_open_udio(urlpath_mmap, &io);
     CUTEST_ASSERT("Mismatch in number of chunks", schunk_read->nchunks == 2);
 
+    if (i > 0) {
+      free(chunk_data);
+    }
     chunk_data = (float*)malloc(schunk_read->chunksize);
     dsize = blosc2_schunk_decompress_chunk(schunk_read, 0, chunk_data, schunk_read->chunksize);
     CUTEST_ASSERT("Size of decompressed chunk 1 does not match", dsize == sizeof(data_buffer));

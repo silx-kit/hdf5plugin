@@ -18,10 +18,6 @@
 #include "zstd.h"
 #endif
 
-#ifdef HAVE_IPP
-#include <ipps.h>
-#endif
-
 #include <threading.h>
 
 #include <stddef.h>
@@ -33,22 +29,34 @@
 #define BLOSC_POSIX_BARRIERS
 #endif
 
+#define BLOSC_BACKEND_SERIAL 0
+#define BLOSC_BACKEND_SHARED_POOL 1
+#define BLOSC_BACKEND_CALLBACK 2
+#define BLOSC_BACKEND_PER_CONTEXT 3   /* per-context threads; used on Windows */
+
 struct blosc2_context_s {
   const uint8_t* src;  /* The source buffer */
   uint8_t* dest;  /* The destination buffer */
   uint8_t header_flags;  /* Flags for header */
   uint8_t blosc2_flags;  /* Flags specific for blosc2 */
+  uint8_t blosc2_flags2;  /* Secondary flags specific for blosc2 */
   int32_t sourcesize;  /* Number of bytes in source buffer */
   int32_t header_overhead;  /* The number of bytes in chunk header */
   int32_t nblocks;  /* Number of total blocks in buffer */
   int32_t leftover;  /* Extra bytes at end of buffer */
   int32_t blocksize;  /* Length of the block in bytes */
+  int32_t header_blocksize;  /* Raw blocksize field as stored in the chunk header */
   int32_t splitmode;  /* Whether the blocks should be split or not */
   int32_t output_bytes;  /* Counter for the number of input bytes */
   int32_t srcsize;  /* Counter for the number of output bytes */
   int32_t destsize;  /* Maximum size for destination buffer */
   int32_t typesize;  /* Type size */
   int32_t* bstarts;  /* Starts for every block inside the compressed buffer */
+  int32_t* blocknbytes;  /* Uncompressed sizes for blocks in VL-block chunks */
+  int32_t* blockoffsets;  /* Uncompressed offsets for blocks in VL-block chunks */
+  int32_t* blockcbytes;  /* Compressed byte spans for blocks in VL-block chunks */
+  const uint8_t** vlblock_sources;  /* Per-block sources when compressing VL-block chunks */
+  uint8_t** vlblock_dests;  /* Per-block destinations when decompressing VL-block chunks */
   int32_t special_type;  /* Special type for chunk.  0 if not special. */
   int compcode;  /* Compressor code to use */
   uint8_t compcode_meta;  /* The metainfo for the compressor code */
@@ -80,28 +88,28 @@ struct blosc2_context_s {
   /* Threading */
   int16_t nthreads;
   int16_t new_nthreads;
+  int16_t thread_backend;
   int16_t threads_started;
-  int16_t end_threads;
-  blosc2_pthread_t *threads;
-  struct thread_context *thread_contexts;  /* Only for user-managed threads */
+  struct thread_context *thread_contexts;  /* Only for callback-managed threads */
+  struct blosc_shared_pool *thread_pool;
+  int32_t pool_epoch;  /* value of g_destroy_count when pool was attached */
+  struct blosc_job_group *job;
   blosc2_pthread_mutex_t count_mutex;
   blosc2_pthread_mutex_t nchunk_mutex;
-#ifdef BLOSC_POSIX_BARRIERS
-  pthread_barrier_t barr_init;
-  pthread_barrier_t barr_finish;
-#else
-  int count_threads;
-  blosc2_pthread_mutex_t count_threads_mutex;
-  blosc2_pthread_cond_t count_threads_cv;
-#endif
-#if !defined(_WIN32)
-  pthread_attr_t ct_attr;  /* creation time attrs for threads */
-#endif
   int thread_giveup_code;  /* error code when give up */
-  int thread_nblock;  /* block counter */
   int dref_not_init;  /* data ref in delta not initialized */
   blosc2_pthread_mutex_t delta_mutex;
   blosc2_pthread_cond_t delta_cv;
+  bool dict_buffer_owned;  /* Whether dict_buffer must be freed by the context */
+  /* Per-context worker threads (Windows only; BLOSC_BACKEND_PER_CONTEXT) */
+  int16_t end_threads;                   /* set to 1 to signal workers to exit */
+  uint32_t job_seq;                      /* incremented each new job dispatch */
+  int16_t active_workers;               /* workers still processing current job */
+  int32_t thread_nblock;               /* next block index for dynamic scheduling */
+  blosc2_pthread_t *threads;            /* per-context thread handles */
+  blosc2_pthread_mutex_t jobs_mutex;    /* guards job_seq, end_threads, active_workers */
+  blosc2_pthread_cond_t jobs_ready;     /* workers sleep here between jobs */
+  blosc2_pthread_cond_t jobs_done;      /* main sleeps here until job completes */
   // Add new fields here to avoid breaking the ABI.
 };
 
@@ -128,6 +136,7 @@ struct b2nd_context_s {
 
 struct thread_context {
   blosc2_context* parent_context;
+  struct blosc_shared_pool* owner_pool;
   int tid;
   uint8_t* tmp;
   uint8_t* tmp2;
@@ -142,9 +151,14 @@ struct thread_context {
   ZSTD_CCtx* zstd_cctx;
   ZSTD_DCtx* zstd_dctx;
 #endif /* HAVE_ZSTD */
-#ifdef HAVE_IPP
-  Ipp8u* lz4_hash_table;
-#endif
+  /* Working streams for LZ4/LZ4HC dictionary compression */
+  void* lz4_cstream;   /* LZ4_stream_t* pre-loaded with dict; NULL when no dict active */
+  void* lz4hc_cstream; /* LZ4_streamHC_t* pre-loaded with dict; NULL when no dict active */
+  uint32_t my_job_seq;  /* last job_seq processed; used by BLOSC_BACKEND_PER_CONTEXT on Windows */
 };
+
+static inline bool ctx_uses_parallel_backend(const blosc2_context *context) {
+  return context != NULL && context->thread_backend != BLOSC_BACKEND_SERIAL && context->nthreads > 1;
+}
 
 #endif  /* BLOSC_CONTEXT_H */

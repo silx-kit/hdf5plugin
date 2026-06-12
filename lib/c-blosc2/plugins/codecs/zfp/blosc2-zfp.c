@@ -17,6 +17,68 @@
 #include <string.h>
 
 
+/*
+ * Validate the b2nd geometry obtained from the (untrusted) "b2nd" metalayer
+ * before it is used to drive zfp_decompress(), which writes
+ * blockshape[0]*...*blockshape[ndim-1]*typesize bytes into `output`.
+ *
+ * The decompressors receive the real output-buffer capacity in `output_len`
+ * (the block size `neblock` from the chunk header), but `blockshape` comes
+ * from the metalayer, a separate attacker-controlled field of a crafted frame.
+ * Without these checks a chunk whose blockshape is larger than its block buffer
+ * makes zfp_decompress write far past `output`, a heap buffer overflow.
+ * This mirrors the guard the NDLZ codec gained after CVE-2024-3204
+ * (plugins/codecs/ndlz/ndlz4x4.c: "blockshape is bigger than the output buffer").
+ *
+ * Returns BLOSC2_ERROR_SUCCESS when the decompressed size is known to fit.
+ */
+static int zfp_check_output_size(int deserialize_rc, int8_t ndim,
+                                 const int32_t *blockshape,
+                                 int32_t typesize, int32_t output_len) {
+  if (deserialize_rc < 0) {
+    BLOSC_TRACE_ERROR("Cannot deserialize b2nd meta info");
+    return BLOSC2_ERROR_FAILURE;
+  }
+  if (ndim <= 0 || ndim > ZFP_MAX_DIM) {
+    BLOSC_TRACE_ERROR("ndim %d is out of range for ZFP", ndim);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  if (typesize <= 0) {
+    BLOSC_TRACE_ERROR("Invalid typesize %d", typesize);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  if (output_len < 0) {
+    BLOSC_TRACE_ERROR("Negative output length");
+    return BLOSC2_ERROR_FAILURE;
+  }
+  /* Compute prod(blockshape) * typesize and compare against output_len without
+   * ever overflowing int64_t: keep nbytes bounded by `cap` at every step, so a
+   * crafted (large) blockshape cannot wrap the product past the guard. */
+  const int64_t cap = (int64_t) output_len;
+  int64_t nbytes = (int64_t) typesize;
+  for (int i = 0; i < ndim; i++) {
+    int32_t dim = blockshape[i];
+    if (dim <= 0) {
+      /* A zero or negative block dimension is malformed input; reject it rather
+       * than letting a 0 dim slip past the size guard and into zfp_field_*. */
+      BLOSC_TRACE_ERROR("Invalid blockshape dimension %d", dim);
+      return BLOSC2_ERROR_FAILURE;
+    }
+    if (nbytes > cap / dim) {
+      BLOSC_TRACE_ERROR("Decompressed block size exceeds the output buffer (%d bytes)", output_len);
+      return BLOSC2_ERROR_FAILURE;
+    }
+    nbytes *= dim;
+  }
+  if (nbytes > cap) {
+    BLOSC_TRACE_ERROR("Decompressed size (%lld bytes) is bigger than the output buffer (%d bytes)",
+                      (long long) nbytes, output_len);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
 int zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
                      int32_t output_len, uint8_t meta, blosc2_cparams *cparams, const void *chunk) {
   BLOSC_UNUSED_PARAM(chunk);
@@ -27,9 +89,9 @@ int zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
 
   double tol = (int8_t) meta;
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
   uint8_t *smeta;
   int32_t smeta_len;
   if (blosc2_meta_get(cparams->schunk, "b2nd", &smeta, &smeta_len) < 0) {
@@ -39,13 +101,41 @@ int zfp_acc_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
     BLOSC_TRACE_ERROR("b2nd layer not found!");
     return BLOSC2_ERROR_FAILURE;
   }
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
+  if (deserialize_rc < 0 || ndim <= 0 || ndim > ZFP_MAX_DIM) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Invalid b2nd meta info (ndim %d)", ndim);
+    return BLOSC2_ERROR_FAILURE;
+  }
 
   for(int i = 0; i < ndim; i++) {
     if (blockshape[i] < 4) {
-      BLOSC_TRACE_ERROR("ZFP does not support blocks smaller than cells (4x...x4");
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("ZFP does not support blocks smaller than cells (4x...x4)");
       return BLOSC2_ERROR_FAILURE;
+    }
+  }
+
+  /* The b2nd blockshape determines the dataset fed to ZFP, so the input must be
+   * a complete block.  With split streams (e.g. SplitMode.ALWAYS_SPLIT) or any
+   * partial buffer, input_len is smaller than the block: compressing would
+   * overread the input, and the result would decompress to more bytes than the
+   * stream slot it came from.  Store uncompressed in that case. */
+  {
+    int64_t block_nbytes = cparams->typesize;
+    for (int i = 0; i < ndim; i++) {
+      block_nbytes *= blockshape[i];
+    }
+    if ((int64_t) input_len != block_nbytes) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      return 0;
     }
   }
 
@@ -152,9 +242,9 @@ int zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
 
   double tol = (int8_t) meta;
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
   uint8_t *smeta;
   int32_t smeta_len;
   if (blosc2_meta_get(sc, "b2nd", &smeta, &smeta_len) < 0) {
@@ -164,8 +254,15 @@ int zfp_acc_decompress(const uint8_t *input, int32_t input_len, uint8_t *output,
     free(blockshape);
     return BLOSC2_ERROR_FAILURE;
   }
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
+
+  if (zfp_check_output_size(deserialize_rc, ndim, blockshape, typesize, output_len) < 0) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    return BLOSC2_ERROR_FAILURE;
+  }
 
   zfp_type type;     /* array scalar type */
   zfp_field *field;  /* array meta data */
@@ -243,9 +340,9 @@ int zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
   ZFP_ERROR_NULL(cparams->schunk);
 
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
   uint8_t *smeta;
   int32_t smeta_len;
   if (blosc2_meta_get(cparams->schunk, "b2nd", &smeta, &smeta_len) < 0) {
@@ -255,13 +352,41 @@ int zfp_prec_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
     BLOSC_TRACE_ERROR("b2nd layer not found!");
     return BLOSC2_ERROR_FAILURE;
   }
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
+  if (deserialize_rc < 0 || ndim <= 0 || ndim > ZFP_MAX_DIM) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Invalid b2nd meta info (ndim %d)", ndim);
+    return BLOSC2_ERROR_FAILURE;
+  }
 
   for(int i = 0; i < ndim; i++) {
     if (blockshape[i] < 4) {
-      BLOSC_TRACE_ERROR("ZFP does not support blocks smaller than cells (4x...x4");
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("ZFP does not support blocks smaller than cells (4x...x4)");
       return BLOSC2_ERROR_FAILURE;
+    }
+  }
+
+  /* The b2nd blockshape determines the dataset fed to ZFP, so the input must be
+   * a complete block.  With split streams (e.g. SplitMode.ALWAYS_SPLIT) or any
+   * partial buffer, input_len is smaller than the block: compressing would
+   * overread the input, and the result would decompress to more bytes than the
+   * stream slot it came from.  Store uncompressed in that case. */
+  {
+    int64_t block_nbytes = cparams->typesize;
+    for (int i = 0; i < ndim; i++) {
+      block_nbytes *= blockshape[i];
+    }
+    if ((int64_t) input_len != block_nbytes) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      return 0;
     }
   }
 
@@ -391,9 +516,9 @@ int zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t *output
   blosc2_schunk *sc = dparams->schunk;
   int32_t typesize = sc->typesize;
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
   uint8_t *smeta;
   int32_t smeta_len;
   if (blosc2_meta_get(sc, "b2nd", &smeta, &smeta_len) < 0) {
@@ -403,8 +528,15 @@ int zfp_prec_decompress(const uint8_t *input, int32_t input_len, uint8_t *output
     free(blockshape);
     return BLOSC2_ERROR_FAILURE;
   }
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
+
+  if (zfp_check_output_size(deserialize_rc, ndim, blockshape, typesize, output_len) < 0) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    return BLOSC2_ERROR_FAILURE;
+  }
 
   zfp_type type;     /* array scalar type */
   zfp_field *field;  /* array meta data */
@@ -509,9 +641,9 @@ int zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
 
   double ratio = (double) meta / 100.0;
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
   uint8_t *smeta;
   int32_t smeta_len;
   if (blosc2_meta_get(cparams->schunk, "b2nd", &smeta, &smeta_len) < 0) {
@@ -521,13 +653,41 @@ int zfp_rate_compress(const uint8_t *input, int32_t input_len, uint8_t *output,
     BLOSC_TRACE_ERROR("b2nd layer not found!");
     return BLOSC2_ERROR_FAILURE;
   }
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
+  if (deserialize_rc < 0 || ndim <= 0 || ndim > ZFP_MAX_DIM) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Invalid b2nd meta info (ndim %d)", ndim);
+    return BLOSC2_ERROR_FAILURE;
+  }
 
   for(int i = 0; i < ndim; i++) {
     if (blockshape[i] < 4) {
-      BLOSC_TRACE_ERROR("ZFP does not support blocks smaller than cells (4x...x4");
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("ZFP does not support blocks smaller than cells (4x...x4)");
       return BLOSC2_ERROR_FAILURE;
+    }
+  }
+
+  /* The b2nd blockshape determines the dataset fed to ZFP, so the input must be
+   * a complete block.  With split streams (e.g. SplitMode.ALWAYS_SPLIT) or any
+   * partial buffer, input_len is smaller than the block: compressing would
+   * overread the input, and the result would decompress to more bytes than the
+   * stream slot it came from.  Store uncompressed in that case. */
+  {
+    int64_t block_nbytes = cparams->typesize;
+    for (int i = 0; i < ndim; i++) {
+      block_nbytes *= blockshape[i];
+    }
+    if ((int64_t) input_len != block_nbytes) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      return 0;
     }
   }
 
@@ -645,9 +805,9 @@ int zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output
 
   double ratio = (double) meta / 100.0;
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
   uint8_t *smeta;
   int32_t smeta_len;
   if (blosc2_meta_get(sc, "b2nd", &smeta, &smeta_len) < 0) {
@@ -657,8 +817,15 @@ int zfp_rate_decompress(const uint8_t *input, int32_t input_len, uint8_t *output
     free(blockshape);
     return BLOSC2_ERROR_FAILURE;
   }
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
+
+  if (zfp_check_output_size(deserialize_rc, ndim, blockshape, typesize, output_len) < 0) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    return BLOSC2_ERROR_FAILURE;
+  }
 
   zfp_type type;     /* array scalar type */
   zfp_field *field;  /* array meta data */

@@ -24,7 +24,7 @@ The header contains information needed to decompress the Blosc chunks contained 
 msgpack and the format is as follows::
 
     |-0-|-1-|-2-|-3-|-4-|-5-|-6-|-7-|-8-|-9-|-A-|-B-|-C-|-D-|-E-|-F-|-10|-11|-12|-13|-14|-15|-16|-17|
-    | 9X| aX| "b2frame\0"                   | d2| header_size   | cf| frame_size                    |
+    | 9X| aX| "b2frame\0"                   | d2| header_len    | cf| frame_len                     |
     |---|---|-------------------------------|---|---------------|---|-------------------------------|
       ^   ^       ^                           ^                   ^
       |   |       |                           |                   |
@@ -66,11 +66,11 @@ possible filter meta-info in `filters_meta`::
 
 
     |-45|-46|-47|-48|-49|-4A|-4B|-4C|-4D|-4E|-4F|-50|-51|-52|-53|-54|-55|-56|
-    | d2| X | filters               |_f4|_f5| filters_meta          |   |   |
+    | d2| X | filters               |_f4|_f5| filters_meta          |_of|   |
     |---|---|-------------------------------|-------------------------------|
       ^   ^                           ^   ^                           ^   ^
       |   |                           |   |                           |   +-- reserved
-      |   |                           |   |                           +-- reserved
+      |   |                           |   |                           +-- other_flags2 (see below)
       |   |                           |   +-- compcodec_meta
       |   |                           +-- udcodec
       |   +--number of filters
@@ -78,7 +78,7 @@ possible filter meta-info in `filters_meta`::
 
 The last section of the header is for the *metalayers*, which contain meta-information about the data in the
 frame.  It is mandatory the use of the msgpack format for storing them, although the user may use another format
-(e.g. json) encoded as msgpack (in this case as a string). Here it is the format for the *metalayers*::
+(e.g. json) encoded as msgpack (in this case as a string). Here is the format for the *metalayers*::
 
     |-57|-58|-59|-5A|-5B|-5C|-5D|====================|---|---|---|================|
     | 93| cd| idx   | de| size  | meta keys/values   | dc|  idy  | meta content   |
@@ -94,11 +94,11 @@ frame.  It is mandatory the use of the msgpack format for storing them, although
      |   +-- [msgpack] uint16
      +-- [msgpack] fixarray with 3 elements
 
-:header_size:
-    (``int32``) Size of the header of the frame (including metalayers).
+:header_len:
+    (``int32``) Length of the header of the frame (including metalayers).
 
-:frame_size:
-    (``uint64``) Size of the whole frame (including compressed data).
+:frame_len:
+    (``uint64``) Length of the whole frame (including compressed data).
 
 :general_flags:
     (``uint8``) General flags.
@@ -119,7 +119,9 @@ frame.  It is mandatory the use of the msgpack format for storing them, although
     :``6``:
         Chunks of fixed length (0) or variable length (1)
     :``7``:
-        Reserved
+        All chunks in the frame use variable-length blocks (1) or regular blocks (0)
+
+    Frames must not mix regular chunks and variable-length-block chunks.
 
 :frame_type:
     (``uint8``) The type of frame.
@@ -161,7 +163,7 @@ frame.  It is mandatory the use of the msgpack format for storing them, although
     :``4`` to ``7``: Compression level (up to 16)
 
 :other_flags:
-    (``uint8``) Split mode and others.
+    (``uint8``) Split mode.
 
     :``0`` to ``1``:
             Enumerated for splitmodes (up to 4).
@@ -175,6 +177,14 @@ frame.  It is mandatory the use of the msgpack format for storing them, although
             :``3``:
                 ``BLOSC_FORWARD_COMPAT_SPLIT``
     :``2`` to ``7``: Reserved.
+
+:other_flags2:
+    (``uint8``) Additional compression flags.
+
+    :``0``:
+        Use dictionary compression (1) or not (0). Only meaningful for codecs that support
+        dictionaries (e.g. ZSTD).
+    :``1`` to ``7``: Reserved.
 
 :uncompressed_size:
     (``int64``) Size of uncompressed data in frame (excluding metadata).
@@ -213,7 +223,7 @@ Dumping info in metalayers
 
 **Note:** The method in this section only works for Unix.
 
-Here it is a trick for printing the content of metalayers using the nice set of
+Here is a trick for printing the content of metalayers using the nice set of
 `msgpack-tools <https://github.com/ludocode/msgpack-tools>`_ command line utilities.  After installing the package we
 can do e.g.::
 
