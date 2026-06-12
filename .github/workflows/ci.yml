@@ -51,7 +51,6 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
           CIBW_BUILD_VERBOSITY: 1
           CIBW_BUILD: ${{ matrix.cibw_build }}
-          CIBW_BEFORE_TEST: pip install "blosc2_grok==0.3.3" "blosc2<4" --only-binary ":all:"
           CIBW_TEST_EXTRAS: "test"
           # Test twice:
           # - with latest version
