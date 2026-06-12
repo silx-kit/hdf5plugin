@@ -69,23 +69,32 @@ int ndlz4_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
   }
 
   int8_t ndim;
-  int64_t *shape = malloc(8 * sizeof(int64_t));
-  int32_t *chunkshape = malloc(8 * sizeof(int32_t));
-  int32_t *blockshape = malloc(8 * sizeof(int32_t));
-  b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
+  int64_t *shape = malloc(B2ND_MAX_DIM * sizeof(int64_t));
+  int32_t *chunkshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int32_t *blockshape = malloc(B2ND_MAX_DIM * sizeof(int32_t));
+  int deserialize_rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape, NULL, NULL);
   free(smeta);
 
-  if (ndim != 2) {
+  if (deserialize_rc < 0 || ndim != 2) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
     BLOSC_TRACE_ERROR("This codec only works for ndim = 2");
     return BLOSC2_ERROR_FAILURE;
   }
 
   if (input_len != (blockshape[0] * blockshape[1])) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
     BLOSC_TRACE_ERROR("Length not equal to blocksize");
     return BLOSC2_ERROR_FAILURE;
   }
 
   if (NDLZ_UNEXPECT_CONDITIONAL(output_len < (int) (1 + ndim * sizeof(int32_t)))) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
     BLOSC_TRACE_ERROR("Output too small");
     return BLOSC2_ERROR_FAILURE;
   }
@@ -120,6 +129,9 @@ int ndlz4_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
   /* input and output buffer cannot be less than 16 and 66 bytes or we can get into trouble */
   int overhead = 17 + (blockshape[0] * blockshape[1] / 16 - 1) * 2;
   if (input_len < 16 || output_len < overhead) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
     BLOSC_TRACE_ERROR("Incorrect length or maxout");
     return 0;
   }
@@ -518,7 +530,6 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   BLOSC_ERROR_NULL(output, BLOSC2_ERROR_NULL_POINTER);
 
   uint8_t *ip = (uint8_t *) input;
-  uint8_t *ip_limit = ip + input_len;
   uint8_t *op = (uint8_t *) output;
   uint8_t ndim;
   int32_t blockshape[2];
@@ -526,9 +537,34 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   uint8_t *buffercpy;
   uint8_t local_buffer[16];
   uint8_t token;
-  if (NDLZ_UNEXPECT_CONDITIONAL(input_len < 8)) {
+  // The fixed header is 1 (ndim) + 2 * int32 (blockshape) = 9 bytes.  Reject any
+  // input too short to hold it -- the previous `< 8` check let an 8-byte input
+  // through and the header parse below then read a 9th byte.  The cast keeps the
+  // comparison signed so a negative `input_len` is rejected here, before the
+  // `ip + input_len` pointer arithmetic (which would otherwise be UB) is reached.
+  if (NDLZ_UNEXPECT_CONDITIONAL(input_len < (int32_t) (1 + 2 * sizeof(int32_t)))) {
     return 0;
   }
+  uint8_t *ip_limit = ip + input_len;
+
+  // Validate that a read of `len` bytes starting at byte offset `pos` (measured
+  // from the start of `input`) lies fully within the compressed buffer.  A
+  // crafted token `offset` otherwise makes a back-reference point before
+  // `input`, and the cell-fill memcpy then leaks out-of-bounds heap memory into
+  // the (attacker-visible) output buffer -- CWE-125.  The per-cell `ip > ip_limit`
+  // check is not enough because each cell reads a 2-byte offset and literal bytes
+  // past that point.  All arithmetic is done on integer offsets so we never form
+  // an out-of-bounds pointer (which is undefined behaviour in C, even when the
+  // pointer is only compared and not dereferenced).
+#define NDLZ4_CHECK_RANGE(pos, len)                                              \
+  do {                                                                           \
+    int64_t _pos = (int64_t) (pos);                                              \
+    int64_t _len = (int64_t) (len);                                              \
+    if (_pos < 0 || _len < 0 || _pos > (int64_t) input_len - _len) {             \
+      BLOSC_TRACE_ERROR("ndlz4: out-of-bounds reference in compressed stream");  \
+      return BLOSC2_ERROR_FAILURE;                                               \
+    }                                                                            \
+  } while (0)
 
   /* we start with literal copy */
   ndim = *ip;
@@ -583,21 +619,31 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
       } else {
         padding[1] = 4;
       }
+      int64_t cur = ip - (const uint8_t *) input;   // in-range: ip is within [input, ip_limit]
+      NDLZ4_CHECK_RANGE(cur, 1);
       token = *ip++;
       if (token == 0) {    // no match
+        NDLZ4_CHECK_RANGE(cur + 1, (int64_t) padding[0] * padding[1]);
         buffercpy = ip;
         ip += padding[0] * padding[1];
       } else if (token == (uint8_t) ((1U << 7U) | (1U << 6U))) {  // cell match
-        uint16_t offset = *((uint16_t *) ip);
-        buffercpy = ip - offset - 1;
+        NDLZ4_CHECK_RANGE(cur + 1, 2);
+        uint16_t offset;
+        memcpy(&offset, ip, sizeof(offset));
+        int64_t bpos = (cur + 1) - (int64_t) offset - 1;   // back-reference start offset
+        NDLZ4_CHECK_RANGE(bpos, (int64_t) padding[0] * padding[1]);
+        buffercpy = (uint8_t *) input + bpos;
         ip += 2;
       } else if (token == (uint8_t) (1U << 6U)) { // whole cell of same element
+        NDLZ4_CHECK_RANGE(cur + 1, 1);
         buffercpy = cell_aux;
         memset(buffercpy, *ip, 16);
         ip++;
       } else if (token >= 224) { // three rows match
         buffercpy = local_buffer;
-        uint16_t offset = *((uint16_t *) ip);
+        NDLZ4_CHECK_RANGE(cur + 1, 2);
+        uint16_t offset;
+        memcpy(&offset, ip, sizeof(offset));
         offset += 3;
         ip += 2;
         int i, j, k;
@@ -619,11 +665,15 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
             }
           }
         }
-        memcpy(&buffercpy[i * 4], ip - offset, 4);
-        memcpy(&buffercpy[j * 4], ip - offset + 4, 4);
-        memcpy(&buffercpy[k * 4], ip - offset + 8, 4);
+        int64_t bpos = (cur + 3) - (int64_t) offset;   // == (ip - offset) as an offset
+        NDLZ4_CHECK_RANGE(bpos, 12);
+        const uint8_t *ref = (const uint8_t *) input + bpos;
+        memcpy(&buffercpy[i * 4], ref, 4);
+        memcpy(&buffercpy[j * 4], ref + 4, 4);
+        memcpy(&buffercpy[k * 4], ref + 8, 4);
         for (int l = 0; l < 4; l++) {
           if ((l != i) && (l != j) && (l != k)) {
+            NDLZ4_CHECK_RANGE(ip - (const uint8_t *) input, 4);
             memcpy(&buffercpy[l * 4], ip, 4);
             ip += 4;
             break;
@@ -632,7 +682,9 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
 
       } else if ((token >= 128) && (token <= 191)) { // rows pair match
         buffercpy = local_buffer;
-        uint16_t offset = *((uint16_t *) ip);
+        NDLZ4_CHECK_RANGE(cur + 1, 2);
+        uint16_t offset;
+        memcpy(&offset, ip, sizeof(offset));
         offset += 3;
         ip += 2;
         int i, j;
@@ -643,20 +695,28 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
           i = (token - 128) >> 5U;
           j = ((token - 128) >> 3U) - (i << 2U);
         }
-        memcpy(&buffercpy[i * 4], ip - offset, 4);
-        memcpy(&buffercpy[j * 4], ip - offset + 4, 4);
+        int64_t bpos = (cur + 3) - (int64_t) offset;
+        NDLZ4_CHECK_RANGE(bpos, 8);
+        const uint8_t *ref = (const uint8_t *) input + bpos;
+        memcpy(&buffercpy[i * 4], ref, 4);
+        memcpy(&buffercpy[j * 4], ref + 4, 4);
         for (int k = 0; k < 4; k++) {
           if ((k != i) && (k != j)) {
+            NDLZ4_CHECK_RANGE(ip - (const uint8_t *) input, 4);
             memcpy(&buffercpy[k * 4], ip, 4);
             ip += 4;
           }
         }
       } else if ((token >= 40) && (token <= 63)) {  // 2 rows pair matches
         buffercpy = local_buffer;
-        uint16_t offset_1 = *((uint16_t *) ip);
+        NDLZ4_CHECK_RANGE(cur + 1, 2);
+        uint16_t offset_1;
+        memcpy(&offset_1, ip, sizeof(offset_1));
         offset_1 += 5;
         ip += 2;
-        uint16_t offset_2 = *((uint16_t *) ip);
+        NDLZ4_CHECK_RANGE(cur + 3, 2);
+        uint16_t offset_2;
+        memcpy(&offset_2, ip, sizeof(offset_2));
         offset_2 += 5;
         ip += 2;
         int i, j, k, l, m;
@@ -672,10 +732,16 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
             }
           }
         }
-        memcpy(&buffercpy[i * 4], ip - offset_1, 4);
-        memcpy(&buffercpy[j * 4], ip - offset_1 + 4, 4);
-        memcpy(&buffercpy[l * 4], ip - offset_2, 4);
-        memcpy(&buffercpy[m * 4], ip - offset_2 + 4, 4);
+        int64_t bpos1 = (cur + 5) - (int64_t) offset_1;
+        NDLZ4_CHECK_RANGE(bpos1, 8);
+        const uint8_t *ref1 = (const uint8_t *) input + bpos1;
+        memcpy(&buffercpy[i * 4], ref1, 4);
+        memcpy(&buffercpy[j * 4], ref1 + 4, 4);
+        int64_t bpos2 = (cur + 5) - (int64_t) offset_2;
+        NDLZ4_CHECK_RANGE(bpos2, 8);
+        const uint8_t *ref2 = (const uint8_t *) input + bpos2;
+        memcpy(&buffercpy[l * 4], ref2, 4);
+        memcpy(&buffercpy[m * 4], ref2 + 4, 4);
 
       } else {
         BLOSC_TRACE_ERROR("Invalid token: %u at cell [%d, %d]\n", token, ii[0], ii[1]);
@@ -687,8 +753,13 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
         if (i < padding[0]) {
           ind = orig + i * blockshape[1];
           memcpy(&op[ind], buffercpy, padding[1]);
+          // Only advance over rows we actually consume.  For a literal cell
+          // (token == 0) buffercpy points into the input and only holds
+          // padding[0] * padding[1] bytes; advancing unconditionally for the
+          // trailing padding rows would form an out-of-bounds pointer (UB)
+          // for the block's last cell.  The skipped rows are never read.
+          buffercpy += padding[1];
         }
-        buffercpy += padding[1];
       }
       if (ind > (uint32_t) output_len) {
         BLOSC_TRACE_ERROR("Exceeding output size");
@@ -708,4 +779,5 @@ int ndlz4_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, i
   }
 
   return (int) ind;
+#undef NDLZ4_CHECK_RANGE
 }
