@@ -81,16 +81,12 @@ extern "C" {
 
 
 /* Version numbers */
-#define BLOSC2_VERSION_MAJOR    2    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    23   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  0   /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MAJOR    3    /* for major interface/format changes  */
+#define BLOSC2_VERSION_MINOR    1   /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  3  /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "2.23.0"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2026-01-29 #$"    /* date version year-month-day */
-
-
-/* The maximum number of dimensions for Blosc2 NDim arrays */
-#define BLOSC2_MAX_DIM 8
+#define BLOSC2_VERSION_STRING   "3.1.3"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2026-06-10 #$"    /* date version year-month-day */
 
 
 /* Tracing macros */
@@ -143,7 +139,9 @@ enum {
   BLOSC2_VERSION_FORMAT_ALPHA = 3,
   BLOSC2_VERSION_FORMAT_BETA1 = 4,
   BLOSC2_VERSION_FORMAT_STABLE = 5,
-  BLOSC2_VERSION_FORMAT = BLOSC2_VERSION_FORMAT_STABLE,
+  BLOSC2_VERSION_FORMAT_VL_BLOCKS = 6,
+  /* Highest chunk format version supported by this library. */
+  BLOSC2_VERSION_FORMAT = BLOSC2_VERSION_FORMAT_VL_BLOCKS,
 };
 
 
@@ -152,11 +150,13 @@ enum {
   /* Blosc format version
    *  1 -> First version (introduced in beta.2)
    *  2 -> Second version (introduced in rc.1)
-   *
+  *
    */
   BLOSC2_VERSION_FRAME_FORMAT_BETA2 = 1,  // for 2.0.0-beta2 and after
   BLOSC2_VERSION_FRAME_FORMAT_RC1 = 2,    // for 2.0.0-rc1 and after
-  BLOSC2_VERSION_FRAME_FORMAT = BLOSC2_VERSION_FRAME_FORMAT_RC1,
+  BLOSC2_VERSION_FRAME_FORMAT_VL_BLOCKS = 3,
+  /* Highest cframe format version supported by this library. */
+  BLOSC2_VERSION_FRAME_FORMAT = BLOSC2_VERSION_FRAME_FORMAT_VL_BLOCKS,
 };
 
 
@@ -250,12 +250,12 @@ enum {
   BLOSC_NOFILTER = 0,
   //!< No filter.
   BLOSC_SHUFFLE = 1,
-  //!< Byte-wise shuffle. `filters_meta` does not have any effect here.
+  //!< Byte-wise shuffle. `filters_meta` is the number of bytestreams to shuffle from the input. If 0, defaults to typesize.
   BLOSC_BITSHUFFLE = 2,
-  //!< Bit-wise shuffle. `filters_meta` does not have any effect here.
+  //!< Bit-wise shuffle. `filters_meta` does not have any effect.
 #endif // BLOSC_H
   BLOSC_DELTA = 3,
-  //!< Delta filter. `filters_meta` does not have any effect here.
+  //!< Delta filter (bitwise XOR relative to reference). `filters_meta` does not have any effect.
   BLOSC_TRUNC_PREC = 4,
   //!< Truncate mantissa precision.
   //!< Positive values in `filters_meta` will keep bits; negative values will zero bits.
@@ -287,10 +287,18 @@ enum {
 };
 
 /**
+ * @brief Codes for flags in the secondary Blosc2 header byte.
+ */
+enum {
+  BLOSC2_VL_BLOCKS = 0x1,        //!< chunk uses variable-length blocks
+};
+
+/**
  * @brief Values for different Blosc2 capabilities
  */
 enum {
-  BLOSC2_MAXDICTSIZE = 128 * 1024, //!< maximum size for compression dicts
+  BLOSC2_MAXDICTSIZE = 32 * 1024,  //!< maximum size for compression dicts
+  BLOSC2_MINUSEFULDICT = 256,      //!< minimum dict size considered useful; smaller → fall back to plain compression
   BLOSC2_MAXBLOCKSIZE = 536866816, //!< maximum size for blocks
   BLOSC2_MAXTYPESIZE = BLOSC2_MAXBLOCKSIZE, //!< maximum size for types
 };
@@ -420,6 +428,7 @@ enum {
   BLOSC2_CHUNK_CBYTES = 0xc,        //!< (int32) compressed size of the buffer (including this header)
   BLOSC2_CHUNK_FILTER_CODES = 0x10, //!< the codecs for the filter pipeline (1 byte per code)
   BLOSC2_CHUNK_FILTER_META = 0x18,  //!< meta info for the filter pipeline (1 byte per code)
+  BLOSC2_CHUNK_BLOSC2_FLAGS2 = 0x1e,//!< second flags byte specific for Blosc2 functionality
   BLOSC2_CHUNK_BLOSC2_FLAGS = 0x1F, //!< flags specific for Blosc2 functionality
 };
 
@@ -890,13 +899,20 @@ BLOSC_EXPORT void blosc1_cbuffer_sizes(const void* cbuffer, size_t* nbytes,
  *
  * @param cbuffer The buffer of compressed data.
  * @param nbytes The pointer where the number of uncompressed bytes will be put.
- * @param cbytes The pointer where the number of compressed bytes will be put.
+ * @param cbytes The pointer where the number of compressed bytes stored in the
+ * chunk header will be put.
  * @param blocksize The pointer where the block size will be put.
  *
  * @note: if any of the nbytes, cbytes or blocksize is NULL, it will not be returned.
  *
  * You only need to pass the first BLOSC_MIN_HEADER_LENGTH bytes of a
  * compressed buffer for this call to work.
+ *
+ * @note For lazy chunks returned by #blosc2_schunk_get_lazychunk, the returned
+ * @p cbytes value is still the compressed size encoded in the chunk header,
+ * not the full size of the lazy proxy buffer.  When passing a lazy chunk to
+ * #blosc2_decompress_ctx or #blosc2_getitem_ctx, use the size returned by
+ * #blosc2_schunk_get_lazychunk as @p srcsize.
  *
  * @return On failure, returns negative value.
  */
@@ -1161,7 +1177,8 @@ typedef struct {
   uint8_t clevel;
   //!< The compression level (5).
   int use_dict;
-  //!< Use dicts or not when compressing (only for ZSTD).
+  //!< Use dicts or not when compressing. Only ZSTD and LZ4/LZ4HC support this;
+  //!< other codecs will return an error if this is set.
   int32_t typesize;
   //!< The type size (8).
   int16_t nthreads;
@@ -1465,6 +1482,22 @@ BLOSC_EXPORT int blosc2_compress_ctx(
         blosc2_context* context, const void* src, int32_t srcsize, void* dest,
         int32_t destsize);
 
+/**
+ * @brief Context interface to Blosc compression for chunks with variable-length blocks.
+ *
+ * @param context A blosc2_context struct with the different compression params.
+ * @param srcs A list of pointers, one per block.
+ * @param srcsizes A list of uncompressed sizes, one per block.
+ * @param nblocks The number of blocks in the chunk.
+ * @param dest The buffer where the compressed chunk will be put.
+ * @param destsize The size in bytes of the @p dest buffer.
+ *
+ * @return The number of bytes compressed, or a negative error code.
+ */
+BLOSC_EXPORT int blosc2_vlcompress_ctx(
+        blosc2_context* context, const void* const* srcs, const int32_t* srcsizes,
+        int32_t nblocks, void* dest, int32_t destsize);
+
 
 /**
  * @brief Context interface to Blosc decompression. This does not require a
@@ -1474,7 +1507,10 @@ BLOSC_EXPORT int blosc2_compress_ctx(
  *
  * @param context The blosc2_context struct with the different compression params.
  * @param src The buffer of compressed data.
- * @param srcsize The length of buffer of compressed data.
+ * @param srcsize The length of buffer of compressed data.  If @p src is a lazy
+ * chunk returned by #blosc2_schunk_get_lazychunk, pass the size returned by
+ * #blosc2_schunk_get_lazychunk here rather than the @p cbytes value reported by
+ * #blosc2_cbuffer_sizes.
  * @param dest The buffer where the decompressed data will be put.
  * @param destsize The size in bytes of the @p dest buffer.
  *
@@ -1500,6 +1536,69 @@ BLOSC_EXPORT int blosc2_compress_ctx(
  */
 BLOSC_EXPORT int blosc2_decompress_ctx(blosc2_context* context, const void* src,
                                        int32_t srcsize, void* dest, int32_t destsize);
+
+/**
+ * @brief Context interface to Blosc decompression for chunks with variable-length blocks.
+ *
+ * @param context The blosc2_context struct with the different decompression params.
+ * @param src The buffer of compressed data.
+ * @param srcsize The length of buffer of compressed data.
+ * @param dests On output, one newly allocated buffer per block.
+ * @param destsizes On output, the uncompressed sizes of the blocks.
+ * @param maxblocks The number of entries available in @p dests and @p destsizes.
+ *
+ * @return The number of blocks decompressed, or a negative error code.
+ */
+BLOSC_EXPORT int blosc2_vldecompress_ctx(blosc2_context* context, const void* src,
+                                         int32_t srcsize, void** dests,
+                                         int32_t* destsizes, int32_t maxblocks);
+
+/**
+ * @brief Return the number of variable-length blocks stored in a VL-block chunk.
+ *
+ * This is a header-only query: it reads only the chunk header and does not
+ * allocate or decompress anything.
+ *
+ * @param src The buffer of compressed data.  Must carry the #BLOSC2_VL_BLOCKS flag.
+ * @param srcsize The length of the compressed data buffer.
+ * @param nblocks On success, the number of VL blocks in the chunk.
+ *
+ * @return 0 on success, or a negative error code.
+ *   Returns #BLOSC2_ERROR_INVALID_PARAM if the chunk does not use VL blocks.
+ */
+BLOSC_EXPORT int blosc2_vlchunk_get_nblocks(const void* src, int32_t srcsize,
+                                            int32_t* nblocks);
+
+/**
+ * @brief Decompress a single variable-length block from a VL-block chunk.
+ *
+ * Only the requested block is decompressed and allocated; all other blocks
+ * in the chunk are untouched.
+ *
+ * @param context A decompression context (#blosc2_context created with
+ *   #blosc2_create_dctx).  If @p src is a lazy chunk (obtained via
+ *   #blosc2_schunk_get_lazychunk), the caller must set @c context->schunk
+ *   to the owning super-chunk (which must have an associated frame) before
+ *   calling this function; the frame is used to read block data from disk.
+ * @param src The buffer of compressed data.  Must carry the #BLOSC2_VL_BLOCKS flag.
+ *   May be a fully in-memory chunk or a lazy chunk proxy.
+ * @param srcsize The length of the compressed data buffer.
+ * @param nblock Zero-based index of the block to decompress.
+ * @param dest On success, points to a newly allocated buffer containing the
+ *   decompressed block.  The caller is responsible for freeing this buffer with
+ *   @c free().
+ * @param destsize On success, the uncompressed byte size of the block.
+ *
+ * @return The uncompressed byte size of the block on success, or a negative
+ *   error code.  Returns #BLOSC2_ERROR_INVALID_PARAM if the chunk does not use
+ *   VL blocks or if @p nblock is out of range.
+ */
+BLOSC_EXPORT int blosc2_vldecompress_block_ctx(blosc2_context* context,
+                                               const void* src,
+                                               int32_t srcsize,
+                                               int32_t nblock,
+                                               uint8_t** dest,
+                                               int32_t* destsize);
 
 /**
  * @brief Create a chunk made of zeros.
@@ -1574,7 +1673,10 @@ BLOSC_EXPORT int blosc2_chunk_uninit(blosc2_cparams cparams, int32_t nbytes,
  *
  * @param context Context pointer.
  * @param src The compressed buffer from data will be decompressed.
- * @param srcsize Compressed buffer length.
+ * @param srcsize Compressed buffer length.  If @p src is a lazy chunk returned by
+ * #blosc2_schunk_get_lazychunk, pass the size returned by
+ * #blosc2_schunk_get_lazychunk here rather than the @p cbytes value reported by
+ * #blosc2_cbuffer_sizes.
  * @param start The position of the first item (of @p typesize size) from where data
  * will be retrieved.
  * @param nitems The number of items (of @p typesize size) that will be retrieved.
@@ -1688,6 +1790,10 @@ typedef struct blosc2_schunk {
   //!< The requested size of the compressed blocks (0; meaning automatic).
   int32_t chunksize;
   //!< Size of each chunk. 0 if not a fixed chunksize.
+  uint8_t flags2;
+  //!< Secondary chunk-format flags shared by all chunks in the schunk. 0 when empty.
+  uint8_t use_dict;
+  //!< Whether to use a dictionary for codec compression (1) or not (0).
   uint8_t filters[BLOSC2_MAX_FILTERS];
   //!< The (sequence of) filters.  8-bit per filter.
   uint8_t filters_meta[BLOSC2_MAX_FILTERS];
@@ -1992,6 +2098,12 @@ BLOSC_EXPORT int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, 
  *
  * @warning Currently, a lazy chunk can only be used by #blosc2_decompress_ctx and #blosc2_getitem_ctx.
  *
+ * @note The return value is the effective size of the returned buffer.  For lazy
+ * chunks, use this return value as @p srcsize when calling
+ * #blosc2_decompress_ctx or #blosc2_getitem_ctx.  This value can be larger than
+ * the @p cbytes reported by #blosc2_cbuffer_sizes because lazy chunks carry
+ * extra trailer metadata.
+ *
  * @warning If the super-chunk is backed by a frame that is disk-based, a buffer is allocated for the
  * (compressed) chunk, and hence a free is needed.
  * You can check whether requires a free with the @p needs_free parameter.
@@ -1999,12 +2111,37 @@ BLOSC_EXPORT int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, 
  * (or the backing in-memory frame) is returned in the @p chunk parameter.  In this case the returned
  * chunk is not lazy.
  *
- * @return The size of the (compressed) chunk or 0 if it is non-initialized. If some problem is
- * detected, a negative code is returned instead.  Note that a lazy chunk is somewhat larger than
- * a regular chunk because of the trailer section (for details see `README_CHUNK_FORMAT.rst`).
+ * @return The size of the returned chunk buffer, or 0 if it is non-initialized.
+ * If some problem is detected, a negative code is returned instead.  For regular
+ * chunks this matches the compressed chunk size.  Note that a lazy chunk is
+ * somewhat larger than a regular chunk because of the trailer section (for
+ * details see `README_CHUNK_FORMAT.rst`).
  */
 BLOSC_EXPORT int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk,
                                              bool *needs_free);
+
+/**
+ * @brief Decompress a single variable-length block from a schunk chunk.
+ *
+ * Convenience wrapper around #blosc2_vldecompress_block_ctx that fetches the
+ * compressed chunk from @p schunk and decompresses only the requested VL block.
+ * Only the requested block is allocated and decompressed; all other blocks in
+ * the chunk are untouched.
+ *
+ * @param schunk The super-chunk from which to read.
+ * @param nchunk Zero-based index of the chunk inside the super-chunk.
+ * @param nblock Zero-based index of the VL block inside the chunk.
+ * @param dest On success, points to a newly allocated buffer containing the
+ *   decompressed block.  The caller is responsible for freeing it with @c free().
+ * @param destsize On success, the uncompressed byte size of the block.
+ *
+ * @return The uncompressed byte size of the block on success, or a negative
+ *   error code.  Returns #BLOSC2_ERROR_INVALID_PARAM if the chunk does not use
+ *   VL blocks or if @p nblock is out of range.
+ */
+BLOSC_EXPORT int blosc2_schunk_get_vlblock(blosc2_schunk *schunk, int64_t nchunk,
+                                           int32_t nblock,
+                                           uint8_t **dest, int32_t *destsize);
 
 /**
  * @brief Fill buffer with a schunk slice.
@@ -2020,6 +2157,22 @@ BLOSC_EXPORT int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchu
  * @return An error code.
  */
 BLOSC_EXPORT int blosc2_schunk_get_slice_buffer(blosc2_schunk *schunk, int64_t start, int64_t stop, void *buffer);
+
+/**
+ * @brief Fill buffer with elements at the given coordinates from a schunk.
+ *
+ * @param schunk The super-chunk from where to extract elements.
+ * @param ncoords The number of coordinates.
+ * @param coords The coordinates of the elements to be extracted.
+ * @param buffer The buffer where the data will be stored.
+ *
+ * @warning You must make sure that you have enough space in buffer to store the
+ * uncompressed data.
+ *
+ * @return An error code.
+ */
+BLOSC_EXPORT int blosc2_schunk_get_sparse_buffer(blosc2_schunk *schunk, int64_t ncoords,
+                                                 const int64_t* coords, void *buffer);
 
 /**
  * @brief Update a schunk slice from buffer.
@@ -2165,20 +2318,51 @@ BLOSC_EXPORT int blosc2_meta_update(blosc2_schunk *schunk, const char *name, uin
  * @warning The @p **content receives a malloc'ed copy of the content.
  * The user is responsible of freeing it.
  *
- * @note This function is inlined and available even when not linking with libblosc2.
+ * @note This function is inlined so that external codec/filter plugins (like
+ * blosc2_grok) can use it without linking against libblosc2.  This avoids
+ * pulling all of libblosc2's symbols (e.g. internal ZFP, Zstd) into the
+ * global namespace at load time, which would otherwise shadow symbols from
+ * other libraries that need differently-configured builds of the same
+ * dependencies.
  *
  * @return If successful, the index of the new metalayer. Else, return a negative value.
  */
 static inline int blosc2_meta_get(blosc2_schunk *schunk, const char *name, uint8_t **content,
                                   int32_t *content_len) {
+  if (schunk == NULL || name == NULL || content == NULL || content_len == NULL) {
+    BLOSC_TRACE_ERROR("Invalid parameters.");
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+
   int nmetalayer = blosc2_meta_exists(schunk, name);
   if (nmetalayer < 0) {
     BLOSC_TRACE_WARNING("Metalayer \"%s\" not found.", name);
     return nmetalayer;
   }
-  *content_len = schunk->metalayers[nmetalayer]->content_len;
-  *content = (uint8_t*)malloc((size_t)*content_len);
-  memcpy(*content, schunk->metalayers[nmetalayer]->content, (size_t)*content_len);
+  int32_t len = schunk->metalayers[nmetalayer]->content_len;
+  if (len < 0) {
+    BLOSC_TRACE_ERROR("Metalayer \"%s\" has corrupted content length %d.", name, len);
+    return BLOSC2_ERROR_DATA;
+  }
+  *content_len = len;
+  if (len == 0) {
+    *content = NULL;
+    return nmetalayer;
+  }
+  *content = (uint8_t*)malloc((size_t)len);
+  if (*content == NULL) {
+    BLOSC_TRACE_ERROR("Unable to allocate metalayer content buffer.");
+    *content_len = 0;
+    return BLOSC2_ERROR_MEMORY_ALLOC;
+  }
+  if (len > 0 && schunk->metalayers[nmetalayer]->content == NULL) {
+    free(*content);
+    *content = NULL;
+    *content_len = 0;
+    BLOSC_TRACE_ERROR("Metalayer \"%s\" has corrupted content pointer.", name);
+    return BLOSC2_ERROR_DATA;
+  }
+  memcpy(*content, schunk->metalayers[nmetalayer]->content, (size_t)len);
   return nmetalayer;
 }
 
@@ -2514,7 +2698,7 @@ BLOSC_EXPORT void blosc2_multidim_to_unidim(const int64_t *index, int8_t ndim, c
  * @return The number of chunks needed to get the slice. If some problem is
  * detected, a negative code is returned instead.
  */
-BLOSC_EXPORT int blosc2_get_slice_nchunks(blosc2_schunk* schunk, int64_t *start, int64_t *stop, int64_t **chunks_idx);
+BLOSC_EXPORT int64_t blosc2_get_slice_nchunks(blosc2_schunk* schunk, int64_t *start, int64_t *stop, int64_t **chunks_idx);
 
 
 /*********************************************************************
@@ -2633,6 +2817,9 @@ static inline void swap_store(void *dest, const void *pa, int size) {
       default:
         fprintf(stderr, "Unhandled nitems: %d\n", size);
     }
+  } else {
+    /* big endian: native byte order is already big-endian, just copy */
+    memcpy(pa2_, pa_, size);
   }
   memcpy(dest, pa2_, size);
   free(pa2_);

@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include "test_common.h"
+#include "sframe.h"
 
 #define CHUNKSIZE (200 * 1000)
 #define NTHREADS (2)
@@ -91,14 +92,18 @@ static char* test_sframe(void) {
   }
 
   if (metalayers) {
-    uint8_t* _content;
-    int32_t _content_len;
-    blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
+    uint8_t* _content = NULL;
+    int32_t _content_len = 0;
+    int rc = blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
+    mu_assert("ERROR: cannot get metalayer1", rc >= 0);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
       free(_content);
     }
-    blosc2_meta_get(schunk, "metalayer2", &_content, &_content_len);
+    _content = NULL;
+    _content_len = 0;
+    rc = blosc2_meta_get(schunk, "metalayer2", &_content, &_content_len);
+    mu_assert("ERROR: cannot get metalayer2", rc >= 0);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
       free(_content);
@@ -126,14 +131,18 @@ static char* test_sframe(void) {
   mu_assert("ERROR: wrong number of append chunks", _nchunks == nchunks);
 
   if (metalayers) {
-    uint8_t* _content;
-    int32_t _content_len;
-    blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
+    uint8_t* _content = NULL;
+    int32_t _content_len = 0;
+    int rc = blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
+    mu_assert("ERROR: cannot get metalayer1", rc >= 0);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
       free(_content);
     }
-    blosc2_meta_get(schunk, "metalayer2", &_content, &_content_len);
+    _content = NULL;
+    _content_len = 0;
+    rc = blosc2_meta_get(schunk, "metalayer2", &_content, &_content_len);
+    mu_assert("ERROR: cannot get metalayer2", rc >= 0);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
       free(_content);
@@ -173,14 +182,18 @@ static char* test_sframe(void) {
   }
 
   if (metalayers) {
-    uint8_t* _content;
-    int32_t _content_len;
-    blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
+    uint8_t* _content = NULL;
+    int32_t _content_len = 0;
+    int rc = blosc2_meta_get(schunk, "metalayer1", &_content, &_content_len);
+    mu_assert("ERROR: cannot get metalayer1", rc >= 0);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer1", _content_len) == 0);
     if (_content != NULL) {
       free(_content);
     }
-    blosc2_meta_get(schunk, "metalayer2", &_content, &_content_len);
+    _content = NULL;
+    _content_len = 0;
+    rc = blosc2_meta_get(schunk, "metalayer2", &_content, &_content_len);
+    mu_assert("ERROR: cannot get metalayer2", rc >= 0);
     mu_assert("ERROR: bad metalayer content", strncmp((char*)_content, "my metalayer2", _content_len) == 0);
     if (_content != NULL) {
       free(_content);
@@ -321,6 +334,40 @@ static char* test_sframe_typesize(void) {
 }
 
 
+static char* test_sframe_reject_large_chunk_index(void) {
+  blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
+  blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
+  blosc2_storage storage = {
+      .contiguous = false,
+      .urlpath = "test_sframe_reject_large_chunk_index.b2frame",
+      .cparams = &cparams,
+      .dparams = &dparams,
+  };
+
+  blosc2_init();
+  blosc2_remove_dir(storage.urlpath);
+
+  blosc2_schunk* schunk = blosc2_schunk_new(&storage);
+  mu_assert("Error in creating schunk", schunk != NULL);
+
+  // Chunk IDs are encoded as 8-hex-digit filenames. Values beyond UINT32_MAX must be rejected.
+  int64_t out_of_range_chunk = (int64_t)UINT32_MAX + 1;
+  blosc2_io io = BLOSC2_IO_DEFAULTS;
+  void* fp = sframe_open_chunk(storage.urlpath, out_of_range_chunk, "wb", &io);
+  mu_assert("Out-of-range chunk index should be rejected", fp == NULL);
+
+  // If rejection worked, chunk 0 was not spuriously created via truncation.
+  void* fp0 = sframe_open_chunk(storage.urlpath, 0, "rb", &io);
+  mu_assert("Chunk 0 must not exist after rejecting out-of-range chunk index", fp0 == NULL);
+
+  blosc2_schunk_free(schunk);
+  blosc2_remove_dir(storage.urlpath);
+  blosc2_destroy();
+
+  return EXIT_SUCCESS;
+}
+
+
 static char *all_tests(void) {
   directory = "dir1.b2frame";
 
@@ -341,6 +388,8 @@ static char *all_tests(void) {
 
   nchunks = 10;
   mu_run_test(test_sframe_typesize);
+
+  mu_run_test(test_sframe_reject_large_chunk_index);
 
   // Check directory with a trailing slash
   directory = "dir1.b2frame/";

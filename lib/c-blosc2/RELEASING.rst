@@ -9,6 +9,14 @@ Preliminaries
 
 - Check that *VERSION* symbols in include/blosc2.h contains the correct info.
 
+- Check that all public functions are covered in the reference docs::
+
+    $ python3 doc/check_missing_docs.py
+
+  If any are missing, add them to the appropriate ``.rst`` file under
+  ``doc/reference/``.  If a function is intentionally left undocumented,
+  add it to ``INTENTIONAL_SKIP`` in ``doc/check_missing_docs.py``.
+
 - If API/ABI changes, please increase the minor number (e.g. 2.15 -> 2.16) *and*
   bump the SOVERSION in blosc/CMakeLists.txt.
   When in doubt on when SOVERSION should change, see these nice guidelines:
@@ -37,8 +45,9 @@ First, go to the compat/ directory and generate a file with the current
 version::
 
   $ cd ../compat
-  $ export LD_LIBRARY_PATH=../build/blosc
-  $ gcc -o filegen filegen.c -L$LD_LIBRARY_PATH -lblosc2 -I../include
+  $ export LD_LIBRARY_PATH=../build/blosc      # Linux
+  $ export DYLD_LIBRARY_PATH=../build/blosc    # macOS
+  $ gcc -o filegen filegen.c -L../build/blosc -lblosc2 -I../include
   $ ./filegen compress lz4 blosc-lz4-1.y.z.cdata
 
 In order to make sure that we are not breaking forward compatibility,
@@ -47,8 +56,9 @@ the Blosc library (suggestion: 1.3.0, 1.7.0, 1.11.1, 1.14.1, 2.0.0).
 
 You can compile the utility with different blosc shared libraries with::
 
-  $ export LD_LIBRARY_PATH=shared_blosc_library_path
-  $ gcc -o filegen filegen.c -L$LD_LIBRARY_PATH -lblosc -Iblosc2.h_include_path
+  $ export LD_LIBRARY_PATH=shared_blosc_library_path      # Linux
+  $ export DYLD_LIBRARY_PATH=shared_blosc_library_path    # macOS
+  $ gcc -o filegen filegen.c -Lshared_blosc_library_path -lblosc -Iblosc2.h_include_path
 
 Then, test the file created with the new version with::
 
@@ -56,6 +66,43 @@ Then, test the file created with the new version with::
 
 Repeat this for every codec shipped with Blosc (blosclz, lz4, lz4hc, zlib and
 zstd).
+
+For shuffle-only fixtures, use the matching inverse operation instead of
+``decompress``::
+
+  $ ./filegen unshuffle shuffle-2.20.0.cdata
+  $ ./filegen bitunshuffle bitshuffle-2.20.0.cdata
+
+For VL-block cframe compatibility checks, use ``compat/filegen-vl``.
+This utility can generate two kinds of persistent cframes:
+
+* a cframe with VL-block chunks and fixed chunk sizes
+* a cframe with VL-block chunks and variable chunk sizes
+
+Generate them with the current version::
+
+  $ cd ../compat
+  $ export LD_LIBRARY_PATH=../build/blosc      # Linux
+  $ export DYLD_LIBRARY_PATH=../build/blosc    # macOS
+  $ gcc -o filegen-vl filegen-vl.c -L../build/blosc -lblosc2 -I../include
+  $ ./filegen-vl compress lz4 vlblocks-lz4-fixed-2.y.z.b2frame
+  $ ./filegen-vl compress lz4 vlblocks-lz4-variable-2.y.z.b2frame --variable-chunks
+  $ ./filegen-vl compress lz4 varchunks-lz4-2.y.z.b2frame --regular
+
+Then, build ``compat/filegen-vl`` against the target Blosc library and check
+the fixtures with::
+
+  $ ./filegen-vl decompress vlblocks-lz4-fixed-3.0.0.b2frame
+  $ ./filegen-vl decompress vlblocks-lz4-variable-3.0.0.b2frame
+  $ ./filegen-vl decompress varchunks-lz4-3.0.0.b2frame
+
+Expected results:
+
+* These VL-block fixtures are only expected to work with releases that support
+  the VL-block cframe format.
+* Pre-vlblocks releases are expected to reject them.
+* The ``--regular`` fixture tests regular (non-VL-block) chunks of varying
+  sizes in the same cframe (frame format v3 ``FRAME_VARIABLE_CHUNKS`` flag).
 
 Tagging
 -------

@@ -1,6 +1,337 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 3.1.2 to 3.1.3
+===========================
+
+Security hardening
+------------------
+
+* Harden ndlz, zfp, and ndmean plugin codecs/filters against malformed or
+  attacker-crafted ``b2nd`` metalayers.  The block geometry for these
+  multidimensional plugins is read from the ``b2nd`` metalayer, which is
+  under user/remote control.  Without validation, a crafted metalayer could
+  trigger heap buffer overflows or out-of-bounds writes during decompression.
+
+* **zfp**: Added ``zfp_check_output_size()`` that validates the b2nd
+  metadata return value, ndim range, typesize, and performs an
+  overflow-safe computation of ``prod(blockshape) * typesize`` against the
+  output buffer size.  Non-positive block dimensions are rejected.
+  Compressors now also check deserialize returns and free buffers on every
+  early-return path.  A regression test covering oversized, zero-dimension,
+  and int64-overflow blockshapes has been added.
+
+* **ndlz**: Both ``ndlz4x4`` and ``ndlz8x8`` decoders now validate the
+  ``b2nd_deserialize_meta`` return value and properly free
+  shape/chunkshape/blockshape buffers (and ``bufarea``) on early-return
+  paths.
+
+* **ndmean**: Validates the deserialize return and ndim range, and sizes
+  the shape/chunkshape/blockshape buffers for ``B2ND_MAX_DIM``.
+
+* Validate NDLZ decompression input references, preventing potential issues
+  with untrusted or malformed inputs reaching the ndlz4x4 and ndlz8x8
+  decompressors.
+
+Thanks to @metsw24-max for all these improvements.
+
+Performance improvements
+------------------------
+
+* Use a lazy chunk instead of eagerly reading the whole chunk in the frame
+  code path.  This avoids unnecessary I/O and decompression when only part
+  of a chunk is needed.
+
+Fixes
+-----
+
+* Better handling of the ZFP codec workflow when ``input_len`` is smaller than
+  the block size in the zfp plugin.
+
+Notes
+-----
+
+* This is a maintenance release with no API/ABI changes.
+
+Changes from 3.1.1 to 3.1.2
+===========================
+
+Hotfixes
+--------
+
+* Fix a regression in ``b2nd_get_orthogonal_selection()`` and
+  ``b2nd_set_orthogonal_selection()`` introduced by the 3.1.1 batching
+  optimization.
+
+* Add a regression test covering orthogonal get/set selections across outer
+  dimensions.
+
+Notes
+-----
+
+* This is a hot-fix release with no API/ABI changes.
+
+Changes from 3.1.0 to 3.1.1
+===========================
+
+Performance improvements
+------------------------
+
+* Optimize ``b2nd_get_orthogonal_selection()`` for axis-based row/column
+  selections by reusing the chunk decompression buffer across visited chunks
+  and batching consecutive innermost-dimension element copies.
+
+  In internal benchmarks, this makes orthogonal selections up to about
+  2.6x faster (for example, on the ``blosc2.take()`` ndim=2 benchmark with
+  100M elements, 6388 indices, and ``axis=0``).
+
+Documentation improvements
+--------------------------
+
+* Include static-inline functions in the user-facing API docs, so header-only
+  entry points such as ``b2nd_deserialize_meta_inline()`` show up correctly in
+  the generated reference manual.
+
+* Add the public functions that were missing from the reference docs,
+  including recently added sparse getters, VL-block/context helpers,
+  defaults accessors, and utility functions.
+
+* Add ``doc/check_missing_docs.py`` to help ensure that public APIs are not
+  accidentally left undocumented in future releases.
+
+Notes
+-----
+
+* This is a maintenance release with no API/ABI changes.
+
+Changes from 3.0.3 to 3.1.0
+===========================
+
+New features
+------------
+
+* New sparse coords getter API for extracting arbitrary sets of
+  coordinates in a single call, much faster than repeated individual
+  `getitem` operations:
+
+  - ``blosc2_schunk_get_sparse_buffer()`` extracts a set of flat
+    (1-dimensional) coordinates from a schunk into a caller-provided
+    buffer.  It batches coordinates by chunk internally to minimize
+    decompression overhead.
+
+  - ``b2nd_get_sparse_cbuffer()`` does the same for multidimensional
+    (b2nd) arrays, accepting an array of *n*-dimensional coordinates and
+    returning the corresponding values into a C buffer.
+
+  Both APIs support regular and special-value (zero/NaN/run-length)
+  schunks, as well as frame-backed and callback-threaded schunks.
+
+* ``b2nd_deserialize_meta_inline()`` — a new static-inline version of
+  ``b2nd_deserialize_meta()`` available from the header ``b2nd.h`` without
+  linking against ``libblosc2``.  Together with the already-inline
+  ``blosc2_meta_get()``, this lets external codec/filter plugins (like
+  ``blosc2_grok``) use the b2nd metadata API without pulling all of
+  ``libblosc2``'s internal symbols (ZFP, Zstd, …) into the global
+  namespace, which could otherwise shadow symbols from other libraries
+  that need differently-configured builds of the same dependencies.
+  The existing ``b2nd_deserialize_meta()`` ABI entry point is preserved
+  as a thin wrapper for backward compatibility.
+
+* Globally registered codec IDs **J2K** (124) and **HTJ2K** (125) for
+  upcoming JPEG 2000 / High-Throughput JPEG 2000 plugins.
+  Thanks to @alemirone.
+
+Fixes
+-----
+
+* Fix ``swap_store()`` for big-endian machines.
+* Fix divide-by-zero in ``b2nd_update_shape``.  Thanks to @metsw24-max.
+* Fix trailer vlmetalayer-parsing and a NULL-check on a missing allocation.
+* Rename ``blosc2_schunk_get_sparse`` → ``blosc2_schunk_get_sparse_buffer``
+  in the test file and error messages for consistency with the public header.
+  Thanks to @metsw24-max.
+
+Changes from 3.0.2 to 3.0.3
+===========================
+
+* Harden frame parsing against malformed trailer lengths, invalid metalayer
+  offsets and lengths, and lazy-chunk compressed sizes that extend past the
+  end of a frame.  This prevents invalid offset computation,
+  out-of-bounds reads, and a double-free on malformed inputs.  Thanks to
+  @metsw24-max.
+
+* Fix integer-overflow paths in b2nd chunk-size and slice-buffer
+  calculations that could otherwise lead to heap corruption or invalid
+  allocations.  Thanks to @metsw24-max.
+
+* Improve stdio and mmap I/O safety by validating NULL streams, file sizes,
+  offsets, and integer conversions, and by tightening cleanup/error paths.
+  Thanks to @metsw24-max.
+
+* Replace unsafe string formatting/concatenation in compressor listing,
+  codec-version reporting, directory helpers, and frame path handling with
+  bounded operations and allocation checks.  Thanks to @metsw24-max.
+
+* Validate negative indices in offset reordering to reject malformed offset
+  tables more reliably.  Thanks to @uwezkhan.
+
+* Add regression tests covering malformed frame trailer/metalayer data,
+  lazy-chunk bounds, b2nd chunk-size overflows, stdio validation, mmap error
+  handling, and negative reorder offsets.
+
+Changes from 3.0.1 to 3.0.2
+===========================
+
+* Fix for windows when using ctx API from multiple threads.  Closes #763.
+  Thanks to Christoph Gohlke (@cgohlke).
+
+* Harden metalayer APIs against invalid lengths and unsafe memory usage.
+  PR #758.  Thanks to @metsw24-max.
+
+* Fix DELTA pipelines after byte-transforming filters (e.g. shuffle).
+
+Changes from 3.0.0 to 3.0.1
+===========================
+
+* Add BLOSC_DEPENDENCY_MODE to choose BUNDLED, EXTERNAL, or AUTO
+  dependency resolution, defaulting to BUNDLED for compatibility.
+
+* Add BLOSC_ENABLE_ZFP to make ZFP optional in external builds while
+  still allowing users to require or disable it explicitly.
+
+* Add external ZFP discovery and improve LZ4/Zstd find modules so
+  external builds provide proper imported targets and include dirs.
+
+* Avoid dependency CMake variables polluting the Blosc2 package install
+  dir, and install Blosc2 config files under the expected Blosc2 path.
+
+* Document the new options for distro packagers.
+
+Changes from 3.0.0-rc2 to 3.0.0
+===============================
+
+* Fixes an integer overflow in VL-block decompression where cumulative
+  blocknbytes was tracked in a 32-bit integer. PR #753. Thanks to @metsw24-max.
+
+* Fix data races in global configuration APIs using mutex protection. PR #753.
+  Thanks to @metsw24-max.
+
+* Different typos fixed.  Thanks to @DimitriPapadopoulos.
+
+Changes from 3.0.0-rc1 to 3.0.0-rc2
+===================================
+
+* `blosc2_get_slice_nchunks()`, `schunk_get_slice_nchunks()`, and
+  `b2nd_get_slice_nchunks()` now return `int64_t` instead of `int`.
+  This removes an artificial `INT_MAX` limit on the number of chunks
+  reported for large slices.  Because these public signatures changed,
+  this is an API/ABI break and callers should be rebuilt against 3.0.0.
+
+* The internal parallel execution model has been reworked around a shared
+  managed thread pool.  Instead of owning a private worker pool per
+  compression/decompression context, contexts now attach lazily to a pool
+  shared by other contexts with the same `nthreads` setting, while
+  caller-managed callback threading remains supported as before.  This greatly
+  reduces redundant thread creation and idle thread accumulation when many
+  contexts coexist, improves scalability and resource usage, and fixes
+  reliability problems in downstream workloads such as python-blosc2 that
+  create large numbers of arrays/contexts over time.  The new queue-based
+  scheduling model also supports true concurrent submissions to the same pool.
+
+* Landed a broad set of robustness and security hardening fixes in frame,
+  schunk, lazy-chunk, metadata, mmap, and getitem paths.  These changes tighten
+  bounds checking, reject malformed headers/offset tables/VL-block metadata more
+  aggressively, prevent integer overflows and out-of-bounds reads/writes, and
+  add regression tests for malformed inputs and edge cases.  Thanks to
+  @metsw24-max for many of these.
+
+* Modernized codec dependency handling in CMake.  `lz4`, `zlib-ng`, and
+  `zstd` are now resolved either from external packages (when preferred and
+  available) or via `FetchContent` using pinned upstream versions, instead of
+  being built from vendored in-tree copies.  The optional ZFP plugin is now
+  also obtained via `FetchContent` too.  As a result, `blosclz` is now the only
+  codec still vendored in-tree.
+
+* Added explicit CMake cache variables for pinned codec versions and local
+  source overrides:
+  `BLOSC_LZ4_VERSION`, `BLOSC_ZLIBNG_VERSION`, `BLOSC_ZSTD_VERSION`, and the
+  matching `BLOSC_*_SOURCE_DIR` variables.
+
+* Improved CMake install/export support for static builds so downstream
+  `find_package(Blosc2)` consumers keep working when fetched codec libraries
+  are embedded into the Blosc package.
+
+* Embedded third-party headers installed by the CMake package are now placed
+  under a Blosc-owned include subtree (`blosc2/thirdparty/...`) instead of the
+  top-level include directory, reducing the risk of header name collisions.
+
+* Replaced deprecated `exec_program()` usage in `cmake/FindSIMD.cmake` with
+  `execute_process()`, avoiding warnings with newer CMake versions.
+
+* Removed the unmaintained Intel IPP integration.  C-Blosc2 no longer exposes
+  a CMake option to enable/disable IPP, does not probe for IPP at configure
+  time, and always uses the maintained native codec paths instead.
+
+
+Changes from 2.23.1 to 3.0.0-rc1
+================================
+
+* This release introduces support for variable-length chunks and variable-length
+  blocks, which is the main reason for the major version bump.
+
+  Until now, a schunk/frame generally assumed that all chunks shared the same
+  logical chunk size, and regular Blosc2 chunks assumed fixed-size internal blocks
+  (except for the last remainder block).  In 3.0.0-rc.1, schunks can switch to
+  variable chunk sizes when needed, and there is also a new chunk layout for
+  variable-length blocks (VL-blocks), where each block can carry a different
+  uncompressed size inside the same chunk.
+
+  This is especially useful for workloads made of naturally variable-size pieces
+  of data, like strings, records, JSON fragments, or other irregular payloads
+  that previously had to be padded, split awkwardly, or stored as independent
+  chunks.  The new layout keeps these pieces grouped together while still making
+  them individually recoverable.
+
+  Together with this, there are new public APIs for VL-block chunks:
+  `blosc2_vlcompress_ctx()`, `blosc2_vldecompress_ctx()`,
+  `blosc2_vlchunk_get_nblocks()`, `blosc2_vldecompress_block_ctx()`, and
+  `blosc2_schunk_get_vlblock()`.  Lazy loading also works with VL-block chunks,
+  so individual blocks can be fetched on demand without materializing the whole
+  chunk first.
+
+* The chunk and cframe formats have been extended to represent variable chunk
+  sizes, VL-block chunks, and dictionary usage more explicitly.  Forward
+  compatibility checks were tightened as part of this work, and regular chunks
+  keep their previous stable format version while VL-block chunks use a new one.
+
+* Dictionary compression has been expanded and improved:
+  `use_dict` now works with LZ4 and LZ4HC in addition to ZSTD, the dictionary
+  state is preserved correctly across chunk compression/decompression, and the
+  frame metadata now round-trips the dictionary setting.  There is also a new
+  minimum useful dictionary threshold to avoid training or using dictionaries
+  that are too small to help.
+
+* The necessary changes for accommodating all these improvements have been fully
+  documented in README_CHUNK_FORMAT.md and README_CFRAME_FORMAT.md.  Again,
+  care has been taken to ensure that the chunk and frame formats are backward
+  compatible with previous versions of C-Blosc2.
+
+* Fixed several safety issues in the core library, as well as in ndcell/ndlz
+  plugins.  Thanks to Trail of Bits (in collaboration with Anthropic).
+
+* Additional compatibility and portability fixes include better protection
+  against unsupported future chunk/frame versions and proper VSX shuffle support
+  detection on big-endian ppc64.  Thanks to @AutoJanitor for these.
+
+
+Changes from 2.23.0 to 2.23.1
+=============================
+
+* Fix some memory leaks/undefined behaviour
+* Allow resizing of empty arrays
+* `filters_meta` (interpreted as number of bytestreams) for the byteshuffle filter
+
+
 Changes from 2.22.0 to 2.23.0
 =============================
 

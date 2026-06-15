@@ -35,18 +35,18 @@ What is it?
 
 C-Blosc2 is the new major version of `C-Blosc <https://github.com/Blosc/c-blosc>`_, and is backward compatible with both the C-Blosc1 API and its in-memory format.  However, the reverse thing is generally not true for the format; buffers generated with C-Blosc2 are not format-compatible with C-Blosc1 (i.e. forward compatibility is not supported).  In case you want to ensure full API compatibility with C-Blosc1 API, define the `BLOSC1_COMPAT` symbol.
 
-See a 3 minutes  `introductory video to Blosc2 <https://www.youtube.com/watch?v=ER12R7FXosk>`_.
+See a 3-minute `introductory video to Blosc2 <https://www.youtube.com/watch?v=ER12R7FXosk>`_.
 
 
 Blosc2 NDim: an N-Dimensional store
 ===================================
 
-One of more exciting additions in C-Blosc2 is the `Blosc2 NDim layer <https://www.blosc.org/c-blosc2/reference/b2nd.html>`_ (or B2ND for short), allowing to create *and* read n-dimensional datasets in an extremely efficient way thanks to a n-dim 2-level partitioning, that allows to slice and dice arbitrary large and compressed data in a more fine-grained way:
+One of more exciting additions in C-Blosc2 is the `Blosc2 NDim layer <https://www.blosc.org/c-blosc2/reference/b2nd.html>`_ (or B2ND for short), which allows creating *and* reading n-dimensional datasets in an extremely efficient way thanks to a n-dim 2-level partitioning, that allows slicing and dicing arbitrary large and compressed data in a more fine-grained way:
 
 .. image:: https://github.com/Blosc/c-blosc2/blob/main/images/b2nd-2level-parts.png?raw=true
   :width: 75%
 
-To wet you appetite, here it is how the `NDArray` object in the  `Python wrapper`_ performs on getting slices orthogonal to the different axis of a 4-dim dataset:
+To whet your appetite, here is how the `NDArray` object in the  `Python wrapper`_ performs on getting slices orthogonal to the different axis of a 4-dim dataset:
 
 .. image:: https://github.com/Blosc/c-blosc2/blob/main/images/Read-Partial-Slices-B2ND.png?raw=true
   :width: 75%
@@ -105,7 +105,7 @@ directory (e.g. '/usr' or '/usr/local'):
 
   cmake -DCMAKE_INSTALL_PREFIX=your_install_prefix_directory ..
 
-CMake allows to configure Blosc in many different ways, like preferring internal or external sources for compressors or enabling/disabling them.  Please note that configuration can also be performed using UI tools provided by CMake (`ccmake`  or `cmake-gui`):
+CMake allows configuring Blosc in many different ways, including selecting external codec libraries, fetching pinned upstream codec sources during configuration, or disabling selected codecs altogether.  Please note that configuration can also be performed using UI tools provided by CMake (`ccmake`  or `cmake-gui`):
 
 .. code-block:: console
 
@@ -125,28 +125,51 @@ The static and dynamic version of the Blosc library, together with header files,
 Once you have compiled your Blosc library, you can easily link your apps with it as shown in the `examples/ directory <https://github.com/Blosc/c-blosc2/blob/main/examples>`_.
 
 
-Handling support for codecs (LZ4, LZ4HC, Zstd, Zlib)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Handling support for codecs (LZ4, LZ4HC, Zstd, Zlib, ZFP)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-C-Blosc2 comes with full sources for LZ4, LZ4HC, Zstd, and Zlib and in general, you should not worry about not having (or CMake not finding) the libraries in your system because by default the included sources will be automatically compiled and included in the C-Blosc2 library. This means that you can be confident in having a complete support for all these codecs in all the official Blosc deployments.  Of course, if you consider this is too bloated, you can exclude support for some of them.
+C-Blosc2 can either fetch pinned upstream codec releases via CMake ``FetchContent`` or use codec libraries already installed on the system.  The top-level switch is ``BLOSC_DEPENDENCY_MODE``:
 
-For example, let's suppose that you want to disable support for Zstd:
+``BUNDLED``
+  Default.  Fetch and build the bundled dependency versions.  This preserves the traditional self-contained C-Blosc2 build behavior.  Bundled dependencies are private: their headers and libraries are not installed separately, and static builds fold them into ``libblosc2.a``.
+
+``EXTERNAL``
+  Require system packages for mandatory dependencies and fail with a clear error if they are missing.  This is the recommended mode for distro packagers that must avoid bundled third-party code::
+
+    cmake -DBLOSC_DEPENDENCY_MODE=EXTERNAL ..
+
+``AUTO``
+  Try system packages first and fall back to bundled dependencies.  This is convenient for local development, but less reproducible for distro packaging.
+
+The older ``PREFER_EXTERNAL_LZ4``, ``PREFER_EXTERNAL_ZLIB`` and ``PREFER_EXTERNAL_ZSTD`` options are still accepted as per-dependency compatibility options; when enabled they try the system package first for that dependency.
+
+ZFP support is controlled separately because ZFP packages are not available in all distributions:
+
+``BLOSC_ENABLE_ZFP=AUTO``
+  Default.  In ``BUNDLED`` mode, build bundled ZFP.  In ``EXTERNAL`` mode, enable ZFP only when a system ZFP package is found; otherwise build C-Blosc2 without ZFP support.  In ``AUTO`` dependency mode, try system ZFP first and fall back to bundled ZFP.
+
+``BLOSC_ENABLE_ZFP=ON``
+  Require ZFP support.  In ``EXTERNAL`` mode this fails if no system ZFP package is found.
+
+``BLOSC_ENABLE_ZFP=OFF``
+  Disable the ZFP codec.
+
+For fully local bundled builds without network access, point CMake at local codec checkouts instead of downloading them:
+
+.. code-block:: console
+
+  cmake \
+    -DBLOSC_LZ4_SOURCE_DIR=/path/to/lz4 \
+    -DBLOSC_ZLIBNG_SOURCE_DIR=/path/to/zlib-ng \
+    -DBLOSC_ZSTD_SOURCE_DIR=/path/to/zstd \
+    -DBLOSC_ZFP_SOURCE_DIR=/path/to/zfp \
+    ..
+
+You can also exclude support for selected codecs.  For example, to disable Zstd support:
 
 .. code-block:: console
 
   cmake -DDEACTIVATE_ZSTD=ON ..
-
-Or, you may want to use a codec in an external library already in the system:
-
-.. code-block:: console
-
-  cmake -DPREFER_EXTERNAL_LZ4=ON ..
-
-For OpenZL, there are problems with the build seemingly, so, after building and installing into ``build-cmake`` in the ``openzl`` directory, one has to run:
-
-.. code-block:: console
-
-  cmake   -DPREFER_EXTERNAL_OPENZL=ON   -DOPENZL_LIBRARY=$HOME/openzl/build-cmake/install/lib/libopenzl.a   -DOPENZL_INCLUDE_DIR=$HOME/openzl/build-cmake/install/include   ..
 
 Supported platforms
 ~~~~~~~~~~~~~~~~~~~
@@ -181,7 +204,7 @@ Contributing
 If you want to collaborate in this development you are welcome.  We need help in the different areas listed at the `ROADMAP <https://github.com/Blosc/c-blosc2/blob/main/ROADMAP-TO-3.0.rst>`_; also, be sure to read our `DEVELOPING-GUIDE <https://github.com/Blosc/c-blosc2/blob/main/DEVELOPING-GUIDE.rst>`_ and our `Code of Conduct <https://github.com/Blosc/community/blob/master/code_of_conduct.md>`_.  Blosc is distributed using the `BSD license <https://github.com/Blosc/c-blosc2/blob/main/LICENSE.txt>`_.
 
 
-Tweeter feed
+Twitter feed
 ============
 
 Follow `@Blosc2 <https://twitter.com/Blosc2>`_ so as to get informed about the latest developments.

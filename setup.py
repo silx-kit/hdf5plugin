@@ -823,8 +823,9 @@ def _get_lz4_clib(field=None):
     cflags = ["-O3", "-std=gnu99"]
     cflags += ["/Ox"]
 
-    folders = glob("lib/c-blosc2/internal-complibs/lz4*")
-    lz4_dir = folders[0] if folders else "lib/no-folder"
+    lz4_dir = "lib/lz4-clib/lib"
+    if not os.path.isdir(lz4_dir):
+        lz4_dir = "lib/no-folder"
 
     config = dict(
         sources=glob(f"{lz4_dir}/*.c"),
@@ -965,8 +966,9 @@ def _get_zstd_clib(field=None):
     cflags = ["-O3", "-std=gnu99"]
     cflags += ["/Ox"]
 
-    folders = glob("lib/c-blosc2/internal-complibs/zstd*")
-    zstd_dir = folders[0] if folders else "lib/no-folder"
+    zstd_dir = "lib/zstd/lib"
+    if not os.path.isdir(zstd_dir):
+        zstd_dir = "lib/no-folder"
 
     config = dict(
         sources=glob(f"{zstd_dir}/*/*.c"),
@@ -1173,12 +1175,10 @@ def _get_blosc2_plugin():
         + glob(f"{plugins_dir}/*/*/*.c")
         if not os.path.basename(src_file).startswith("test")
     ]
-    sources += glob(f"{plugins_dir}/codecs/zfp/src/*.c")  # Add ZFP embedded sources
     include_dirs = [
         blosc2_dir,
         f"{blosc2_dir}/blosc",
         f"{blosc2_dir}/include",
-        f"{blosc2_dir}/plugins/codecs/zfp/include",
     ]
     define_macros = [("HAVE_PLUGINS", 1)]
     if platform.machine() == "ppc64le":
@@ -1189,6 +1189,11 @@ def _get_blosc2_plugin():
         define_macros.append(("SHUFFLE_AVX2_ENABLED", 1))
         define_macros.append(("SHUFFLE_AVX512_ENABLED", 1))
         define_macros.append(("SHUFFLE_NEON_ENABLED", 1))
+
+    # Add ZFP instead of using static library since compilation options are different
+    sources += glob("lib/c-blosc2-zfp/src/*.c")
+    include_dirs += ["lib/c-blosc2-zfp/include"]
+    define_macros.append(("HAVE_ZFP", 1))
 
     libraries = []
 

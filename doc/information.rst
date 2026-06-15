@@ -71,7 +71,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.6), LZ4, Snappy, ZLib and ZStd.
 * `hdf5-blosc2 plugin <https://github.com/Blosc/HDF5-Blosc2>`_
   (commit `e4d0f58 <https://github.com/Blosc/HDF5-Blosc2/tree/e4d0f583f39bf1d3e482aa4695b7dc95afb2b9b2>`_)
-  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v2.23.0), LZ4, ZLib and ZStd.
+  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v3.1.3), LZ4, ZFP, ZLib and ZStd.
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.1.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/2.1.1>`_)
   using `CharLS <https://github.com/team-charls/charls>`_ (v2.1.0).
@@ -82,17 +82,17 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `SZ3 plugin <https://github.com/szcompressor/SZ3>`_
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
-* `HDF5-ZFP plugin <https://github.com/LLNL/H5Z-ZFP>`_ (v1.1.1)
-  using `zfp <https://github.com/LLNL/zfp>`_ (v1.0.1).
+* `HDF5-ZFP plugin <https://github.com/LLNL/H5Z-ZFP>`_ (v1.1.1) using ZFP.
 * `HDF5Plugin-Zstandard <https://github.com/aparamon/HDF5Plugin-Zstandard>`_
   (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) using ZStd.
 
 Sources of compression libraries shared accross multiple filters were obtained from:
 
 
-* `LZ4 v1.10.0 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/lz4-1.10.0>`_
+* `LZ4 v1.10.0 <https://github.com/lz4/lz4>`_
 * `Snappy v1.2.2 <https://github.com/google/snappy>`_
-* `ZStd v1.5.7 <https://github.com/Blosc/c-blosc2/tree/v2.21.2/internal-complibs/zstd-1.5.7>`_
+* `ZFP v1.0.1 <https://github.com/LLNL/zfp>`_
+* `ZStd v1.5.7 <https://github.com/facebook/zstd>`_
 * `ZLib v1.3.1 <https://github.com/Blosc/c-blosc/tree/v1.21.6/internal-complibs/zlib-1.3.1>`_
 
 When compiled with Intel IPP, the LZ4 compression library is replaced with `LZ4 v1.9.3 <https://github.com/lz4/lz4/releases/tag/v1.9.3>`_ patched with a patch from Intel IPP 2021.7.0.
@@ -107,16 +107,26 @@ See `LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/LICENSE>`_.
 The source code of the embedded HDF5 filter plugin libraries is licensed under different open-source licenses.
 Please read the different licenses:
 
-* bitshuffle: See `lib/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/bitshuffle/LICENSE>`_
-* blosc: See `lib/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/hdf5-blosc/LICENSES/>`_, `lib/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc/LICENSES/>`_ and `lib/snappy/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/snappy/COPYING>`_
-* blosc2: See `lib/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/PyTables/LICENSE.txt>`_  and `lib/c-blosc2/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc2/LICENSES/>`_
-* bzip2: See `lib/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/PyTables/LICENSE.txt>`_ and `lib/bzip2/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/bzip2/LICENSE>`_
-* lz4: See `lib/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/LZ4/COPYING>`_, `lib/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/LZ4/LICENSE>`_ and `lib/c-blosc/LICENSES/LZ4.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc/LICENSES/LZ4.txt>`_
-* FCIDECOMP: See `lib/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/fcidecomp/LICENSE>`_ and `lib/charls/LICENSE.md  <https://github.com/silx-kit/hdf5plugin/blob/main/lib/charls/LICENSE.md>`_
-* SPERR: See `lib/H5Z-SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-SPERR/LICENSE>`_ and `lib/SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SPERR/LICENSE>`_
-* SZ: See `lib/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ/copyright-and-BSD-license.txt>`_
-* SZ3: See `lib/SZ3/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ3/copyright-and-BSD-license.txt>`_
-* zfp: See `lib/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-ZFP/LICENSE>`_ and `lib/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/zfp/LICENSE>`_
-* zstd: See `lib/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/HDF5Plugin-Zstandard/LICENSE>`_
+* HDF5 compression filters:
+
+  * bitshuffle: `lib/bitshuffle/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/bitshuffle/LICENSE>`_
+  * blosc: `lib/hdf5-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/hdf5-blosc/LICENSES/>`_, `lib/c-blosc/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc/LICENSES/>`_
+  * blosc2: `lib/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/PyTables/LICENSE.txt>`_  and `lib/c-blosc2/LICENSES/ <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc2/LICENSES/>`_
+  * bzip2: `lib/PyTables/LICENSE.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/PyTables/LICENSE.txt>`_ and `lib/bzip2/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/bzip2/LICENSE>`_
+  * lz4: `lib/LZ4/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/LZ4/COPYING>`_, `lib/LZ4/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/LZ4/LICENSE>`_
+  * FCIDECOMP: `lib/fcidecomp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/fcidecomp/LICENSE>`_ and `lib/charls/LICENSE.md  <https://github.com/silx-kit/hdf5plugin/blob/main/lib/charls/LICENSE.md>`_
+  * SPERR: `lib/H5Z-SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-SPERR/LICENSE>`_ and `lib/SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SPERR/LICENSE>`_
+  * SZ: `lib/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ/copyright-and-BSD-license.txt>`_
+  * SZ3: `lib/SZ3/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ3/copyright-and-BSD-license.txt>`_
+  * zfp: `lib/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-ZFP/LICENSE>`_
+  * zstd: `lib/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/HDF5Plugin-Zstandard/LICENSE>`_
+
+* Shared compression libraries:
+
+  * LZ4: `lib/lz4-clib/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/lz4-clib/LICENSE>`_
+  * Snappy: `lib/snappy/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/snappy/COPYING>`_
+  * ZFP: `lib/zfp/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/zfp/LICENSE>`_
+  * ZLib: `lib/c-blosc/internal-complibs/zlib-1.3.1/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/c-blosc/internal-complibs/zlib-1.3.1/LICENSE>`_
+  * ZStd: `lib/zstd/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/zstd/LICENSE>`_
 
 The HDF5 v1.10.5 headers (and Windows .lib file) used to build the filters are stored for convenience in the repository. The license is available here: `lib/hdf5/COPYING <https://github.com/silx-kit/hdf5plugin/blob/main/lib/hdf5/COPYING>`_.

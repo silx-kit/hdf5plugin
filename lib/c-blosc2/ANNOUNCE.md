@@ -1,10 +1,11 @@
-# Announcing C-Blosc2 2.23.0
-A fast, compressed and persistent binary data store library for C.
+# Announcing C-Blosc2 3.1.3
+A fast, compressed, and persistent binary data store library for C.
 
 ## What is new?
 
-The main change is in ``blosc2_prefilter_params``, which has a new field. 
-There is also a new ``typesize`` field in ``blosc2_dparams`` and some other changes to support the blosc2-openzl plugin.
+This is a maintenance release for hardening ndlz, zfp, and ndmean plugin codecs/filters.
+We are also using lazy chunks more aggressively in the superblock.  This avoids
+unnecessary I/O and decompression when only part of a chunk is needed.
 
 For more info, see the release notes in:
 
@@ -13,11 +14,11 @@ https://github.com/Blosc/c-blosc2/blob/main/RELEASE_NOTES.md
 ## What is it?
 
 Blosc2 is a high-performance data container optimized for binary data.
-Blosc2 is the next generation of Blosc, an [award-winning]
-(https://www.blosc.org/posts/prize-push-Blosc2)` library that has been
-around for more than a decade.
+Blosc2 is the next generation of Blosc, an
+[award-winning library](https://www.blosc.org/posts/prize-push-Blosc2)
+that has been around for more than a decade.
 
-Blosc2 expands the capabilities of Blosc by providing a higher lever
+Blosc2 expands the capabilities of Blosc by providing a higher level
 container that is able to store many chunks on it (hence the super-block name).
 It supports storing data on both memory and disk using the same API.
 Also, it adds more compressors and filters.
@@ -37,10 +38,6 @@ There is an official Blosc mailing list at:
 
 blosc@googlegroups.com
 https://groups.google.com/g/blosc
-
-## Fosstodon feed
-
-Please follow https://fosstodon.org/@Blosc2 to get informed about the latest developments.
 
 
 Enjoy Data!

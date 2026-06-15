@@ -46,6 +46,7 @@ test_ndata tndata[] = {
         {5, 0, CHUNKSIZE * 5 + 200 * 100 + 300, true, 0, 6}, // last chunk shorter
         {2, 10, CHUNKSIZE * 2 + 400, true, 0, 3}, // start != 0, last chunk shorter
         {12,  CHUNKSIZE * 1 + 300, CHUNKSIZE * 4 + 100, false, 1, 5}, // start not in first chunk
+        {0,  0, 100, false, 0, 0}, // shape 0 array
 };
 
 typedef struct {
@@ -63,9 +64,9 @@ test_storage tstorage[] = {
 
 static char* test_get_slice_nchunks(void) {
   static int32_t data[CHUNKSIZE];
-  int32_t *data_;
+  int32_t *data_ = NULL;
   int32_t isize = CHUNKSIZE * sizeof(int32_t);
-  int rc;
+  int64_t rc;
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
   blosc2_dparams dparams = BLOSC2_DPARAMS_DEFAULTS;
   blosc2_schunk* schunk;
@@ -83,6 +84,8 @@ static char* test_get_slice_nchunks(void) {
   blosc2_storage storage = {.cparams=&cparams, .dparams=&dparams,
                             .urlpath=tdata.urlpath, .contiguous=tdata.contiguous};
   schunk = blosc2_schunk_new(&storage);
+
+  if (tdata.nchunks == 0){schunk->chunksize = 0;}
 
   // Feed it with data
   if (!tdata.shorter_last_chunk) {
@@ -114,13 +117,14 @@ static char* test_get_slice_nchunks(void) {
   mu_assert("ERROR: cannot get slice correctly.", rc >= 0);
   mu_assert("ERROR: wrong number of chunks.", rc == (tdata.nchunk_stop - tdata.nchunk_start));
   int nchunk = tdata.nchunk_start;
-  for (int i = 0; i < rc; ++i) {
+  for (int64_t i = 0; i < rc; ++i) {
     mu_assert("ERROR: wrong nchunk index retrieved.", chunks_indexes[i] == nchunk);
     nchunk++;
   }
 
 
   /* Free resources */
+  free(data_);
   free(chunks_indexes);
   blosc2_schunk_free(schunk);
   blosc2_remove_urlpath(tdata.urlpath);

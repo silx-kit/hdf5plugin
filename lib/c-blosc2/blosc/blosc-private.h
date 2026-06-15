@@ -18,12 +18,19 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <ctype.h>
 
 /*********************************************************************
 
   Utility functions meant to be used internally.
 
 *********************************************************************/
+
+int blosc2_decompress_block_ctx(blosc2_context* context, const void* src,
+                                int32_t srcsize, int32_t nblock, void* dest,
+                                int32_t destsize);
+int blosc2_run_parallel(int16_t nthreads, void (*dojob)(void *),
+                        size_t jobdata_elsize, void *jobdata);
 
 #define to_little(dest, src, itemsize)    endian_handler(true, dest, src, itemsize)
 #define from_little(dest, src, itemsize)  endian_handler(true, dest, src, itemsize)
@@ -85,6 +92,25 @@ static inline void endian_handler(bool little, void *dest, const void *pa, int s
   }
 }
 
+/*
+ * Convert a chunk count to the serialized offsets payload size.
+ *
+ * Security rationale: frame metadata can be attacker-controlled, and the offsets payload
+ * eventually flows into APIs that accept int32 byte lengths. This helper enforces a
+ * single overflow-checked conversion so callers cannot accidentally truncate
+ * nchunks * sizeof(int64_t) into a smaller signed length.
+ */
+static inline bool blosc2_nchunks_to_offsets_nbytes(int64_t nchunks, int32_t *off_nbytes) {
+  const int64_t max_nchunks = INT32_MAX / (int64_t)sizeof(int64_t);
+  if (nchunks < 0 || nchunks > max_nchunks) {
+    return false;
+  }
+  if (off_nbytes != NULL) {
+    *off_nbytes = (int32_t)(nchunks * (int64_t)sizeof(int64_t));
+  }
+  return true;
+}
+
 /* Copy 4 bytes from @p *pa to int32_t, changing endianness if necessary. */
 static inline int32_t sw32_(const void* pa) {
   int32_t idest;
@@ -99,6 +125,7 @@ static inline int32_t sw32_(const void* pa) {
 #elif defined (_MSC_VER) /* Visual Studio */
     return _byteswap_ulong(*(unsigned int *)pa);
 #else
+    const uint8_t *pa_ = (const uint8_t *)pa;
     uint8_t *dest = (uint8_t *)&idest;
     dest[0] = pa_[3];
     dest[1] = pa_[2];
@@ -235,7 +262,7 @@ static inline int dlclose(void *handle) {
 static inline const char *dlerror (void) {
   static char errstr [88];
   if (var.lasterror) {
-      sprintf (errstr, "%s error #%ld", var.err_rutin, var.lasterror);
+      snprintf(errstr, sizeof(errstr), "%s error #%ld", var.err_rutin, var.lasterror);
       return errstr;
   } else {
       return NULL;
@@ -245,11 +272,33 @@ static inline const char *dlerror (void) {
 #include <dlfcn.h>
 #endif
 
+static inline bool blosc2_valid_plugin_name(const char *plugin_name) {
+  if (plugin_name == NULL || plugin_name[0] == '\0') {
+    return false;
+  }
+  for (const unsigned char *p = (const unsigned char *)plugin_name; *p != '\0'; ++p) {
+    if (!isalnum(*p) && *p != '_') {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 static inline int get_libpath(char *plugin_name, char *libpath, char *python_version) {
   BLOSC_TRACE_INFO("Trying to get plugin path with python%s\n", python_version);
   char python_cmd[PATH_MAX] = {0};
-  sprintf(python_cmd, "python%s -c \"import blosc2_%s; blosc2_%s.print_libpath()\"", python_version, plugin_name, plugin_name);
+  if (!blosc2_valid_plugin_name(plugin_name)) {
+    BLOSC_TRACE_ERROR("Invalid plugin name");
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+  int written = snprintf(python_cmd, sizeof(python_cmd),
+                         "python%s -c \"import blosc2_%s; blosc2_%s.print_libpath()\"",
+                         python_version, plugin_name, plugin_name);
+  if (written < 0 || (size_t)written >= sizeof(python_cmd)) {
+    BLOSC_TRACE_ERROR("Python command is too long");
+    return BLOSC2_ERROR_FAILURE;
+  }
   FILE *fp = popen(python_cmd, "r");
   if (fp == NULL) {
     BLOSC_TRACE_ERROR("Could not run python");
@@ -266,6 +315,10 @@ static inline int get_libpath(char *plugin_name, char *libpath, char *python_ver
 }
 
 static inline void* load_lib(char *plugin_name, char *libpath) {
+  if (!blosc2_valid_plugin_name(plugin_name)) {
+    BLOSC_TRACE_ERROR("Invalid plugin name");
+    return NULL;
+  }
     // Attempt to directly load the library by name
 #if defined(_WIN32)
     // Windows dynamic library (DLL) format
