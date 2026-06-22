@@ -71,7 +71,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
   using `c-blosc <https://github.com/Blosc/c-blosc>`_ (v1.21.6), LZ4, Snappy, ZLib and ZStd.
 * `hdf5-blosc2 plugin <https://github.com/Blosc/HDF5-Blosc2>`_
   (commit `e4d0f58 <https://github.com/Blosc/HDF5-Blosc2/tree/e4d0f583f39bf1d3e482aa4695b7dc95afb2b9b2>`_)
-  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v3.1.3), LZ4, ZFP, ZLib and ZStd.
+  using `c-blosc2 <https://github.com/Blosc/c-blosc2>`_ (v3.1.4), LZ4, ZFP, ZLib and ZStd.
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.1.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/2.1.1>`_)
   using `CharLS <https://github.com/team-charls/charls>`_ (v2.1.0).
