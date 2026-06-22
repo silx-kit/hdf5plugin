@@ -3,7 +3,12 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include "gzguts.h"
+#include <sys/types.h>   /* for off_t, ssize_t */
+#include <unistd.h>      /* for read, write, lseek, close */
 
 #if defined(_WIN32) && !defined(__BORLANDC__) && !defined(__MINGW32__)
 #  define LSEEK _lseeki64

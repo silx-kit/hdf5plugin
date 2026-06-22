@@ -7,12 +7,13 @@ SZ2: Error-bounded Lossy Compressor for HPC Data
 * Supervisor: Franck Cappello 
 * Other Contributors: Robert Underwood, Sihuan Li, Ali M. Gok, Cody Rivera, Xiangyu Zou, Wen Xia
 
+## Note on SZ3
+* This repository contains SZ2, the previous generation of the SZ lossy compression framework.
+* SZ3 is the successor to SZ2 and is the recommended version for all new projects. It offers enhanced compression performance, modular design, and expanded API support.
+* For more information and to access the newest version, please visit:  [https://github.com/szcompressor/SZ3](https://github.com/szcompressor/SZ3)
+
 ## Citations
-**Kindly note: This site contains the implementation of SZ2.x. If you mention SZ in your paper, the most appropriate citation is including these three references (***ICDE2021, HPDC2020 and BigData2018***), because they cover the whole design and implementation of the latest version of SZ**.
-
-**Note**: **SZ3** has been released [**here**](https://github.com/szcompressor/SZ3). SZ3 has much higher compression ratios than SZ2 in many cases, with comparable throughput (suffering slightly degraded throughput though). Details can be found in our ICDE21 paper. 
-
-* [SZ3](https://github.com/szcompressor/SZ3): Kai Zhao, Sheng Di, Maxim Dmitriev, Thierry-Laurent D. Tonellot, Zizhong Chen, and Franck Cappello. "[Optimizing Error-Bounded Lossy Compression for Scientiﬁc Data by Dynamic Spline Interpolation](https://ieeexplore.ieee.org/document/9458791)", Proceeding of the 37th IEEE International Conference on Data Engineering (ICDE 21), Chania, Crete, Greece, Apr 19 - 22, 2021.
+**Kindly note: This site contains the implementation of SZ2.x. The most appropriate citations for SZ2 are our ***BigData2018 and IPDPS2017*** papers below**.
 
 * SZauto: Kai Zhao, Sheng Di, Xin Liang, Sihuan Li, Dingwen Tao, Zizhong Chen, and Franck Cappello. "[Significantly Improving Lossy Compression for HPC Datasets with Second-Order Prediction and Parameter Optimization](https://dl.acm.org/doi/10.1145/3369583.3392688)", Proceedings of the 29th International Symposium on High-Performance Parallel and Distributed Computing (HPDC 20), Stockholm, Sweden, 2020. (code: https://github.com/szcompressor/SZauto/)
 

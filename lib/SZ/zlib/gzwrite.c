@@ -3,7 +3,12 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include "gzguts.h"
+#include <sys/types.h>   /* ssize_t */
+#include <unistd.h>      /* write, close */
 
 /* Local functions */
 local int gz_init OF((gz_statep));
