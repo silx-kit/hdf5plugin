@@ -1,3 +1,39 @@
+7.0.0: 25/06/2026
+-----------------
+
+This release includes a change of major version of the embedded **c-blosc2** library.
+
+- Added ``hd5plugin.from_filter_options(filter_id, filter_options)`` function to create filter instances from hdf5 "cd_values" (PR #366)
+- Added ``hdf5plugin.FilterBase.get_config()`` method to retrieve parameters as a ``dict`` and ``repr`` support (PR #373, #376)
+- Added support of negative compression levels to ``hdf5plugin.Zstd`` (PR #395)
+- Fixed type checker re-export compatibility by adding ``__all__`` to ``__init__.py`` (PR #381)
+- Fixed ``Bitshuffle``'s ``clevel`` argument supported range (PR #384)
+
+- Updated compression filters:
+
+  * **blosc2** hdf5 filter (commit e4d0f58) (PR #383)
+  * **LZ4** hdf5 filter: Use HDFGroup version (PR #394)
+  * **Zstd** hdf5 filter: Use HDFGroup version (PR #395)
+
+- Updated compression libraries:
+
+  * **c-blosc2** library: Change of major version (v3.1.4) (PR #378, #387, #392)
+  * **SPERR library** (v0.8.5) (PR #383)
+  * **SZ library** (commit 308bd06) (PR #392)
+
+- Build:
+
+  * Fixed name of ``bzip2`` plugin (PR #367)
+  * Fixed deprecation warning when building wheel (PR #390)
+  * Fixed building plugins against libhdf5 v2 (PR #391, #399)
+
+- Misc.:
+
+  * Added tests for variable-width strings support (PR #363)
+  * Updated CI release workflow (PR #374, #396)
+  * Updated documentation (PR #393, #398)
+  * Updated code format/check with ``ruff`` (PR #400)
+
 6.0.0: 08/10/2025
 -----------------
 
