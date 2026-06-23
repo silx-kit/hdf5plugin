@@ -12,8 +12,8 @@ jobs:
     name: Build sdist & documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -47,8 +47,8 @@ jobs:
             cibw_build: "cp314-macosx_arm64"
 
     steps:
-      - uses: actions/checkout@v5
-      - uses: pypa/cibuildwheel@v3.1.4
+      - uses: actions/checkout@v7
+      - uses: pypa/cibuildwheel@v4.1.0
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
           CIBW_BUILD_VERBOSITY: 1
