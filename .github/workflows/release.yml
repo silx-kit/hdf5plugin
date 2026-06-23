@@ -21,6 +21,7 @@ jobs:
       - run: python -m build --sdist
       - run: python -m twine check dist/*
       - run: pip install --pre "$(ls dist/hdf5plugin*.tar.gz)[test]"
+      - run: pip uninstall -y blosc2_grok  # https://github.com/silx-kit/hdf5plugin/issues/377
       - run: python test/test.py
       - uses: actions/upload-artifact@v7
         with:
@@ -153,6 +154,7 @@ jobs:
         run: |
           pip download --no-index --no-cache --no-deps --find-links=./dist --only-binary :all: hdf5plugin
           pip install "$(ls ./hdf5plugin-*.whl)[test]"
+          pip uninstall -y blosc2_grok  # https://github.com/silx-kit/hdf5plugin/issues/377
       - name: Run test with latest h5py
         run: python test/test.py
       - name: Run test with oldest h5py
