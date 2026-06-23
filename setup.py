@@ -40,12 +40,12 @@ from glob import glob
 from pathlib import Path
 
 from setuptools import Distribution, Extension, setup
+from setuptools.command.bdist_wheel import bdist_wheel
 from setuptools.command.build import build
 from setuptools.command.build_clib import build_clib
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 from setuptools.errors import CompileError
-from wheel.bdist_wheel import bdist_wheel
 
 try:
     import pkgconfig
