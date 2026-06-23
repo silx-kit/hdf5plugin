@@ -108,7 +108,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
 
           CIBW_TEST_SKIP: "*-*linux_ppc64le"
-          CIBW_BEFORE_TEST: pip install h5py --only-binary ":all:"
+          CIBW_BEFORE_TEST: pip install packaging h5py --only-binary ":all:"
           CIBW_TEST_COMMAND: python {project}/test/test.py
       - uses: actions/upload-artifact@v7
         with:
