@@ -68,8 +68,9 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(data.shape[1] == 100, "Incorrect shape")
         self.assertTrue(data.shape[2] == 100, "Incorrect shape")
 
-        target = numpy.arange(numpy.prod(expected_shape), dtype=numpy.float64)
-        target.shape = expected_shape
+        target = numpy.arange(numpy.prod(expected_shape), dtype=numpy.float64).reshape(
+            expected_shape
+        )
         self.assertTrue(numpy.allclose(data, target), "Incorrect readout")
 
     @unittest.skipUnless(
@@ -304,10 +305,9 @@ class TestHDF5PluginRead(unittest.TestCase):
             )
 
             # see what relative and absolute differences are acceptable for this mode
-            difference = original - compressed_back
+            difference = numpy.ravel(original - compressed_back)
             idx = numpy.argmax(abs(difference))
-            difference.shape = -1
-            rtol = abs(difference[idx] / original.flatten()[idx])
+            rtol = abs(difference[idx] / numpy.ravel(original)[idx])
 
             # TODO: Check why one needs to have such large tolerance
             rtol = rtol * 5
