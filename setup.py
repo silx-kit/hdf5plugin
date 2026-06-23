@@ -1243,15 +1243,13 @@ else:
     PLUGIN_LIB_DEPENDENCIES["blosc2"] = "lz4", "zlib", "zstd"
 
 
-def _get_zstandard_plugin():
-    """HDF5Plugin-Zstandard plugin build config"""
-    zstandard_dir = "lib/HDF5Plugin-Zstandard"
-
+def _get_zstd_plugin():
+    """Zstd plugin build config"""
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5zstd",
-        sources=[f"{zstandard_dir}/zstd_h5plugin.c"],
+        sources=["lib/hdf5_plugins/ZSTD/src/H5Zzstd.c"],
         extra_objects=get_clib_config("zstd", "extra_objects"),
-        include_dirs=[zstandard_dir] + get_clib_config("zstd", "include_dirs"),
+        include_dirs=get_clib_config("zstd", "include_dirs"),
         extra_link_args=get_clib_config("zstd", "extra_link_args"),
         libraries=get_clib_config("zstd", "libraries"),
     )
@@ -1504,7 +1502,7 @@ _EMBEDDED_PLUGIN_EXTENSIONS = {
     "sz": _get_sz_plugin,
     "sz3": _get_sz3_plugin,
     "zfp": _get_h5zfp_plugin,
-    "zstd": _get_zstandard_plugin,
+    "zstd": _get_zstd_plugin,
 }
 
 PLUGIN_NAMES = set(_EMBEDDED_PLUGIN_EXTENSIONS.keys())

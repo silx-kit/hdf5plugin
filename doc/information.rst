@@ -83,8 +83,8 @@ HDF5 compression filters and compression libraries sources were obtained from:
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
 * `HDF5-ZFP plugin <https://github.com/LLNL/H5Z-ZFP>`_ (v1.1.1) using ZFP.
-* `HDF5Plugin-Zstandard <https://github.com/aparamon/HDF5Plugin-Zstandard>`_
-  (commit `d5afdb5 <https://github.com/aparamon/HDF5Plugin-Zstandard/tree/d5afdb5f04116d5c2d1a869dc9c7c0c72832b143>`_) using ZStd.
+* `ZStd plugin <https://github.com/HDFGroup/hdf5_plugins/tree/master/ZSTD>`_
+  (commit `5573db8 <https://github.com/HDFGroup/hdf5_plugins/tree/5573db8f9706e1df262752a9247e90a3d4bd57bd/ZSTD>`_) using ZStd.
 
 Sources of compression libraries shared accross multiple filters were obtained from:
 

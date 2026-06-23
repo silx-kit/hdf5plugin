@@ -406,11 +406,21 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
     def testZstd(self):
         """Write/read test with Zstd filter plugin"""
         self._test("zstd")
-        tests = [{"clevel": 3}, {"clevel": 22}]
-        for options in tests:
+        tests: list[tuple[int, str | bool]] = [
+            (-131072, "nocheck"),  # Do not check if data is compressed for faster mode
+            (-1, True),
+            (3, True),
+            (22, True),
+        ]
+        for clevel, compressed in tests:
             for dtype in (numpy.float32, numpy.float64):
-                with self.subTest(options=options, dtype=dtype):
-                    self._test("zstd", dtype=dtype, options=options)
+                with self.subTest(clevel=clevel, dtype=dtype):
+                    self._test(
+                        "zstd",
+                        dtype=dtype,
+                        options={"clevel": clevel},
+                        compressed=compressed,
+                    )
 
 
 class TestStrings(unittest.TestCase):

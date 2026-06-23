@@ -1258,6 +1258,19 @@ class SZ3(FilterBase):
         raise ValueError(f"Unsupported sz_mode: {sz_mode}")
 
 
+def _to_uint32(value: int) -> int:
+    """Cast an integer to a uint32 and store it as a Python int
+
+    Useful to pass negative integers as hdf5 filter options (uint32)
+    """
+    return int(struct.unpack("I", struct.pack("i", value))[0])
+
+
+def _from_uint32(value: int) -> int:
+    """Cast value stored as uint32 to a signed int"""
+    return int(struct.unpack("i", struct.pack("I", value))[0])
+
+
 class Zstd(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using Zstd filter.
 
@@ -1270,25 +1283,35 @@ class Zstd(FilterBase):
             compression=hdf5plugin.Zstd(clevel=22))
         f.close()
 
-    :param clevel: Compression level from 1 (lowest compression) to 22 (maximum compression).
-        Ultra compression extends from 20 through 22. Default: 3.
+    :param clevel: Compression level from -131072 (lowest compression) to 22 (maximum compression).
+        Negative compression levels offer faster compression and decompression speed at the cost of compression ratio.
+        Compression levels from 20 to 22 offer better compression ratio at the expense of requiring more memory.
+        Default: 3.
     """
 
     filter_name = "zstd"
     filter_id = ZSTD_ID
 
+    # As of Zstandard v1.5.7: ZSTD_minCLevel() -> -1<<17 = -131072
+    _ZSTD_MIN_CLEVEL = -131072
+    _ZSTD_MAX_CLEVEL = 22
+
     def __init__(self, clevel: int = 3):
-        if not 1 <= clevel <= 22:
-            raise ValueError("clevel must be in the range [1, 22]")
+        if not self._ZSTD_MIN_CLEVEL <= clevel <= self._ZSTD_MAX_CLEVEL:
+            raise ValueError(
+                f"clevel must be in the range [{self._ZSTD_MIN_CLEVEL}, {self._ZSTD_MAX_CLEVEL}]"
+            )
+        clevel_uint32 = _to_uint32(clevel)
         super().__init__(
-            filter_options=(clevel,),
+            filter_options=(clevel_uint32,),
             config={"clevel": clevel},
         )
 
     @property
     def clevel(self) -> int:
-        """Compression level from 1 (lowest compression) to 22 (maximum compression)"""
-        return self.filter_options[0]
+        """Compression level from -131072 (lowest compression) to 22 (maximum compression)"""
+        clevel = _from_uint32(self.filter_options[0])
+        return clevel
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Zstd:
