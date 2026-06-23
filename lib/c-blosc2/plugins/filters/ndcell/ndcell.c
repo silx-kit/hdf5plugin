@@ -48,19 +48,68 @@ int ndcell_forward(const uint8_t *input, uint8_t *output, int32_t length, uint8_
   }
   int typesize = cparams->typesize;
 
-  int8_t cell_shape = (int8_t) meta;
-  const int cell_size = (int) pow(cell_shape, ndim);
-
-  int32_t blocksize = (int32_t) typesize;
-  for (int i = 0; i < ndim; i++) {
-    blocksize *= blockshape[i];
-  }
-
-  if (length != blocksize) {
+  // `meta` is the cell side length and comes from the chunk header (uint8_t,
+  // 0..255).  Interpret it as unsigned and reject 0: an (int8_t) cast would turn
+  // 128..255 into negative values and 0 would later divide by zero in
+  // `(blockshape[i] + cell_shape - 1) / cell_shape`.
+  int cell_shape = (int) meta;
+  if (cell_shape <= 0) {
     free(shape);
     free(chunkshape);
     free(blockshape);
-    BLOSC_TRACE_ERROR("Length not equal to blocksize %d %d \n", length, blocksize);
+    BLOSC_TRACE_ERROR("Invalid cell_shape %d", cell_shape);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  // cell_size is cell_shape^ndim (elements per cell).  Compute it with checked
+  // 64-bit multiplication: an (int) pow() can overflow / lose precision, and
+  // casting an out-of-range double back to int is undefined behaviour that could
+  // bypass the "buffer smaller than cell" check further down.
+  int64_t cell_size = 1;
+  for (int i = 0; i < ndim; i++) {
+    if (cell_size > INT64_MAX / cell_shape) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("cell_shape %d too large for ndim %d", cell_shape, ndim);
+      return BLOSC2_ERROR_FAILURE;
+    }
+    cell_size *= cell_shape;
+  }
+
+  if (typesize <= 0) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Invalid typesize %d", typesize);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  // See ndcell_backward(): validate the b2nd block geometry in 64-bit so a
+  // crafted blockshape cannot wrap a 32-bit product back onto `length` and make
+  // the index arithmetic below read past the `length`-sized input buffer.
+  int64_t blocksize = (int64_t) typesize;
+  for (int i = 0; i < ndim; i++) {
+    if (blockshape[i] <= 0) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("Invalid blockshape[%d] = %d", i, blockshape[i]);
+      return BLOSC2_ERROR_FAILURE;
+    }
+    blocksize *= blockshape[i];
+    if (blocksize > (int64_t) length) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("blockshape too large for block of %d bytes", length);
+      return BLOSC2_ERROR_FAILURE;
+    }
+  }
+
+  if ((int64_t) length != blocksize) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Length not equal to blocksize %d %lld \n", length, (long long) blocksize);
     return BLOSC2_ERROR_FAILURE;
   }
 
@@ -68,7 +117,10 @@ int ndcell_forward(const uint8_t *input, uint8_t *output, int32_t length, uint8_
   uint8_t *op = (uint8_t *) output;
   uint8_t *op_limit = op + length;
 
-  if (length < cell_size * typesize) {
+  // length is a multiple of typesize here (length == blocksize, checked above),
+  // so the division is exact; phrasing the check this way avoids overflowing the
+  // cell_size * typesize product.
+  if (cell_size > (int64_t) length / typesize) {
     free(shape);
     free(chunkshape);
     free(blockshape);
@@ -182,26 +234,82 @@ int ndcell_backward(const uint8_t *input, uint8_t *output, int32_t length, uint8
     return BLOSC2_ERROR_FAILURE;
   }
 
-  int8_t cell_shape = (int8_t) meta;
-  int cell_size = (int) pow(cell_shape, ndim);
+  // `meta` is attacker-controlled in a crafted frame.  Interpret it as unsigned
+  // and reject 0: an (int8_t) cast would turn 128..255 into negative values and
+  // 0 would later divide by zero in `(blockshape[i] + cell_shape - 1) / cell_shape`.
+  int cell_shape = (int) meta;
+  if (cell_shape <= 0) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Invalid cell_shape %d", cell_shape);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  // See ndcell_forward(): compute cell_shape^ndim with checked 64-bit
+  // multiplication so an overflowing (int) pow() cannot bypass the
+  // "buffer smaller than cell" check below.
+  int64_t cell_size = 1;
+  for (int i = 0; i < ndim; i++) {
+    if (cell_size > INT64_MAX / cell_shape) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("cell_shape %d too large for ndim %d", cell_shape, ndim);
+      return BLOSC2_ERROR_FAILURE;
+    }
+    cell_size *= cell_shape;
+  }
   int32_t typesize = schunk->typesize;
   uint8_t *ip = (uint8_t *) input;
   uint8_t *ip_limit = ip + length;
   uint8_t *op = (uint8_t *) output;
-  int32_t blocksize = (int32_t) typesize;
-  for (int i = 0; i < ndim; i++) {
-    blocksize *= blockshape[i];
-  }
-
-  if (length != blocksize) {
+  if (typesize <= 0) {
     free(shape);
     free(chunkshape);
     free(blockshape);
-    BLOSC_TRACE_ERROR("Length not equal to blocksize");
+    BLOSC_TRACE_ERROR("Invalid typesize %d", typesize);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  // The block geometry (blockshape) comes from the attacker-controlled "b2nd"
+  // metalayer and is NOT validated by b2nd_deserialize_meta().  Compute the
+  // block size in 64-bit and reject non-positive dimensions.  Otherwise a
+  // crafted blockshape whose 32-bit product wraps back onto `length` would pass
+  // the check below, while the scatter-write index arithmetic further down uses
+  // the true (huge) dimensions, writing past the `length`-sized output buffer
+  // (heap overflow).  Bailing as soon as the running product exceeds `length`
+  // also keeps the 64-bit multiply from overflowing (it stays
+  // <= length * INT32_MAX < INT64_MAX).
+  int64_t blocksize = (int64_t) typesize;
+  for (int i = 0; i < ndim; i++) {
+    if (blockshape[i] <= 0) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("Invalid blockshape[%d] = %d", i, blockshape[i]);
+      return BLOSC2_ERROR_FAILURE;
+    }
+    blocksize *= blockshape[i];
+    if (blocksize > (int64_t) length) {
+      free(shape);
+      free(chunkshape);
+      free(blockshape);
+      BLOSC_TRACE_ERROR("blockshape too large for block of %d bytes", length);
+      return BLOSC2_ERROR_FAILURE;
+    }
+  }
+
+  if ((int64_t) length != blocksize) {
+    free(shape);
+    free(chunkshape);
+    free(blockshape);
+    BLOSC_TRACE_ERROR("Length not equal to blocksize %d %lld", length, (long long) blocksize);
     return BLOSC2_ERROR_FAILURE;
   }
 
-  if (length < cell_size * typesize) {
+  // length is a multiple of typesize here (length == blocksize, checked above),
+  // so the division is exact; phrasing the check this way avoids overflowing the
+  // cell_size * typesize product.
+  if (cell_size > (int64_t) length / typesize) {
     free(shape);
     free(chunkshape);
     free(blockshape);
@@ -272,8 +380,8 @@ int ndcell_backward(const uint8_t *input, uint8_t *output, int32_t length, uint8
     free(shape);
     free(chunkshape);
     free(blockshape);
-    BLOSC_TRACE_ERROR("Output size is not compatible with embedded blockshape ind %d %d \n",
-                      ind, (blocksize / typesize));
+    BLOSC_TRACE_ERROR("Output size is not compatible with embedded blockshape ind %d %lld \n",
+                      ind, (long long) (blocksize / typesize));
     return BLOSC2_ERROR_FAILURE;
   }
 
