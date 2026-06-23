@@ -7,6 +7,7 @@ This project follows the standard open-source project github workflow, which is 
 Testing
 =======
 
+
 To run self-contained tests, from Python:
 
 .. code-block:: python
@@ -23,6 +24,36 @@ To also run tests relying on actual HDF5 files, run from the source directory::
   python test/test.py
 
 This tests the installed version of `hdf5plugin`.
+
+Example of an installation with conda for test
+..............................................
+
+1. `Install conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>`_ if needed & create conda environment for testing
+
+.. code-block:: bash
+
+  conda create -n hdf5plugins_env python=3.XX
+  conda activate hdf5plugins_env
+
+2. Install requirements
+
+.. code-block:: bash
+
+  conda install compilers
+  pip install py-cpuinfo setuptools
+
+3. Build
+
+.. code-block:: bash
+
+  python setup.py build
+
+4. Run the test
+
+.. code-block:: bash
+
+  PYTHONPATH=build/lib.linux-x86_64-cpython-3{XX}/ python test/test.py -vvv
+
 
 Formatting/Linting
 ==================
