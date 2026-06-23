@@ -44,7 +44,7 @@ jobs:
           - os: ubuntu-latest
             cibw_build: "cp312-manylinux_x86_64"
           - os: macos-latest
-            cibw_build: "cp313-macosx_arm64"
+            cibw_build: "cp314-macosx_arm64"
 
     steps:
       - uses: actions/checkout@v5
