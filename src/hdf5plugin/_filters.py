@@ -1258,6 +1258,19 @@ class SZ3(FilterBase):
         raise ValueError(f"Unsupported sz_mode: {sz_mode}")
 
 
+def _to_uint32(value: int) -> int:
+    """Cast an integer to a uint32 and store it as a Python int
+
+    Useful to pass negative integers as hdf5 filter options (uint32)
+    """
+    return int(struct.unpack("I", struct.pack("i", value))[0])
+
+
+def _from_uint32(value: int) -> int:
+    """Cast value stored as uint32 to a signed int"""
+    return int(struct.unpack("i", struct.pack("I", value))[0])
+
+
 class Zstd(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using Zstd filter.
 
@@ -1288,7 +1301,7 @@ class Zstd(FilterBase):
             raise ValueError(
                 f"clevel must be in the range [{self._ZSTD_MIN_CLEVEL}, {self._ZSTD_MAX_CLEVEL}]"
             )
-        clevel_uint32 = struct.unpack("I", struct.pack("i", clevel))[0]
+        clevel_uint32 = _to_uint32(clevel)
         super().__init__(
             filter_options=(clevel_uint32,),
             config={"clevel": clevel},
@@ -1297,7 +1310,7 @@ class Zstd(FilterBase):
     @property
     def clevel(self) -> int:
         """Compression level from -131072 (lowest compression) to 22 (maximum compression)"""
-        clevel = int(struct.unpack("i", struct.pack("I", self.filter_options[0]))[0])
+        clevel = _from_uint32(self.filter_options[0])
         return clevel
 
     @classmethod
