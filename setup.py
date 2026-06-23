@@ -1319,8 +1319,9 @@ def _get_lz4_plugin():
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5lz4",
-        sources=["lib/LZ4/H5Zlz4.c", "lib/LZ4/lz4_h5plugin.c"],
-        include_dirs=get_clib_config("lz4", "include_dirs"),
+        sources=["lib/hdf5_plugins/LZ4/src/H5Zlz4.c"],
+        include_dirs=["lib/hdf5_plugins_extra/LZ4"]
+        + get_clib_config("lz4", "include_dirs"),
         extra_compile_args=extra_compile_args,
         extra_link_args=get_clib_config("lz4", "extra_link_args"),
         libraries=libraries,
