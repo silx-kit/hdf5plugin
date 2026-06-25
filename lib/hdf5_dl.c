@@ -143,14 +143,19 @@ static struct {
 
 
 /*HDF5 variables*/
-#define DEF_DEFAULT_BOOL_VARIABLE(NAME)\
-    _Bool NAME = -1
+#define DEF_DEFAULT_BOOL_VARIABLE(NAME, value)\
+    _Bool NAME = value
 
 #define DEF_DLSYM_BOOL_VARIABLE(NAME)\
-    NAME = *((_Bool *)dlsym(handle, #NAME))
+    {\
+        void * symbol = dlsym(handle, #NAME);\
+        if (symbol != NULL) {\
+            NAME = *((_Bool *)symbol);\
+        }\
+    }
 
-DEF_DEFAULT_BOOL_VARIABLE(H5_libinit_g);
-DEF_DEFAULT_BOOL_VARIABLE(H5_libterm_g);
+DEF_DEFAULT_BOOL_VARIABLE(H5_libinit_g, true);
+DEF_DEFAULT_BOOL_VARIABLE(H5_libterm_g, false);
 
 #define DEF_DEFAULT_VARIABLE(NAME)\
     hid_t NAME = -1
@@ -239,8 +244,8 @@ int init_filter(const char* libname)
     DL_H5Functions.H5Zunregister = (DL_func_H5Zunregister)dlsym(handle, "H5Zunregister");
 
     /*Variables*/
-    DEF_DLSYM_BOOL_VARIABLE(H5_libinit_g);
-    DEF_DLSYM_BOOL_VARIABLE(H5_libterm_g);
+    DEF_DLSYM_BOOL_VARIABLE(H5_libinit_g)
+    DEF_DLSYM_BOOL_VARIABLE(H5_libterm_g)
 
     DEF_DLSYM_VARIABLE(H5E_ARGS_g);
     DEF_DLSYM_VARIABLE(H5E_BADTYPE_g);
