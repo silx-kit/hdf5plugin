@@ -33,10 +33,10 @@ import tempfile
 import unittest
 from typing import Any, cast
 
-import h5py
 import numpy
 from packaging.version import parse as parse_version
 
+import h5py
 import hdf5plugin
 
 try:

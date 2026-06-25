@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """mypy stubs for h5py usage in hdf5plugin"""
+
+from __future__ import annotations
 
 import ctypes
 from collections.abc import Buffer

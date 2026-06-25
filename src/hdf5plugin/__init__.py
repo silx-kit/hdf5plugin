@@ -27,13 +27,13 @@ It works under Windows, MacOS and Linux.
 """
 
 from . import _version
-from ._filters import FILTERS  # noqa
 from ._filters import (  # noqa
     BLOSC2_ID,
     BLOSC_ID,
     BSHUF_ID,
     BZIP2_ID,
     FCIDECOMP_ID,
+    FILTERS,
     LZ4,
     LZ4_ID,
     SPERR_ID,
