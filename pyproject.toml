@@ -62,27 +62,30 @@ package-dir = {"" = "src"}
 [tool.setuptools.dynamic]
 version = {attr = "hdf5plugin._version.version"}
 
-[tool.bandit]
-exclude_dirs = [
+[tool.ruff]
+exclude = [
     "build",
-    "doc/hdf5plugin_EuropeanHUG2023",
     "lib",
 ]
+line-length = 88
 
-[tool.bandit.assert_used]
-skips = ["*test.py"]
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "S",  # flake8-bandit
+    "W",  # pycodestyle
+]
 
-[tool.black]
-extend-exclude = '''
-(
-    lib
-    | .*\.ipynb
-)
-'''
-
-[tool.isort]
-profile = "black"
-skip_glob = ["lib"]
+[tool.ruff.lint.per-file-ignores]
+"*" = ["E501"]  # line too long
+"test*.py" = ["S101"]  # assert
+"doc/hdf5plugin_EuropeanHUG2023/*" = ["S108"]  # access to /dev/shm
+# urlretrieve without url schema check
+"doc/hdf5plugin_EuropeanHUG2021.ipynb" = ["S310"]
+"doc/hdf5plugin_EuropeanHUG2022.ipynb" = ["S310"]
+"doc/hdf5plugin_EuropeanHUG2023/presentation.ipynb" = ["S310"]
 
 [tool.mypy]
 mypy_path = ["src"]
