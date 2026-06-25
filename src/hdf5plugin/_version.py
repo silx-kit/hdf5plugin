@@ -27,7 +27,7 @@ import logging
 import re
 from typing import NamedTuple
 
-version = "6.0.0"
+version = "7.0.0"
 
 
 logger = logging.getLogger(__name__)
