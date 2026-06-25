@@ -29,23 +29,15 @@ Formatting/Linting
 
 From the source directory:
 
-* Format code with `black <https://black.readthedocs.io/>`_::
+* To format the code, use `ruff format <https://docs.astral.sh/ruff/formatter/>`_::
 
-    black .
+    ruff format
 
-* Sort imports with `isort <https://pycqa.github.io/isort/>`_::
+* To check (lint) the code, use `ruff check <https://docs.astral.sh/ruff/linter/>`_::
 
-    isort .
+    ruff check
 
-* Check code with `flake8 <https://flake8.pycqa.org/>`_::
-
-    flake8
-
-* Check code with `bandit <https://bandit.readthedocs.io/>`_ security linter::
-
-    bandit -c pyproject.toml -r .
-
-* Check typing with `mypy <https://mypy.readthedocs.io>`_::
+* To check typing, use `mypy <https://mypy.readthedocs.io>`_::
 
     mypy
 
