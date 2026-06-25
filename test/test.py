@@ -31,9 +31,9 @@ import shutil
 import tempfile
 import unittest
 
-import h5py
 import numpy
 
+import h5py
 import hdf5plugin
 from hdf5plugin import _filters
 from hdf5plugin.test import suite as hdf5plugin_suite
@@ -370,9 +370,7 @@ class TestRepr(unittest.TestCase):
             with self.subTest(filter=filter_class.filter_name):
                 filter_instance = filter_class()
                 repr_string = repr(filter_instance)
-                repr_instance = eval(
-                    repr_string, {filter_class.__name__: filter_class}
-                )  # nosec
+                repr_instance = eval(repr_string, {filter_class.__name__: filter_class})  # noqa: S307
                 self.assertEqual(filter_instance, repr_instance)
 
 

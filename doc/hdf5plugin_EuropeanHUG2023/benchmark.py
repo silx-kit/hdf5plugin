@@ -9,8 +9,9 @@ import tempfile
 import time
 from typing import NamedTuple, Optional
 
-import h5py
 import numpy
+
+import h5py
 
 # Set affinity and env. var. before importing hdf5plugin
 
