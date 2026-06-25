@@ -49,10 +49,8 @@ test = [
 ]
 dev = [
     "hdf5plugin[doc,test]",
-    "bandit",
-    "black",
-    "flake8",
-    "isort",
+    "mypy",
+    "ruff",
 ]
 
 [tool.setuptools]
