@@ -34,7 +34,6 @@ import unittest
 from typing import Any, cast
 
 import numpy
-from packaging.version import parse as parse_version
 
 import h5py
 import hdf5plugin
@@ -435,8 +434,8 @@ class TestStrings(unittest.TestCase):
             numpy.array(["test", "strings", "ascii"] * N, dtype="S"),
             numpy.array([b"test", b"strings", b"binary"] * N, dtype="O"),
         ]
-        has_h5py_314 = parse_version(h5py.__version__) >= parse_version("3.14")
-        has_numpy_2 = parse_version(numpy.__version__) >= parse_version("2.0")
+        has_h5py_314 = h5py.version.version_tuple >= (3, 14)
+        has_numpy_2 = numpy.__version__.startswith("2.")
         if has_h5py_314 and has_numpy_2:
             self.string_arrays.append(
                 numpy.array(["test", "strings", "Crème brûlée"] * N, dtype="T")
