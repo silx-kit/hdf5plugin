@@ -34,7 +34,6 @@ import unittest
 from typing import Any, cast
 
 import numpy
-from packaging.version import parse as parse_version
 
 import h5py
 import hdf5plugin
@@ -435,8 +434,8 @@ class TestStrings(unittest.TestCase):
             numpy.array(["test", "strings", "ascii"] * N, dtype="S"),
             numpy.array([b"test", b"strings", b"binary"] * N, dtype="O"),
         ]
-        has_h5py_314 = parse_version(h5py.__version__) >= parse_version("3.14")
-        has_numpy_2 = parse_version(numpy.__version__) >= parse_version("2.0")
+        has_h5py_314 = h5py.version.version_tuple >= (3, 14)
+        has_numpy_2 = numpy.__version__.startswith("2.")
         if has_h5py_314 and has_numpy_2:
             self.string_arrays.append(
                 numpy.array(["test", "strings", "Crème brûlée"] * N, dtype="T")
@@ -494,13 +493,17 @@ class TestStrings(unittest.TestCase):
                 self.assertEqual(len(filters), 1)
                 self.assertEqual(filters[0][0], hdf5plugin.FILTERS[filter_name])
 
-    @unittest.skip(reason="segfault (#364)")
+    @unittest.skipIf(
+        h5py.version.hdf5_version_tuple < (2, 1, 0), "hdf5 v2.1.0 required"
+    )
     @unittest.skipUnless(should_test("blosc"), "Blosc filter not available")
     def testStringsBlosc(self):
         """Strings write/read test with blosc filter plugin"""
         self._test_strings("blosc")  # Default options
 
-    @unittest.skip(reason="segfault (#364)")
+    @unittest.skipIf(
+        h5py.version.hdf5_version_tuple < (2, 1, 0), "hdf5 v2.1.0 required"
+    )
     @unittest.skipUnless(should_test("blosc2"), "Blosc filter not available")
     def testStringsBlosc2(self):
         """Strings write/read test with blosc2 filter plugin"""
