@@ -66,10 +66,16 @@ H5Z_filter_zstd(unsigned int flags, size_t cd_nelmts, const unsigned int cd_valu
     if (flags & H5Z_FLAG_REVERSE) {
         /* We're decompressing */
         size_t decompSize = ZSTD_getFrameContentSize(*buf, origSize);
+        if (decompSize == 0 || decompSize == ZSTD_CONTENTSIZE_UNKNOWN ||
+            decompSize == ZSTD_CONTENTSIZE_ERROR)
+            goto error;
+
         if (NULL == (outbuf = malloc(decompSize)))
             goto error;
 
         decompSize = ZSTD_decompress(outbuf, decompSize, inbuf, origSize);
+        if (ZSTD_isError(decompSize))
+            goto error;
 
 #ifdef ZSTD_DEBUG
         fprintf(stderr, "   decompressing nbytes: %ld\n", decompSize);
@@ -104,6 +110,8 @@ H5Z_filter_zstd(unsigned int flags, size_t cd_nelmts, const unsigned int cd_valu
             goto error;
 
         compSize = ZSTD_compress(outbuf, compSize, inbuf, origSize, aggression);
+        if (ZSTD_isError(compSize))
+            goto error;
 
 #ifdef ZSTD_DEBUG
         fprintf(stderr, "    compressing nbytes: %ld\n", compSize);
