@@ -1,3 +1,8 @@
+Unreleased
+----------
+
+This release add the new plugin `h5z-htj2k`.
+
 7.0.0: 25/06/2026
 -----------------
 

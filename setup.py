@@ -987,10 +987,64 @@ def _get_zstd_clib(field=None):
     return config[field]
 
 
+def _get_openjph_clib(field=None):
+    """Vendored OpenJPH static lib build config (used by the htj2k plugin)
+
+    OpenJPH normally picks its fastest code path at runtime among several
+    SIMD-specific translation units (SSE/SSE2/SSSE3/AVX/AVX2/AVX512), each
+    requiring its own compiler flags (see vendored CMakeLists.txt). A plain
+    setuptools clib/extension cannot apply per-source compile flags, so this
+    only builds the portable, non-SIMD sources and defines OJPH_DISABLE_SIMD,
+    which is an upstream-supported configuration (CMake's OJPH_DISABLE_SIMD
+    option) that keeps ojph_codeblock_fun.cpp's dispatcher from referencing
+    the SIMD-only symbols we are not compiling.
+    """
+    openjph_dir = "lib/h5z-htj2k/vendored/OpenJPH/src/core"
+    simd_suffixes = (
+        "_sse",
+        "_sse2",
+        "_ssse3",
+        "_avx",
+        "_avx2",
+        "_avx512",
+        "_wasm",
+        "_vsx",
+    )
+
+    def portable_sources(pattern):
+        return [
+            source
+            for source in glob(f"{openjph_dir}/{pattern}")
+            if not os.path.splitext(os.path.basename(source))[0].endswith(simd_suffixes)
+        ]
+
+    sources = (
+        portable_sources("codestream/*.cpp")
+        + portable_sources("coding/*.cpp")
+        + portable_sources("transform/*.cpp")
+        + glob(f"{openjph_dir}/others/*.cpp")
+        + glob(f"{openjph_dir}/others/*.c")
+    )
+
+    config = dict(
+        sources=sources,
+        include_dirs=[f"{openjph_dir}/openjph"],
+        macros=[("OJPH_DISABLE_SIMD", None), ("_FILE_OFFSET_BITS", 64)],
+        cflags=["-std=c++17", "/std:c++17"],
+    )
+
+    if field is None:
+        return config
+    if field in ("extra_link_args", "libraries"):
+        return []
+    return config[field]
+
+
 _EMBEDDED_CLIB_CONFIG_GETTERS = {
     "bzip2": _get_bzip2_clib,
     "charls": _get_charls_clib,
     "lz4": _get_lz4_clib,
+    "openjph": _get_openjph_clib,
     "snappy": _get_snappy_clib,
     "sperr": _get_sperr_clib,
     "sperr_filter": _get_sperr_filter_clib,
@@ -1395,6 +1449,28 @@ def _get_h5zfp_plugin():
     )
 
 
+PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
+
+
+def _get_htj2k_plugin():
+    """H5Z-htj2k plugin build config"""
+    h5z_htj2k_dir = "lib/h5z-htj2k"
+    openjph_include_dir = f"{h5z_htj2k_dir}/vendored/OpenJPH/src/core/openjph"
+
+    extra_compile_args = ["-O3", "-std=c++17"]
+    extra_compile_args += ["/Ox", "/std:c++17"]
+
+    return HDF5PluginExtension(
+        "hdf5plugin.plugins.libh5htj2k",
+        sources=glob(f"{h5z_htj2k_dir}/*.c") + glob(f"{h5z_htj2k_dir}/*.cpp"),
+        include_dirs=[h5z_htj2k_dir, openjph_include_dir]
+        + get_clib_config("openjph", "include_dirs"),
+        libraries=get_clib_config("openjph", "extra_link_args"),
+        extra_compile_args=extra_compile_args,
+        language="c++",
+    )
+
+
 PLUGIN_LIB_DEPENDENCIES["zfp"] = ("zfp",)
 
 
@@ -1497,6 +1573,7 @@ _EMBEDDED_PLUGIN_EXTENSIONS = {
     "bshuf": _get_bitshuffle_plugin,
     "bzip2": _get_bzip2_plugin,
     "fcidecomp": _get_fcidecomp_plugin,
+    "htj2k": _get_htj2k_plugin,
     "lz4": _get_lz4_plugin,
     "sperr": _get_sperr_plugin,
     "sz": _get_sz_plugin,

@@ -145,6 +145,25 @@ class TestHDF5PluginRead(unittest.TestCase):
             )
 
     @unittest.skipUnless(
+        h5py.h5z.filter_avail(hdf5plugin.HTJP2K_ID), "HT-JP2K filter not available"
+    )
+    def testHtj2k(self):
+        """Test writing and reading back HT-JP2K compressed data (lossless)"""
+        original = numpy.arange(100, dtype=numpy.int16)
+        with self.subTest(dtype=original.dtype, shape=original.shape):
+            fname = os.path.join(self.tempdir, "htjp2k.h5")
+            with h5py.File(fname, "w") as h5:
+                h5.create_dataset(
+                    "data",
+                    data=original,
+                    chunks=original.shape,
+                    compression=hdf5plugin.Htj2k(),
+                )
+            with h5py.File(fname, "r") as h5:
+                result = h5["data"][()]
+            numpy.testing.assert_array_equal(result, original)
+
+    @unittest.skipUnless(
         h5py.h5z.filter_avail(hdf5plugin.SPERR_ID), "Sperr filter not available"
     )
     def testSperrV0_1(self):

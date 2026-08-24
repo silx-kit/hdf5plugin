@@ -42,6 +42,7 @@ from ._filters import (  # noqa
     SZ3_ID,
     SZ_ID,
     ZFP_ID,
+    HTJP2K_ID,
     ZSTD_ID,
     Bitshuffle,
     Blosc,
@@ -50,6 +51,7 @@ from ._filters import (  # noqa
     FciDecomp,
     Sperr,
     Zfp,
+    Htj2k,
     Zstd,
 )
 from ._utils import (  # noqa
@@ -73,6 +75,7 @@ __all__ = [
     "SZ",
     "SZ3",
     "Zfp",
+    "htj2k",
     "Zstd",
     # Utilities
     "FILTERS",
