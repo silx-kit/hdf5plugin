@@ -145,23 +145,29 @@ class TestHDF5PluginRead(unittest.TestCase):
             )
 
     @unittest.skipUnless(
-        h5py.h5z.filter_avail(hdf5plugin.HTJP2K_ID), "HT-JP2K filter not available"
+        h5py.h5z.filter_avail(hdf5plugin.HTJ2K_ID), "HTJ2K filter not available"
     )
     def testHtj2k(self):
-        """Test writing and reading back HT-JP2K compressed data (lossless)"""
-        original = numpy.arange(100, dtype=numpy.int16)
-        with self.subTest(dtype=original.dtype, shape=original.shape):
-            fname = os.path.join(self.tempdir, "htjp2k.h5")
-            with h5py.File(fname, "w") as h5:
-                h5.create_dataset(
-                    "data",
-                    data=original,
-                    chunks=original.shape,
-                    compression=hdf5plugin.Htj2k(),
-                )
-            with h5py.File(fname, "r") as h5:
-                result = h5["data"][()]
-            numpy.testing.assert_array_equal(result, original)
+        """Test reading HTJ2K compressed data (lossless)"""
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        fname = os.path.join(dirname, "htj2k.h5")
+        self.assertTrue(os.path.exists(fname), "Cannot find %s file" % fname)
+        with h5py.File(fname, "r") as h5:
+            compressed = h5["htj2k"][()]
+            expected_rmse = h5["htj2k"].attrs["RMSE"]
+            expected_max_abs_error = h5["htj2k"].attrs["MAX_ABS_ERROR"]
+            original = h5["raw"][()]
+        self.assertTrue(original.shape == compressed.shape, "Incorrect shape")
+        self.assertTrue(original.dtype == compressed.dtype, "Incorrect dtype")
+        diff = compressed.astype(numpy.float64) - original.astype(numpy.float64)
+        rmse = numpy.sqrt(numpy.mean(diff**2))
+        max_abs_error = numpy.max(numpy.abs(diff))
+        self.assertLessEqual(rmse, expected_rmse, "RMSE higher than expected")
+        self.assertLessEqual(
+            max_abs_error,
+            expected_max_abs_error,
+            "Max absolute error higher than expected",
+        )
 
     @unittest.skipUnless(
         h5py.h5z.filter_avail(hdf5plugin.SPERR_ID), "Sperr filter not available"

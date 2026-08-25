@@ -949,8 +949,8 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
     """Test usage of the register function"""
 
     def _simple_test(self, filter_name: str):
-        if filter_name == "fcidecomp":
-            self._test("fcidecomp", dtype=numpy.uint8)
+        if filter_name in ("fcidecomp", "htj2k"):
+            self._test(filter_name, dtype=numpy.uint8)
         elif filter_name in ("sz", "zfp"):
             self._test(filter_name, dtype=numpy.float32, lossless=False)
         else:
