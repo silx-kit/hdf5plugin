@@ -988,17 +988,7 @@ def _get_zstd_clib(field=None):
 
 
 def _get_openjph_clib(field=None):
-    """Vendored OpenJPH static lib build config (used by the htj2k plugin)
-
-    OpenJPH normally picks its fastest code path at runtime among several
-    SIMD-specific translation units (SSE/SSE2/SSSE3/AVX/AVX2/AVX512), each
-    requiring its own compiler flags (see vendored CMakeLists.txt). A plain
-    setuptools clib/extension cannot apply per-source compile flags, so this
-    only builds the portable, non-SIMD sources and defines OJPH_DISABLE_SIMD,
-    which is an upstream-supported configuration (CMake's OJPH_DISABLE_SIMD
-    option) that keeps ojph_codeblock_fun.cpp's dispatcher from referencing
-    the SIMD-only symbols we are not compiling.
-    """
+    """Vendored OpenJPH static lib build config (used by the htj2k plugin)"""
     openjph_dir = "lib/h5z-htj2k/vendored/OpenJPH/src/core"
     simd_suffixes = (
         "_sse",
@@ -1030,7 +1020,7 @@ def _get_openjph_clib(field=None):
         sources=sources,
         include_dirs=[f"{openjph_dir}/openjph"],
         macros=[("OJPH_DISABLE_SIMD", None), ("_FILE_OFFSET_BITS", 64)],
-        cflags=["-std=c++17", "/std:c++17"],
+        cflags=["-O3", "/O2"],
     )
 
     if field is None:
@@ -1453,21 +1443,19 @@ PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
 
 
 def _get_htj2k_plugin():
-    """H5Z-htj2k plugin build config"""
-    h5z_htj2k_dir = "lib/h5z-htj2k"
-    openjph_include_dir = f"{h5z_htj2k_dir}/vendored/OpenJPH/src/core/openjph"
+    """h5z-htj2k plugin build config"""
+    h5z_htj2k_dir = "lib/h5z-htj2k/src"
 
-    extra_compile_args = ["-O3", "-std=c++17"]
-    extra_compile_args += ["/Ox", "/std:c++17"]
+    extra_compile_args = ["-O3"]
+    extra_compile_args += ["/Ox"]
 
     return HDF5PluginExtension(
         "hdf5plugin.plugins.libh5htj2k",
-        sources=glob(f"{h5z_htj2k_dir}/*.c") + glob(f"{h5z_htj2k_dir}/*.cpp"),
-        include_dirs=[h5z_htj2k_dir, openjph_include_dir]
-        + get_clib_config("openjph", "include_dirs"),
+        sources=[f"{h5z_htj2k_dir}/H5Zhtj2k.c", f"{h5z_htj2k_dir}/backend_openjph.cpp"],
+        include_dirs=[h5z_htj2k_dir] + get_clib_config("openjph", "include_dirs"),
         libraries=get_clib_config("openjph", "extra_link_args"),
         extra_compile_args=extra_compile_args,
-        language="c++",
+        cpp14_required=True,
     )
 
 
