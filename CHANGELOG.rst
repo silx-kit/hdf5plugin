@@ -3,6 +3,10 @@ Unreleased
 
 This release add the new plugin `h5z-htj2k`.
 
+- Compression filters and libraries:
+
+  * Added `Htj2k` filter (PR #405)
+
 7.0.0: 25/06/2026
 -----------------
 
