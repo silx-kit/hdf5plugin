@@ -55,7 +55,7 @@ BSHUF_ID = 32008
 ZFP_ID = 32013
 """ZFP filter ID"""
 
-HTJP2K_ID = 32033
+HTJ2K_ID = 32033
 """High troughput JPEG 2000"""
 
 ZSTD_ID = 32015
@@ -825,9 +825,9 @@ class Htj2k(FilterBase):
 
     This filter compresses data losslessly (reversibly) using
     `High-Throughput JPEG 2000 <https://jpeg.org/jpeg2000/htj2k.html>`_
-    and currently accepts no user-defined option through HDF5 filter's
-    ``cd_values``: they are computed and stored automatically from the
-    dataset's dtype and chunk shape.
+    and currently accepts no user-defined option.
+    Use hdf5 direct chunk write to achieve HTJ2K lossy compression,
+    see `filter documentation <https://github.com/silx-kit/h5z-htj2k>`_.
 
     It only supports datasets of signed or unsigned 8- or 16-bit integers
     (``int8``, ``uint8``, ``int16``, ``uint16``), with chunk shapes having
@@ -838,18 +838,21 @@ class Htj2k(FilterBase):
     """
 
     filter_name = "htj2k"
-    filter_id = HTJP2K_ID
+    filter_id = HTJ2K_ID
+
+    def __init__(self) -> None:
+        if not build_config.cpp14:
+            logger.error(
+                "The Htj2k filter is not available as hdf5plugin was not built with C++14.\n"
+                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler."
+            )
+        super().__init__(filter_options=(), config={})
 
     @classmethod
     def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Htj2k:
         """Returns compression arguments from HDF5 compression filters "cd_values" options
 
-        This filter has no user-configurable option: all ``cd_values``
-        (version, dtype, width, height, ncomps) are computed and stored by
-        the filter's own ``set_local`` from the dataset's dtype and chunk
-        shape, so there is nothing to recover from them here.
-
-        :param filter_options: Unused, kept for interface consistency.
+        :raises ValueError: Unsupported filter_options
         """
         return cls()
 
@@ -1378,12 +1381,12 @@ FILTER_CLASSES: tuple[type[FilterBase], ...] = (
     Blosc2,
     BZip2,
     FciDecomp,
+    Htj2k,
     LZ4,
     Sperr,
     SZ,
     SZ3,
     Zfp,
-    Htj2k,
     Zstd,
 )
 
