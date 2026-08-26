@@ -67,3 +67,10 @@ Frame specific functions
 ------------------------
 
 .. doxygenfunction:: blosc2_frame_get_offsets
+
+Locking
+-------
+
+.. doxygenfunction:: blosc2_schunk_lock
+.. doxygenfunction:: blosc2_schunk_unlock
+.. doxygenfunction:: blosc2_schunk_refresh

@@ -1,21 +1,26 @@
-# Announcing C-Blosc2 3.1.4
+# Announcing C-Blosc2 3.3.2
 A fast, compressed, and persistent binary data store library for C.
 
 ## What is new?
 
-This is a maintenance release extending the security hardening from 3.1.3
-to the **ndcell** and **ndmean** plugin filters.  Malformed or
-attacker-crafted ``b2nd`` metalayers could previously trigger heap buffer
-overflows in these filters by exploiting 32-bit block-size arithmetic.
-Both plugins now validate block geometry in 64-bit to prevent overflows.
+This is a bugfix release, mainly about BYTEDELTA.
 
-Additionally, this release fixes a thread-pool memory leak that was
-especially visible under WebAssembly/Pyodide, and a potential SEGV on
-demand when the parallel backend fails to initialize.  RISC-V targets
-are now also properly recognized in the CMake build system.
+The BYTEDELTA filter silently corrupted the tail of any block whose
+length is not a multiple of the typesize.  The last ``length % typesize``
+bytes belong to no byte stream, and were never written to the output in
+either direction, leaving whatever the destination buffer happened to
+hold.  They are now passed through verbatim, as SHUFFLE already does with
+the same remainder.
 
-Thanks to @metsw24-max, @saddamr3e and @carlosqwqqwq for their contributions
-to this release!
+Blocks whose length is a multiple of the typesize are unaffected, so
+existing data still decodes bit for bit.  Data written by the old encoder
+at a non-multiple length cannot be recovered: those tail bytes were never
+encoded in the first place.
+
+Also, the installed CMake package now exports the configured
+``CMAKE_INSTALL_INCLUDEDIR`` instead of a hardcoded ``include``.
+
+There are no API or format changes in this release.
 
 For more info, see the release notes in:
 
@@ -29,7 +34,7 @@ Blosc2 is the next generation of Blosc, an
 that has been around for more than a decade.
 
 Blosc2 expands the capabilities of Blosc by providing a higher level
-container that is able to store many chunks on it (hence the super-block name).
+container that is able to store many chunks on it (hence the super-chunk name).
 It supports storing data on both memory and disk using the same API.
 Also, it adds more compressors and filters.
 
