@@ -7,11 +7,11 @@
 #include <cstring>
 #include <exception>
 
-#include "ojph_arch.h"
-#include "ojph_codestream.h"
-#include "ojph_file.h"
-#include "ojph_mem.h"
-#include "ojph_params.h"
+#include "openjph/ojph_arch.h"
+#include "openjph/ojph_codestream.h"
+#include "openjph/ojph_file.h"
+#include "openjph/ojph_mem.h"
+#include "openjph/ojph_params.h"
 
 namespace {
 
