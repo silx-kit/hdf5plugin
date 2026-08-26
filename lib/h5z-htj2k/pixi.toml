@@ -1,6 +1,6 @@
 [workspace]
 name = "h5z-htj2k"
-version = "0.1.0"
+version = "0.1.1"
 channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 

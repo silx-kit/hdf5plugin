@@ -88,7 +88,7 @@ else()
 
   message(STATUS "Using OpenJPH backend (vendored: ${CMAKE_CURRENT_SOURCE_DIR}/vendored/OpenJPH)")
 
-  set(_backend_include_dirs)
+  set(_backend_include_dirs ${CMAKE_CURRENT_SOURCE_DIR}/vendored/OpenJPH/src/core)
   set(_backend_libs openjph)
 endif()
 
