@@ -126,6 +126,8 @@ typedef struct {
   //!< Data type. Different formats can be supported (see dtype_format).
   int8_t dtype_format;
   //!< The format of the data type.  Default is DTYPE_NUMPY_FORMAT.
+  int64_t last_tick;
+  //!< The schunk change_tick this struct was last synced with (see blosc2_schunk).
 } b2nd_array_t;
 
 
@@ -513,6 +515,29 @@ BLOSC_EXPORT int b2nd_print_meta(const b2nd_array_t *array);
  * @return An error code
  */
 BLOSC_EXPORT int b2nd_resize(b2nd_array_t *array, const int64_t *new_shape, const int64_t *start);
+
+
+/**
+ * @brief Re-sync the cached geometry (shape, strides, metalayers) of a
+ * disk-based array when another handle — possibly in another process — has
+ * changed it (e.g. via @ref b2nd_resize).
+ *
+ * This gives a deterministic sync point for readers in a single-writer,
+ * multiple-readers (SWMR) workflow: after calling it, the shape in @p array
+ * reflects the current on-disk state.  Data-access functions (get/set slice
+ * and friends) already do this implicitly, so calling it is only needed to
+ * observe shape changes without reading data (e.g. when polling).
+ *
+ * A no-op for arrays not backed by an on-disk frame.  Only shape changes are
+ * followed: if ndim, chunkshape or blockshape changed behind this handle,
+ * BLOSC2_ERROR_DATA is returned.
+ *
+ * @param array The array to refresh.
+ *
+ * @return 1 if the geometry was re-synced, 0 if it was already current, or a
+ * negative error code.
+ */
+BLOSC_EXPORT int b2nd_refresh(b2nd_array_t *array);
 
 
 /**

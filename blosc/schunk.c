@@ -20,6 +20,8 @@
 #include <direct.h>
 #include <malloc.h>
 #define mkdir(D, M) _mkdir(D)
+#else
+#include <unistd.h>
 #endif  /* _WIN32 */
 
 #include <sys/stat.h>
@@ -201,6 +203,7 @@ blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
       return NULL;
     }
     frame->sframe = true;
+    frame_set_locking(frame, schunk->storage->io);
     // Initialize frame (basically, encode the header)
     frame->schunk = schunk;
     int64_t frame_len = frame_from_schunk(schunk, frame);
@@ -224,6 +227,7 @@ blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
       return NULL;
     }
     frame->sframe = false;
+    frame_set_locking(frame, schunk->storage->io);
     // Initialize frame (basically, encode the header)
     frame->schunk = schunk;
     int64_t frame_len = frame_from_schunk(schunk, frame);
@@ -343,14 +347,18 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
 
   // Copy vlmetalayers
   for (int nmeta = 0; nmeta < schunk->nvlmetalayers; ++nmeta) {
-    uint8_t *content;
+    uint8_t *content = NULL;
     int32_t content_len;
     char* name = schunk->vlmetalayers[nmeta]->name;
     if (blosc2_vlmeta_get(schunk, name, &content, &content_len) < 0) {
+      // Passing the (previously uninitialized) content pointer forward ended
+      // in a bogus free that aborted the process; bail out instead.
       BLOSC_TRACE_ERROR("Can not get %s `vlmetalayer`.", name);
+      return NULL;
     }
     if (blosc2_vlmeta_add(new_schunk, name, content, content_len, NULL) < 0) {
       BLOSC_TRACE_ERROR("Can not add %s `vlmetalayer`.", name);
+      free(content);
       return NULL;
     }
     free(content);
@@ -364,13 +372,45 @@ blosc2_schunk* blosc2_schunk_open_udio(const char* urlpath, const blosc2_io *udi
   return blosc2_schunk_open_offset_udio(urlpath, 0, udio);
 }
 
+// frame_from_file_offset()'s bootstrap read (path stat + header + trailer)
+// happens before any lock is taken, so it can race a concurrent writer
+// growing or rewriting the frame (e.g. a stat() size snapshot made stale by
+// a header already advertising the writer's new, larger frame length) and
+// fail outright instead of returning a frame to refresh under lock.  Under
+// the locking contract such a failure is expected to be transient, so
+// retry a bounded number of times with a short backoff before giving up;
+// without locking requested this is the pre-existing single-attempt
+// behavior (a concurrent writer without locking is already out of the SWMR
+// contract).  Used for every bootstrap/re-read of the frame header in
+// blosc2_schunk_open_offset_udio() below -- a compressed-size change on an
+// in-place update can rewrite the frame layout just like growth does, so
+// this race is not limited to append/resize.
+static blosc2_frame_s* frame_from_file_offset_retrying(
+    const char* urlpath, const blosc2_io *udio, int64_t offset, int max_attempts) {
+  blosc2_frame_s* frame = NULL;
+  for (int attempt = 0; attempt < max_attempts; attempt++) {
+    frame = frame_from_file_offset(urlpath, udio, offset);
+    if (frame != NULL || attempt + 1 == max_attempts) {
+      break;
+    }
+#if defined(_WIN32)
+    Sleep(1);
+#else
+    usleep(1000);
+#endif
+  }
+  return frame;
+}
+
 blosc2_schunk* blosc2_schunk_open_offset_udio(const char* urlpath, int64_t offset, const blosc2_io *udio) {
   if (urlpath == NULL) {
     BLOSC_TRACE_ERROR("You need to supply a urlpath.");
     return NULL;
   }
 
-  blosc2_frame_s* frame = frame_from_file_offset(urlpath, udio, offset);
+  bool retry_on_race = frame_locking_requested(udio);
+  const int max_attempts = retry_on_race ? 50 : 1;
+  blosc2_frame_s* frame = frame_from_file_offset_retrying(urlpath, udio, offset, max_attempts);
   if (frame == NULL) {
     blosc2_io_cb *io_cb = blosc2_get_io_cb(udio->id);
     if (io_cb == NULL) {
@@ -383,11 +423,43 @@ blosc2_schunk* blosc2_schunk_open_offset_udio(const char* urlpath, int64_t offse
     }
     return NULL;
   }
+  // Guard the initial read of the frame against concurrent writers
+  if (frame_lock(frame, false) < 0) {
+    frame_free(frame);
+    return NULL;
+  }
+  if (frame->force_refresh) {
+    // The bootstrap read in frame_from_file_offset() happened before the lock
+    // acquisition above, so a writer may have mutated the frame in between
+    // (the generation counter cannot tell a first acquisition from a raced
+    // one, so this also triggers on every open of a previously-mutated frame;
+    // one extra header read at open time is a fair price).  Re-read the frame
+    // now, taking the fresh handle's own shared lock *before* releasing the
+    // current one so that no writer can interleave.  Same transient race as
+    // the bootstrap read above, so the same bounded retry applies.
+    blosc2_frame_s* fresh = frame_from_file_offset_retrying(urlpath, udio, offset, max_attempts);
+    int lock_rc = (fresh == NULL) ? BLOSC2_ERROR_FILE_READ : frame_lock(fresh, false);
+    frame_free(frame);  // closing its lock fd releases the old shared lock
+    if (fresh == NULL) {
+      return NULL;
+    }
+    if (lock_rc < 0) {
+      frame_free(fresh);
+      return NULL;
+    }
+    // The re-read ran under a continuously-held shared lock, so it is
+    // current: the seq mismatch of a first acquisition is not a mutation
+    fresh->force_refresh = false;
+    frame = fresh;
+  }
   blosc2_schunk* schunk = frame_to_schunk(frame, false, udio);
   if (schunk == NULL) {
     BLOSC_TRACE_ERROR("Error converting frame to super-chunk");
+    // frame_to_schunk() has already freed the frame on failure; closing its
+    // lock fd released the OS lock, so no frame_unlock() here
     return NULL;
   }
+  frame_unlock(frame);
 
   // Set the storage with proper defaults
   size_t pathlen = strlen(urlpath);
@@ -448,10 +520,18 @@ int64_t frame_to_file(blosc2_frame_s* frame, const char* urlpath) {
     BLOSC_TRACE_ERROR("Error getting the input/output API");
     return BLOSC2_ERROR_PLUGIN_IO;
   }
-  void* fp = io_cb->open(urlpath, "wb", frame->schunk->storage->io);
+  void* fp = io_cb->open(urlpath, "wb", frame->schunk->storage->io->params);
+  if (fp == NULL) {
+    BLOSC_TRACE_ERROR("Cannot open %s for writing.", urlpath);
+    return BLOSC2_ERROR_FILE_OPEN;
+  }
   int64_t io_pos = 0;
   int64_t nitems = io_cb->write(frame->cframe, frame->len, 1, io_pos, fp);
   io_cb->close(fp);
+  if (nitems != 1) {
+    BLOSC_TRACE_ERROR("Cannot write the frame to %s.", urlpath);
+    return BLOSC2_ERROR_FILE_WRITE;
+  }
   return nitems * frame->len;
 }
 
@@ -463,11 +543,46 @@ int64_t append_frame_to_file(blosc2_frame_s* frame, const char* urlpath) {
         BLOSC_TRACE_ERROR("Error getting the input/output API");
         return BLOSC2_ERROR_PLUGIN_IO;
     }
-    void* fp = io_cb->open(urlpath, "ab", frame->schunk->storage->io);
+    /* "rb+" rather than "ab": the write below passes an explicit position, and
+       POSIX ignores it on an O_APPEND descriptor (every write lands at EOF)
+       while Windows honours it.  Without O_APPEND the position means the same
+       thing on both.  "rb+" will not create, so create the file first when it
+       is not there yet -- which is what "ab" used to cover.  Creating with "ab"
+       rather than "wb+": should the "rb+" below have failed for some reason
+       other than a missing file, "ab" leaves its contents alone where "wb+"
+       would truncate them away.
+
+       Note this gives up O_APPEND's atomic land-at-EOF: two processes appending
+       to the same file concurrently can now write at the same offset.  They
+       could not use the result before either -- the offset returned here comes
+       from a size() that the other process invalidates just the same -- and
+       Windows never had the atomicity to begin with, since it honours the
+       explicit position even on an append handle. */
+    void* fp = io_cb->open(urlpath, "rb+", frame->schunk->storage->io->params);
+    if (fp == NULL) {
+        fp = io_cb->open(urlpath, "ab", frame->schunk->storage->io->params);
+        if (fp != NULL) {
+            io_cb->close(fp);
+            fp = io_cb->open(urlpath, "rb+", frame->schunk->storage->io->params);
+        }
+    }
+    if (fp == NULL) {
+        BLOSC_TRACE_ERROR("Cannot open %s for appending.", urlpath);
+        return BLOSC2_ERROR_FILE_OPEN;
+    }
 
     int64_t io_pos = io_cb->size(fp);
-    io_cb->write(frame->cframe, frame->len, 1, io_pos, fp);
+    if (io_pos < 0) {
+        io_cb->close(fp);
+        BLOSC_TRACE_ERROR("Cannot determine the size of %s.", urlpath);
+        return BLOSC2_ERROR_FILE_READ;
+    }
+    int64_t nitems = io_cb->write(frame->cframe, frame->len, 1, io_pos, fp);
     io_cb->close(fp);
+    if (nitems != 1) {
+        BLOSC_TRACE_ERROR("Cannot append the frame to %s.", urlpath);
+        return BLOSC2_ERROR_FILE_WRITE;
+    }
     return io_pos;
 }
 
@@ -535,6 +650,32 @@ int64_t blosc2_schunk_append_file(blosc2_schunk* schunk, const char* urlpath) {
 
 
 /* Free all memory from a super-chunk. */
+void schunk_free_metalayers(blosc2_schunk *schunk) {
+  for (int i = 0; i < schunk->nmetalayers; i++) {
+    if (schunk->metalayers[i] != NULL) {
+      free(schunk->metalayers[i]->name);
+      free(schunk->metalayers[i]->content);
+      free(schunk->metalayers[i]);
+      schunk->metalayers[i] = NULL;
+    }
+  }
+  schunk->nmetalayers = 0;
+}
+
+
+void schunk_free_vlmetalayers(blosc2_schunk *schunk) {
+  for (int i = 0; i < schunk->nvlmetalayers; i++) {
+    if (schunk->vlmetalayers[i] != NULL) {
+      free(schunk->vlmetalayers[i]->name);
+      free(schunk->vlmetalayers[i]->content);
+      free(schunk->vlmetalayers[i]);
+      schunk->vlmetalayers[i] = NULL;
+    }
+  }
+  schunk->nvlmetalayers = 0;
+}
+
+
 int blosc2_schunk_free(blosc2_schunk *schunk) {
   int err = 0;
 
@@ -552,18 +693,7 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
   if (schunk->blockshape != NULL)
     free(schunk->blockshape);
 
-  if (schunk->nmetalayers > 0) {
-    for (int i = 0; i < schunk->nmetalayers; i++) {
-      if (schunk->metalayers[i] != NULL) {
-        if (schunk->metalayers[i]->name != NULL)
-          free(schunk->metalayers[i]->name);
-        if (schunk->metalayers[i]->content != NULL)
-          free(schunk->metalayers[i]->content);
-        free(schunk->metalayers[i]);
-      }
-    }
-    schunk->nmetalayers = 0;
-  }
+  schunk_free_metalayers(schunk);
 
   if (schunk->storage != NULL) {
     blosc2_io_cb *io_cb = blosc2_get_io_cb(schunk->storage->io->id);
@@ -589,17 +719,7 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
     frame_free((blosc2_frame_s *) schunk->frame);
   }
 
-  if (schunk->nvlmetalayers > 0) {
-    for (int i = 0; i < schunk->nvlmetalayers; ++i) {
-      if (schunk->vlmetalayers[i] != NULL) {
-        if (schunk->vlmetalayers[i]->name != NULL)
-          free(schunk->vlmetalayers[i]->name);
-        if (schunk->vlmetalayers[i]->content != NULL)
-          free(schunk->vlmetalayers[i]->content);
-        free(schunk->vlmetalayers[i]);
-      }
-    }
-  }
+  schunk_free_vlmetalayers(schunk);
 
   free(schunk);
 
@@ -636,6 +756,35 @@ void blosc2_schunk_avoid_cframe_free(blosc2_schunk *schunk, bool avoid_cframe_fr
   if (frame) {
     frame_avoid_cframe_free(frame, avoid_cframe_free);
   }
+}
+
+
+/* Hold the exclusive frame lock across several operations: the operations
+   between blosc2_schunk_lock() and blosc2_schunk_unlock() nest on the
+   already-held lock (via the frame's lock depth counter) instead of
+   re-acquiring it, so the whole bracket is atomic against other handles.
+   No-ops (success) when locking is not enabled on the handle. */
+int blosc2_schunk_lock(blosc2_schunk *schunk) {
+  return frame_lock((blosc2_frame_s*)schunk->frame, true);
+}
+
+
+int blosc2_schunk_unlock(blosc2_schunk *schunk) {
+  return frame_unlock((blosc2_frame_s*)schunk->frame);
+}
+
+
+/* Re-sync the cached counters (nchunks, nbytes, cbytes) and metalayers of a
+   disk-based super-chunk when another handle changed it behind our back.
+   A no-op for in-memory super-chunks. */
+int blosc2_schunk_refresh(blosc2_schunk *schunk) {
+  if (schunk == NULL) {
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
+  if (schunk->frame == NULL) {
+    return 0;
+  }
+  return frame_check_stale((blosc2_frame_s *) schunk->frame);
 }
 
 
@@ -743,7 +892,15 @@ int64_t blosc2_schunk_fill_special(blosc2_schunk* schunk, int64_t nitems, int sp
     schunk->chunksize = chunksize;
     schunk->nchunks = nchunks;
     schunk->nbytes = nitems * typesize;
+    int rc = frame_lock(frame, true);
+    if (rc < 0) {
+      schunk->chunksize = old_chunksize;
+      schunk->nchunks = old_nchunks;
+      schunk->nbytes = old_nbytes;
+      return rc;
+    }
     int64_t frame_len = frame_fill_special(frame, nitems, special_value, chunksize, schunk);
+    frame_unlock(frame);
     if (frame_len < 0) {
       schunk->chunksize = old_chunksize;
       schunk->nchunks = old_nchunks;
@@ -775,9 +932,30 @@ static int schunk_get_chunk_nbytes(blosc2_schunk *schunk, int64_t nchunk, int32_
   return rc;
 }
 
+/* The flags2 byte lives in the extended header, at offset 0x1e, so it only
+   exists when the chunk actually carries one.  Whether it does is recorded in
+   the flags byte, the same way read_chunk_header() decides it -- not in the
+   chunk size: a Blosc1-style chunk with 16 or more bytes of payload is 32 bytes
+   or longer, yet offset 0x1e is compressed data there, and reading it as flags2
+   can mark a schunk as using variable-length blocks out of thin air.  The size
+   check stays as the bound that keeps a short chunk from being over-read. */
+static uint8_t get_chunk_flags2(const uint8_t *chunk, int32_t chunk_cbytes) {
+  uint8_t flags = chunk[BLOSC2_CHUNK_FLAGS];
+  bool extended_header = (flags & BLOSC_DOSHUFFLE) && (flags & BLOSC_DOBITSHUFFLE);
+  if (!extended_header || chunk_cbytes < BLOSC_EXTENDED_HEADER_LENGTH) {
+    return 0;
+  }
+  return chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2];
+}
+
 static int schunk_get_chunk_flags2(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk_flags2) {
   if (schunk->frame == NULL) {
-    *chunk_flags2 = schunk->data[nchunk][BLOSC2_CHUNK_BLOSC2_FLAGS2];
+    int32_t chunk_cbytes;
+    int rc = blosc2_cbuffer_sizes(schunk->data[nchunk], NULL, &chunk_cbytes, NULL);
+    if (rc < 0) {
+      return rc;
+    }
+    *chunk_flags2 = get_chunk_flags2(schunk->data[nchunk], chunk_cbytes);
     return 0;
   }
 
@@ -787,7 +965,7 @@ static int schunk_get_chunk_flags2(blosc2_schunk *schunk, int64_t nchunk, uint8_
   if (rc < 0) {
     return rc;
   }
-  *chunk_flags2 = chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2];
+  *chunk_flags2 = get_chunk_flags2(chunk, rc);
   if (needs_free) {
     free(chunk);
   }
@@ -795,16 +973,17 @@ static int schunk_get_chunk_flags2(blosc2_schunk *schunk, int64_t nchunk, uint8_
 }
 
 /* Append an existing chunk into a super-chunk. */
-int64_t blosc2_schunk_append_chunk(blosc2_schunk *schunk, uint8_t *chunk, bool copy) {
+static int64_t schunk_append_chunk_unlocked(blosc2_schunk *schunk, uint8_t *chunk, bool copy) {
   int32_t chunk_nbytes;
   int32_t chunk_cbytes;
   int64_t nchunks = schunk->nchunks;
-  bool chunk_vlblocks = (chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2] & BLOSC2_VL_BLOCKS) != 0;
 
   int rc = blosc2_cbuffer_sizes(chunk, &chunk_nbytes, &chunk_cbytes, NULL);
   if (rc < 0) {
     return rc;
   }
+  uint8_t flags2 = get_chunk_flags2(chunk, chunk_cbytes);
+  bool chunk_vlblocks = (flags2 & BLOSC2_VL_BLOCKS) != 0;
   if (nchunks > 0) {
     uint8_t first_flags2;
     rc = schunk_get_chunk_flags2(schunk, 0, &first_flags2);
@@ -817,7 +996,7 @@ int64_t blosc2_schunk_append_chunk(blosc2_schunk *schunk, uint8_t *chunk, bool c
     }
   }
   else {
-    schunk->flags2 = chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2];
+    schunk->flags2 = flags2;
   }
 
   int32_t chunksize = schunk->chunksize;
@@ -896,8 +1075,29 @@ int64_t blosc2_schunk_append_chunk(blosc2_schunk *schunk, uint8_t *chunk, bool c
 }
 
 
+/* Append an existing @p chunk to a super-chunk. */
+int64_t blosc2_schunk_append_chunk(blosc2_schunk *schunk, uint8_t *chunk, bool copy) {
+  blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
+  int rc = frame_lock(frame, true);
+  if (rc < 0) {
+    return rc;
+  }
+  // Sync the cached counters before the delta below is applied to them, so a
+  // handle whose lock acquisition just flagged staleness does not persist
+  // wrong nbytes/cbytes/nchunks (see plans/todo-locking-swmr.md item 1).
+  rc = frame_check_stale(frame);
+  if (rc < 0) {
+    frame_unlock(frame);
+    return rc;
+  }
+  int64_t nchunks = schunk_append_chunk_unlocked(schunk, chunk, copy);
+  frame_unlock(frame);
+  return nchunks;
+}
+
+
 /* Insert an existing @p chunk in a specified position on a super-chunk */
-int64_t blosc2_schunk_insert_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk, bool copy) {
+static int64_t schunk_insert_chunk_unlocked(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk, bool copy) {
   int rc = validate_nchunk(schunk, nchunk, true, "blosc2_schunk_insert_chunk");
   if (rc < 0) {
     return rc;
@@ -906,12 +1106,13 @@ int64_t blosc2_schunk_insert_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
   int32_t chunk_nbytes;
   int32_t chunk_cbytes;
   int64_t nchunks = schunk->nchunks;
-  bool chunk_vlblocks = (chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2] & BLOSC2_VL_BLOCKS) != 0;
 
   rc = blosc2_cbuffer_sizes(chunk, &chunk_nbytes, &chunk_cbytes, NULL);
   if (rc < 0) {
     return rc;
   }
+  uint8_t flags2 = get_chunk_flags2(chunk, chunk_cbytes);
+  bool chunk_vlblocks = (flags2 & BLOSC2_VL_BLOCKS) != 0;
   if (nchunks > 0) {
     uint8_t first_flags2;
     rc = schunk_get_chunk_flags2(schunk, 0, &first_flags2);
@@ -924,7 +1125,7 @@ int64_t blosc2_schunk_insert_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
     }
   }
   else {
-    schunk->flags2 = chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2];
+    schunk->flags2 = flags2;
   }
 
   int32_t chunksize = schunk->chunksize;
@@ -1011,7 +1212,27 @@ int64_t blosc2_schunk_insert_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
 }
 
 
-int64_t blosc2_schunk_update_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk, bool copy) {
+/* Insert an existing @p chunk in a specified position on a super-chunk. */
+int64_t blosc2_schunk_insert_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk, bool copy) {
+  blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
+  int rc = frame_lock(frame, true);
+  if (rc < 0) {
+    return rc;
+  }
+  // See blosc2_schunk_append_chunk() for why this must happen before the
+  // counter deltas below are applied.
+  rc = frame_check_stale(frame);
+  if (rc < 0) {
+    frame_unlock(frame);
+    return rc;
+  }
+  int64_t nchunks = schunk_insert_chunk_unlocked(schunk, nchunk, chunk, copy);
+  frame_unlock(frame);
+  return nchunks;
+}
+
+
+static int64_t schunk_update_chunk_unlocked(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk, bool copy) {
   int rc = validate_nchunk(schunk, nchunk, false, "blosc2_schunk_update_chunk");
   if (rc < 0) {
     return rc;
@@ -1019,12 +1240,13 @@ int64_t blosc2_schunk_update_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
 
   int32_t chunk_nbytes;
   int32_t chunk_cbytes;
-  bool chunk_vlblocks = (chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2] & BLOSC2_VL_BLOCKS) != 0;
 
   rc = blosc2_cbuffer_sizes(chunk, &chunk_nbytes, &chunk_cbytes, NULL);
   if (rc < 0) {
     return rc;
   }
+  uint8_t flags2 = get_chunk_flags2(chunk, chunk_cbytes);
+  bool chunk_vlblocks = (flags2 & BLOSC2_VL_BLOCKS) != 0;
   if (schunk->nchunks > 1 || (schunk->nchunks == 1 && nchunk != 0)) {
     int64_t ref_nchunk = (nchunk == 0) ? 1 : 0;
     uint8_t ref_flags2;
@@ -1038,7 +1260,7 @@ int64_t blosc2_schunk_update_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
     }
   }
   else {
-    schunk->flags2 = chunk[BLOSC2_CHUNK_BLOSC2_FLAGS2];
+    schunk->flags2 = flags2;
   }
 
   int32_t chunksize = schunk->chunksize;
@@ -1137,7 +1359,20 @@ int64_t blosc2_schunk_update_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
   return schunk->nchunks;
 }
 
-int64_t blosc2_schunk_delete_chunk(blosc2_schunk *schunk, int64_t nchunk) {
+/* Update the chunk at a specified position of a super-chunk. */
+int64_t blosc2_schunk_update_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t *chunk, bool copy) {
+  blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
+  int rc = frame_lock(frame, true);
+  if (rc < 0) {
+    return rc;
+  }
+  int64_t nchunks = schunk_update_chunk_unlocked(schunk, nchunk, chunk, copy);
+  frame_unlock(frame);
+  return nchunks;
+}
+
+
+static int64_t schunk_delete_chunk_unlocked(blosc2_schunk *schunk, int64_t nchunk) {
   int rc = validate_nchunk(schunk, nchunk, false, "blosc2_schunk_delete_chunk");
   if (rc < 0) {
     return rc;
@@ -1207,6 +1442,19 @@ int64_t blosc2_schunk_delete_chunk(blosc2_schunk *schunk, int64_t nchunk) {
 }
 
 
+/* Delete the chunk at a specified position of a super-chunk. */
+int64_t blosc2_schunk_delete_chunk(blosc2_schunk *schunk, int64_t nchunk) {
+  blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
+  int rc = frame_lock(frame, true);
+  if (rc < 0) {
+    return rc;
+  }
+  int64_t nchunks = schunk_delete_chunk_unlocked(schunk, nchunk);
+  frame_unlock(frame);
+  return nchunks;
+}
+
+
 /* Append a data buffer to a super-chunk. */
 int64_t blosc2_schunk_append_buffer(blosc2_schunk *schunk, const void *src, int32_t nbytes) {
   uint8_t* chunk = malloc(nbytes + BLOSC2_MAX_OVERHEAD);
@@ -1268,7 +1516,12 @@ int blosc2_schunk_decompress_chunk(blosc2_schunk *schunk, int64_t nchunk,
       return BLOSC2_ERROR_FAILURE;
     }
   } else {
+    rc = frame_lock(frame, false);
+    if (rc < 0) {
+      return rc;
+    }
     chunksize = frame_decompress_chunk(schunk->dctx, frame, nchunk, dest, nbytes);
+    frame_unlock(frame);
     if (chunksize < 0) {
       return chunksize;
     }
@@ -1303,7 +1556,13 @@ int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chu
   }
   blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
   if (frame != NULL) {
-    return frame_get_chunk(frame, nchunk, chunk, needs_free);
+    rc = frame_lock(frame, false);
+    if (rc < 0) {
+      return rc;
+    }
+    rc = frame_get_chunk(frame, nchunk, chunk, needs_free);
+    frame_unlock(frame);
+    return rc;
   }
 
   *chunk = schunk->data[nchunk];
@@ -1348,7 +1607,13 @@ int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t *
   }
   blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
   if (schunk->frame != NULL) {
-    return frame_get_lazychunk(frame, nchunk, chunk, needs_free);
+    rc = frame_lock(frame, false);
+    if (rc < 0) {
+      return rc;
+    }
+    rc = frame_get_lazychunk(frame, nchunk, chunk, needs_free);
+    frame_unlock(frame);
+    return rc;
   }
 
   *chunk = schunk->data[nchunk];
@@ -1439,6 +1704,9 @@ int blosc2_schunk_get_slice_buffer(blosc2_schunk *schunk, int64_t start, int64_t
       nbytes = blosc2_decompress_ctx(schunk->dctx, chunk, cbytes, dst_ptr, chunksize);
       if (nbytes < 0) {
         BLOSC_TRACE_ERROR("Cannot decompress chunk ('%" PRId64 "').", nchunk);
+        if (needs_free) {
+          free(chunk);
+        }
         return BLOSC2_ERROR_FAILURE;
       }
     }
@@ -1471,11 +1739,25 @@ int blosc2_schunk_get_slice_buffer(blosc2_schunk *schunk, int64_t start, int64_t
         free(data);
       }
       else {
-        /* Less than 1 block to read; use a getitem call */
-        nbytes = blosc2_getitem_ctx(schunk->dctx, chunk, cbytes, (int32_t) (chunk_start / schunk->typesize),
-                                    (chunk_stop - chunk_start) / schunk->typesize, dst_ptr, chunksize);
+        /* Less than 1 block to read; use a getitem call.  Counting in bytes
+           keeps this right for typesizes above BLOSC_MAX_TYPESIZE, which chunks
+           record as 1. */
+        int32_t nbytes_wanted = chunk_stop - chunk_start;
+        nbytes = blosc2_getitem_bytes_ctx(schunk->dctx, chunk, cbytes, chunk_start,
+                                          nbytes_wanted, dst_ptr, nbytes_wanted);
         if (nbytes < 0) {
           BLOSC_TRACE_ERROR("Cannot get item from ('%" PRId64 "') chunk.", nchunk);
+          if (needs_free) {
+            free(chunk);
+          }
+          return BLOSC2_ERROR_FAILURE;
+        }
+        if (nbytes != nbytes_wanted) {
+          BLOSC_TRACE_ERROR("Short read (%d out of %d bytes) in ('%" PRId64 "') chunk.",
+                            nbytes, nbytes_wanted, nchunk);
+          if (needs_free) {
+            free(chunk);
+          }
           return BLOSC2_ERROR_FAILURE;
         }
       }
@@ -1611,7 +1893,9 @@ static int schunk_get_sparse_getitem(blosc2_schunk *schunk, int64_t ncoords, con
     }
 
     int64_t nchunk = coord / chunk_nitems;
-    int start = (int)(coord % chunk_nitems);
+    // count in bytes, so that a typesize above BLOSC_MAX_TYPESIZE (which chunks
+    // record as 1) needs no special casing here
+    int32_t start = (int32_t)((coord % chunk_nitems) * schunk->typesize);
     uint8_t *chunk = NULL;
     bool needs_free = false;
     int cbytes = blosc2_schunk_get_lazychunk(schunk, nchunk, &chunk, &needs_free);
@@ -1620,7 +1904,8 @@ static int schunk_get_sparse_getitem(blosc2_schunk *schunk, int64_t ncoords, con
       return BLOSC2_ERROR_FAILURE;
     }
 
-    int nbytes = blosc2_getitem_ctx(schunk->dctx, chunk, cbytes, start, 1, dst_ptr, schunk->typesize);
+    int nbytes = blosc2_getitem_bytes_ctx(schunk->dctx, chunk, cbytes, start,
+                                          schunk->typesize, dst_ptr, schunk->typesize);
     if (needs_free) {
       free(chunk);
     }
@@ -1978,7 +2263,13 @@ int blosc2_schunk_reorder_offsets(blosc2_schunk *schunk, int64_t *offsets_order)
 
   blosc2_frame_s* frame = (blosc2_frame_s*)schunk->frame;
   if (frame != NULL) {
-    return frame_reorder_offsets(frame, offsets_order, schunk);
+    int rc = frame_lock(frame, true);
+    if (rc < 0) {
+      return rc;
+    }
+    rc = frame_reorder_offsets(frame, offsets_order, schunk);
+    frame_unlock(frame);
+    return rc;
   }
   uint8_t **offsets = schunk->data;
 
@@ -2029,16 +2320,23 @@ int metalayer_flush(blosc2_schunk* schunk) {
   if (frame == NULL) {
     return rc;
   }
+  rc = frame_lock(frame, true);
+  if (rc < 0) {
+    return rc;
+  }
   rc = frame_update_header(frame, schunk, true);
   if (rc < 0) {
     BLOSC_TRACE_ERROR("Unable to update metalayers into frame.");
+    frame_unlock(frame);
     return rc;
   }
   rc = frame_update_trailer(frame, schunk);
   if (rc < 0) {
     BLOSC_TRACE_ERROR("Unable to update trailer into frame.");
+    frame_unlock(frame);
     return rc;
   }
+  frame_unlock(frame);
   return rc;
 }
 
@@ -2098,6 +2396,7 @@ int blosc2_meta_add(blosc2_schunk *schunk, const char *name, uint8_t *content, i
   if (rc < 0) {
     return rc;
   }
+  schunk->change_tick++;
 
   return schunk->nmetalayers - 1;
 }
@@ -2146,6 +2445,7 @@ int blosc2_meta_update(blosc2_schunk *schunk, const char *name, uint8_t *content
       return rc;
     }
   }
+  schunk->change_tick++;
 
   return nmetalayer;
 }
@@ -2159,6 +2459,16 @@ int blosc2_vlmeta_exists(blosc2_schunk *schunk, const char *name) {
   if (strlen(name) > BLOSC2_METALAYER_NAME_MAXLEN) {
     BLOSC_TRACE_ERROR("Variable-length metalayer names cannot be larger than %d chars.", BLOSC2_METALAYER_NAME_MAXLEN);
     return BLOSC2_ERROR_INVALID_PARAM;
+  }
+  // Re-sync the cached vlmetalayers if another handle rewrote the frame, so
+  // that a vlmetalayer added or deleted elsewhere is (not) found.  The other
+  // vlmeta entry points (add/get/update/delete) all pass through here, so
+  // this is the single sync point for the vlmetalayers.
+  if (schunk->frame != NULL) {
+    int rc = frame_check_stale((blosc2_frame_s*)schunk->frame);
+    if (rc < 0) {
+      return rc;
+    }
   }
 
   for (int nvlmetalayer = 0; nvlmetalayer < schunk->nvlmetalayers; nvlmetalayer++) {
@@ -2175,16 +2485,23 @@ int vlmetalayer_flush(blosc2_schunk* schunk) {
   if (frame == NULL) {
     return rc;
   }
+  rc = frame_lock(frame, true);
+  if (rc < 0) {
+    return rc;
+  }
   rc = frame_update_header(frame, schunk, false);
   if (rc < 0) {
     BLOSC_TRACE_ERROR("Unable to update metalayers into frame.");
+    frame_unlock(frame);
     return rc;
   }
   rc = frame_update_trailer(frame, schunk);
   if (rc < 0) {
     BLOSC_TRACE_ERROR("Unable to update trailer into frame.");
+    frame_unlock(frame);
     return rc;
   }
+  frame_unlock(frame);
   return rc;
 }
 
@@ -2283,6 +2600,7 @@ int blosc2_vlmeta_add(blosc2_schunk *schunk, const char *name, uint8_t *content,
     BLOSC_TRACE_ERROR("Can not propagate de `%s` variable-length metalayer to a frame.", name);
     return rc;
   }
+  schunk->change_tick++;
 
   return schunk->nvlmetalayers - 1;
 }
@@ -2294,6 +2612,8 @@ int blosc2_vlmeta_get(blosc2_schunk *schunk, const char *name, uint8_t **content
     BLOSC_TRACE_ERROR("Invalid parameters.");
     return BLOSC2_ERROR_INVALID_PARAM;
   }
+  // blosc2_vlmeta_exists() re-syncs the cached vlmetalayers if another handle
+  // rewrote the frame
   int nvlmetalayer = blosc2_vlmeta_exists(schunk, name);
   if (nvlmetalayer < 0) {
     BLOSC_TRACE_ERROR("User metalayer \"%s\" not found.", name);
@@ -2414,6 +2734,7 @@ int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name, uint8_t *conte
     BLOSC_TRACE_ERROR("Can not propagate de `%s` variable-length metalayer to a frame.", name);
     return rc;
   }
+  schunk->change_tick++;
 
   return nvlmetalayer;
 }
@@ -2441,6 +2762,7 @@ int blosc2_vlmeta_delete(blosc2_schunk *schunk, const char *name) {
     BLOSC_TRACE_ERROR("Can not propagate de `%s` variable-length metalayer to a frame.", name);
     return rc;
   }
+  schunk->change_tick++;
 
   return schunk->nvlmetalayers;
 }

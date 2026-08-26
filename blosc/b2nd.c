@@ -10,6 +10,7 @@
 
 #include "b2nd.h"
 #include "context.h"
+#include "frame.h"
 #include "blosc2/blosc2-common.h"
 #include "blosc2.h"
 
@@ -21,6 +22,31 @@
 
 static bool b2nd_mul_overflow_size_t(size_t a, size_t b, size_t *out) {
   if (a != 0 && b > SIZE_MAX / a) {
+    return true;
+  }
+  if (out != NULL) {
+    *out = a * b;
+  }
+  return false;
+}
+
+/* Signed counterparts of the above.  Shape products are accumulated with these
+ * so that crafted metadata cannot wrap them: signed overflow is UB, and a
+ * wrapped product reaches divisors (see the nblocks computations) and
+ * allocation sizes.  Negative operands are reported as overflow too, so callers
+ * get one error path rather than two. */
+static bool b2nd_mul_overflow_int32(int32_t a, int32_t b, int32_t *out) {
+  if (a < 0 || b < 0 || (a != 0 && b > INT32_MAX / a)) {
+    return true;
+  }
+  if (out != NULL) {
+    *out = a * b;
+  }
+  return false;
+}
+
+static bool b2nd_mul_overflow_int64(int64_t a, int64_t b, int64_t *out) {
+  if (a < 0 || b < 0 || (a != 0 && b > INT64_MAX / a)) {
     return true;
   }
   if (out != NULL) {
@@ -140,8 +166,11 @@ static int validate_shape_chunkshape_blockshape(int8_t ndim, const int64_t *shap
 
 
 
-int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
-                 const int32_t *chunkshape, const int32_t *blockshape) {
+/* Recompute the cached geometry (shape/extshape/strides/...) without touching
+ * the b2nd metalayer.  Used both by update_shape() and by the refresh path
+ * that re-syncs the struct from a metalayer another handle rewrote. */
+static int update_shape_struct(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
+                               const int32_t *chunkshape, const int32_t *blockshape) {
   BLOSC_ERROR(validate_shape_chunkshape_blockshape(ndim, shape, chunkshape, blockshape));
 
   array->ndim = ndim;
@@ -159,13 +188,20 @@ int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
         if (shape[i] % array->chunkshape[i] == 0) {
           array->extshape[i] = shape[i];
         } else {
+          // Rounding shape up to the next chunk must not wrap int64
+          if (shape[i] > INT64_MAX - chunkshape[i]) {
+            BLOSC_TRACE_ERROR("shape[%d] is too large to round up to chunkshape[%d]", i, i);
+            return BLOSC2_ERROR_INVALID_PARAM;
+          }
           array->extshape[i] = shape[i] + chunkshape[i] - shape[i] % chunkshape[i];
         }
         if (chunkshape[i] % blockshape[i] == 0) {
           array->extchunkshape[i] = chunkshape[i];
         } else {
+          // Done in 64 bits: the sum of two int32 values does not fit in int32,
+          // and extchunkshape is int64 anyway
           array->extchunkshape[i] =
-                  chunkshape[i] + blockshape[i] - chunkshape[i] % blockshape[i];
+                  (int64_t) chunkshape[i] + blockshape[i] - chunkshape[i] % blockshape[i];
         }
       } else {
         array->extchunkshape[i] = chunkshape[i];
@@ -178,11 +214,17 @@ int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
       array->extchunkshape[i] = 1;
       array->shape[i] = 1;
     }
-    array->nitems *= array->shape[i];
-    array->extnitems *= array->extshape[i];
-    array->extchunknitems *= array->extchunkshape[i];
-    array->chunknitems *= array->chunkshape[i];
-    array->blocknitems *= array->blockshape[i];
+    // Crafted metadata can make any of these products wrap, which is UB and
+    // lands in divisors and allocation sizes downstream (see #795)
+    if (b2nd_mul_overflow_int64(array->nitems, array->shape[i], &array->nitems) ||
+        b2nd_mul_overflow_int64(array->extnitems, array->extshape[i], &array->extnitems) ||
+        b2nd_mul_overflow_int64(array->extchunknitems, array->extchunkshape[i],
+                                &array->extchunknitems) ||
+        b2nd_mul_overflow_int32(array->chunknitems, array->chunkshape[i], &array->chunknitems) ||
+        b2nd_mul_overflow_int32(array->blocknitems, array->blockshape[i], &array->blocknitems)) {
+      BLOSC_TRACE_ERROR("shape, chunkshape or blockshape product overflows at dimension %d", i);
+      return BLOSC2_ERROR_INVALID_PARAM;
+    }
   }
 
   // Compute strides
@@ -228,30 +270,118 @@ int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
       array->chunk_array_strides[i] = 0;
     }
   }
-  if (array->sc) {
-    uint8_t *smeta = NULL;
-    // Serialize the dimension info ...
-    int32_t smeta_len =
-            b2nd_serialize_meta(array->ndim, array->shape, array->chunkshape, array->blockshape,
-                                array->dtype, array->dtype_format, &smeta);
-    if (smeta_len < 0) {
-      BLOSC_TRACE_ERROR("Error during serializing dims info for Blosc2 NDim");
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
+/* Publish the current cached geometry into the "b2nd" metalayer. */
+static int publish_shape_meta(b2nd_array_t *array) {
+  if (!array->sc) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+  uint8_t *smeta = NULL;
+  // Serialize the dimension info ...
+  int32_t smeta_len =
+          b2nd_serialize_meta(array->ndim, array->shape, array->chunkshape, array->blockshape,
+                              array->dtype, array->dtype_format, &smeta);
+  if (smeta_len < 0) {
+    BLOSC_TRACE_ERROR("Error during serializing dims info for Blosc2 NDim");
+    BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+  }
+  // ... and update it in its metalayer
+  if (blosc2_meta_exists(array->sc, "b2nd") < 0) {
+    if (blosc2_meta_add(array->sc, "b2nd", smeta, smeta_len) < 0) {
       BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
     }
-    // ... and update it in its metalayer
-    if (blosc2_meta_exists(array->sc, "b2nd") < 0) {
-      if (blosc2_meta_add(array->sc, "b2nd", smeta, smeta_len) < 0) {
-        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
-      }
-    } else {
-      if (blosc2_meta_update(array->sc, "b2nd", smeta, smeta_len) < 0) {
-        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
-      }
+  } else {
+    if (blosc2_meta_update(array->sc, "b2nd", smeta, smeta_len) < 0) {
+      BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
     }
-    free(smeta);
   }
+  free(smeta);
+  // The meta mutation bumped the schunk change tick; this struct is in sync
+  array->last_tick = array->sc->change_tick;
 
   return BLOSC2_ERROR_SUCCESS;
+}
+
+
+int update_shape(b2nd_array_t *array, int8_t ndim, const int64_t *shape,
+                 const int32_t *chunkshape, const int32_t *blockshape) {
+  BLOSC_ERROR(update_shape_struct(array, ndim, shape, chunkshape, blockshape));
+  return publish_shape_meta(array);
+}
+
+
+/* Re-sync the cached geometry when another handle changed the b2nd metalayer
+ * behind our back (the growth-SWMR case: a writer resizes, readers follow).
+ * A no-op for arrays not backed by an on-disk frame.
+ * Returns 1 if the geometry was re-synced, 0 if it was already current, or
+ * a negative error code. */
+static int refresh_if_stale(b2nd_array_t *array) {
+  blosc2_schunk *sc = array->sc;
+  if (sc == NULL || sc->frame == NULL) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+  BLOSC_ERROR(frame_check_stale((blosc2_frame_s *) sc->frame));
+  if (array->last_tick == sc->change_tick) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+
+  uint8_t *smeta;
+  int32_t smeta_len;
+  if (blosc2_meta_get(sc, "b2nd", &smeta, &smeta_len) < 0) {
+    if (blosc2_meta_get(sc, "caterva", &smeta, &smeta_len) < 0) {
+      // blosc2_meta_get() itself is a pure in-memory lookup on
+      // schunk->metalayers[], but that array was just repopulated by
+      // frame_check_stale() -> frame_refresh_if_stale() -> frame_get_metalayers(),
+      // which does its *own*, fully independent disk read (its own fresh
+      // get_header_info() + header re-read, frame.c) -- separate from both
+      // frame_check_stale()'s header read and the trailer read a few lines
+      // up in this same call chain. Without locking, nothing holds these
+      // reads together atomically, so this one can catch the header mid
+      // rewrite just as easily as the other two; a b2nd array always has
+      // one of these two metalayers from creation, so a miss here reflects
+      // that specific read landing in a torn window, not a genuine
+      // absence. Same opportunistic treatment as those reads: keep the
+      // cached view and let the next poll (its own fresh, independent read)
+      // resolve it, instead of hard-erroring on what is normally transient.
+      return BLOSC2_ERROR_SUCCESS;
+    }
+  }
+  int8_t ndim;
+  int64_t shape[B2ND_MAX_DIM];
+  int32_t chunkshape[B2ND_MAX_DIM];
+  int32_t blockshape[B2ND_MAX_DIM];
+  char *dtype;
+  int8_t dtype_format;
+  int rc = b2nd_deserialize_meta(smeta, smeta_len, &ndim, shape, chunkshape, blockshape,
+                                 &dtype, &dtype_format);
+  free(smeta);
+  BLOSC_ERROR(rc);
+  free(dtype);
+
+  // Shape-only SWMR scope (matching HDF5): chunk/block geometry or ndim
+  // changing under a live handle is a misuse of the single-writer contract,
+  // not something to follow silently.
+  if (ndim != array->ndim ||
+      memcmp(chunkshape, array->chunkshape, ndim * sizeof(int32_t)) != 0 ||
+      memcmp(blockshape, array->blockshape, ndim * sizeof(int32_t)) != 0) {
+    BLOSC_TRACE_ERROR("ndim/chunkshape/blockshape changed behind this handle; "
+                      "only shape changes are followed");
+    BLOSC_ERROR(BLOSC2_ERROR_DATA);
+  }
+
+  BLOSC_ERROR(update_shape_struct(array, ndim, shape, chunkshape, blockshape));
+  array->last_tick = sc->change_tick;
+
+  return 1;
+}
+
+
+int b2nd_refresh(b2nd_array_t *array) {
+  BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  return refresh_if_stale(array);
 }
 
 
@@ -261,12 +391,21 @@ int array_without_schunk(b2nd_context_t *ctx, b2nd_array_t **array) {
   BLOSC_ERROR_NULL(*array, BLOSC2_ERROR_MEMORY_ALLOC);
 
   (*array)->sc = NULL;
+  (*array)->last_tick = 0;
 
   (*array)->ndim = ctx->ndim;
   int64_t *shape = ctx->shape;
   int32_t *chunkshape = ctx->chunkshape;
   int32_t *blockshape = ctx->blockshape;
-  BLOSC_ERROR(update_shape(*array, ctx->ndim, shape, chunkshape, blockshape));
+  // update_shape() rejects shapes whose products overflow, so this can fail on
+  // crafted metadata.  Hand back NULL rather than the half-built array, which
+  // would otherwise leak and leave callers with a non-NULL pointer on error.
+  int rc = update_shape(*array, ctx->ndim, shape, chunkshape, blockshape);
+  if (rc < 0) {
+    free(*array);
+    *array = NULL;
+    BLOSC_ERROR(rc);
+  }
 
   if (ctx->dtype != NULL) {
     (*array)->dtype = malloc(strlen(ctx->dtype) + 1);
@@ -561,10 +700,14 @@ int b2nd_from_schunk(blosc2_schunk *schunk, b2nd_array_t **array) {
     }
   }
 
-  BLOSC_ERROR(array_without_schunk(&params, array));
+  // Free the deserialized dtype whether or not the array could be built; the
+  // rejection path is now reachable for crafted shapes (see #795)
+  int rc = array_without_schunk(&params, array);
   free(params.dtype);
+  BLOSC_ERROR(rc);
 
   (*array)->sc = schunk;
+  (*array)->last_tick = schunk->change_tick;
 
   if ((*array) == NULL) {
     BLOSC_TRACE_ERROR("Error creating a b2nd container from a frame");
@@ -677,6 +820,7 @@ int b2nd_to_cbuffer(const b2nd_array_t *array, void *buffer,
                     int64_t buffersize) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) array));
 
   if (buffersize < (int64_t) array->nitems * array->sc->typesize) {
     BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
@@ -695,6 +839,7 @@ int b2nd_to_cbuffer(const b2nd_array_t *array, void *buffer,
 int b2nd_get_sparse_cbuffer(const b2nd_array_t *array, int64_t ncoords,
                             const int64_t *coords, void *buffer, int64_t buffersize) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) array));
   if (ncoords < 0) {
     BLOSC_TRACE_ERROR("ncoords must be non-negative");
     BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
@@ -962,7 +1107,16 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     nelems_slice *= stop[i] - start[i];
   }
   int64_t slice_nbytes = nelems_slice * array->sc->typesize;
-  int32_t data_nbytes = (int32_t) array->extchunknitems * array->sc->typesize;
+  // Compute in 64 bits and range-check: the cast used to bind to extchunknitems
+  // alone, truncating it before the multiply and sizing buffers from the
+  // wrapped value while offsets kept using the full extent (see #795)
+  int64_t data_nbytes_64 = 0;
+  if (b2nd_mul_overflow_int64(array->extchunknitems, array->sc->typesize, &data_nbytes_64) ||
+      data_nbytes_64 > INT32_MAX) {
+    BLOSC_TRACE_ERROR("Chunk buffer size overflows the maximum of %d bytes", INT32_MAX);
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+  int32_t data_nbytes = (int32_t) data_nbytes_64;
 
   if (buffersize < slice_nbytes) {
     BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
@@ -1004,8 +1158,14 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
 
   // Slow path for set and get
 
-  uint8_t *data = malloc(data_nbytes);
-  BLOSC_ERROR_NULL(data, BLOSC2_ERROR_MEMORY_ALLOC);
+  // Chunk-sized scratch, allocated lazily: the compact get path below never
+  // needs it, and for large chunks just the malloc/free pair costs
+  // O(chunksize) in page-table work (it is way above the malloc mmap
+  // threshold), which would dominate small reads.
+  uint8_t *data = NULL;
+  // Block-sized scratch for the compact get path (lazily allocated too).
+  uint8_t *block_data = NULL;
+  int32_t block_nbytes = (int32_t) (array->blocknitems * array->sc->typesize);
 
   int64_t chunks_in_array[B2ND_MAX_DIM] = {0};
   for (int i = 0; i < ndim; ++i) {
@@ -1069,7 +1229,16 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     }
 
     int32_t nblocks = (int32_t) array->extchunknitems / array->blocknitems;
+    // Compact get path state for this chunk (see below).
+    bool use_compact = false;
+    uint8_t *lazychunk = NULL;
+    bool lazychunk_needs_free = false;
+    int32_t lazychunk_cbytes = 0;
     if (set_slice) {
+      if (data == NULL) {
+        data = malloc(data_nbytes);
+        BLOSC_ERROR_NULL(data, BLOSC2_ERROR_MEMORY_ALLOC);
+      }
       // Check if all the chunk is going to be updated and avoid the decompression
       bool decompress_chunk = false;
       for (int i = 0; i < ndim; ++i) {
@@ -1089,6 +1258,7 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
     } else {
       bool *block_maskout = malloc(nblocks);
       BLOSC_ERROR_NULL(block_maskout, BLOSC2_ERROR_MEMORY_ALLOC);
+      int32_t nblocks_needed = 0;
       for (int nblock = 0; nblock < nblocks; ++nblock) {
         int64_t nblock_ndim[B2ND_MAX_DIM] = {0};
         blosc2_unidim_to_multidim(ndim, blocks_in_chunk, nblock, nblock_ndim);
@@ -1115,17 +1285,67 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
           block_empty |= (block_stop[i] <= start[i] || block_start[i] >= stop[i]);
         }
         block_maskout[nblock] = block_empty ? true : false;
+        if (!block_empty) {
+          nblocks_needed++;
+        }
       }
 
-      if (blosc2_set_maskout(array->sc->dctx, block_maskout, nblocks) != BLOSC2_ERROR_SUCCESS) {
-        BLOSC_TRACE_ERROR("Error setting the maskout");
-        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
-      }
+      // Compact get path: when only a fraction of the chunk's blocks is
+      // needed, decompress just those blocks -- one at a time, straight
+      // from the (lazy)chunk -- instead of decompressing into a chunk-sized
+      // scratch.  This keeps the working buffer at one block, so small reads
+      // from arrays with large chunks stay O(request), not O(chunksize).
+      // Larger requests keep the maskout path, which decompresses the needed
+      // blocks in parallel.
+      //
+      // The threshold depends on the storage backend.  On disk, the maskout
+      // path reads the *whole* compressed chunk per call while the compact
+      // path only reads the touched blocks, so compact wins by 10-100x well
+      // past needed == nblocks/4 for typical data.  In memory there is no
+      // I/O to save: for poorly-compressible data the maskout path's
+      // parallel decompression overtakes the compact path's serial one at
+      // around 2-4 needed blocks, so stay conservative there (1/16 keeps
+      // the possible loss window narrow while still capturing the common
+      // 1-2 block reads, where compact always wins or ties).
+      bool on_disk = array->sc->storage != NULL && array->sc->storage->urlpath != NULL;
+      int64_t frac = on_disk ? 4 : 16;
+      use_compact = ((int64_t) nblocks_needed * block_nbytes) * frac <= (int64_t) data_nbytes;
+      if (use_compact) {
+        lazychunk_cbytes = blosc2_schunk_get_lazychunk(array->sc, nchunk, &lazychunk,
+                                                       &lazychunk_needs_free);
+        if (lazychunk_cbytes < 0) {
+          BLOSC_TRACE_ERROR("Error getting the lazy chunk");
+          free(block_maskout);
+          BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+        }
+        if (block_data == NULL) {
+          block_data = malloc(block_nbytes);
+          if (block_data == NULL) {
+            if (lazychunk_needs_free) {
+              free(lazychunk);
+            }
+            free(block_maskout);
+            BLOSC_ERROR(BLOSC2_ERROR_MEMORY_ALLOC);
+          }
+        }
+      } else {
+        if (data == NULL) {
+          data = malloc(data_nbytes);
+          if (data == NULL) {
+            free(block_maskout);
+            BLOSC_ERROR(BLOSC2_ERROR_MEMORY_ALLOC);
+          }
+        }
+        if (blosc2_set_maskout(array->sc->dctx, block_maskout, nblocks) != BLOSC2_ERROR_SUCCESS) {
+          BLOSC_TRACE_ERROR("Error setting the maskout");
+          BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+        }
 
-      int err = blosc2_schunk_decompress_chunk(array->sc, nchunk, data, data_nbytes);
-      if (err < 0) {
-        BLOSC_TRACE_ERROR("Error decompressing chunk");
-        BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+        int err = blosc2_schunk_decompress_chunk(array->sc, nchunk, data, data_nbytes);
+        if (err < 0) {
+          BLOSC_TRACE_ERROR("Error decompressing chunk");
+          BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+        }
       }
 
       free(block_maskout);
@@ -1200,7 +1420,23 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
         src_stop[i] = slice_stop[i] - start[i];
       }
 
-      uint8_t *dst = &data[nblock * array->blocknitems * array->sc->typesize];
+      uint8_t *dst;
+      if (use_compact) {
+        // Decompress just this block from the (lazy)chunk.
+        int grc = blosc2_getitem_bytes_ctx(array->sc->dctx, lazychunk, lazychunk_cbytes,
+                                           (int32_t) ((int64_t) nblock * block_nbytes), block_nbytes,
+                                           block_data, block_nbytes);
+        if (grc < 0) {
+          BLOSC_TRACE_ERROR("Error decompressing block");
+          if (lazychunk_needs_free) {
+            free(lazychunk);
+          }
+          BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
+        }
+        dst = block_data;
+      } else {
+        dst = &data[nblock * array->blocknitems * array->sc->typesize];
+      }
       int64_t dst_pad_shape[B2ND_MAX_DIM];
       for (int i = 0; i < ndim; ++i) {
         dst_pad_shape[i] = array->blockshape[i];
@@ -1222,6 +1458,10 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
                           dst, dst_pad_shape, dst_start, dst_stop,
                           src, shape, src_start);
       }
+    }
+
+    if (use_compact && lazychunk_needs_free) {
+      free(lazychunk);
     }
 
     if (set_slice) {
@@ -1246,6 +1486,7 @@ int get_set_slice(void *buffer, int64_t buffersize, const int64_t *start, const 
   }
 
   free(data);
+  free(block_data);
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -1258,6 +1499,7 @@ int b2nd_get_slice_cbuffer(const b2nd_array_t *array, const int64_t *start, cons
   BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffershape, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) array));
 
   BLOSC_ERROR(get_set_slice(buffer, buffersize, start, stop, buffershape, (b2nd_array_t *)array, false));
 
@@ -1272,8 +1514,20 @@ int b2nd_set_slice_cbuffer(const void *buffer, const int64_t *buffershape, int64
   BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale(array));
 
-  BLOSC_ERROR(get_set_slice((void*)buffer, buffersize, start, stop, (int64_t *)buffershape, array, true));
+  // A slice write can span several chunks, each updated with its own
+  // blosc2_schunk_update_chunk() call; hold the exclusive frame lock across
+  // all of them (as b2nd_resize() already does for its metalayer+chunks
+  // sequence) so locked handles -- including plain readers -- see the whole
+  // slice atomically instead of a chunk-wise interleave with other writers
+  // (plans/todo-locking-swmr.md item 2 / python-blosc2's
+  // todo/locking-mwmr.md item 2). A no-op for unlocked handles.
+  blosc2_frame_s *frame = (blosc2_frame_s *) array->sc->frame;
+  BLOSC_ERROR(frame_lock(frame, true));
+  int rc = get_set_slice((void*)buffer, buffersize, start, stop, (int64_t *)buffershape, array, true);
+  frame_unlock(frame);
+  BLOSC_ERROR(rc);
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -1285,6 +1539,7 @@ int b2nd_get_slice(b2nd_context_t *ctx, b2nd_array_t **array, const b2nd_array_t
   BLOSC_ERROR_NULL(start, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(stop, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) src));
 
   ctx->ndim = src->ndim;
   for (int i = 0; i < src->ndim; ++i) {
@@ -1401,6 +1656,7 @@ int view_new(const b2nd_array_t *array, b2nd_array_t **view, b2nd_context_t *ctx
 }
 
 int b2nd_expand_dims(const b2nd_array_t *array, b2nd_array_t **view, const bool *axis, const uint8_t final_dims) {
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) array));
   for (int i = 0; i < array->sc->nmetalayers; ++i) {
     if (strcmp(array->sc->metalayers[i]->name, "b2nd") != 0) {
       BLOSC_TRACE_ERROR("Cannot expand dimensions of an array with non-b2nd metalayers");
@@ -1469,6 +1725,7 @@ int b2nd_squeeze(b2nd_array_t *array, b2nd_array_t **view) {
 
 
 int b2nd_squeeze_index(b2nd_array_t *array, b2nd_array_t **view, const bool *index) {
+  BLOSC_ERROR(refresh_if_stale(array));
   for (int i = 0; i < array->sc->nmetalayers; ++i) {
     if (strcmp(array->sc->metalayers[i]->name, "b2nd") != 0) {
       BLOSC_TRACE_ERROR("Cannot squeeze dimensions of an array with non-b2nd metalayers");
@@ -1515,6 +1772,7 @@ int b2nd_squeeze_index(b2nd_array_t *array, b2nd_array_t **view, const bool *ind
 int b2nd_copy(b2nd_context_t *ctx, const b2nd_array_t *src, b2nd_array_t **array) {
   BLOSC_ERROR_NULL(src, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) src));
 
   ctx->ndim = src->ndim;
 
@@ -1593,6 +1851,8 @@ int b2nd_concatenate(b2nd_context_t *ctx, const b2nd_array_t *src1, const b2nd_a
   BLOSC_ERROR_NULL(src1, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(src2, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) src1));
+  BLOSC_ERROR(refresh_if_stale((b2nd_array_t *) src2));
 
   // Validate the axis parameter
   if (axis < 0 || axis >= src1->ndim) {
@@ -1844,7 +2104,10 @@ int extend_shape(b2nd_array_t *array, const int64_t *new_shape, const int64_t *s
   aux->sc = NULL;
   BLOSC_ERROR(update_shape(aux, ndim, array->shape, array->chunkshape, array->blockshape));
 
-  BLOSC_ERROR(update_shape(array, ndim, new_shape, array->chunkshape, array->blockshape));
+  // SWMR ordering for growth: make the data (special chunks) exist first and
+  // publish the new shape in the metalayer last, so a concurrent reader never
+  // sees a shape that points at chunks that are not there yet.
+  BLOSC_ERROR(update_shape_struct(array, ndim, new_shape, array->chunkshape, array->blockshape));
 
   int64_t nchunks = array->extnitems / array->chunknitems;
   int64_t nchunks_;
@@ -1889,6 +2152,9 @@ int extend_shape(b2nd_array_t *array, const int64_t *new_shape, const int64_t *s
   }
   free(aux);
   free(cparams);
+
+  // Data is in place; now publish the grown shape (shape last, see above)
+  BLOSC_ERROR(publish_shape_meta(array));
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -1962,6 +2228,7 @@ int b2nd_resize(b2nd_array_t *array, const int64_t *new_shape,
                 const int64_t *start) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(new_shape, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale(array));
 
   if (start != NULL) {
     for (int i = 0; i < array->ndim; ++i) {
@@ -1997,8 +2264,18 @@ int b2nd_resize(b2nd_array_t *array, const int64_t *new_shape,
     }
   }
 
-  BLOSC_ERROR(shrink_shape(array, shrunk_shape, start));
-  BLOSC_ERROR(extend_shape(array, new_shape, start));
+  // A resize is a sequence (metalayer update + chunk inserts/deletes); hold
+  // the exclusive frame lock across it so locked handles see it atomically.
+  // For unlocked handles this is a no-op and the data-first/shape-last
+  // ordering in extend_shape/shrink_shape keeps readers safe.
+  blosc2_frame_s *frame = (blosc2_frame_s *) array->sc->frame;
+  BLOSC_ERROR(frame_lock(frame, true));
+  int rc = shrink_shape(array, shrunk_shape, start);
+  if (rc >= 0) {
+    rc = extend_shape(array, new_shape, start);
+  }
+  frame_unlock(frame);
+  BLOSC_ERROR(rc);
 
   return BLOSC2_ERROR_SUCCESS;
 }
@@ -2009,6 +2286,7 @@ int b2nd_insert(b2nd_array_t *array, const void *buffer, int64_t buffersize,
 
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale(array));
 
   if (axis >= array->ndim) {
     BLOSC_TRACE_ERROR("`axis` cannot be greater than the number of dimensions");
@@ -2053,6 +2331,7 @@ int b2nd_append(b2nd_array_t *array, const void *buffer, int64_t buffersize,
                 int8_t axis) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(buffer, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale(array));
 
   int32_t chunksize = array->sc->chunksize;
   int64_t nchunks_append = buffersize / chunksize;
@@ -2096,6 +2375,7 @@ int b2nd_append(b2nd_array_t *array, const void *buffer, int64_t buffersize,
 int b2nd_delete(b2nd_array_t *array, const int8_t axis,
                 int64_t delete_start, int64_t delete_len) {
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale(array));
 
   if (axis >= array->ndim) {
     BLOSC_TRACE_ERROR("axis cannot be greater than the number of dimensions");
@@ -2462,6 +2742,7 @@ int orthogonal_selection(b2nd_array_t *array, int64_t **selection, int64_t *sele
   BLOSC_ERROR_NULL(array, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(selection, BLOSC2_ERROR_NULL_POINTER);
   BLOSC_ERROR_NULL(selection_size, BLOSC2_ERROR_NULL_POINTER);
+  BLOSC_ERROR(refresh_if_stale(array));
 
   int8_t ndim = array->ndim;
 
@@ -2482,6 +2763,17 @@ int orthogonal_selection(b2nd_array_t *array, int64_t **selection, int64_t *sele
   }
 
   if (sel_size < buffersize) {
+    BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
+  }
+
+  // Size of the reusable chunk buffer allocated further down.  Computed here,
+  // before any allocation, so the error path has nothing to unwind: the cast
+  // used to truncate an int64 product into the malloc size while the copy
+  // offsets kept using the full extent (see #795).
+  int64_t chunk_data_nbytes_64 = 0;
+  if (b2nd_mul_overflow_int64(array->extchunknitems, array->sc->typesize, &chunk_data_nbytes_64) ||
+      chunk_data_nbytes_64 > INT32_MAX) {
+    BLOSC_TRACE_ERROR("Chunk buffer size overflows the maximum of %d bytes", INT32_MAX);
     BLOSC_ERROR(BLOSC2_ERROR_INVALID_PARAM);
   }
 
@@ -2511,7 +2803,7 @@ int orthogonal_selection(b2nd_array_t *array, int64_t **selection, int64_t *sele
 
   // Pre-allocate a single chunk decompression buffer, reused for every
   // chunk visited by iter_chunk, instead of malloc/free per chunk.
-  int32_t chunk_data_nbytes = (int32_t)(array->extchunknitems * array->sc->typesize);
+  int32_t chunk_data_nbytes = (int32_t) chunk_data_nbytes_64;
   uint8_t *chunk_data = malloc(chunk_data_nbytes);
   BLOSC_ERROR_NULL(chunk_data, BLOSC2_ERROR_MEMORY_ALLOC);
 
@@ -2602,13 +2894,27 @@ b2nd_create_ctx(const blosc2_storage *b2_storage, int8_t ndim, const int64_t *sh
   ctx->b2_storage = params_b2_storage;
   ctx->ndim = ndim;
   int32_t blocknitems = 1;
+  bool blocksize_overflow = false;
   for (int i = 0; i < ndim; i++) {
     ctx->shape[i] = shape[i];
     ctx->chunkshape[i] = chunkshape[i];
     ctx->blockshape[i] = blockshape[i];
-    blocknitems *= ctx->blockshape[i];
+    if (b2nd_mul_overflow_int32(blocknitems, ctx->blockshape[i], &blocknitems)) {
+      blocksize_overflow = true;
+      break;
+    }
   }
-  cparams->blocksize = blocknitems * cparams->typesize;
+  // update_shape_struct() rejects this too, but only once an array is built out
+  // of the context; catching it here keeps cparams->blocksize from wrapping
+  if (blocksize_overflow ||
+      b2nd_mul_overflow_int32(blocknitems, cparams->typesize, &cparams->blocksize)) {
+    BLOSC_TRACE_ERROR("blockshape product overflows the maximum blocksize");
+    free(ctx->dtype);
+    free(cparams);
+    free(params_b2_storage);
+    free(ctx);
+    return NULL;
+  }
 
   ctx->nmetalayers = nmetalayers;
   for (int i = 0; i < nmetalayers; ++i) {

@@ -8,6 +8,27 @@
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#if !defined(_WIN32)
+// Make flock() and O_CLOEXEC visible despite -D_XOPEN_SOURCE=600 (as in blosc2-stdio.c)
+#if !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+#define _DARWIN_C_SOURCE
+// The BSDs honour neither of the above.  There, <sys/cdefs.h> derives
+// _POSIX_C_SOURCE from _XOPEN_SOURCE and then leaves __BSD_VISIBLE undefined,
+// which reads as 0 in the `#if __BSD_VISIBLE` that guards both flock() and the
+// LOCK_* constants in <sys/fcntl.h> --- so they stay hidden even though
+// <sys/file.h> is included below (see #794).  Dropping _XOPEN_SOURCE for this
+// file restores their default environment, which is a superset of what it asks
+// for: POSIX 200809 and XSI 700, plus the BSD extensions.  It has to be done per
+// file rather than in CMakeLists.txt, because my_malloc() in blosc2.c keys its
+// posix_memalign() path off _XOPEN_SOURCE and would fall back to malloc().
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || \
+    defined(__DragonFly__)
+#undef _XOPEN_SOURCE
+#endif
+#endif
+
 #include "frame.h"
 #include "sframe.h"
 #include "context.h"
@@ -20,6 +41,15 @@
 #include <malloc.h>
 // See https://github.com/Blosc/python-blosc2/issues/359#issuecomment-2625380236
 #define stat _stat64
+#else
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#if !defined(O_CLOEXEC)
+#define O_CLOEXEC 0
+#endif
 #endif  /* _WIN32 */
 
 #include <inttypes.h>
@@ -36,15 +66,271 @@
 #endif
 
 
+#if !defined(_WIN32)
+/* A cached read handle is held for the whole life of its frame, so the process
+   pays one descriptor per *open* frame rather than one per in-flight read.  A
+   caller that keeps many frames open at once (python-blosc2's ctable indexes
+   hold half a dozen arrays each) can walk into EMFILE that way, and on macOS
+   the soft limit is 256 by default.  So cache only while under a cap; frames
+   past it fall back to the open-per-operation path, which is exactly how this
+   worked before the cache existed.  Deliberately not an LRU: evicting means
+   closing a handle other threads may be mid-pread on, and this degrades
+   instead of breaking. */
+/* Ceiling on the cap, and the share of the process's descriptor budget we are
+   willing to sit on.  A fixed number cannot work: blosc2 itself already holds a
+   descriptor per memory-mapped frame, and python-blosc2's indexes open a couple
+   of hundred of those, so on a 256-descriptor macOS default a generous cache
+   here is what tips the process into EMFILE.  A sixteenth of the budget is what
+   python-blosc2's suite tolerates at that limit (an eighth does not), and small
+   working sets -- where caching actually pays -- fit in it comfortably. */
+#define FRAME_READER_CACHE_MAX 96
+#define FRAME_READER_CACHE_SHARE 16
+
+/* Plain pthread type so it can be statically initialised; this block is
+   POSIX-only anyway, and there the blosc2_pthread_* macros are pthread_*.
+   No atomics needed: the counter is only touched when a handle is actually
+   opened or closed, or once more when a frame is first refused one (see
+   read_fp_nocache) -- never per read. */
+static pthread_mutex_t reader_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int reader_cache_count = 0;
+
+static int reader_cache_max(void) {
+  static int cached_max = -1;
+  if (cached_max >= 0) {
+    return cached_max;
+  }
+  char* envvar = getenv("BLOSC_MAX_CACHED_READERS");
+  if (envvar != NULL && envvar[0] != '\0') {
+    long value = strtol(envvar, NULL, 10);
+    if (value >= 0 && value <= INT_MAX) {
+      cached_max = (int)value;
+      return cached_max;
+    }
+  }
+  cached_max = FRAME_READER_CACHE_MAX;
+  struct rlimit rl;
+  if (getrlimit(RLIMIT_NOFILE, &rl) == 0 && rl.rlim_cur != RLIM_INFINITY) {
+    rlim_t share = rl.rlim_cur / FRAME_READER_CACHE_SHARE;
+    if (share < (rlim_t)cached_max) {
+      cached_max = (int)share;
+    }
+  }
+  /* A budget below FRAME_READER_CACHE_SHARE lands on 0, i.e. no caching at all;
+     that is the right answer there -- a descriptor held for a frame's lifetime
+     is exactly what such a process cannot spare. */
+  return cached_max;
+}
+
+/* Claim a slot for one more cached handle, or report that the cache is full */
+static bool reader_cache_claim(void) {
+  bool claimed = false;
+  blosc2_pthread_mutex_lock(&reader_cache_mutex);
+  if (reader_cache_count < reader_cache_max()) {
+    reader_cache_count++;
+    claimed = true;
+  }
+  blosc2_pthread_mutex_unlock(&reader_cache_mutex);
+  return claimed;
+}
+
+static void reader_cache_return(void) {
+  blosc2_pthread_mutex_lock(&reader_cache_mutex);
+  if (reader_cache_count > 0) {
+    reader_cache_count--;
+  }
+  blosc2_pthread_mutex_unlock(&reader_cache_mutex);
+}
+#endif  /* !_WIN32 */
+
+
+/* Allocate a zeroed frame with its internal mutex ready */
+static blosc2_frame_s* frame_alloc(void) {
+  blosc2_frame_s* frame = calloc(1, sizeof(blosc2_frame_s));
+  if (frame != NULL) {
+    blosc2_pthread_mutex_init(&frame->read_fp_mutex, NULL);
+  }
+  return frame;
+}
+
+
+/* See frame.h */
+void* frame_reader_acquire(blosc2_frame_s* frame, const blosc2_io* io) {
+  blosc2_io_cb *io_cb = blosc2_get_io_cb(io->id);
+  if (io_cb == NULL) {
+    BLOSC_TRACE_ERROR("Error getting the input/output API");
+    return NULL;
+  }
+  if (io->id != BLOSC2_IO_FILESYSTEM) {
+    // Third-party backends keep the documented one-handle-per-reader contract
+    // (and the mmap one already makes open() a cheap pointer return).
+    return io_cb->open(frame->urlpath, "rb", io->params);
+  }
+#if defined(_WIN32)
+  // No handle caching on Windows.  The CRT opens files without
+  // FILE_SHARE_DELETE, so a cached handle turns every unlink or rename of the
+  // frame file into a sharing violation.  Callers that replace a frame rather
+  // than rewrite it in place -- python-blosc2 does, both via os.replace and via
+  // remove-then-recreate for mode="w" -- would get hard errors instead of the
+  // stale read that frame_reader_revalidate() handles elsewhere.  Caching here
+  // needs CreateFileW(..., FILE_SHARE_DELETE) plus POSIX-semantics deletion
+  // (Win10 1709+), which is only worth its cost once measured on Windows.
+  return io_cb->open(frame->urlpath, "rb", io->params);
+#else
+  // The cached handle pins the inode it was opened on, so a frame file that is
+  // replaced instead of rewritten in place would keep serving the old bytes.
+  // frame_reader_revalidate() catches that ahead of each header read.
+  //
+  // No unlocked fast path on read_fp: reading it outside the mutex races the
+  // store below (C11 data race, and TSan says so).  An uncontended lock is a
+  // handful of ns against the ~600 ns pread this hands a handle to.
+  blosc2_pthread_mutex_lock(&frame->read_fp_mutex);
+  if (frame->read_fp == NULL && !frame->read_fp_nocache) {
+    if (reader_cache_claim()) {
+      frame->read_fp = io_cb->open(frame->urlpath, "rb", io->params);
+      if (frame->read_fp == NULL) {
+        reader_cache_return();
+      }
+    }
+    else {
+      // Remember that this frame goes uncached, so the process-wide cache mutex
+      // is asked once rather than on every read for the rest of its life
+      frame->read_fp_nocache = true;
+    }
+  }
+  void* fp = frame->read_fp;
+  if (fp != NULL) {
+    // Held until the matching release, so nothing can close it underneath a
+    // caller that keeps it across several reads (frame_to_schunk does)
+    frame->read_fp_refs++;
+  }
+  blosc2_pthread_mutex_unlock(&frame->read_fp_mutex);
+  if (fp == NULL) {
+    // Cache full (or the cached open failed): hand out a private handle, which
+    // the matching frame_reader_release() closes since it is not frame->read_fp
+    fp = io_cb->open(frame->urlpath, "rb", io->params);
+  }
+  return fp;
+#endif
+}
+
+
+/* See frame.h */
+void frame_reader_release(blosc2_frame_s* frame, const blosc2_io_cb* io_cb, void* fp) {
+  if (fp == NULL) {
+    return;
+  }
+  // Same reasoning as in frame_reader_acquire(): read_fp is only ever read
+  // under the mutex, so a concurrent first open cannot race this comparison.
+  blosc2_pthread_mutex_lock(&frame->read_fp_mutex);
+  bool is_cached = (fp == frame->read_fp);
+  if (is_cached) {
+    frame->read_fp_refs--;
+  }
+  blosc2_pthread_mutex_unlock(&frame->read_fp_mutex);
+  if (!is_cached) {
+    io_cb->close(fp);
+  }
+}
+
+
+/* Drop the cached handle; caller must hold read_fp_mutex.  Returns false when
+   the handle is checked out and @p force is not set, i.e. nothing was closed. */
+static bool frame_reader_close_locked(blosc2_frame_s* frame, bool force) {
+  if (frame->read_fp == NULL) {
+    return true;
+  }
+  if (frame->read_fp_refs > 0 && !force) {
+    /* A caller up the stack is reading through it (frame_to_schunk holds it
+       across its whole chunk loop, and that loop re-enters get_header_info).
+       Closing it here would hand that caller a dangling handle, and its own
+       release would then close it a second time.  Leave it: the operation in
+       flight finishes on the file it started on, and the next revalidate --
+       past that release -- drops it. */
+    return false;
+  }
+  /* read_fp only ever comes from the filesystem backend, so close it directly:
+     blosc2_get_io_cb() would return NULL after a blosc2_destroy(), and then the
+     descriptor would leak while its cache slot got handed back anyway. */
+  blosc2_stdio_close(frame->read_fp);
+  frame->read_fp = NULL;
+  frame->read_fp_refs = 0;
+#if !defined(_WIN32)
+  reader_cache_return();
+#endif
+  return true;
+}
+
+
+/* See frame.h */
+void frame_reader_invalidate(blosc2_frame_s* frame) {
+  blosc2_pthread_mutex_lock(&frame->read_fp_mutex);
+  frame_reader_close_locked(frame, true);
+  blosc2_pthread_mutex_unlock(&frame->read_fp_mutex);
+}
+
+
+/* See frame.h */
+void frame_reader_revalidate(blosc2_frame_s* frame) {
+#if defined(_WIN32)
+  /* No handle is ever cached here, so none can go stale */
+  BLOSC_UNUSED_PARAM(frame);
+#else
+  if (frame->urlpath == NULL) {
+    return;
+  }
+  /* The whole inspection runs under read_fp_mutex: reading the pointer and then
+     dereferencing it outside the lock would let a concurrent invalidate close
+     the handle in between.  Two stat() calls under the lock cost nothing here,
+     as this runs once per header read rather than per block. */
+  blosc2_pthread_mutex_lock(&frame->read_fp_mutex);
+  /* Only the filesystem backend ever populates read_fp, so this cast is safe */
+  blosc2_stdio_file* my_fp = (blosc2_stdio_file*)frame->read_fp;
+  if (my_fp == NULL) {
+    blosc2_pthread_mutex_unlock(&frame->read_fp_mutex);
+    return;
+  }
+  bool stale;
+  int fd = my_fp->file != NULL ? fileno(my_fp->file) : -1;
+  struct stat fd_st;
+  struct stat path_st;
+  if (fd < 0 || fstat(fd, &fd_st) != 0) {
+    /* Cannot vouch for the handle; drop it and let the next acquire reopen */
+    stale = true;
+  }
+  else if (stat(frame->urlpath, &path_st) != 0) {
+    /* The path is gone but the inode we hold open is still perfectly valid, so
+       keep reading it -- exactly what an already-open fd does on POSIX. */
+    stale = false;
+  }
+  else {
+    /* A different file at urlpath means unlink-then-recreate (mode="w") or a
+       rename over it (os.replace) */
+    stale = fd_st.st_dev != path_st.st_dev || fd_st.st_ino != path_st.st_ino;
+  }
+  if (stale) {
+    frame_reader_close_locked(frame, false);
+  }
+  blosc2_pthread_mutex_unlock(&frame->read_fp_mutex);
+  if (stale) {
+    /* Force the metadata refresh too: the replacement is often the same length
+       as the old frame, and then the trailer poll in frame_refresh_if_stale()
+       never fires by itself. */
+    frame->force_refresh = true;
+  }
+#endif
+}
+
+
 /* Create a new (empty) frame */
 blosc2_frame_s* frame_new(const char* urlpath) {
-  blosc2_frame_s* new_frame = calloc(1, sizeof(blosc2_frame_s));
+  blosc2_frame_s* new_frame = frame_alloc();
   if (new_frame == NULL) {
     return NULL;
   }
   if (urlpath != NULL) {
     char* new_urlpath = malloc(strlen(urlpath) + 1);  // + 1 for the trailing NULL
     if (new_urlpath == NULL) {
+      blosc2_pthread_mutex_destroy(&new_frame->read_fp_mutex);
       free(new_frame);
       return NULL;
     }
@@ -55,8 +341,234 @@ blosc2_frame_s* frame_new(const char* urlpath) {
 }
 
 
+/* Whether `io` requests locking, either explicitly (blosc2_stdio_params.locking)
+   or via the fleet-wide BLOSC_LOCKING environment variable.  Factored out of
+   frame_set_locking() so callers without a frame object yet (e.g. the open
+   path's pre-frame bootstrap read) can also ask the question. */
+bool frame_locking_requested(const blosc2_io* io) {
+  if (io == NULL || io->id != BLOSC2_IO_FILESYSTEM) {
+    return false;
+  }
+  bool locking = io->params != NULL && ((blosc2_stdio_params*)io->params)->locking;
+  if (!locking) {
+    // "0" or an empty value leave it off
+    char* envvar = getenv("BLOSC_LOCKING");
+    locking = envvar != NULL && envvar[0] != '\0' && strcmp(envvar, "0") != 0;
+  }
+  return locking;
+}
+
+
+void frame_set_locking(blosc2_frame_s* frame, const blosc2_io* io) {
+  if (frame->urlpath == NULL) {
+    return;
+  }
+  if (frame_locking_requested(io)) {
+    frame->locking = true;
+    frame->lock_fd = -1;
+  }
+}
+
+
+/* Path of the sidecar lock file: inside the directory for sframes (removed for
+   free by blosc2_remove_dir), alongside the file for cframes. */
+static char* frame_lock_path(blosc2_frame_s* frame) {
+  const char* suffix = frame->sframe ? "/.b2lock" : ".b2lock";
+  char* path = malloc(strlen(frame->urlpath) + strlen(suffix) + 1);
+  if (path == NULL) {
+    return NULL;
+  }
+  strcpy(path, frame->urlpath);
+  strcat(path, suffix);
+  return path;
+}
+
+
+// Where the generation counter lives in the sidecar (past the byte range
+// locked by LockFileEx on Windows)
+#define FRAME_LOCK_SEQ_OFFSET 8
+
+
+static int frame_os_lock(blosc2_frame_s* frame, bool exclusive) {
+#if defined(_WIN32)
+  OVERLAPPED ov;
+  memset(&ov, 0, sizeof(ov));
+  if (!LockFileEx((HANDLE)frame->lock_fd, exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0,
+                  0, 1, 0, &ov)) {
+    return BLOSC2_ERROR_LOCK;
+  }
+#else
+  int rc;
+  do {
+    rc = flock((int)frame->lock_fd, exclusive ? LOCK_EX : LOCK_SH);
+  } while (rc != 0 && errno == EINTR);
+  if (rc != 0) {
+    return BLOSC2_ERROR_LOCK;
+  }
+#endif
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
+static int frame_os_unlock(blosc2_frame_s* frame) {
+#if defined(_WIN32)
+  OVERLAPPED ov;
+  memset(&ov, 0, sizeof(ov));
+  if (!UnlockFileEx((HANDLE)frame->lock_fd, 0, 1, 0, &ov)) {
+    return BLOSC2_ERROR_LOCK;
+  }
+#else
+  if (flock((int)frame->lock_fd, LOCK_UN) != 0) {
+    return BLOSC2_ERROR_LOCK;
+  }
+#endif
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
+/* Read the sidecar's generation counter (must be called with the lock held).
+   A fresh (short) sidecar reads as 0. */
+static int frame_lock_read_seq(blosc2_frame_s* frame, uint64_t* seq) {
+  *seq = 0;
+#if defined(_WIN32)
+  OVERLAPPED ov;
+  memset(&ov, 0, sizeof(ov));
+  ov.Offset = FRAME_LOCK_SEQ_OFFSET;
+  DWORD nread = 0;
+  if (!ReadFile((HANDLE)frame->lock_fd, seq, sizeof(*seq), &nread, &ov)) {
+    if (GetLastError() != ERROR_HANDLE_EOF) {
+      return BLOSC2_ERROR_LOCK;
+    }
+  }
+  if (nread != sizeof(*seq)) {
+    *seq = 0;
+  }
+#else
+  int64_t nread = pread((int)frame->lock_fd, seq, sizeof(*seq), FRAME_LOCK_SEQ_OFFSET);
+  if (nread < 0) {
+    return BLOSC2_ERROR_LOCK;
+  }
+  if (nread != (int64_t)sizeof(*seq)) {
+    *seq = 0;
+  }
+#endif
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
+/* Write the sidecar's generation counter (must be called with the exclusive
+   lock held). */
+static int frame_lock_write_seq(blosc2_frame_s* frame, uint64_t seq) {
+#if defined(_WIN32)
+  OVERLAPPED ov;
+  memset(&ov, 0, sizeof(ov));
+  ov.Offset = FRAME_LOCK_SEQ_OFFSET;
+  DWORD nwritten = 0;
+  if (!WriteFile((HANDLE)frame->lock_fd, &seq, sizeof(seq), &nwritten, &ov) ||
+      nwritten != sizeof(seq)) {
+    return BLOSC2_ERROR_LOCK;
+  }
+#else
+  if (pwrite((int)frame->lock_fd, &seq, sizeof(seq), FRAME_LOCK_SEQ_OFFSET) !=
+      (int64_t)sizeof(seq)) {
+    return BLOSC2_ERROR_LOCK;
+  }
+#endif
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
+int frame_lock(blosc2_frame_s* frame, bool exclusive) {
+  if (frame == NULL || !frame->locking) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+  if (frame->lock_depth > 0) {
+    // Already held by this handle (a nested call); the outer lock covers us
+    frame->lock_depth++;
+    return BLOSC2_ERROR_SUCCESS;
+  }
+  if (frame->lock_fd == -1) {
+    // Lazily open the sidecar, kept for the frame's lifetime
+    char* path = frame_lock_path(frame);
+    if (path == NULL) {
+      return BLOSC2_ERROR_MEMORY_ALLOC;
+    }
+#if defined(_WIN32)
+    HANDLE h = CreateFileA(path, GENERIC_READ | GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h == INVALID_HANDLE_VALUE) {
+      BLOSC_TRACE_ERROR("Cannot open the lock file in: %s", path);
+      free(path);
+      return BLOSC2_ERROR_LOCK;
+    }
+    frame->lock_fd = (intptr_t)h;
+#else
+    int fd = open(path, O_CREAT | O_RDWR | O_CLOEXEC, 0666);
+    if (fd < 0) {
+      BLOSC_TRACE_ERROR("Cannot open the lock file in: %s", path);
+      free(path);
+      return BLOSC2_ERROR_LOCK;
+    }
+    frame->lock_fd = fd;
+#endif
+    free(path);
+  }
+  if (frame_os_lock(frame, exclusive) < 0) {
+    BLOSC_TRACE_ERROR("Cannot lock the frame.");
+    return BLOSC2_ERROR_LOCK;
+  }
+  // Generation counter: writers bump it, everyone compares it with the last
+  // value it saw.  This detects mutations by other handles exactly, even when
+  // the frame length on disk ends up unchanged (which the length-based
+  // staleness check in frame_refresh_if_stale() cannot see).
+  uint64_t seq;
+  if (frame_lock_read_seq(frame, &seq) < 0 ||
+      (exclusive && frame_lock_write_seq(frame, seq + 1) < 0)) {
+    BLOSC_TRACE_ERROR("Cannot access the frame lock generation counter.");
+    frame_os_unlock(frame);
+    return BLOSC2_ERROR_LOCK;
+  }
+  if (seq != frame->lock_seq) {
+    frame->force_refresh = true;
+  }
+  if (exclusive) {
+    seq++;
+  }
+  frame->lock_seq = seq;
+  frame->lock_depth = 1;
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
+int frame_unlock(blosc2_frame_s* frame) {
+  if (frame == NULL || !frame->locking || frame->lock_depth == 0) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+  if (--frame->lock_depth > 0) {
+    return BLOSC2_ERROR_SUCCESS;
+  }
+  if (frame_os_unlock(frame) < 0) {
+    BLOSC_TRACE_ERROR("Cannot unlock the frame.");
+    return BLOSC2_ERROR_LOCK;
+  }
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+
 /* Free memory from a frame. */
 int frame_free(blosc2_frame_s* frame) {
+
+  frame_reader_invalidate(frame);
+  blosc2_pthread_mutex_destroy(&frame->read_fp_mutex);
+
+  if (frame->locking && frame->lock_fd != -1) {
+#if defined(_WIN32)
+    CloseHandle((HANDLE)frame->lock_fd);
+#else
+    close((int)frame->lock_fd);
+#endif
+  }
 
   if (frame->cframe != NULL && !frame->avoid_cframe_free) {
     free(frame->cframe);
@@ -410,7 +922,12 @@ int get_header_info(blosc2_frame_s *frame, int32_t *header_len, int64_t *frame_l
       }
     }
     else {
-      fp = io_cb->open(frame->urlpath, "rb", io->params);
+      /* Ahead of the header read, not after it: everything downstream (and
+         frame_refresh_if_stale in particular) trusts the length this read
+         returns, so a stale handle here would pair old metadata with the
+         replacement's bytes. */
+      frame_reader_revalidate(frame);
+      fp = frame_reader_acquire(frame, io);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         return BLOSC2_ERROR_FILE_OPEN;
@@ -420,7 +937,7 @@ int get_header_info(blosc2_frame_s *frame, int32_t *header_len, int64_t *frame_l
     if (io_cb->is_allocation_necessary)
       header_ptr = header;
     rbytes = io_cb->read((void**)&header_ptr, 1, FRAME_HEADER_MINLEN, io_pos, fp);
-    io_cb->close(fp);
+    frame_reader_release(frame, io_cb, fp);
     if (rbytes != FRAME_HEADER_MINLEN) {
       return BLOSC2_ERROR_FILE_READ;
     }
@@ -565,6 +1082,221 @@ int64_t get_trailer_offset(blosc2_frame_s *frame, int32_t header_len, bool has_c
   return frame->len - frame->trailer_len;
 }
 
+
+/* If the on-disk frame length (as just re-read by get_header_info) differs from the
+ * cached one, another handle (or process) has rewritten the frame behind our back.
+ * Drop the cached offsets index and refresh len/trailer_len so that subsequent
+ * accesses re-read the current on-disk state.  In-memory frames cannot go stale
+ * this way, and single-handle flows always match, so this is a no-op for them.
+ * Returns 1 if a refresh took place, 0 if none was needed, or a negative error. */
+static int frame_refresh_if_stale(blosc2_frame_s *frame, int64_t frame_len_on_disk) {
+  if (frame->cframe != NULL || frame->schunk == NULL ||
+      (!frame->force_refresh && frame_len_on_disk == frame->len)) {
+    return 0;
+  }
+  // Saved so the metalayer-reload retry loop below can roll back to a fully
+  // consistent state on exhaustion, rather than leaving frame->len/trailer_len
+  // committed to the new value with no metalayers to match it.
+  int64_t old_len = frame->len;
+  uint32_t old_trailer_len = frame->trailer_len;
+
+  if (frame_len_on_disk < FRAME_HEADER_MINLEN + FRAME_TRAILER_MINLEN) {
+    BLOSC_TRACE_ERROR("Invalid on-disk frame length (%" PRId64 ").", frame_len_on_disk);
+    return BLOSC2_ERROR_FILE_READ;
+  }
+
+  // Read and validate the trailer *before* mutating any frame state below,
+  // so a transient torn read (a writer without locking has no coordination
+  // preventing a reader from landing mid-rewrite here -- the documented
+  // SWMR-without-locking tradeoff) can be handled opportunistically: keep
+  // the old cached view and let the next access retry, the same way
+  // frame_check_stale()'s header read already does a few lines up in the
+  // caller. Once frame->len/coffsets are overwritten below, a failure
+  // partway through would leave the frame in a self-inconsistent state
+  // (new length, stale trailer/offsets), so those mutations only happen
+  // after the trailer is confirmed good.
+  blosc2_io_cb *io_cb = blosc2_get_io_cb(frame->schunk->storage->io->id);
+  if (io_cb == NULL) {
+    BLOSC_TRACE_ERROR("Error getting the input/output API");
+    return BLOSC2_ERROR_PLUGIN_IO;
+  }
+  void* fp;
+  if (frame->sframe) {
+    fp = sframe_open_index(frame->urlpath, "rb", frame->schunk->storage->io);
+  }
+  else {
+    fp = frame_reader_acquire(frame, frame->schunk->storage->io);
+  }
+  if (fp == NULL) {
+    BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
+    return BLOSC2_ERROR_FILE_OPEN;
+  }
+  uint8_t trailer[FRAME_TRAILER_MINLEN];
+  uint8_t* trailer_ptr = trailer;
+  int64_t io_pos = frame->file_offset + frame_len_on_disk - FRAME_TRAILER_MINLEN;
+  int64_t rbytes = io_cb->read((void**)&trailer_ptr, 1, FRAME_TRAILER_MINLEN, io_pos, fp);
+  frame_reader_release(frame, io_cb, fp);
+  if (rbytes != FRAME_TRAILER_MINLEN) {
+    BLOSC_TRACE_ERROR("Cannot read the trailer out of the frame.");
+    return 0;  // opportunistic: transient, keep the cached view, retry later
+  }
+  int trailer_offset = FRAME_TRAILER_MINLEN - FRAME_TRAILER_LEN_OFFSET;
+  if (trailer_ptr[trailer_offset - 1] != 0xce) {
+    // Not a valid trailer; most likely we are reading a frame in the middle of
+    // being rewritten by another handle without locking (locked handles
+    // fully serialize, so this only happens under the no-locking contract).
+    BLOSC_TRACE_ERROR("Invalid trailer in frame.");
+    return 0;  // opportunistic, same reasoning as above
+  }
+  uint32_t trailer_len;
+  from_big(&trailer_len, trailer_ptr + trailer_offset, sizeof(trailer_len));
+  if (trailer_len < FRAME_TRAILER_MINLEN || trailer_len > INT32_MAX ||
+      (int64_t)trailer_len > frame_len_on_disk - FRAME_HEADER_MINLEN) {
+    BLOSC_TRACE_ERROR("Invalid trailer length (%" PRIu32 ") in frame.", trailer_len);
+    return 0;  // opportunistic, same reasoning as above
+  }
+
+  // Trailer confirmed good: now safe to commit the new length. The lock
+  // generation counter (see frame_lock) may have flagged a mutation that
+  // left the frame length unchanged; only clear that flag here, once a
+  // refresh has actually happened -- clearing it earlier and then bailing
+  // out opportunistically above would permanently lose a same-length
+  // mutation notification on a torn-read retry. The cached offsets index is
+  // dropped further down, only once the metalayer/vlmetalayer reload below
+  // has actually succeeded -- neither of those touches frame->coffsets, so
+  // deferring this keeps the old view of it fully intact for the
+  // opportunistic rollback path below, exactly as strong as the trailer
+  // read's own bail-outs above.
+  frame->force_refresh = false;
+  frame->len = frame_len_on_disk;
+  frame->trailer_len = trailer_len;
+
+  // The header metalayers and trailer vlmetalayers were cached at open time;
+  // reload them so metadata changes made by another handle (e.g. a b2nd shape
+  // update) become visible too.  The guard protects against re-entering from
+  // the reload path itself (get_header_info does not refresh, but cheap
+  // insurance against future changes there).
+  //
+  // frame_get_metalayers()/frame_get_vlmetalayers() each do their own fully
+  // independent header/trailer re-read (separate from the trailer read
+  // above), so without locking they can hit the same transient torn-read
+  // window. Unlike that trailer read, there's no way to validate first and
+  // commit after: schunk_free_metalayers()/schunk_free_vlmetalayers() must
+  // run before a reload attempt (the parsers write straight into
+  // schunk->metalayers[]/vlmetalayers[] as they go), so a single failed
+  // attempt already discards the old cached set. Retry a bounded number of
+  // times -- both free helpers are NULL-safe and re-run cleanly against a
+  // partial prior attempt, and each attempt is a fresh independent read, so
+  // this self-heals once the writer's rewrite stabilizes.
+  //
+  // This reasoning only holds without locking, though: frame_check_stale()
+  // (the only caller) holds the shared frame lock across this entire call
+  // when frame->locking is set, which fully excludes writers for its
+  // duration -- so under locking a reload failure here cannot be a torn
+  // read, it is a genuine problem (corruption or a real I/O error), and
+  // retrying 50 times would just waste ~50ms holding that shared lock
+  // before silently masking it. Retry once (i.e. don't retry) and propagate
+  // the error under locking; keep the opportunistic bounded retry + silent
+  // rollback for the no-locking case only.
+  //
+  // On exhaustion in the no-locking case, roll back frame->len/trailer_len
+  // to what they were before this call and force a full retry on the next
+  // poll (frame->force_refresh = true) -- otherwise frame_len_on_disk ==
+  // frame->len would short-circuit every subsequent call at the top of this
+  // function, permanently stranding this handle with an empty metalayer set.
+  if (!frame->refreshing) {
+    frame->refreshing = true;
+    int rc = -1;
+    const int max_attempts = frame->locking ? 1 : 50;
+    for (int attempt = 0; attempt < max_attempts; attempt++) {
+      schunk_free_metalayers(frame->schunk);
+      rc = frame_get_metalayers(frame, frame->schunk);
+      if (rc >= 0) {
+        schunk_free_vlmetalayers(frame->schunk);
+        rc = frame_get_vlmetalayers(frame, frame->schunk);
+      }
+      if (rc >= 0 || attempt + 1 == max_attempts) {
+        break;
+      }
+#if defined(_WIN32)
+      Sleep(1);
+#else
+      usleep(1000);
+#endif
+    }
+    frame->refreshing = false;
+    if (rc < 0) {
+      if (frame->locking) {
+        BLOSC_TRACE_ERROR("Cannot reload the metalayers from the refreshed frame "
+                          "(locked handle: this is not a transient race).");
+        return rc;
+      }
+      BLOSC_TRACE_ERROR("Cannot reload the metalayers from the refreshed frame "
+                        "after retries; rolling back to the previous cached view.");
+      frame->len = old_len;
+      frame->trailer_len = old_trailer_len;
+      frame->force_refresh = true;
+      return 0;
+    }
+  }
+  frame->schunk->change_tick++;
+
+  // Cached offsets index invalidated only now, after a fully successful
+  // refresh: recomputed lazily from the fresh trailer on demand.
+  if (frame->coffsets != NULL) {
+    if (frame->coffsets_needs_free) {
+      free(frame->coffsets);
+    }
+    frame->coffsets = NULL;
+  }
+
+  return 1;
+}
+
+
+/* Poll the on-disk frame for staleness; see frame.h.  Mirrors the
+ * get_header_info + frame_refresh_if_stale + counter re-sync sequence that
+ * read paths like frame_get_chunk perform, but standalone, so upper layers
+ * (b2nd geometry checks, vlmeta reads) can sync before trusting cached
+ * metadata.  The shared lock makes the sidecar generation counter flag
+ * same-length mutations via force_refresh. */
+int frame_check_stale(blosc2_frame_s *frame) {
+  if (frame == NULL || frame->cframe != NULL || frame->schunk == NULL) {
+    return 0;
+  }
+  if (frame_lock(frame, false) < 0) {
+    return BLOSC2_ERROR_LOCK;
+  }
+  int32_t header_len;
+  int64_t frame_len;
+  int64_t nbytes;
+  int64_t cbytes;
+  int32_t blocksize;
+  int32_t chunksize;
+  int64_t nchunks;
+  int rc = get_header_info(frame, &header_len, &frame_len, &nbytes, &cbytes,
+                           &blocksize, &chunksize, &nchunks,
+                           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                           frame->schunk->storage->io);
+  if (rc < 0) {
+    // The on-disk header cannot be read right now (e.g. a freshly created
+    // frame not yet flushed to disk, or another process mid-write).  The
+    // poll is opportunistic: keep the cached view, exactly as before polling
+    // existed.  A genuinely torn frame still errors out in the data-access
+    // paths that need it.
+    frame_unlock(frame);
+    return 0;
+  }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc > 0) {
+    frame->schunk->nbytes = nbytes;
+    frame->schunk->cbytes = cbytes;
+    frame->schunk->nchunks = nchunks;
+  }
+  frame_unlock(frame);
+  return rc;
+}
+
 static int get_coffsets_nbytes(blosc2_frame_s *frame, int32_t header_len, int64_t cbytes,
                                int32_t *coffsets_nbytes, const blosc2_io *io) {
   int32_t chunk_cbytes;
@@ -620,7 +1352,7 @@ static int get_coffsets_nbytes(blosc2_frame_s *frame, int32_t header_len, int64_
     io_pos = off_pos;
   }
   else {
-    fp = io_cb->open(frame->urlpath, "rb", io->params);
+    fp = frame_reader_acquire(frame, io);
     if (fp == NULL) {
       BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
       return BLOSC2_ERROR_FILE_OPEN;
@@ -628,7 +1360,7 @@ static int get_coffsets_nbytes(blosc2_frame_s *frame, int32_t header_len, int64_
     io_pos = frame->file_offset + off_pos;
   }
   int64_t rbytes = io_cb->read((void**)&header_ptr, 1, BLOSC_EXTENDED_HEADER_LENGTH, io_pos, fp);
-  io_cb->close(fp);
+  frame_reader_release(frame, io_cb, fp);
   if (rbytes != BLOSC_EXTENDED_HEADER_LENGTH) {
     BLOSC_TRACE_ERROR("Cannot read the offsets header out of the frame.");
     return BLOSC2_ERROR_FILE_READ;
@@ -923,6 +1655,67 @@ static char* normalize_urlpath(const char* urlpath) {
 }
 
 
+#if defined(BLOSC_TESTING)
+/* Deterministic fault injection for the stat()-vs-header transient race
+   handled by frame_from_file_offset_retrying() (schunk.c): rather than
+   relying on process-scheduling luck to land a real writer's header write
+   inside a reader's stat()-to-read window (see tests/test_frame_lock.c,
+   test_fork_open_race_update, which tries exactly that and mostly fails to
+   land it), simulate the race directly by tampering with the on-disk
+   frame_len field between this function's own stat() (already sampled) and
+   its header read.  Armed via blosc2_test_arm_open_race(): on the arm_at'th
+   call since arming, frame_len is overwritten with a value that exceeds the
+   already-sampled file size, forcing the same "frame length exceeds file
+   boundary" error a real race produces; the following call restores the
+   correct value before its own read, simulating the writer completing its
+   extend.  One-shot: disarms itself after firing once.  A no-op when not
+   armed (arm_at == 0, the default), so it costs one integer compare on
+   builds that don't use it. */
+static int g_open_race_arm_at = 0;
+static int g_open_race_calls = 0;
+static bool g_open_race_pending_restore = false;
+static uint8_t g_open_race_saved_len_be[8];
+
+void blosc2_test_arm_open_race(int arm_at) {
+  g_open_race_arm_at = arm_at;
+  g_open_race_calls = 0;
+  g_open_race_pending_restore = false;
+}
+
+static void open_race_test_hook(const char* urlpath, int64_t offset) {
+  if (g_open_race_arm_at == 0) {
+    return;
+  }
+  g_open_race_calls++;
+  FILE* fp = fopen(urlpath, "rb+");
+  if (fp == NULL) {
+    return;
+  }
+  if (g_open_race_pending_restore) {
+    fseek(fp, offset + FRAME_LEN, SEEK_SET);
+    fwrite(g_open_race_saved_len_be, 1, sizeof(g_open_race_saved_len_be), fp);
+    g_open_race_pending_restore = false;
+    g_open_race_arm_at = 0;
+  }
+  else if (g_open_race_calls == g_open_race_arm_at) {
+    fseek(fp, offset + FRAME_LEN, SEEK_SET);
+    if (fread(g_open_race_saved_len_be, 1, sizeof(g_open_race_saved_len_be), fp) ==
+        sizeof(g_open_race_saved_len_be)) {
+      int64_t real_len;
+      to_big(&real_len, g_open_race_saved_len_be, sizeof(real_len));
+      int64_t bogus_len = real_len + 10 * 1024 * 1024;
+      uint8_t bogus_be[8];
+      to_big(bogus_be, &bogus_len, sizeof(bogus_len));
+      fseek(fp, offset + FRAME_LEN, SEEK_SET);
+      fwrite(bogus_be, 1, sizeof(bogus_be), fp);
+      g_open_race_pending_restore = true;
+    }
+  }
+  fclose(fp);
+}
+#endif  /* BLOSC_TESTING */
+
+
 /* Initialize a frame out of a file */
 blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io, int64_t offset) {
     // Get the length of the frame
@@ -946,6 +1739,10 @@ blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io,
         BLOSC_TRACE_ERROR("Cannot get information about the path %s.", urlpath);
         return NULL;
     }
+
+#if defined(BLOSC_TESTING)
+    open_race_test_hook(urlpath, offset);
+#endif
 
     blosc2_io_cb *io_cb = blosc2_get_io_cb(io->id);
     if (io_cb == NULL) {
@@ -1021,7 +1818,7 @@ blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io,
       return NULL;
     }
 
-    blosc2_frame_s* frame = calloc(1, sizeof(blosc2_frame_s));
+    blosc2_frame_s* frame = frame_alloc();
     if (frame == NULL) {
       BLOSC_TRACE_ERROR("Cannot allocate memory for frame metadata.");
       io_cb->close(fp);
@@ -1042,6 +1839,7 @@ blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io,
     if (rbytes != FRAME_TRAILER_MINLEN) {
         BLOSC_TRACE_ERROR("Cannot read from file '%s'.", urlpath);
         free(urlpath_cpy);
+        blosc2_pthread_mutex_destroy(&frame->read_fp_mutex);
         free(frame);
         return NULL;
     }
@@ -1049,6 +1847,7 @@ blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io,
     if (trailer_ptr[trailer_offset - 1] != 0xce) {
         BLOSC_TRACE_ERROR("Invalid trailer in file '%s'.", urlpath);
         free(urlpath_cpy);
+        blosc2_pthread_mutex_destroy(&frame->read_fp_mutex);
         free(frame);
         return NULL;
     }
@@ -1059,10 +1858,12 @@ blosc2_frame_s* frame_from_file_offset(const char* urlpath, const blosc2_io *io,
         (int64_t)trailer_len > frame_len - FRAME_HEADER_MINLEN) {
       BLOSC_TRACE_ERROR("Invalid trailer length (%" PRIu32 ") in file '%s'.", trailer_len, urlpath);
       free(urlpath_cpy);
+      blosc2_pthread_mutex_destroy(&frame->read_fp_mutex);
       free(frame);
       return NULL;
     }
     frame->trailer_len = trailer_len;
+    frame_set_locking(frame, io);
 
     return frame;
 }
@@ -1082,7 +1883,10 @@ blosc2_frame_s* frame_from_cframe(uint8_t *cframe, int64_t len, bool copy) {
     return NULL;
   }
 
-  blosc2_frame_s* frame = calloc(1, sizeof(blosc2_frame_s));
+  blosc2_frame_s* frame = frame_alloc();
+  if (frame == NULL) {
+    return NULL;
+  }
   frame->len = frame_len;
   frame->file_offset = 0;
 
@@ -1090,6 +1894,7 @@ blosc2_frame_s* frame_from_cframe(uint8_t *cframe, int64_t len, bool copy) {
   const uint8_t* trailer = cframe + frame_len - FRAME_TRAILER_MINLEN;
   int trailer_offset = FRAME_TRAILER_MINLEN - FRAME_TRAILER_LEN_OFFSET;
   if (trailer[trailer_offset - 1] != 0xce) {
+    blosc2_pthread_mutex_destroy(&frame->read_fp_mutex);
     free(frame);
     return NULL;
   }
@@ -1098,6 +1903,7 @@ blosc2_frame_s* frame_from_cframe(uint8_t *cframe, int64_t len, bool copy) {
   if (trailer_len < FRAME_TRAILER_MINLEN || trailer_len > INT32_MAX ||
       (int64_t)trailer_len > frame_len ||
       (int64_t)trailer_len > frame_len - FRAME_HEADER_MINLEN) {
+    blosc2_pthread_mutex_destroy(&frame->read_fp_mutex);
     free(frame);
     return NULL;
   }
@@ -1239,6 +2045,8 @@ int64_t frame_from_schunk(blosc2_schunk *schunk, blosc2_frame_s *frame) {
                              frame->schunk->storage->io);
     }
     else {
+      // The file is about to be recreated from scratch; drop any cached reader
+      frame_reader_invalidate(frame);
       fp = io_cb->open(frame->urlpath, "wb", frame->schunk->storage->io->params);
     }
     if (fp == NULL) {
@@ -1397,7 +2205,7 @@ uint8_t* get_coffsets(blosc2_frame_s *frame, int32_t header_len, int64_t cbytes,
     io_pos = header_len + 0;
   }
   else {
-    fp = io_cb->open(frame->urlpath, "rb", frame->schunk->storage->io->params);
+    fp = frame_reader_acquire(frame, frame->schunk->storage->io);
     if (fp == NULL) {
       BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
       return NULL;
@@ -1405,7 +2213,7 @@ uint8_t* get_coffsets(blosc2_frame_s *frame, int32_t header_len, int64_t cbytes,
     io_pos = frame->file_offset + header_len + cbytes;
   }
   int64_t rbytes = io_cb->read((void**)&coffsets, 1, coffsets_cbytes, io_pos, fp);
-  io_cb->close(fp);
+  frame_reader_release(frame, io_cb, fp);
   if (rbytes != coffsets_cbytes) {
     BLOSC_TRACE_ERROR("Cannot read the offsets out of the frame.");
     if (frame->coffsets_needs_free)
@@ -1508,7 +2316,7 @@ int frame_update_header(blosc2_frame_s* frame, blosc2_schunk* schunk, bool new) 
       }
     }
     else {
-      fp = io_cb->open(frame->urlpath, "rb", frame->schunk->storage->io->params);
+      fp = frame_reader_acquire(frame, frame->schunk->storage->io);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         return BLOSC2_ERROR_FILE_OPEN;
@@ -1519,7 +2327,7 @@ int frame_update_header(blosc2_frame_s* frame, blosc2_schunk* schunk, bool new) 
       if (io_cb->is_allocation_necessary)
         header_ptr = header;
       rbytes = io_cb->read((void**)&header_ptr, 1, FRAME_HEADER_MINLEN, io_pos, fp);
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
     }
     (void) rbytes;
     if (rbytes != FRAME_HEADER_MINLEN) {
@@ -1752,7 +2560,7 @@ int frame_get_metalayers(blosc2_frame_s* frame, blosc2_schunk* schunk) {
       }
     }
     else {
-      fp = io_cb->open(frame->urlpath, "rb", frame->schunk->storage->io->params);
+      fp = frame_reader_acquire(frame, frame->schunk->storage->io);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         return BLOSC2_ERROR_FILE_OPEN;
@@ -1761,7 +2569,7 @@ int frame_get_metalayers(blosc2_frame_s* frame, blosc2_schunk* schunk) {
     }
     if (fp != NULL) {
       rbytes = io_cb->read((void**)&header, 1, header_len, io_pos, fp);
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
     }
     if (rbytes != header_len) {
       BLOSC_TRACE_ERROR("Cannot access the header out of the frame.");
@@ -1994,7 +2802,7 @@ int frame_get_vlmetalayers(blosc2_frame_s* frame, blosc2_schunk* schunk) {
       io_pos = trailer_offset;
     }
     else {
-      fp = io_cb->open(frame->urlpath, "rb", frame->schunk->storage->io->params);
+      fp = frame_reader_acquire(frame, frame->schunk->storage->io);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         return BLOSC2_ERROR_FILE_OPEN;
@@ -2003,7 +2811,7 @@ int frame_get_vlmetalayers(blosc2_frame_s* frame, blosc2_schunk* schunk) {
     }
     if (fp != NULL) {
       rbytes = io_cb->read((void**)&trailer, 1, trailer_len, io_pos, fp);
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
     }
     if (rbytes != trailer_len) {
       BLOSC_TRACE_ERROR("Cannot access the trailer out of the fileframe.");
@@ -2277,7 +3085,7 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
 
     if (!frame->sframe) {
       // If not the chunks won't be in the frame
-      fp = io_cb->open(frame->urlpath, "rb", udio->params);
+      fp = frame_reader_acquire(frame, udio);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         rc = BLOSC2_ERROR_FILE_OPEN;
@@ -2401,7 +3209,7 @@ blosc2_schunk* frame_to_schunk(blosc2_frame_s* frame, bool copy, const blosc2_io
   }
   if (frame->cframe == NULL) {
     if (!frame->sframe) {
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
     }
   }
   free(offsets);
@@ -2590,6 +3398,19 @@ int frame_get_chunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, bool
     BLOSC_TRACE_ERROR("Unable to get meta info from frame.");
     return rc;
   }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
+    return rc;
+  }
+  if (rc > 0) {
+    // Keep the schunk-level counters in sync with the refreshed on-disk state.
+    // Mutating ops (update/delete) read a chunk before adjusting the counters,
+    // so this also gives them a fresh base to apply their deltas on.
+    frame->schunk->nbytes = nbytes;
+    frame->schunk->cbytes = cbytes;
+    frame->schunk->nchunks = nchunks;
+  }
 
   if ((nchunks > 0) && (nchunk >= nchunks)) {
     BLOSC_TRACE_ERROR("nchunk ('%" PRId64 "') exceeds the number of chunks "
@@ -2634,7 +3455,7 @@ int frame_get_chunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, bool
   if (frame->cframe == NULL) {
     uint8_t* header_ptr;
     uint8_t header[BLOSC_EXTENDED_HEADER_LENGTH];
-    void* fp = io_cb->open(frame->urlpath, "rb", frame->schunk->storage->io->params);
+    void* fp = frame_reader_acquire(frame, frame->schunk->storage->io);
     if (fp == NULL) {
       BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
       return BLOSC2_ERROR_FILE_OPEN;
@@ -2645,20 +3466,20 @@ int frame_get_chunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, bool
     int64_t rbytes = io_cb->read((void**)&header_ptr, 1, sizeof(header), io_pos, fp);
     if (rbytes != BLOSC_EXTENDED_HEADER_LENGTH) {
       BLOSC_TRACE_ERROR("Cannot read the cbytes for chunk in the frame.");
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
       return BLOSC2_ERROR_FILE_READ;
     }
     rc = blosc2_cbuffer_sizes(header_ptr, NULL, &chunk_cbytes, NULL);
     if (rc < 0) {
       BLOSC_TRACE_ERROR("Cannot read the cbytes for chunk in the frame.");
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
       return rc;
     }
     if (chunk_cbytes < BLOSC_EXTENDED_HEADER_LENGTH ||
         offset > INT64_MAX - chunk_cbytes ||
         offset + chunk_cbytes > cbytes) {
       BLOSC_TRACE_ERROR("Invalid chunk size in frame for chunk %" PRId64 ".", nchunk);
-      io_cb->close(fp);
+      frame_reader_release(frame, io_cb, fp);
       return BLOSC2_ERROR_INVALID_HEADER;
     }
     if (io_cb->is_allocation_necessary) {
@@ -2671,7 +3492,7 @@ int frame_get_chunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, bool
 
     io_pos = frame->file_offset + header_len + offset;
     rbytes = io_cb->read((void**)chunk, 1, chunk_cbytes, io_pos, fp);
-    io_cb->close(fp);
+    frame_reader_release(frame, io_cb, fp);
     if (rbytes != chunk_cbytes) {
       BLOSC_TRACE_ERROR("Cannot read the chunk out of the frame.");
       return BLOSC2_ERROR_FILE_READ;
@@ -2732,6 +3553,18 @@ int frame_get_lazychunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, 
     BLOSC_TRACE_ERROR("Unable to get meta info from frame.");
     return rc;
   }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
+    return rc;
+  }
+  if (rc > 0) {
+    // Keep the schunk-level counters in sync with the refreshed on-disk state
+    // (see frame_get_chunk).
+    frame->schunk->nbytes = nbytes;
+    frame->schunk->cbytes = cbytes;
+    frame->schunk->nchunks = nchunks;
+  }
 
   if (nchunk >= nchunks) {
     BLOSC_TRACE_ERROR("nchunk ('%" PRId64 "') exceeds the number of chunks "
@@ -2785,7 +3618,7 @@ int frame_get_lazychunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, 
       }
     }
     else {
-      fp = io_cb->open(frame->urlpath, "rb", frame->schunk->storage->io->params);
+      fp = frame_reader_acquire(frame, frame->schunk->storage->io);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         return BLOSC2_ERROR_FILE_OPEN;
@@ -3041,7 +3874,7 @@ int frame_get_lazychunk(blosc2_frame_s *frame, int64_t nchunk, uint8_t **chunk, 
     free(block_csizes);
   }
   if (fp != NULL) {
-    io_cb->close(fp);
+    frame_reader_release(frame, io_cb, fp);
   }
   if (rc < 0) {
     if (*needs_free) {
@@ -3258,6 +4091,11 @@ void* frame_append_chunk(blosc2_frame_s* frame, void* chunk, blosc2_schunk* schu
                            frame->schunk->storage->io);
   if (rc < 0) {
     BLOSC_TRACE_ERROR("Unable to get meta info from frame.");
+    return NULL;
+  }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
     return NULL;
   }
 
@@ -3508,6 +4346,11 @@ void* frame_insert_chunk(blosc2_frame_s* frame, int64_t nchunk, void* chunk, blo
     BLOSC_TRACE_ERROR("Unable to get meta info from frame.");
     return NULL;
   }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
+    return NULL;
+  }
   int32_t chunk_cbytes;
   rc = blosc2_cbuffer_sizes(chunk_, NULL, &chunk_cbytes, NULL);
   if (rc < 0) {
@@ -3725,6 +4568,11 @@ void* frame_update_chunk(blosc2_frame_s* frame, int64_t nchunk, void* chunk, blo
                            frame->schunk->storage->io);
   if (rc < 0) {
     BLOSC_TRACE_ERROR("Unable to get meta info from frame.");
+    return NULL;
+  }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
     return NULL;
   }
   if (nchunk >= nchunks) {
@@ -4064,6 +4912,11 @@ void* frame_delete_chunk(blosc2_frame_s* frame, int64_t nchunk, blosc2_schunk* s
     BLOSC_TRACE_ERROR("Unable to get meta info from frame.");
     return NULL;
   }
+  rc = frame_refresh_if_stale(frame, frame_len);
+  if (rc < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
+    return NULL;
+  }
 
   // Get the current offsets
   int32_t off_nbytes;
@@ -4184,7 +5037,7 @@ void* frame_delete_chunk(blosc2_frame_s* frame, int64_t nchunk, blosc2_schunk* s
     }
     else {
       // Regular frame
-      fp = io_cb->open(frame->urlpath, "rb+", frame->schunk->storage->io);
+      fp = io_cb->open(frame->urlpath, "rb+", frame->schunk->storage->io->params);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Error opening file in: %s", frame->urlpath);
         return NULL;
@@ -4237,6 +5090,11 @@ int frame_reorder_offsets(blosc2_frame_s* frame, const int64_t* offsets_order, b
   if (ret < 0) {
       BLOSC_TRACE_ERROR("Cannot get the header info for the frame.");
       return ret;
+  }
+  ret = frame_refresh_if_stale(frame, frame_len);
+  if (ret < 0) {
+    BLOSC_TRACE_ERROR("Unable to refresh the frame state from disk.");
+    return ret;
   }
 
   // Get the current offsets and add one more
