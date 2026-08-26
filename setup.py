@@ -987,10 +987,54 @@ def _get_zstd_clib(field=None):
     return config[field]
 
 
+def _get_openjph_clib(field=None):
+    """Vendored OpenJPH static lib build config (used by the htj2k plugin)"""
+    openjph_dir = "lib/h5z-htj2k/vendored/OpenJPH/src/core"
+    simd_suffixes = (
+        "_sse",
+        "_sse2",
+        "_ssse3",
+        "_avx",
+        "_avx2",
+        "_avx512",
+        "_wasm",
+        "_vsx",
+    )
+
+    def portable_sources(pattern):
+        return [
+            source
+            for source in glob(f"{openjph_dir}/{pattern}")
+            if not os.path.splitext(os.path.basename(source))[0].endswith(simd_suffixes)
+        ]
+
+    sources = (
+        portable_sources("codestream/*.cpp")
+        + portable_sources("coding/*.cpp")
+        + portable_sources("transform/*.cpp")
+        + glob(f"{openjph_dir}/others/*.cpp")
+        + glob(f"{openjph_dir}/others/*.c")
+    )
+
+    config = dict(
+        sources=sources,
+        include_dirs=[f"{openjph_dir}/openjph"],
+        macros=[("OJPH_DISABLE_SIMD", None), ("_FILE_OFFSET_BITS", 64)],
+        cflags=["-O3", "/O2"],
+    )
+
+    if field is None:
+        return config
+    if field in ("extra_link_args", "libraries"):
+        return []
+    return config[field]
+
+
 _EMBEDDED_CLIB_CONFIG_GETTERS = {
     "bzip2": _get_bzip2_clib,
     "charls": _get_charls_clib,
     "lz4": _get_lz4_clib,
+    "openjph": _get_openjph_clib,
     "snappy": _get_snappy_clib,
     "sperr": _get_sperr_clib,
     "sperr_filter": _get_sperr_filter_clib,
@@ -1395,6 +1439,26 @@ def _get_h5zfp_plugin():
     )
 
 
+PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
+
+
+def _get_htj2k_plugin():
+    """h5z-htj2k plugin build config"""
+    h5z_htj2k_dir = "lib/h5z-htj2k/src"
+
+    extra_compile_args = ["-O3"]
+    extra_compile_args += ["/Ox"]
+
+    return HDF5PluginExtension(
+        "hdf5plugin.plugins.libh5htj2k",
+        sources=[f"{h5z_htj2k_dir}/H5Zhtj2k.c", f"{h5z_htj2k_dir}/backend_openjph.cpp"],
+        include_dirs=[h5z_htj2k_dir] + get_clib_config("openjph", "include_dirs"),
+        libraries=get_clib_config("openjph", "extra_link_args"),
+        extra_compile_args=extra_compile_args,
+        cpp14_required=True,
+    )
+
+
 PLUGIN_LIB_DEPENDENCIES["zfp"] = ("zfp",)
 
 
@@ -1497,6 +1561,7 @@ _EMBEDDED_PLUGIN_EXTENSIONS = {
     "bshuf": _get_bitshuffle_plugin,
     "bzip2": _get_bzip2_plugin,
     "fcidecomp": _get_fcidecomp_plugin,
+    "htj2k": _get_htj2k_plugin,
     "lz4": _get_lz4_plugin,
     "sperr": _get_sperr_plugin,
     "sz": _get_sz_plugin,

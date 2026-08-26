@@ -55,6 +55,9 @@ BSHUF_ID = 32008
 ZFP_ID = 32013
 """ZFP filter ID"""
 
+HTJ2K_ID = 32033
+"""High troughput JPEG 2000"""
+
 ZSTD_ID = 32015
 """Zstandard filter ID"""
 
@@ -808,6 +811,52 @@ class Zfp(FilterBase):
         return cls(minbits=minbits, maxbits=maxbits, maxprec=maxprec, minexp=minexp)
 
 
+class Htj2k(FilterBase):
+    """``h5py.Group.create_dataset``'s compression arguments for using the HTJ2K filter.
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'htj2k',
+            data=numpy.arange(100, dtype=numpy.uint16),
+            compression=hdf5plugin.Htj2k())
+        f.close()
+
+    This filter compresses data losslessly (reversibly) using
+    `High-Throughput JPEG 2000 <https://jpeg.org/jpeg2000/htj2k.html>`_
+    and currently accepts no user-defined option.
+    Use hdf5 direct chunk write to achieve HTJ2K lossy compression,
+    see `filter documentation <https://github.com/silx-kit/h5z-htj2k>`_.
+
+    It only supports datasets of signed or unsigned 8- or 16-bit integers
+    (``int8``, ``uint8``, ``int16``, ``uint16``), with chunk shapes having
+    1, 2 or 3 non-unity dimensions. For chunks with 3 non-unity dimensions,
+    the last one must be equal to 3 (e.g., RGB images).
+
+    For more details, see `h5z-htj2k <https://github.com/silx-kit/h5z-htj2k>`_.
+    """
+
+    filter_name = "htj2k"
+    filter_id = HTJ2K_ID
+
+    def __init__(self) -> None:
+        if not build_config.cpp14:
+            logger.error(
+                "The Htj2k filter is not available as hdf5plugin was not built with C++14.\n"
+                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler."
+            )
+        super().__init__(filter_options=(), config={})
+
+    @classmethod
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Htj2k:
+        """Returns compression arguments from HDF5 compression filters "cd_values" options
+
+        :raises ValueError: Unsupported filter_options
+        """
+        return cls()
+
+
 class Sperr(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SPERR filter.
 
@@ -1332,6 +1381,7 @@ FILTER_CLASSES: tuple[type[FilterBase], ...] = (
     Blosc2,
     BZip2,
     FciDecomp,
+    Htj2k,
     LZ4,
     Sperr,
     SZ,

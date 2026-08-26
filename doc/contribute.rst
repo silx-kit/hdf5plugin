@@ -217,6 +217,12 @@ compression_opts: (**block size**,)
 - **block_size**: Size of the blocks as a multiple of 100k.
   It must be in the range [1, 9].
 
+htj2k
+.....
+
+No options can be provided by the user, but the filter stores the following
+`cd_values <https://github.com/silx-kit/h5z-htj2k/blob/main/README.md#filter-cd_values>`_
+
 lz4
 ...
 

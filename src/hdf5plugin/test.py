@@ -69,6 +69,7 @@ compression_name_to_class = {
     "sz": hdf5plugin.SZ,
     "sz3": hdf5plugin.SZ3,
     "zfp": hdf5plugin.Zfp,
+    "htj2k": hdf5plugin.Htj2k,
     "zstd": hdf5plugin.Zstd,
 }
 
@@ -319,6 +320,14 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
         for dtype in (numpy.uint8, numpy.uint16, numpy.int8, numpy.int16):
             with self.subTest(dtype=dtype):
                 self._test("fcidecomp", dtype=dtype)
+
+    @unittest.skipUnless(should_test("htj2k"), "HTJ2K filter not available")
+    def testHtj2k(self):
+        """Write/read test with htj2k filter plugin"""
+        # Test with supported datatypes
+        for dtype in (numpy.uint8, numpy.uint16, numpy.int8, numpy.int16):
+            with self.subTest(dtype=dtype):
+                self._test("htj2k", dtype=dtype)
 
     @unittest.skipUnless(should_test("sperr"), "Sperr filter not available")
     def testSperr(self):
@@ -593,6 +602,13 @@ class TestFromFilterOptionsMethods(unittest.TestCase):
         compression_filter = hdf5plugin.FciDecomp._from_filter_options((1, 2, 3))
         self.assertEqual(compression_filter.filter_options, ())
 
+    def testHtj2k(self):
+        # (version, dtype, width, height, ncomps)
+        compression_filter = hdf5plugin.Htj2k._from_filter_options(
+            (1, 0x0002, 256, 256, 1)
+        )
+        self.assertEqual(compression_filter.filter_options, ())
+
     def testLZ4(self):
         for filter_options, expected_options in (
             # (nbytes,)
@@ -780,6 +796,11 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
         data = numpy.arange(256**2, dtype=numpy.uint16).reshape(256, 256)
         self._test(hdf5plugin.FciDecomp(), data)
 
+    @unittest.skipUnless(should_test("htj2k"), "HTJ2K filter not available")
+    def testHtj2k(self):
+        data = numpy.arange(256**2, dtype=numpy.uint16).reshape(256, 256)
+        self._test(hdf5plugin.Htj2k(), data)
+
     @unittest.skipUnless(should_test("lz4"), "LZ4 filter not available")
     def testLZ4(self):
         data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
@@ -928,8 +949,8 @@ class TestRegisterFilter(BaseTestHDF5PluginRW):
     """Test usage of the register function"""
 
     def _simple_test(self, filter_name: str):
-        if filter_name == "fcidecomp":
-            self._test("fcidecomp", dtype=numpy.uint8)
+        if filter_name in ("fcidecomp", "htj2k"):
+            self._test(filter_name, dtype=numpy.uint8)
         elif filter_name in ("sz", "zfp"):
             self._test(filter_name, dtype=numpy.float32, lossless=False)
         else:
