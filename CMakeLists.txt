@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.10)
+cmake_minimum_required(VERSION 3.5)
 cmake_policy(SET CMP0074 NEW)
 project(blosc2_hdf5)
 include(ExternalProject)
@@ -50,7 +50,6 @@ else(MSVC)
     find_package(HDF5 REQUIRED)
 endif(MSVC)
 include_directories(${HDF5_INCLUDE_DIRS})
-include_directories("/mnt/c/Users/sosca/CLionProjects/build/include")
 
 
 # add blosc2 libraries
@@ -78,11 +77,6 @@ install(FILES src/blosc2_filter.h DESTINATION include COMPONENT HDF5_FILTER_DEV)
 install(TARGETS blosc2_filter_shared DESTINATION lib COMPONENT HDF5_FILTER_DEV)
 
 
-# add caterva library
-add_library(CAT_LIBRARY SHARED IMPORTED)
-set_target_properties(CAT_LIBRARY PROPERTIES IMPORTED_LOCATION "/mnt/c/Users/sosca/CLionProjects/build/libs/release/libcaterva.so")
-
-
 # test
 message("LINK LIBRARIES='blosc2_filter_shared ${HDF5_LIBRARIES}'")
 if(BUILD_TESTS)
@@ -93,7 +87,4 @@ if(BUILD_TESTS)
     add_executable(example executables/example.c)
     target_link_libraries(example blosc2_filter_shared ${HDF5_LIBRARIES} ${LIBS})
     add_test(test_hdf5_filter example)
-    add_executable(test_blosc2_filter_read executables/test_blosc2_filter_read.c)
-    target_link_libraries(test_blosc2_filter_read blosc2_filter_shared ${HDF5_LIBRARIES} ${LIBS} CAT_LIBRARY)
-    add_test(test_hdf5_filter test_blosc2_filter_read)
 endif(BUILD_TESTS)

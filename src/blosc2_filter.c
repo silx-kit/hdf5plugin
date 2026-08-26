@@ -454,6 +454,15 @@ size_t blosc2_filter_function(unsigned flags, size_t cd_nelmts,
 
     }
 
+    if (status > 0) {
+      /* The cframe returned by Blosc2 is exactly `status` bytes long.  Report
+       * its real size instead of the precomputed guess: when the frame is
+       * larger than the guess (e.g. incompressible data), HDF5 >= 2.2.0
+       * rejects the write if the reported buffer size is smaller than the
+       * returned data size. */
+      outbuf_size = (size_t) status;
+    }
+
 #ifdef BLOSC2_DEBUG
     fprintf(stderr, "Blosc2: Compressed into %zd bytes\n", status);
 #endif
