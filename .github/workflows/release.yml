@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -76,7 +76,7 @@ jobs:
           - os: macos-15-intel
             cibw_archs: "auto64"
             with_sse2: true
-          - os: macos-14
+          - os: macos-15
             cibw_archs: "auto64"
             with_sse2: false
 
@@ -86,7 +86,7 @@ jobs:
         if: runner.os == 'Linux' && runner.arch == 'X64'
         with:
           platforms: all
-      - uses: pypa/cibuildwheel@v4.1.0
+      - uses: pypa/cibuildwheel@v4.2.0
         env:
           # Configure hdf5plugin build
           HDF5PLUGIN_OPENMP: "False"
@@ -141,7 +141,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'

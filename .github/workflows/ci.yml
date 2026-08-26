@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - uses: pypa/cibuildwheel@v4.1.0
+      - uses: pypa/cibuildwheel@v4.2.0
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
           CIBW_BUILD_VERBOSITY: 1
