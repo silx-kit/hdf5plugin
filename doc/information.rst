@@ -74,7 +74,7 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `FCIDECOMP plugin <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp>`_
   (`v2.1.1 <https://gitlab.eumetsat.int/open-source/data-tailor-plugins/fcidecomp/-/tree/2.1.1>`_)
   using `CharLS <https://github.com/team-charls/charls>`_ (v2.1.0).
-* `h5z-htj2k plugin <https://github.com/silx-kit/h5z-htj2k>`_ (v0.1.0) using
+* `h5z-htj2k plugin <https://github.com/silx-kit/h5z-htj2k>`_ (v0.1.1) using
   `OpenJPH <https://github.com/aous72/OpenJPH>`_ (v0.31.0).
 * `SZ plugin <https://github.com/szcompressor/SZ2>`_
   (commit `308bd06 <https://github.com/szcompressor/SZ2/tree/308bd06f0040ec0d5c22fb3fcb0428c306ba4df1>`_)
