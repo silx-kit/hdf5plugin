@@ -1018,7 +1018,7 @@ def _get_openjph_clib(field=None):
 
     config = dict(
         sources=sources,
-        include_dirs=[f"{openjph_dir}/openjph"],
+        include_dirs=[openjph_dir, f"{openjph_dir}/openjph"],
         macros=[("OJPH_DISABLE_SIMD", None), ("_FILE_OFFSET_BITS", 64)],
         cflags=["-O3", "/O2"],
     )
@@ -1453,8 +1453,8 @@ def _get_htj2k_plugin():
         "hdf5plugin.plugins.libh5htj2k",
         sources=[f"{h5z_htj2k_dir}/H5Zhtj2k.c", f"{h5z_htj2k_dir}/backend_openjph.cpp"],
         include_dirs=[h5z_htj2k_dir] + get_clib_config("openjph", "include_dirs"),
-        libraries=get_clib_config("openjph", "extra_link_args"),
         extra_compile_args=extra_compile_args,
+        extra_link_args=get_clib_config("openjph", "extra_link_args"),
         cpp14_required=True,
     )
 
