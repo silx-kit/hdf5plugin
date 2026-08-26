@@ -1,6 +1,348 @@
 Release notes for C-Blosc2
 ==========================
 
+Changes from 3.3.1 to 3.3.2
+===========================
+
+This is a bugfix release, mainly about BYTEDELTA.
+
+The BYTEDELTA filter silently corrupted the tail of any block whose length is
+not a multiple of the typesize.  It splits a block into `typesize` byte streams
+of `length / typesize` bytes each, and the last `length % typesize` bytes fell
+outside every stream, so they were never written to the output -- in both the
+forward and the backward pass, leaving whatever the destination buffer happened
+to hold.  Those trailing bytes are now passed through verbatim in both
+directions, which is what SHUFFLE already does with the same remainder (and why
+SHUFFLE alone roundtrips fine while any pipeline containing BYTEDELTA did not).
+
+Blocks whose length is a multiple of the typesize are unaffected, so existing
+data still decodes bit for bit.  Data written by the old encoder at a
+non-multiple length cannot be recovered: those tail bytes were never encoded in
+the first place.
+
+Also, the installed CMake package now exports the configured
+`CMAKE_INSTALL_INCLUDEDIR` instead of a hardcoded `include`, so consumers of
+installs that use a different include directory get the right path.
+
+There are no API or format changes in this release.
+
+
+Changes from 3.3.0 to 3.3.1
+===========================
+
+This release is about making reads from on-disk frames faster.
+
+Reads from on-disk frames got noticeably faster.  The default filesystem I/O
+backend now uses positioned reads and writes (`pread`/`pwrite`, `ReadFile`/
+`WriteFile` with an explicit offset on Windows) instead of seek + stdio, and a
+frame keeps a single read handle open instead of opening and closing the file
+several times per chunk fetch.  Scattered small reads out of a cframe are about
+3x faster in our microbenchmarks; the gain grows with how many small reads a
+workload does.  User-registered I/O backends are unaffected: they keep their
+one-handle-per-reader contract.
+
+Concurrent readers gain the most, since the per-access open/close this removes
+was paid by every process and contended in the kernel.  Eight processes each
+doing 300 random slice reads over the same 269 MB frame went from 0.52 s to
+0.36 s of wall time, and from 3.85 s to 2.58 s of CPU (Apple M4 Pro): about
+1.4x, against 13% for a single reader.  The advantage of opening such files with
+`mmap_mode="r"` narrows accordingly -- not because memory mapping got slower,
+but because the regular path caught up.
+
+Note that an open on-disk schunk now holds one file descriptor for as long as it
+stays open, where before descriptors were only taken for the duration of each
+read.  To keep that from exhausting the process's descriptor budget, the number
+of cached handles is capped at min(96, RLIMIT_NOFILE/16) -- schunks past the cap
+fall back to the previous open-per-read behaviour.  Set the
+**BLOSC_MAX_CACHED_READERS** environment variable to choose a different cap, or
+to 0 to switch the cache off entirely.  Handle caching is currently POSIX-only:
+on Windows the C runtime opens files without FILE_SHARE_DELETE, so a cached
+handle would make unlinking or renaming an open frame file fail.
+
+As a side effect of dropping `fseek()`, reads and writes past 2 GB no longer
+fail on 32-bit builds whose `off_t` is 64-bit wide.
+
+There are no API or format changes in this release.
+
+
+Changes from 3.2.3 to 3.3.0
+===========================
+
+This release hardens the paths that read data described by untrusted metadata,
+and adds a small API for reading a byte range out of a chunk.
+
+Crafted `.b2nd` files could overflow the b2nd shape arithmetic and reach a
+division by zero or an undersized allocation, and crafted chunks without an
+extended header could be read past their end.  Both are fixed.  Users opening
+b2nd files or chunks they did not produce themselves should upgrade.
+
+Separately, `blosc2_getitem_ctx()` turned out to be easy to misuse for typesizes
+above `BLOSC_MAX_TYPESIZE`, where its unit silently becomes the byte rather than
+the element; `blosc2_getitem_bytes_ctx()` is the unambiguous counterpart, and
+two schunk read paths that got this wrong are fixed.
+
+This is a minor release: `blosc2_getitem_bytes_ctx()` is new, but nothing was
+removed or changed incompatibly, so the SOVERSION is unchanged and existing
+binaries keep working.
+
+Security fixes
+--------------
+
+* **Fixed integer overflows in b2nd shape handling reachable from a crafted
+  ``.b2nd`` file** (#795).  ``update_shape_struct()`` accumulated the shape,
+  chunkshape and blockshape products into ``int32_t`` (``chunknitems``,
+  ``blocknitems``) and ``int64_t`` (``nitems``, ``extnitems``,
+  ``extchunknitems``) fields without any overflow check.  Signed overflow is
+  undefined behaviour, and a wrapped product reached both divisors and
+  allocation sizes: a metalayer declaring ``blockshape={65536, 65536}`` was
+  accepted by ``b2nd_open()`` with ``blocknitems == 0``, and the first data
+  access then divided by zero (SIGFPE on x86-64; on aarch64 the division
+  silently yields 0 instead).  Products that wrapped to a small positive value
+  could instead drive out-of-bounds offsets.
+
+  All the products are now computed with checked multiplications and rejected
+  with ``BLOSC2_ERROR_INVALID_PARAM``.  The same guard covers the creation path,
+  which shared the overflow, plus a third site in ``b2nd_create_ctx()`` that
+  wrapped ``cparams->blocksize``.
+
+* **Fixed int64 to int32 truncation of chunk buffer sizes** (#795).
+  ``b2nd_get_slice_cbuffer()``/``b2nd_set_slice_cbuffer()`` and
+  ``orthogonal_selection()`` sized a chunk buffer with a truncating cast of
+  ``extchunknitems * typesize`` while the copy offsets kept using the full
+  extent, so a shape whose product fits in ``int32_t`` but whose byte count does
+  not produced a heap buffer overflow.  Both sites now compute in 64 bits and
+  refuse anything above ``INT32_MAX``.
+
+  Reported by Akhil Koul.
+
+* **Fixed an out-of-bounds read of the flags2 byte in the schunk append, insert
+  and update paths** (#792).  That byte lives at offset 0x1e, inside the
+  extended header, but a Blosc1-style chunk is only
+  ``BLOSC_MIN_HEADER_LENGTH`` (16) bytes long and carries no flags2 at all, so
+  handing such a chunk to ``blosc2_schunk_append_chunk()`` read 15 bytes past
+  the end of the caller's buffer.  All the sites now go through one helper that
+  looks the size up first.
+
+  The helper also decides whether a chunk has a flags2 byte from the flags, the
+  way ``read_chunk_header()`` does, rather than from the chunk size: a
+  Blosc1-style chunk with 16 or more bytes of payload is long enough to reach
+  offset 0x1e, where it holds compressed data.  Reading that as flags2 could
+  mark a schunk as using variable-length blocks out of thin air, and the flag
+  is persisted into the frame.
+
+  Reported and largely fixed by Farkhalit Rida.
+
+New features
+------------
+
+* **New ``blosc2_getitem_bytes_ctx()``**, a byte-counting counterpart to
+  ``blosc2_getitem_ctx()``.  The unit of the latter is the typesize the
+  *chunk* records, which is 1 for typesizes above ``BLOSC_MAX_TYPESIZE``
+  (255), so its meaning silently changes with the typesize; bytes do not.
+  Prefer it in generic code that does not choose the typesize itself, and
+  ``blosc2_getitem_ctx()`` where the typesize is known and at most 255, as
+  counting in items reads better there.  ``start`` and ``nbytes`` must be
+  multiples of the typesize stored in the chunk, which is vacuous above the
+  cap and automatic for callers deriving offsets from the real typesize.
+
+  ``blosc2_getitem_ctx()`` is unchanged and is not deprecated; its docs now
+  spell out the unit and point at the new entry point.  The three in-tree
+  call sites (``blosc2_schunk_get_slice_buffer()``,
+  ``blosc2_schunk_get_sparse_buffer()`` and the b2nd compact get path) now
+  use it, so the typesize-cap rule lives in exactly one place again.
+
+Bug fixes
+---------
+
+* **Fixed wrong results in schunk slice and sparse reads for typesize > 255.**
+  ``blosc2_schunk_get_slice_buffer()`` derived its ``blosc2_getitem_ctx()``
+  item counts by dividing byte offsets by ``schunk->typesize``, but chunks
+  whose typesize exceeds ``BLOSC_MAX_TYPESIZE`` (255) are compressed with an
+  internal typesize of 1, so getitem counts bytes for them.  Slices that did
+  not cover a chunk exactly mostly failed with ``BLOSC2_ERROR_FAILURE``, and
+  single-element slices returned the wrong bytes with a success return code.
+  The single-coordinate path of ``blosc2_schunk_get_sparse_buffer()`` had the
+  same confusion.  Both now convert through the chunk's actual item unit.
+  See #796.
+
+* ``blosc2_getitem_ctx()`` now returns ``BLOSC2_ERROR_DATA`` instead of a
+  short byte count when it cannot decode every requested item, so a partial
+  decode no longer looks like a success to callers that only test for a
+  negative return.
+
+* Fixed a memory leak and a dangling non-NULL output pointer in
+  ``array_without_schunk()`` when the shape could not be validated, and a leak
+  of the deserialized dtype in ``b2nd_from_schunk()`` on the same path.  These
+  were only reachable once the shape checks above made that path possible.
+
+* Fixed the build on FreeBSD and the other BSDs (#794).  ``-D_XOPEN_SOURCE=600``
+  leaves ``__BSD_VISIBLE`` undefined there, which hides ``flock()`` and the
+  ``LOCK_*`` constants behind the guard in ``<sys/fcntl.h>``, so ``frame.c``
+  failed to compile.  It now drops ``_XOPEN_SOURCE`` for that one file; it
+  cannot be dropped build-wide, because ``my_malloc()`` keys its
+  ``posix_memalign()`` path off it.  Reported by Erik Schnetter.
+
+
+Changes from 3.2.2 to 3.2.3
+===========================
+
+Bug fixes
+---------
+
+* **Fixed data corruption in b2nd get_slice for typesize > 255.**  The
+  compact get path introduced in 3.2.2 passed item counts to
+  ``blosc2_getitem_ctx()`` in array-typesize units, but chunks whose
+  typesize exceeds ``BLOSC_MAX_TYPESIZE`` (255) are compressed with an
+  internal typesize of 1, so small slice reads returned truncated blocks
+  (only the first ``blocknitems`` bytes were correct).  Item counts are
+  now expressed in the chunk's actual item unit, keeping the fast path
+  both correct and O(request) for large typesizes.  Added a regression
+  test covering typesize > 255 on the get_slice path.
+
+Notes
+-----
+
+* This is a hot-fix release with no API/ABI changes.  Users of 3.2.2
+  reading slices from b2nd arrays with typesize > 255 should upgrade.
+
+
+Changes from 3.2.1 to 3.2.2
+===========================
+
+Performance improvements
+------------------------
+
+* **Avoid chunk-sized scratch allocation for small b2nd get_slice
+  requests.**  ``get_set_slice()`` in the b2nd path previously malloc'd a
+  full extended-chunk-sized scratch buffer on every call, even when the
+  block maskout meant only one block was decompressed into it.  For large
+  chunks the mmap/munmap page-table work alone is O(chunksize), so reading
+  a single 1.6 MB block from a 128 MB chunk could cost up to 3x more than
+  the same read from a small chunk.  Now the get path counts the needed
+  blocks after building the maskout, and when they are a small part of the
+  chunk, decompresses just those blocks one at a time via
+  ``blosc2_getitem_ctx()`` into a reusable block-sized buffer — small
+  reads stay O(request) instead of O(chunksize), and on-disk frames only
+  read the touched blocks.  Larger requests keep the existing parallel
+  block-decompression path unchanged, and the chunk-sized scratch is now
+  allocated lazily only when that path (or a set operation) actually runs.
+  Single-block reads from large chunks are now flat ~0.33 ms regardless
+  of chunk size.
+
+Documentation
+-------------
+
+* Broad refresh: annotated every ROADMAP-TO-3.0 item as Done/Ongoing/
+  Deferred now that 3.0 is out, and added a new ROADMAP-TO-4.0 with the
+  deferred items as current goals.  Fixed several stale references
+  (python-blosc2 status, NEON bitshuffle, citation year, Twitter→Mastodon,
+  master→main, header paths), and assorted grammar/markup fixes.
+
+Notes
+-----
+
+* This is a maintenance release with no API/ABI changes.
+
+Changes from 3.2.0 to 3.2.1
+===========================
+
+* New `blosc2_schunk_refresh()` API: an explicit, data-free re-sync point
+  for a plain `blosc2_schunk` reader handle in a Growth-SWMR setup, mirroring
+  `b2nd_refresh()` for b2nd arrays. Useful for polling for another handle's
+  changes without touching data.
+
+Changes from 3.1.5 to 3.2.0
+===========================
+
+New features
+------------
+
+* **Opt-in cross-process locking** for disk-based frames, via a sidecar
+  lock file (``.b2lock``, ``flock``/``LockFileEx``) plus a generation
+  counter that detects mutations other handles made even when the on-disk
+  length is unchanged.  Enable it per-handle (``blosc2_stdio_params.locking``,
+  or the equivalent for other I/O backends) or fleet-wide with the
+  ``BLOSC_LOCKING`` environment variable.  Advisory: every handle touching
+  the container must opt in.  Not supported over NFS.
+* **`blosc2_schunk_lock()` / `blosc2_schunk_unlock()`**: a bracket API to
+  hold the exclusive frame lock across several operations, making a
+  multi-step mutation atomic to other locked handles instead of only each
+  individual call.  No-ops on a handle without locking enabled.
+  `b2nd_resize()` and `b2nd_set_slice_cbuffer()` now bracket their own
+  multi-chunk sequences this way too, so a locked reader never observes a
+  half-applied resize or slice write, and two overlapping slice writers no
+  longer interleave at chunk granularity.
+* **Growth-SWMR** (single writer, multiple readers): a reader handle
+  opened on a disk-based frame or b2nd array now follows shape/length
+  growth made through another handle (typically another process) on its
+  next access, without reopening.  New public `b2nd_refresh()` reader-side
+  API, and `examples/b2nd/example_growth_swmr.c` demonstrating the
+  contract.  Works with or without locking; only the on-disk length is
+  polled without it, so growth is virtually always noticed but a
+  same-length mutation may not be until the next one that changes it.
+* **Stale-handle coherence fixes**: a handle whose cached view of an
+  on-disk frame goes stale (another handle rewrote it) now re-syncs before
+  trusting cached state, closing gaps in `blosc2_vlmeta_exists()` and in
+  the counters (`nbytes`/`cbytes`/`nchunks`) that
+  `blosc2_schunk_append_chunk()`/`blosc2_schunk_insert_chunk()` apply their
+  deltas to.  Also fixed:
+
+  - A race between opening a frame and a concurrent writer growing or
+    otherwise mutating it (`blosc2_schunk_open_offset_udio()` could
+    return ``NULL`` on a transient "frame length exceeds file boundary"
+    read instead of retrying it).
+  - A torn read during the (unlocked) staleness poll used to hard-error
+    instead of keeping the cached view and retrying on the next poll, as
+    intended.
+  - A leak, and a free of an uninitialized pointer in
+    `blosc2_schunk_copy()`, on an unreadable-frame staleness poll (hit
+    legitimately by a freshly created, not-yet-flushed file-backed
+    schunk).
+
+API/ABI notes
+-------------
+
+* Appends `change_tick` to `blosc2_schunk` struct and `last_tick` to
+  `b2nd_array_t`, and adds `locking` to `blosc2_stdio_params` and the new
+  `BLOSC2_ERROR_LOCK` error code.  No existing field or function signature
+  was altered, but this alters the ABI as two public structs have an
+  additional field; the shared library's `SOVERSION` is bumped accordingly
+  (8 to 9).
+
+Notes
+-----
+
+* Advisory locking is not a replacement for a real lock manager: it only
+  protects a container if every handle on it (across every process)
+  enables it.  It does not work on network filesystems (NFS), and is
+  incompatible with memory-mapped I/O.
+* See ``plans/high-level-formats-locking.md`` and
+  ``plans/todo-locking-swmr.md`` in the source tree for the full design
+  rationale and known follow-ups.
+
+Changes from 3.1.4 to 3.1.5
+===========================
+
+Fixes
+-----
+
+* Fix decompression of **all-zeros buffers** whose length is not a multiple
+  of ``typesize``.  ``read_chunk_header()`` previously rejected
+  ``BLOSC2_SPECIAL_ZERO`` chunks whose ``nbytes`` was not a multiple of
+  ``typesize``.  However, all-zeros decompression is just a ``memset`` and
+  works regardless of element alignment, so the check was overly strict for
+  this case (it remains valid for ``SPECIAL_NAN``, ``SPECIAL_VALUE``, and
+  ``UNINIT``, whose callers do enforce alignment).  This affected, for
+  example, python-blosc2's ``compress2`` → ``decompress2`` round-trip for
+  all-zeros payloads such as ``bytes(707658)`` with ``typesize=8``
+  (``707658 % 8 == 2``).  A regression test with 9 parametrized cases has
+  been added.  Closes Blosc/python-blosc2#665.
+
+Notes
+-----
+
+* This is a maintenance release with no API/ABI changes.
+
 Changes from 3.1.3 to 3.1.4
 ===========================
 

@@ -81,12 +81,12 @@ extern "C" {
 
 
 /* Version numbers */
-#define BLOSC2_VERSION_MAJOR    3    /* for major interface/format changes  */
-#define BLOSC2_VERSION_MINOR    1   /* for minor interface/format changes  */
-#define BLOSC2_VERSION_RELEASE  4  /* for tweaks, bug-fixes, or development */
+#define BLOSC2_VERSION_MAJOR    3  /* for major interface/format changes  */
+#define BLOSC2_VERSION_MINOR    3  /* for minor interface/format changes  */
+#define BLOSC2_VERSION_RELEASE  2  /* for tweaks, bug-fixes, or development */
 
-#define BLOSC2_VERSION_STRING   "3.1.4"  /* string version.  Sync with above! */
-#define BLOSC2_VERSION_DATE     "$Date:: 2026-06-17 #$"    /* date version year-month-day */
+#define BLOSC2_VERSION_STRING   "3.3.2"  /* string version.  Sync with above! */
+#define BLOSC2_VERSION_DATE     "$Date:: 2026-08-06 #$"    /* date version year-month-day */
 
 
 /* Tracing macros */
@@ -488,6 +488,7 @@ enum {
   BLOSC2_ERROR_METALAYER_NOT_FOUND = -34,   //!< Metalayer has not been found
   BLOSC2_ERROR_MAX_BUFSIZE_EXCEEDED = -35,  //!< Max buffer size exceeded
   BLOSC2_ERROR_TUNER = -36,           //!< Tuner failure
+  BLOSC2_ERROR_LOCK = -37,            //!< Frame lock failure
 };
 
 
@@ -1683,12 +1684,57 @@ BLOSC_EXPORT int blosc2_chunk_uninit(blosc2_cparams cparams, int32_t nbytes,
  * @param dest The buffer where the decompressed data retrieved will be put.
  * @param destsize Output buffer length.
  *
+ * @warning @p start and @p nitems are counted in the typesize that the *chunk*
+ * records, which is not the typesize the data was created with when the latter
+ * exceeds #BLOSC_MAX_TYPESIZE.  Such buffers are compressed as a plain stream of
+ * bytes with a stored typesize of 1, so for them one "item" here is one byte.
+ * Code that does not control the typesize (a library reading whatever its caller
+ * supplied) should use #blosc2_getitem_bytes_ctx instead, which is unambiguous
+ * at any typesize.
+ *
  * @return The number of bytes copied to @p dest or a negative value if
  * some error happens.
  */
 BLOSC_EXPORT int blosc2_getitem_ctx(blosc2_context* context, const void* src,
                                     int32_t srcsize, int start, int nitems, void* dest,
                                     int32_t destsize);
+
+
+/**
+ * @brief Retrieve a byte range out of a compressed buffer.
+ *
+ * This is the counterpart of #blosc2_getitem_ctx that counts in bytes rather
+ * than in items.  Because a buffer whose typesize exceeds #BLOSC_MAX_TYPESIZE is
+ * stored with a typesize of 1, the unit of #blosc2_getitem_ctx silently changes
+ * with the typesize; bytes do not.  Prefer this entry point in generic code that
+ * does not pick the typesize itself, and #blosc2_getitem_ctx where the typesize
+ * is known and at most #BLOSC_MAX_TYPESIZE, as counting in items reads better
+ * there.
+ *
+ * @param context Context pointer.
+ * @param src The compressed buffer from data will be decompressed.
+ * @param srcsize Compressed buffer length.  If @p src is a lazy chunk returned by
+ * #blosc2_schunk_get_lazychunk, pass the size returned by
+ * #blosc2_schunk_get_lazychunk here rather than the @p cbytes value reported by
+ * #blosc2_cbuffer_sizes.
+ * @param start The position, counted in bytes into the *uncompressed* buffer, of
+ * the first byte from where data will be retrieved.
+ * @param nbytes The number of bytes that will be retrieved.
+ * @param dest The buffer where the decompressed data retrieved will be put.
+ * @param destsize Output buffer length.
+ *
+ * @remark @p start and @p nbytes must both be multiples of the typesize stored
+ * in the chunk, or #BLOSC2_ERROR_INVALID_PARAM is returned.  This constraint is
+ * vacuous for typesizes above #BLOSC_MAX_TYPESIZE (the stored typesize is 1), and
+ * is met automatically by any caller deriving byte offsets from the real
+ * typesize, so it costs nothing in the cases this function exists for.
+ *
+ * @return The number of bytes copied to @p dest or a negative value if
+ * some error happens.
+ */
+BLOSC_EXPORT int blosc2_getitem_bytes_ctx(blosc2_context* context, const void* src,
+                                          int32_t srcsize, int32_t start, int32_t nbytes,
+                                          void* dest, int32_t destsize);
 
 
 /*********************************************************************
@@ -1838,6 +1884,11 @@ typedef struct blosc2_schunk {
   //<! The blockshape (mainly for ZFP usage)
   bool view;
   //<! Whether the schunk is a view or not.
+  int64_t change_tick;
+  //!< Bumped whenever the (vl)metalayers change: by local mutations and by the
+  //!< refresh that follows a mutation made through another handle on the same
+  //!< on-disk frame.  Upper layers compare it against a cached value to know
+  //!< whether their deserialized view of the metalayers is still current.
 } blosc2_schunk;
 
 
@@ -1891,6 +1942,61 @@ BLOSC_EXPORT blosc2_schunk* blosc2_schunk_from_buffer(uint8_t *cframe, int64_t l
  * @warning If you set it to `true` you will be responsible of freeing it.
  */
 BLOSC_EXPORT void blosc2_schunk_avoid_cframe_free(blosc2_schunk *schunk, bool avoid_cframe_free);
+
+/**
+ * @brief Take the exclusive frame lock of a super-chunk and hold it across
+ * several operations.
+ *
+ * When the (opt-in) file locking is enabled on the handle (see the `locking`
+ * member of #blosc2_stdio_params, or the BLOSC_LOCKING environment variable),
+ * every schunk operation locks and unlocks the on-disk frame individually, so
+ * a sequence of operations is not atomic as a whole.  Bracketing the sequence
+ * between blosc2_schunk_lock() and blosc2_schunk_unlock() makes it atomic
+ * against other handles and processes: the operations inside nest on the
+ * already-held lock instead of re-acquiring it.
+ *
+ * Everything inside the bracket is serialized exclusively — including plain
+ * reads through other locked handles — so keep brackets short.  The bracket
+ * is re-entrant on the same handle.  When locking is not enabled on the
+ * handle (or the super-chunk is not disk-based), this is a no-op returning
+ * success, so callers do not need to check whether locking is active.
+ *
+ * @param schunk The super-chunk.
+ *
+ * @return 0 on success; a negative error code (e.g. BLOSC2_ERROR_LOCK)
+ * otherwise.
+ */
+BLOSC_EXPORT int blosc2_schunk_lock(blosc2_schunk *schunk);
+
+/**
+ * @brief Release the frame lock taken with blosc2_schunk_lock().
+ *
+ * @param schunk The super-chunk.
+ *
+ * @return 0 on success; a negative error code otherwise.  Like
+ * blosc2_schunk_lock(), a no-op when locking is not enabled.
+ */
+BLOSC_EXPORT int blosc2_schunk_unlock(blosc2_schunk *schunk);
+
+/**
+ * @brief Re-sync the cached counters (nchunks, nbytes, cbytes) and
+ * metalayers of a disk-based super-chunk when another handle — possibly in
+ * another process — has changed it.
+ *
+ * This gives a deterministic sync point for readers in a single-writer,
+ * multiple-readers (SWMR) workflow: after calling it, the counters in
+ * @p schunk reflect the current on-disk state.  Data-access functions
+ * already do this implicitly, so calling it is only needed to observe
+ * changes without touching data (e.g. when polling).
+ *
+ * A no-op for super-chunks not backed by an on-disk frame.
+ *
+ * @param schunk The super-chunk to refresh.
+ *
+ * @return 1 if the counters were re-synced, 0 if they were already current,
+ * or a negative error code.
+ */
+BLOSC_EXPORT int blosc2_schunk_refresh(blosc2_schunk *schunk);
 
 /**
  * @brief Open an existing super-chunk that is on-disk (frame). No in-memory copy is made.
@@ -2079,6 +2185,11 @@ BLOSC_EXPORT int blosc2_schunk_decompress_chunk(blosc2_schunk *schunk, int64_t n
  * If the chunk does not need a free, it means that a pointer to the location in the super-chunk
  * (or the backing in-memory frame) is returned in the @p chunk parameter.
  *
+ * @note If the frame on disk has been modified through another handle (or process),
+ * the handle re-syncs its view automatically on the next access.  A concurrent
+ * (non-serialized) write can still surface as #BLOSC2_ERROR_FILE_READ; retry or
+ * reopen the super-chunk in that case.  Writers must be serialized externally.
+ *
  * @return The size of the (compressed) chunk or 0 if it is non-initialized. If some problem is
  * detected, a negative code is returned instead.
  */
@@ -2110,6 +2221,11 @@ BLOSC_EXPORT int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, 
  * If the chunk does not need a free, it means that a pointer to the location in the super-chunk
  * (or the backing in-memory frame) is returned in the @p chunk parameter.  In this case the returned
  * chunk is not lazy.
+ *
+ * @note If the frame on disk has been modified through another handle (or process),
+ * the handle re-syncs its view automatically on the next access.  A concurrent
+ * (non-serialized) write can still surface as #BLOSC2_ERROR_FILE_READ; retry or
+ * reopen the super-chunk in that case.  Writers must be serialized externally.
  *
  * @return The size of the returned chunk buffer, or 0 if it is non-initialized.
  * If some problem is detected, a negative code is returned instead.  For regular
@@ -2374,6 +2490,10 @@ static inline int blosc2_meta_get(blosc2_schunk *schunk, const char *name, uint8
 /**
  * @brief Find whether the schunk has a variable-length metalayer or not.
  *
+ * For on-disk super-chunks this also re-syncs the cached variable-length
+ * metalayers when another handle (or process) rewrote the frame, so a
+ * metalayer added or deleted elsewhere is reflected in the answer.
+ *
  * @param schunk The super-chunk from which the variable-length metalayer will be checked.
  * @param name The name of the variable-length metalayer to be checked.
  *
@@ -2423,6 +2543,10 @@ BLOSC_EXPORT int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name,
  *
  * @warning The @p **content receives a malloc'ed copy of the content.
  * The user is responsible of freeing it.
+ *
+ * @note For disk-based super-chunks, this checks whether another handle has
+ * rewritten the frame and, if so, re-reads the cached metalayers first, so
+ * updates made through other handles (or processes) become visible.
  *
  * @return If successful, the index of the new variable-length metalayer. Else, return a negative value.
  */

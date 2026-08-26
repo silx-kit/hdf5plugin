@@ -816,7 +816,9 @@ int read_chunk_header(const uint8_t* src, int32_t srcsize, bool extended_header,
         }
       }
       else {
-        if (header->nbytes % header->typesize != 0) {
+        // All-zero chunks fill with memset, which works regardless of element alignment.
+        if (special_type != BLOSC2_SPECIAL_ZERO
+            && header->nbytes % header->typesize != 0) {
           BLOSC_TRACE_ERROR("`nbytes` is not a multiple of typesize");
           return BLOSC2_ERROR_INVALID_HEADER;
         }
@@ -1652,16 +1654,6 @@ static int32_t set_values(int32_t typesize, const uint8_t* src, uint8_t* dest, i
     memcpy(dest + i * typesize, src + BLOSC_EXTENDED_HEADER_LENGTH, typesize);
   }
 #else
-  // destsize can only be a multiple of typesize
-  int64_t val8;
-  int64_t* dest8;
-  int32_t val4;
-  int32_t* dest4;
-  int16_t val2;
-  int16_t* dest2;
-  int8_t val1;
-  int8_t* dest1;
-
   if (destsize % typesize != 0) {
     BLOSC_ERROR(BLOSC2_ERROR_FAILURE);
   }
@@ -1671,34 +1663,38 @@ static int32_t set_values(int32_t typesize, const uint8_t* src, uint8_t* dest, i
   }
 
   switch (typesize) {
-    case 8:
-      val8 = ((int64_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
-      dest8 = (int64_t*)dest;
+    case 8: {
+      int64_t val8 = ((int64_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
+      int64_t* dest8 = (int64_t*)dest;
       for (int i = 0; i < nitems; i++) {
         dest8[i] = val8;
       }
       break;
-    case 4:
-      val4 = ((int32_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
-      dest4 = (int32_t*)dest;
+    }
+    case 4: {
+      int32_t val4 = ((int32_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
+      int32_t* dest4 = (int32_t*)dest;
       for (int i = 0; i < nitems; i++) {
         dest4[i] = val4;
       }
       break;
-    case 2:
-      val2 = ((int16_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
-      dest2 = (int16_t*)dest;
+    }
+    case 2: {
+      int16_t val2 = ((int16_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
+      int16_t* dest2 = (int16_t*)dest;
       for (int i = 0; i < nitems; i++) {
         dest2[i] = val2;
       }
       break;
-    case 1:
-      val1 = ((int8_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
-      dest1 = (int8_t*)dest;
+    }
+    case 1: {
+      int8_t val1 = ((int8_t*)(src + BLOSC_EXTENDED_HEADER_LENGTH))[0];
+      int8_t* dest1 = (int8_t*)dest;
       for (int i = 0; i < nitems; i++) {
         dest1[i] = val1;
       }
       break;
+    }
     default:
       for (int i = 0; i < nitems; i++) {
         memcpy(dest + i * typesize, src + BLOSC_EXTENDED_HEADER_LENGTH, typesize);
@@ -1769,7 +1765,6 @@ static int blosc_d(
       return BLOSC2_ERROR_INVALID_PARAM;
     }
     blosc2_frame_s* frame = (blosc2_frame_s*)context->schunk->frame;
-    char* urlpath = frame->urlpath;
     size_t bstarts_nbytes;
     size_t trailer_offset;
     size_t block_csizes_nbytes;
@@ -1821,34 +1816,34 @@ static int blosc_d(
       BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       // The offset of the block is src_offset
       if (src_offset < 0) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         BLOSC_TRACE_ERROR("Lazy block offset cannot be negative.");
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       io_pos = src_offset;
     }
     else {
-      fp = io_cb->open(urlpath, "rb", context->schunk->storage->io->params);
+      fp = frame_reader_acquire(frame, context->schunk->storage->io);
       BLOSC_ERROR_NULL(fp, BLOSC2_ERROR_FILE_OPEN);
       // The offset of the block is src_offset
       if (src_offset < 0) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         BLOSC_TRACE_ERROR("Lazy block offset cannot be negative.");
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       if (chunk_offset < 0) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         BLOSC_TRACE_ERROR("Lazy chunk offset cannot be negative.");
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       if (frame->file_offset > INT64_MAX - chunk_offset) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         BLOSC_TRACE_ERROR("Lazy chunk offset overflows file position.");
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       io_pos = frame->file_offset + chunk_offset;
       if (io_pos > INT64_MAX - src_offset) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         BLOSC_TRACE_ERROR("Lazy block offset overflows file position.");
         return BLOSC2_ERROR_INVALID_HEADER;
       }
@@ -1856,7 +1851,7 @@ static int blosc_d(
     }
     // We can make use of tmp3 because it will be used after src is not needed anymore
     int64_t rbytes = io_cb->read((void**)&tmp3, 1, block_csize, io_pos, fp);
-    io_cb->close(fp);
+    frame_reader_release(frame, io_cb, fp);
     if ((int32_t)rbytes != block_csize) {
       BLOSC_TRACE_ERROR("Cannot read the (lazy) block out of the fileframe.");
       return BLOSC2_ERROR_READ_BUFFER;
@@ -2598,11 +2593,11 @@ static int read_lazy_chunk_bytes(blosc2_context* context, int32_t offset, uint8_
       BLOSC_TRACE_ERROR("Lazy chunk offset cannot be negative.");
       return BLOSC2_ERROR_INVALID_HEADER;
     }
-    fp = io_cb->open(frame->urlpath, "rb", context->schunk->storage->io->params);
+    fp = frame_reader_acquire(frame, context->schunk->storage->io);
     if (frame->file_offset > INT64_MAX - chunk_offset) {
       BLOSC_TRACE_ERROR("Lazy chunk offset overflows file position.");
       if (fp != NULL) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
       }
       return BLOSC2_ERROR_INVALID_HEADER;
     }
@@ -2610,7 +2605,7 @@ static int read_lazy_chunk_bytes(blosc2_context* context, int32_t offset, uint8_
     if (io_pos > INT64_MAX - offset) {
       BLOSC_TRACE_ERROR("Lazy block offset overflows file position.");
       if (fp != NULL) {
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
       }
       return BLOSC2_ERROR_INVALID_HEADER;
     }
@@ -2623,7 +2618,7 @@ static int read_lazy_chunk_bytes(blosc2_context* context, int32_t offset, uint8_
 
   uint8_t* read_buffer = buffer;
   int64_t rbytes = io_cb->read((void**)&read_buffer, 1, nbytes, io_pos, fp);
-  io_cb->close(fp);
+  frame_reader_release(frame, io_cb, fp);
   if (read_buffer != buffer) {
     memcpy(buffer, read_buffer, (size_t)nbytes);
     free(read_buffer);
@@ -4080,25 +4075,25 @@ static int decompress_single_vlblock(blosc2_context* context, int32_t nblock,
       io_pos = bstart;
     }
     else {
-      fp = io_cb->open(frame->urlpath, "rb", context->schunk->storage->io->params);
+      fp = frame_reader_acquire(frame, context->schunk->storage->io);
       if (fp == NULL) {
         BLOSC_TRACE_ERROR("Cannot open frame file for lazy VL block size peek.");
         return BLOSC2_ERROR_FILE_OPEN;
       }
       if (chunk_offset < 0) {
         BLOSC_TRACE_ERROR("Lazy chunk offset cannot be negative.");
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       if (frame->file_offset > INT64_MAX - chunk_offset) {
         BLOSC_TRACE_ERROR("Lazy chunk offset overflows file position.");
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       io_pos = frame->file_offset + chunk_offset;
       if (io_pos > INT64_MAX - bstart) {
         BLOSC_TRACE_ERROR("Lazy block offset overflows file position.");
-        io_cb->close(fp);
+        frame_reader_release(frame, io_cb, fp);
         return BLOSC2_ERROR_INVALID_HEADER;
       }
       io_pos += bstart;
@@ -4112,7 +4107,7 @@ static int decompress_single_vlblock(blosc2_context* context, int32_t nblock,
     uint8_t nbuf[sizeof(int32_t)];
     uint8_t* nbufp = nbuf;
     int64_t rbytes = io_cb->read((void**)&nbufp, 1, sizeof(int32_t), io_pos, fp);
-    io_cb->close(fp);
+    frame_reader_release(frame, io_cb, fp);
     if (nbufp != nbuf) {
       // io_cb allocated new memory; copy the result and free.
       memcpy(nbuf, nbufp, sizeof(int32_t));
@@ -4342,14 +4337,19 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
     // Short-circuit for (non-lazy) memcpyed or special values
     ntbytes = nitems_bytes;
     switch (context->special_type) {
-      case BLOSC2_SPECIAL_VALUE:
-        // All repeated values
-        rc = set_values(context->typesize, _src, _dest, ntbytes);
+      case BLOSC2_SPECIAL_VALUE: {
+        // The repeated value's width is cbytes minus the header, not the header
+        // typesize byte (which is left unconstrained for special-value chunks).
+        // Derive it the same way blosc_d() does so a crafted typesize cannot make
+        // set_values() read past the end of the chunk.
+        int32_t value_typesize = header->cbytes - context->header_overhead;
+        rc = set_values(value_typesize, _src, _dest, ntbytes);
         if (rc < 0) {
           BLOSC_TRACE_ERROR("set_values failed");
           return BLOSC2_ERROR_DATA;
         }
         break;
+      }
       case BLOSC2_SPECIAL_NAN:
         rc = set_nans(context->typesize, _dest, ntbytes);
         if (rc < 0) {
@@ -4462,6 +4462,14 @@ int _blosc_getitem(blosc2_context* context, blosc_header* header, const void* sr
 
   scontext->zfp_cell_nitems = 0;
 
+  if (ntbytes >= 0 && ntbytes != nitems_bytes) {
+    // A partial decode must not look like a success: callers that only test for
+    // a negative return would silently keep hold of an incompletely filled dest.
+    BLOSC_TRACE_ERROR("Only %d bytes out of the %d requested could be decoded.",
+                      ntbytes, nitems_bytes);
+    return BLOSC2_ERROR_DATA;
+  }
+
   return ntbytes;
 }
 
@@ -4491,27 +4499,33 @@ int blosc1_getitem(const void* src, int start, int nitems, void* dest) {
   return blosc2_getitem(src, INT32_MAX, start, nitems, dest, INT32_MAX);
 }
 
-int blosc2_getitem_ctx(blosc2_context* context, const void* src, int32_t srcsize,
-    int start, int nitems, void* dest, int32_t destsize) {
-  blosc_header header;
-  int result;
-
-  /* Minimally populate the context */
-  result = read_chunk_header((uint8_t *) src, srcsize, true, &header);
+/* Read and validate the chunk header for the getitem entry points below.
+   read_chunk_header() already rejects a zero typesize, so on success
+   header->typesize is in [1, BLOSC_MAX_TYPESIZE]. */
+static int getitem_read_header(const void* src, int32_t srcsize, blosc_header* header) {
+  int result = read_chunk_header((uint8_t *) src, srcsize, true, header);
   if (result < 0) {
     return result;
   }
-  if (header.blosc2_flags2 & BLOSC2_VL_BLOCKS) {
+  if (header->blosc2_flags2 & BLOSC2_VL_BLOCKS) {
     BLOSC_TRACE_ERROR("getitem is not supported for VL-block chunks.");
     return BLOSC2_ERROR_INVALID_PARAM;
   }
+  return 0;
+}
 
+/* Shared body of the getitem entry points.  `start` and `nitems` are counted in
+   the typesize that `header` records. */
+static int getitem_with_header(blosc2_context* context, blosc_header* header,
+                               const void* src, int32_t srcsize,
+                               int start, int nitems, void* dest, int32_t destsize) {
+  /* Minimally populate the context */
   context->src = src;
   context->srcsize = srcsize;
   context->dest = dest;
   context->destsize = destsize;
 
-  result = blosc2_initialize_context_from_header(context, &header);
+  int result = blosc2_initialize_context_from_header(context, header);
   if (result < 0) {
     return result;
   }
@@ -4521,9 +4535,46 @@ int blosc2_getitem_ctx(blosc2_context* context, const void* src, int32_t srcsize
   }
   BLOSC_ERROR_NULL(context->serial_context, BLOSC2_ERROR_THREAD_CREATE);
   /* Call the actual getitem function */
-  result = _blosc_getitem(context, &header, src, srcsize, start, nitems, dest, destsize);
+  return _blosc_getitem(context, header, src, srcsize, start, nitems, dest, destsize);
+}
 
-  return result;
+int blosc2_getitem_ctx(blosc2_context* context, const void* src, int32_t srcsize,
+    int start, int nitems, void* dest, int32_t destsize) {
+  blosc_header header;
+  int result = getitem_read_header(src, srcsize, &header);
+  if (result < 0) {
+    return result;
+  }
+
+  return getitem_with_header(context, &header, src, srcsize, start, nitems, dest, destsize);
+}
+
+int blosc2_getitem_bytes_ctx(blosc2_context* context, const void* src, int32_t srcsize,
+    int32_t start, int32_t nbytes, void* dest, int32_t destsize) {
+  blosc_header header;
+  int result = getitem_read_header(src, srcsize, &header);
+  if (result < 0) {
+    return result;
+  }
+
+  if (start < 0 || nbytes < 0) {
+    BLOSC_TRACE_ERROR("`start` and `nbytes` must not be negative.");
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+
+  /* The typesize a chunk records is 1 whenever the original one exceeded
+     BLOSC_MAX_TYPESIZE, so for wide types this conversion is a no-op and the
+     alignment check below is vacuous.  That is the whole point of this entry
+     point: the caller never has to know whether the cap kicked in. */
+  int32_t typesize = header.typesize;
+  if ((start % typesize != 0) || (nbytes % typesize != 0)) {
+    BLOSC_TRACE_ERROR("`start` (%d) and `nbytes` (%d) must both be multiples of "
+                      "the typesize stored in the chunk (%d).", start, nbytes, typesize);
+    return BLOSC2_ERROR_INVALID_PARAM;
+  }
+
+  return getitem_with_header(context, &header, src, srcsize, start / typesize,
+                             nbytes / typesize, dest, destsize);
 }
 
 int blosc2_decompress_block_ctx(blosc2_context* context, const void* src,
@@ -6914,6 +6965,8 @@ const char *blosc2_error_string(int error_code) {
       return "Wrong type for frame";
     case BLOSC2_ERROR_FILE_TRUNCATE:
       return "File truncate failure";
+    case BLOSC2_ERROR_LOCK:
+      return "Frame lock failure";
     case BLOSC2_ERROR_THREAD_CREATE:
       return "Thread or thread context creation failure";
     case BLOSC2_ERROR_POSTFILTER:
