@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          cache: true
+      - run: pixi run check
+
+  test:
+    name: test / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+          - os: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          cache: true
+      - run: pixi run test-py
+      - run: pixi run test
+      - run: pixi run distclean
+      - run: pixi run test-decode-only
+
+  test-bigendian:
+    name: test / s390x (big-endian, Debian)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: uraimo/run-on-arch-action@v3
+        name: Build and test on s390x
+        with:
+          arch: s390x
+          distro: trixie
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y --no-install-recommends \
+              build-essential pkg-config ca-certificates cmake ninja-build \
+              python3-pip \
+              python3-numpy python3-h5py python3-h5py-serial python3-pytest \
+              python3-pil python3-pooch \
+              libhdf5-dev libtiff-dev
+          run: |
+            set -euo pipefail
+
+            HDF5_ROOT=/usr/lib/s390x-linux-gnu/hdf5/serial
+
+            export PIP_BREAK_SYSTEM_PACKAGES=1
+            pip3 install --no-deps \
+              http://www.silx.org/pub/wheelhouse/imagecodecs-2026.8.16-cp312-abi3-manylinux_2_39_s390x.whl
+
+            cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=Release -DHDF5_ROOT="$HDF5_ROOT"
+            cmake --build build
+
+            HDF5_PLUGIN_PATH="$PWD/build" python3 -m pytest tests -v
