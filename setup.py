@@ -554,6 +554,7 @@ class BuildCLib(build_clib):
 
     def build_libraries(self, libraries):
         updated_libraries = []
+        libraries_with_source_cflags = []
         for lib_name, build_info in libraries:
             config = self.distribution.get_command_obj("build").hdf5plugin_config
 
@@ -579,9 +580,63 @@ class BuildCLib(build_clib):
                 ]
 
             build_info["cflags"] = cflags
-            updated_libraries.append((lib_name, build_info))
+
+            # Extra flags applied only to specific sources (e.g., SIMD flags
+            # that must not leak into the library's generic sources): a list
+            # of (sources, flags) pairs, in addition to build_info["sources"].
+            source_cflags = [
+                (sources, [f for f in flags if f.startswith(prefix)])
+                for sources, flags in build_info.get("source_cflags", [])
+                if sources
+            ]
+
+            if source_cflags:
+                build_info["source_cflags"] = source_cflags
+                libraries_with_source_cflags.append((lib_name, build_info))
+            else:
+                updated_libraries.append((lib_name, build_info))
 
         super().build_libraries(updated_libraries)
+
+        for lib_name, build_info in libraries_with_source_cflags:
+            self._build_library_with_source_cflags(lib_name, build_info)
+
+    def _build_library_with_source_cflags(self, lib_name, build_info):
+        """Build a library where some sources need extra compile flags
+        (e.g., per-file SIMD flags) that must not be applied to the rest of
+        the library's sources.
+
+        distutils/setuptools' build_clib compiles all of a library's sources
+        in a single compiler.compile() call sharing the same extra_postargs,
+        so this bypasses build_clib.build_libraries for such libraries and
+        compiles each (sources, extra flags) group separately instead.
+        """
+        logger.info("building '%s' library", lib_name)
+
+        macros = build_info.get("macros")
+        include_dirs = build_info.get("include_dirs")
+        base_cflags = build_info.get("cflags", [])
+
+        groups = [(build_info["sources"], [])] + list(
+            build_info.get("source_cflags", [])
+        )
+
+        objects = []
+        for sources, extra_flags in groups:
+            objects.extend(
+                self.compiler.compile(
+                    sorted(sources),
+                    output_dir=self.build_temp,
+                    macros=macros,
+                    include_dirs=include_dirs,
+                    extra_postargs=base_cflags + list(extra_flags),
+                    debug=self.debug,
+                )
+            )
+
+        self.compiler.create_static_lib(
+            objects, lib_name, output_dir=self.build_clib, debug=self.debug
+        )
 
 
 class PluginBuildExt(build_ext):
@@ -991,66 +1046,52 @@ def _get_openjph_clib(field=None):
     """Vendored OpenJPH static lib build config (used by the htj2k plugin)"""
     openjph_dir = "lib/h5z-htj2k/vendored/OpenJPH/src/core"
 
-    used_simd = set()
-    simd_cflags = []
+    simd_cflags = {}  # simd name: list of compile flags
+    simd_macros = [("OJPH_DISABLE_SIMD", None)]
 
     if platform.machine() == "ppc64le":
-        used_simd = {"vsx"}
+        simd_cflags = {"vsx": ["-mcpu=power9"]}
+        simd_macros = []
     elif HostConfig.ARCH in ("X86_32", "X86_64"):
-        used_simd = {"sse", "sse2", "ssse3", "avx", "avx2", "avx512"}
-        simd_cflags += [
-            "-msse",
-            "-msse2",
-            "-mssse3",
-            "-mavx",
-            "-mavx2",
-            "-mavx512f",
-            "-mavx512cd",
-        ]
-        simd_cflags += ["/arch:AVX", "/arch:AVX2", "/arch:AVX512"]
-
-    macros = [("_FILE_OFFSET_BITS", 64)]
-
-    if not used_simd:
-        macros.append(("OJPH_DISABLE_SIMD", None))
-    else:
+        simd_cflags = {
+            "sse": ["-msse"],
+            "sse2": ["-msse2"],
+            "ssse3": ["-mssse3"],
+            "avx": ["-mavx", "/arch:AVX"],
+            "avx2": ["-mavx2", "/arch:AVX2"],
+            "avx512": ["-mavx512f", "-mavx512cd", "/arch:AVX512"],
+        }
         # OJPH_DISABLE_SSE4 only used by cli tools, not by the library
         # OJPH_DISABLE_NEON not used in the code
-        simd_macros = {
-            "OJPH_DISABLE_SSE",
-            "OJPH_DISABLE_SSE2",
-            "OJPH_DISABLE_SSSE3",
-            "OJPH_DISABLE_AVX",
-            "OJPH_DISABLE_AVX2",
-            "OJPH_DISABLE_AVX512",
-        } - {f"OJPH_DISABLE_{simd.upper()}" for simd in used_simd}
-        macros += [(macro, None) for macro in simd_macros]
+        simd_macros = [
+            ("OJPH_DISABLE_SSE", None),
+            ("OJPH_DISABLE_SSE2", None),
+            ("OJPH_DISABLE_SSSE3", None),
+            ("OJPH_DISABLE_AVX", None),
+            ("OJPH_DISABLE_AVX2", None),
+            ("OJPH_DISABLE_AVX512", None),
+        ]
 
-    simd_suffixes = tuple(
-        {
-            "_sse",
-            "_sse2",
-            "_ssse3",
-            "_avx",
-            "_avx2",
-            "_avx512",
-            "_wasm",
-            "_vsx",
-        }
-        - {f"_{simd.lower()}" for simd in used_simd}
-    )
+    macros = [("_FILE_OFFSET_BITS", 64)] + simd_macros
 
-    def selected_sources(pattern):
+    source_cflags = [
+        (glob(f"{openjph_dir}/*/*_{simd}.cpp"), flags)
+        for simd, flags in sorted(simd_cflags.items())
+    ]
+
+    def generic_sources(pattern):
         return [
             source
             for source in glob(f"{openjph_dir}/{pattern}")
-            if not os.path.splitext(os.path.basename(source))[0].endswith(simd_suffixes)
+            if not os.path.splitext(os.path.basename(source))[0].endswith(
+                ("_sse", "_sse2", "_ssse3", "_avx", "_avx2", "_avx512", "_wasm", "_vsx")
+            )
         ]
 
     sources = (
-        selected_sources("codestream/*.cpp")
-        + selected_sources("coding/*.cpp")
-        + selected_sources("transform/*.cpp")
+        generic_sources("codestream/*.cpp")
+        + generic_sources("coding/*.cpp")
+        + generic_sources("transform/*.cpp")
         + glob(f"{openjph_dir}/others/*.cpp")
         + glob(f"{openjph_dir}/others/*.c")
     )
@@ -1063,7 +1104,8 @@ def _get_openjph_clib(field=None):
             f"{openjph_dir}/shared",
         ],
         macros=macros,
-        cflags=["-O3", "/O2"] + simd_cflags,
+        cflags=["-O3", "/O2"],
+        source_cflags=source_cflags,
     )
 
     if field is None:
