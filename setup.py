@@ -1074,7 +1074,7 @@ def _get_clib_config_from_pkgconfig(libname):
 
     include_dir = pkgconfig.variables(libname).get("includedir", None)
     extra_link_args = pkgconfig.libs(libname).split(" ")
-    for arg in extra_link_args:
+    for arg in extra_link_args[:]:
         if arg.startswith("-L"):
             extra_link_args.append(f"/LIBPATH:{arg[2:]}")
         elif arg.startswith("-l"):
@@ -1439,7 +1439,7 @@ def _get_h5zfp_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
+PLUGIN_LIB_DEPENDENCIES["zfp"] = ("zfp",)
 
 
 def _get_htj2k_plugin():
@@ -1459,7 +1459,7 @@ def _get_htj2k_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES["zfp"] = ("zfp",)
+PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
 
 
 def _get_sz_plugin():
