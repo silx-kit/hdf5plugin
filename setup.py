@@ -990,18 +990,57 @@ def _get_zstd_clib(field=None):
 def _get_openjph_clib(field=None):
     """Vendored OpenJPH static lib build config (used by the htj2k plugin)"""
     openjph_dir = "lib/h5z-htj2k/vendored/OpenJPH/src/core"
-    simd_suffixes = (
-        "_sse",
-        "_sse2",
-        "_ssse3",
-        "_avx",
-        "_avx2",
-        "_avx512",
-        "_wasm",
-        "_vsx",
+
+    used_simd = set()
+    simd_cflags = []
+
+    if platform.machine() == "ppc64le":
+        used_simd = {"vsx"}
+    elif HostConfig.ARCH in ("X86_32", "X86_64"):
+        used_simd = {"sse", "sse2", "ssse3", "avx", "avx2", "avx512"}
+        simd_cflags += [
+            "-msse",
+            "-msse2",
+            "-mssse3",
+            "-mavx",
+            "-mavx2",
+            "-mavx512f",
+            "-mavx512cd",
+        ]
+        simd_cflags += ["/arch:AVX", "/arch:AVX2", "/arch:AVX512"]
+
+    macros = [("_FILE_OFFSET_BITS", 64)]
+
+    if not used_simd:
+        macros.append(("OJPH_DISABLE_SIMD", None))
+    else:
+        # OJPH_DISABLE_SSE4 only used by cli tools, not by the library
+        # OJPH_DISABLE_NEON not used in the code
+        simd_macros = {
+            "OJPH_DISABLE_SSE",
+            "OJPH_DISABLE_SSE2",
+            "OJPH_DISABLE_SSSE3",
+            "OJPH_DISABLE_AVX",
+            "OJPH_DISABLE_AVX2",
+            "OJPH_DISABLE_AVX512",
+        } - {f"OJPH_DISABLE_{simd.upper()}" for simd in used_simd}
+        macros += [(macro, None) for macro in simd_macros]
+
+    simd_suffixes = tuple(
+        {
+            "_sse",
+            "_sse2",
+            "_ssse3",
+            "_avx",
+            "_avx2",
+            "_avx512",
+            "_wasm",
+            "_vsx",
+        }
+        - {f"_{simd.lower()}" for simd in used_simd}
     )
 
-    def portable_sources(pattern):
+    def selected_sources(pattern):
         return [
             source
             for source in glob(f"{openjph_dir}/{pattern}")
@@ -1009,18 +1048,22 @@ def _get_openjph_clib(field=None):
         ]
 
     sources = (
-        portable_sources("codestream/*.cpp")
-        + portable_sources("coding/*.cpp")
-        + portable_sources("transform/*.cpp")
+        selected_sources("codestream/*.cpp")
+        + selected_sources("coding/*.cpp")
+        + selected_sources("transform/*.cpp")
         + glob(f"{openjph_dir}/others/*.cpp")
         + glob(f"{openjph_dir}/others/*.c")
     )
 
     config = dict(
         sources=sources,
-        include_dirs=[openjph_dir, f"{openjph_dir}/openjph"],
-        macros=[("OJPH_DISABLE_SIMD", None), ("_FILE_OFFSET_BITS", 64)],
-        cflags=["-O3", "/O2"],
+        include_dirs=[
+            openjph_dir,
+            f"{openjph_dir}/openjph",
+            f"{openjph_dir}/shared",
+        ],
+        macros=macros,
+        cflags=["-O3", "/O2"] + simd_cflags,
     )
 
     if field is None:
