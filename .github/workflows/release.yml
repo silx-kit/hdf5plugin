@@ -124,7 +124,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-14]
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-15]
         python-version: ['3.9', '3.14']
         include:
           - python-version: '3.9'
@@ -133,7 +133,7 @@ jobs:
             os: ubuntu-24.04-arm
             OLDEST_DEPENDENCIES: 'h5py==3.6.0 "numpy<2"'
           - python-version: '3.9'
-            os: macos-14
+            os: macos-15
             OLDEST_DEPENDENCIES: 'h5py==3.7.0 "numpy<2"'
 
           - python-version: '3.14'
