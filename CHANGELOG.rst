@@ -1,11 +1,11 @@
-Unreleased
-----------
+7.1.0: 01/09/02026
+------------------
 
 This release adds the new plugin `h5z-htj2k`.
 
 - Compression filters and libraries:
 
-  * Added **Htj2k** filter (v0.1.1) and **OpenJPH** (v0.31.0) (PR #405, #409)
+  * Added **Htj2k** filter (v0.1.1) and **OpenJPH** (v0.31.0) (PR #405, #409, #410)
   * Updated **blosc2** hdf5 filter (v3.0.1) and **c-blosc2** compression library (v3.3.2) (PR #407)
 
 7.0.0: 25/06/2026
