@@ -554,34 +554,89 @@ class BuildCLib(build_clib):
 
     def build_libraries(self, libraries):
         updated_libraries = []
+        libraries_with_source_cflags = []
         for lib_name, build_info in libraries:
             config = self.distribution.get_command_obj("build").hdf5plugin_config
 
-            cflags = list(build_info.get("cflags", []))
-
             # Add flags from build config
-            cflags.extend(config.compile_args)
+            cflags = list(build_info.get("cflags", []))
+            build_info["cflags"] = self._update_cflags(
+                cflags + list(config.compile_args)
+            )
 
-            if not config.use_openmp:  # Remove OpenMP flags
-                cflags = [f for f in cflags if not f.endswith("openmp")]
+            # Flags applied only to specific sources (e.g., SIMD flags
+            # that must not leak into the library's generic sources): a list
+            # of (sources, flags) pairs, in addition to build_info["sources"].
+            source_cflags = [
+                (sources, self._update_cflags(flags))
+                for sources, flags in build_info.get("source_cflags", [])
+                if sources
+            ]
 
-            prefix = "/" if self.compiler.compiler_type == "msvc" else "-"
-            cflags = [f for f in cflags if f.startswith(prefix)]
-
-            # Patch C++20 flag for older gcc/clang support
-            if "-std=c++20" in cflags:
-                if config.cpp20_compile_arg is None:
-                    raise RuntimeError(
-                        "Cannot compile C++20 code with current compiler"
-                    )
-                cflags = [
-                    f if f != "-std=c++20" else config.cpp20_compile_arg for f in cflags
-                ]
-
-            build_info["cflags"] = cflags
-            updated_libraries.append((lib_name, build_info))
+            if source_cflags:
+                build_info["source_cflags"] = source_cflags
+                libraries_with_source_cflags.append((lib_name, build_info))
+            else:
+                updated_libraries.append((lib_name, build_info))
 
         super().build_libraries(updated_libraries)
+
+        for lib_name, build_info in libraries_with_source_cflags:
+            self._build_library_with_source_cflags(lib_name, build_info)
+
+    def _update_cflags(self, cflags: list[str]) -> list[str]:
+        config = self.distribution.get_command_obj("build").hdf5plugin_config
+
+        if not config.use_openmp:  # Remove OpenMP flags
+            cflags = [f for f in cflags if not f.endswith("openmp")]
+
+        prefix = "/" if self.compiler.compiler_type == "msvc" else "-"
+        cflags = [f for f in cflags if f.startswith(prefix)]
+
+        # Patch C++20 flag for older gcc/clang support
+        if "-std=c++20" in cflags:
+            if config.cpp20_compile_arg is None:
+                raise RuntimeError("Cannot compile C++20 code with current compiler")
+            cflags = [
+                f if f != "-std=c++20" else config.cpp20_compile_arg for f in cflags
+            ]
+        return cflags
+
+    def _build_library_with_source_cflags(self, lib_name, build_info):
+        """Build a library where some sources need specific compile flags
+        (e.g., per-file SIMD flags) that must not be applied to the rest of
+        the library's sources.
+
+        distutils/setuptools' build_clib compiles all of a library's sources
+        in a single compiler.compile() call sharing the same extra_postargs,
+        so this bypasses build_clib.build_libraries for such libraries and
+        compiles each (sources, flags) group separately instead.
+        """
+        logger.info("building '%s' library", lib_name)
+
+        macros = build_info.get("macros")
+        include_dirs = build_info.get("include_dirs")
+
+        groups = [(build_info["sources"], build_info.get("cflags", []))] + list(
+            build_info.get("source_cflags", [])
+        )
+
+        objects = []
+        for sources, extra_flags in groups:
+            objects.extend(
+                self.compiler.compile(
+                    sorted(sources),
+                    output_dir=self.build_temp,
+                    macros=macros,
+                    include_dirs=include_dirs,
+                    extra_postargs=list(extra_flags),
+                    debug=self.debug,
+                )
+            )
+
+        self.compiler.create_static_lib(
+            objects, lib_name, output_dir=self.build_clib, debug=self.debug
+        )
 
 
 class PluginBuildExt(build_ext):
@@ -990,37 +1045,73 @@ def _get_zstd_clib(field=None):
 def _get_openjph_clib(field=None):
     """Vendored OpenJPH static lib build config (used by the htj2k plugin)"""
     openjph_dir = "lib/h5z-htj2k/vendored/OpenJPH/src/core"
-    simd_suffixes = (
-        "_sse",
-        "_sse2",
-        "_ssse3",
-        "_avx",
-        "_avx2",
-        "_avx512",
-        "_wasm",
-        "_vsx",
-    )
+    cflags = ["-O3", "/O2"]
 
-    def portable_sources(pattern):
+    # OJPH_DISABLE_SSE4 only used by cli tools, not by the library
+    # OJPH_DISABLE_NEON not used in the code
+    x86_simd_macros = [
+        ("OJPH_DISABLE_SSE", None),
+        ("OJPH_DISABLE_SSE2", None),
+        ("OJPH_DISABLE_SSSE3", None),
+        ("OJPH_DISABLE_AVX", None),
+        ("OJPH_DISABLE_AVX2", None),
+        ("OJPH_DISABLE_AVX512", None),
+    ]
+
+    if HostConfig.ARCH in ("X86_32", "X86_64"):
+        simd_cflags = {
+            "sse": ["-msse"],
+            "sse2": ["-msse2"],
+            "ssse3": ["-mssse3"],
+            "avx": ["-mavx", "/arch:AVX"],
+            "avx2": ["-mavx2", "/arch:AVX2"],
+            "avx512": ["-mavx512f", "-mavx512cd", "/arch:AVX512"],
+        }
+        simd_macros = []
+    elif HostConfig.ARCH in ("ARM_7", "ARM_8"):
+        simd_cflags = {}
+        simd_macros = x86_simd_macros
+    elif platform.machine() == "ppc64le":
+        simd_cflags = {"vsx": ["-mcpu=power9"]}
+        simd_macros = x86_simd_macros
+    else:
+        simd_cflags = {}  # simd name: list of compile flags
+        simd_macros = [("OJPH_DISABLE_SIMD", None)]
+
+    macros = [("_FILE_OFFSET_BITS", 64)] + simd_macros
+
+    source_cflags = [
+        (glob(f"{openjph_dir}/*/*_{simd}.cpp"), cflags + flags)
+        for simd, flags in sorted(simd_cflags.items())
+    ]
+
+    def generic_sources(pattern):
         return [
             source
             for source in glob(f"{openjph_dir}/{pattern}")
-            if not os.path.splitext(os.path.basename(source))[0].endswith(simd_suffixes)
+            if not os.path.splitext(os.path.basename(source))[0].endswith(
+                ("_sse", "_sse2", "_ssse3", "_avx", "_avx2", "_avx512", "_wasm", "_vsx")
+            )
         ]
 
     sources = (
-        portable_sources("codestream/*.cpp")
-        + portable_sources("coding/*.cpp")
-        + portable_sources("transform/*.cpp")
+        generic_sources("codestream/*.cpp")
+        + generic_sources("coding/*.cpp")
+        + generic_sources("transform/*.cpp")
         + glob(f"{openjph_dir}/others/*.cpp")
         + glob(f"{openjph_dir}/others/*.c")
     )
 
     config = dict(
         sources=sources,
-        include_dirs=[openjph_dir, f"{openjph_dir}/openjph"],
-        macros=[("OJPH_DISABLE_SIMD", None), ("_FILE_OFFSET_BITS", 64)],
-        cflags=["-O3", "/O2"],
+        include_dirs=[
+            openjph_dir,
+            f"{openjph_dir}/openjph",
+            f"{openjph_dir}/shared",
+        ],
+        macros=macros,
+        cflags=cflags,
+        source_cflags=source_cflags,
     )
 
     if field is None:
@@ -1074,7 +1165,7 @@ def _get_clib_config_from_pkgconfig(libname):
 
     include_dir = pkgconfig.variables(libname).get("includedir", None)
     extra_link_args = pkgconfig.libs(libname).split(" ")
-    for arg in extra_link_args:
+    for arg in extra_link_args[:]:
         if arg.startswith("-L"):
             extra_link_args.append(f"/LIBPATH:{arg[2:]}")
         elif arg.startswith("-l"):
@@ -1439,7 +1530,7 @@ def _get_h5zfp_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
+PLUGIN_LIB_DEPENDENCIES["zfp"] = ("zfp",)
 
 
 def _get_htj2k_plugin():
@@ -1459,7 +1550,7 @@ def _get_htj2k_plugin():
     )
 
 
-PLUGIN_LIB_DEPENDENCIES["zfp"] = ("zfp",)
+PLUGIN_LIB_DEPENDENCIES["htj2k"] = ("openjph",)
 
 
 def _get_sz_plugin():
