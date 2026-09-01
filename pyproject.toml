@@ -43,8 +43,8 @@ doc = [
 ]
 test = [
     "numpy<2 ; python_version == '3.9'",
-    "blosc2>=2.5.1",
-    "blosc2-grok>=0.2.2",
+    "blosc2-htj2k ; python_version >= '3.11'",
+    "blosc2-j2k ; python_version >= '3.11'",
 ]
 dev = [
     "hdf5plugin[doc,test]",

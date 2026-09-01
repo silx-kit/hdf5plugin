@@ -25,12 +25,12 @@
 
 from __future__ import annotations
 
-import importlib.util
-import io
+import importlib
 import os
 import shutil
 import tempfile
 import unittest
+from concurrent.futures import ProcessPoolExecutor
 from typing import Any, cast
 
 import numpy
@@ -1059,18 +1059,18 @@ class TestBlosc2Plugins(unittest.TestCase):
         if blosc2 is None:
             self.skipTest("Blosc2 package not available")
 
-    def _readback_hdf5_blosc2_dataset(
-        self,
+    @staticmethod
+    def _direct_chunk_write_blosc2(
+        filename: str,
+        dataset_name: str,
         data: numpy.ndarray[Any, Any],
+        plugin_module: str = None,
         blocks: tuple[int, ...] = None,
         **cparams,
     ):
-        """Compress data with blosc2, write it as HDF5 file with direct chunk write and read it back with h5py
+        if plugin_module:
+            importlib.import_module(plugin_module)
 
-        :param data: data array to compress
-        :param blocks: Blosc2 block shape
-        :param cparams: Blosc2 compression parameters
-        """
         # Convert data to a blosc2 array: This is where compression happens
         blosc_array = blosc2.asarray(
             data,
@@ -1080,9 +1080,9 @@ class TestBlosc2Plugins(unittest.TestCase):
         )
 
         # Write blosc2 array as a hdf5 dataset
-        with io.BytesIO() as buffer, h5py.File(buffer, "w") as f:
+        with h5py.File(filename, "w") as f:
             dataset = f.create_dataset(
-                "data",
+                dataset_name,
                 shape=data.shape,
                 dtype=data.dtype,
                 chunks=data.shape,
@@ -1092,55 +1092,121 @@ class TestBlosc2Plugins(unittest.TestCase):
                 (0,) * data.ndim,
                 blosc_array.schunk.to_cframe(),
             )
-            f.flush()
 
-            return dataset[()]
+    def _write_blosc2_dataset(
+        self,
+        filename: str,
+        dataset_name: str,
+        data: numpy.ndarray[Any, Any],
+        plugin_module: str = None,
+        blocks: tuple[int, ...] = None,
+        **cparams,
+    ):
+        """Compress data with blosc2, write it as HDF5 file with direct chunk write.
+
+        Writing is performed in a different process to avoid importing blosc2 plugin module in the reading process.
+
+        :param plugin_module: Name of the module corresponding to the used blosc2 plugin
+        :param blocks: Blosc2 block shape
+        :param cparams: Blosc2 compression parameters
+        """
+        with ProcessPoolExecutor() as executor:
+            future = executor.submit(
+                self._direct_chunk_write_blosc2,
+                filename,
+                dataset_name,
+                data,
+                plugin_module,
+                blocks,
+                **cparams,
+            )
+            _ = future.result()
 
     def test_blosc2_filter_int_trunc(self):
         """Read blosc2 dataset written with int truncate filter plugin"""
         data = numpy.arange(2**16, dtype=numpy.int16)
-
         removed_bits = 2
-        read_data = self._readback_hdf5_blosc2_dataset(
-            data,
-            codec=blosc2.Codec.ZSTD,
-            filters=[blosc2.Filter.INT_TRUNC],
-            filters_meta=[-removed_bits],
-        )
-        assert numpy.allclose(read_data, data, rtol=0.0, atol=2**removed_bits)
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, "test.h5")
+
+            self._write_blosc2_dataset(
+                filename,
+                "data",
+                data,
+                codec=blosc2.Codec.ZSTD,
+                filters=[blosc2.Filter.INT_TRUNC],
+                filters_meta=[-removed_bits],
+            )
+
+            with h5py.File(filename, "r") as f:
+                read_data = f["data"][()]
+
+            assert numpy.allclose(read_data, data, rtol=0.0, atol=2**removed_bits)
 
     def test_blosc2_codec_zfp(self):
         """Read blosc2 dataset written with zfp codec plugin"""
         data = numpy.outer(numpy.arange(128), numpy.arange(128)).astype(numpy.float32)
 
-        read_data = self._readback_hdf5_blosc2_dataset(
-            data,
-            codec=blosc2.Codec.ZFP_PREC,
-            codec_meta=8,
-            filters=[],
-            filters_meta=[],
-            splitmode=blosc2.SplitMode.NEVER_SPLIT,
-        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, "test.h5")
+
+            self._write_blosc2_dataset(
+                filename,
+                "data",
+                data,
+                codec=blosc2.Codec.ZFP_PREC,
+                codec_meta=8,
+                filters=[],
+                filters_meta=[],
+                splitmode=blosc2.SplitMode.NEVER_SPLIT,
+            )
+
+            with h5py.File(filename, "r") as f:
+                read_data = f["data"][()]
+
         assert numpy.allclose(read_data, data, rtol=1e-3, atol=0)
 
-    @unittest.skipIf(
-        importlib.util.find_spec("blosc2_grok") is None,
-        "blosc2_grok package is not available",
-    )
-    def test_blosc2_codec_grok(self):
-        """Read blosc2 dataset written with blosc2-grok external codec plugin"""
-        shape = 10, 128, 128
-        data = numpy.arange(numpy.prod(shape), dtype=numpy.uint16).reshape(shape)
+    def test_blosc2_j2k_codecs(self):
+        """Read blosc2 dataset written with jpeg2000-related external codec plugins"""
+        for shape in [(128, 128), (10, 128, 128)]:
+            data = numpy.arange(numpy.prod(shape), dtype=numpy.uint16).reshape(shape)
 
-        read_data = self._readback_hdf5_blosc2_dataset(
-            data,
-            blocks=(1,) + data.shape[1:],  # 1 block per slice
-            codec=blosc2.Codec.GROK,
-            # Disable the filters and the splitmode, because these don't work with grok.
-            filters=[],
-            splitmode=blosc2.SplitMode.NEVER_SPLIT,
-        )
-        assert numpy.array_equal(read_data, data)
+            for plugin_module, codec_name in {
+                "blosc2_grok": "GROK",
+                "blosc2_j2k": "J2K",
+                "blosc2_htj2k": "HTJ2K",
+            }.items():
+                with (
+                    self.subTest(plugin=plugin_module, shape=shape),
+                    tempfile.TemporaryDirectory() as tempdir,
+                ):
+                    if importlib.util.find_spec(plugin_module) is None:
+                        self.skipTest(f"{plugin_module} package is not available")
+
+                    try:
+                        codec_id = blosc2.Codec[codec_name]
+                    except KeyError:
+                        self.skipTest(f"Codec {codec_name} not available in blosc2")
+
+                    filename = os.path.join(tempdir, "test.h5")
+
+                    self._write_blosc2_dataset(
+                        filename,
+                        "data",
+                        data,
+                        plugin_module=plugin_module,
+                        blocks=(1,) * (data.ndim - 2) + data.shape[-2:],  # 2d blocks
+                        codec=codec_id,
+                        # Disable the filters and the splitmode, because these don't work with grok.
+                        filters=[],
+                        splitmode=blosc2.SplitMode.NEVER_SPLIT,
+                    )
+
+                    with h5py.File(filename, "r") as f:
+                        read_data = f["data"][()]
+
+                    assert numpy.array_equal(read_data, data)
 
 
 def suite() -> unittest.TestSuite:
