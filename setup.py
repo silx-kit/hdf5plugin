@@ -705,6 +705,17 @@ class PluginBuildExt(build_ext):
                     arg for arg in e.extra_link_args if arg.startswith(prefix)
                 ]
 
+            # Patch C++20 flag for older gcc/clang support
+            if "-std=c++20" in e.extra_compile_args:
+                if config.cpp20_compile_arg is None:
+                    raise RuntimeError(
+                        "Cannot compile C++20 code with current compiler"
+                    )
+                e.extra_compile_args = [
+                    config.cpp20_compile_arg if arg == "-std=c++20" else arg
+                    for arg in e.extra_compile_args
+                ]
+
         build_ext.build_extensions(self)
 
 
@@ -1646,6 +1657,34 @@ def _get_sperr_plugin():
 PLUGIN_LIB_DEPENDENCIES["sperr"] = ("sperr", "sperr_filter")
 
 
+def _get_terse_plugin():
+    """TERSE/PROLIX (TRPX v2.0) plugin build config
+
+    Source from https://github.com/senikm/trpx2.0
+    """
+    trpx_dir = "lib/trpx2.0"
+
+    extra_compile_args = ["-O3", "-std=c++20", "-pthread"]
+    extra_compile_args += ["/Ox", "/std:c++20"]
+    # Concurrent.hpp uses std::clamp without including <algorithm>,
+    # which fails with some libstdc++ versions: force include it.
+    # Use joined forms since compile args must be single tokens starting with - or /
+    extra_compile_args += ["-includealgorithm", "/FIalgorithm"]
+    extra_link_args = ["-pthread"]
+
+    return HDF5PluginExtension(
+        "hdf5plugin.plugins.libh5terse",
+        sources=[f"{trpx_dir}/tersecodec/src/filter.cpp"],
+        include_dirs=[f"{trpx_dir}/include"],
+        extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
+        cpp20_required=True,
+    )
+
+
+PLUGIN_LIB_DEPENDENCIES["terse"] = ()
+
+
 _EMBEDDED_PLUGIN_EXTENSIONS = {
     "blosc": _get_blosc_plugin,
     "blosc2": _get_blosc2_plugin,
@@ -1657,6 +1696,7 @@ _EMBEDDED_PLUGIN_EXTENSIONS = {
     "sperr": _get_sperr_plugin,
     "sz": _get_sz_plugin,
     "sz3": _get_sz3_plugin,
+    "terse": _get_terse_plugin,
     "zfp": _get_h5zfp_plugin,
     "zstd": _get_zstd_plugin,
 }

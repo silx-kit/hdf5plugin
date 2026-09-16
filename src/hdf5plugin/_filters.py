@@ -73,6 +73,9 @@ FCIDECOMP_ID = 32018
 SPERR_ID = 32028
 """SPERR filter ID"""
 
+TERSE_ID = 32029
+"""TERSE/PROLIX (TRPX) filter ID"""
+
 
 class FilterBase(h5py.filters.FilterRefBase):
     filter_id: int
@@ -1072,6 +1075,47 @@ class Sperr(FilterBase):
         return mode, quality, swap, missing_value_mode
 
 
+class Terse(FilterBase):
+    """``h5py.Group.create_dataset``'s compression arguments for using the TERSE/PROLIX (TRPX) filter.
+
+    .. code-block:: python
+
+        f = h5py.File('test.h5', 'w')
+        f.create_dataset(
+            'terse',
+            data=numpy.arange(100, dtype=numpy.uint16),
+            compression=hdf5plugin.Terse())
+        f.close()
+
+    This filter compresses integer data losslessly using the
+    `TERSE/PROLIX v2.0 <https://github.com/senikm/trpx2.0>`_ algorithm,
+    which is tailored for diffraction data and other greyscale images with
+    a high dynamic range.
+
+    It only supports datasets of signed or unsigned 8-, 16- or 32-bit integers
+    (``int8``, ``uint8``, ``int16``, ``uint16``, ``int32``, ``uint32``).
+    """
+
+    filter_name = "terse"
+    filter_id = TERSE_ID
+
+    def __init__(self) -> None:
+        if not build_config.cpp20:
+            logger.error(
+                "The Terse filter is not available as hdf5plugin was not built with C++20.\n"
+                "You may need to reinstall hdf5plugin with a recent version of pip, or rebuild it with a newer compiler."
+            )
+        super().__init__(filter_options=(), config={})
+
+    @classmethod
+    def _from_filter_options(cls, filter_options: tuple[int, ...]) -> Terse:
+        """Returns compression arguments from HDF5 compression filters options
+
+        :raises ValueError: Unsupported filter_options
+        """
+        return cls()
+
+
 def _sz_pack_float64(value: float) -> tuple[int, int]:
     # Pack as big-endian IEEE 754 double
     packed = struct.pack(">d", value)
@@ -1386,6 +1430,7 @@ FILTER_CLASSES: tuple[type[FilterBase], ...] = (
     Sperr,
     SZ,
     SZ3,
+    Terse,
     Zfp,
     Zstd,
 )

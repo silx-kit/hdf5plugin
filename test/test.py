@@ -203,6 +203,47 @@ class TestHDF5PluginRead(unittest.TestCase):
         self.assertTrue(numpy.isnan(compressed[1, 36]))
 
     @unittest.skipUnless(
+        h5py.h5z.filter_avail(hdf5plugin.TERSE_ID), "Terse filter not available"
+    )
+    def testTerse(self):
+        """Test reading TERSE/PROLIX compressed data (lossless)
+
+        The file was written with h5py's low-level API and the raw filter
+        ``cd_values`` (i.e., the data type code) as in the upstream
+        ``py_tests/filter_test.py``, without using ``hdf5plugin.Terse``.
+        """
+        dirname = os.path.abspath(os.path.dirname(__file__))
+        fname = os.path.join(dirname, "terse.h5")
+        self.assertTrue(os.path.exists(fname), "Cannot find %s file" % fname)
+        expected = {
+            "uint16": numpy.arange(60 * 30, dtype=numpy.uint16).reshape(60, 30),
+            "int32": numpy.arange(-900, 900, dtype=numpy.int32).reshape(60, 30),
+            "frames_uint16": numpy.arange(4 * 32 * 32, dtype=numpy.uint16).reshape(
+                4, 32, 32
+            )
+            % 1000,
+        }
+        with h5py.File(fname, "r") as h5:
+            for name, original in expected.items():
+                with self.subTest(dataset=name):
+                    dataset = h5[name]
+                    compressed = dataset[()]
+                    self.assertEqual(compressed.shape, original.shape)
+                    self.assertEqual(compressed.dtype, original.dtype)
+                    self.assertTrue(
+                        numpy.array_equal(compressed, original), "Incorrect values"
+                    )
+                    # Check filter configuration
+                    plist = dataset.id.get_create_plist()
+                    self.assertEqual(plist.get_nfilters(), 1)
+                    filter_id, _, filter_options, _ = plist.get_filter(0)
+                    self.assertEqual(filter_id, hdf5plugin.TERSE_ID)
+                    self.assertEqual(
+                        hdf5plugin.from_filter_options(filter_id, filter_options),
+                        hdf5plugin.Terse(),
+                    )
+
+    @unittest.skipUnless(
         h5py.h5z.filter_avail(hdf5plugin.SZ_ID), "SZ filter not available"
     )
     def testSZ(self):

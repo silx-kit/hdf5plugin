@@ -68,6 +68,7 @@ compression_name_to_class = {
     "sperr": hdf5plugin.Sperr,
     "sz": hdf5plugin.SZ,
     "sz3": hdf5plugin.SZ3,
+    "terse": hdf5plugin.Terse,
     "zfp": hdf5plugin.Zfp,
     "htj2k": hdf5plugin.Htj2k,
     "zstd": hdf5plugin.Zstd,
@@ -380,6 +381,29 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
             for dtype in (numpy.float32, numpy.float64):
                 with self.subTest(options=options, dtype=dtype):
                     self._test("sz3", dtype=dtype, lossless=False, options=options)
+
+    @unittest.skipUnless(should_test("terse"), "Terse filter not available")
+    def testTerse(self):
+        """Write/read test with terse filter plugin"""
+        # Test with supported datatypes and their type code
+        for dtype, type_code in (
+            (numpy.int16, 0),
+            (numpy.uint16, 1),
+            (numpy.int32, 2),
+            (numpy.uint32, 3),
+            (numpy.int8, 4),
+            (numpy.uint8, 5),
+        ):
+            with self.subTest(dtype=dtype):
+                filter_ = self._test("terse", dtype=dtype)
+                # The filter stores the type code of the dataset's dtype
+                self.assertEqual(filter_[2], (type_code,))
+
+        # Test that unsupported datatypes are rejected at dataset creation
+        for unsupported_dtype in (numpy.float32, numpy.int64):
+            with self.subTest(dtype=unsupported_dtype):
+                with self.assertRaises(ValueError):
+                    self._test("terse", dtype=unsupported_dtype)
 
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
@@ -694,6 +718,10 @@ class TestFromFilterOptionsMethods(unittest.TestCase):
                     compression_filter.filter_options, expected_filter.filter_options
                 )
 
+    def testTerse(self):
+        compression_filter = hdf5plugin.Terse._from_filter_options((1,))
+        self.assertEqual(compression_filter.filter_options, ())
+
     def testZfp(self):
         for filter_options, expected_filter in (
             (
@@ -820,6 +848,11 @@ class TestFromFilterOptionsRoundtrip(unittest.TestCase):
     def testSZ3(self):
         data = numpy.arange(256**2, dtype=numpy.float32).reshape(256, 256)
         self._test(hdf5plugin.SZ3(), data)
+
+    @unittest.skipUnless(should_test("terse"), "Terse filter not available")
+    def testTerse(self):
+        data = numpy.arange(256**2, dtype=numpy.uint16).reshape(256, 256)
+        self._test(hdf5plugin.Terse(), data)
 
     @unittest.skipUnless(should_test("zfp"), "Zfp filter not available")
     def testZfp(self):
