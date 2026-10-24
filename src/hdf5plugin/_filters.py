@@ -1089,6 +1089,19 @@ def _sz_unpack_float64(high: int, low: int) -> float:
     return float(struct.unpack(">d", packed)[0])
 
 
+def _sz_strip_dims(filter_options: tuple[int, ...]) -> tuple[int, ...]:
+    """Returns SZ/SZ3 "cd_values" without the leading chunk shape information
+
+    The filter stores (ndim, dtype, dims...) first:
+    4 values for 1 and 2 dimensions, ndim + 2 values otherwise.
+    See SZ_cdArrayToMetaDataErr in H5Z_SZ.c and H5Z_SZ3.cpp.
+    """
+    ndim = filter_options[0] if filter_options else 0
+    offset = 4 if ndim <= 2 else ndim + 2
+    # Keep 4 leading values so indices match the 1D/2D layout
+    return (*filter_options[:4], *filter_options[offset:])
+
+
 class SZ(FilterBase):
     """``h5py.Group.create_dataset``'s compression arguments for using SZ2 filter.
 
@@ -1185,6 +1198,7 @@ class SZ(FilterBase):
             (_, _, _, _, mode, absolute1, absolute2, relative1, relative2, pointwise1, pointwise2)
         :raises ValueError: Unsupported filter_options
         """
+        filter_options = _sz_strip_dims(filter_options)
         if len(filter_options) < 13:
             raise ValueError(f"Expected 13 values, got {len(filter_options)}")
 
@@ -1286,6 +1300,7 @@ class SZ3(FilterBase):
             (_, _, _, _, mode, absolute1, absolute2, relative1, relative2, norm2_1, norm2_2, pointwise1, pointwise2)
         :raises ValueError: Unsupported filter_options
         """
+        filter_options = _sz_strip_dims(filter_options)
         if len(filter_options) < 13:
             raise ValueError(f"Expected 13 values, got {len(filter_options)}")
 
