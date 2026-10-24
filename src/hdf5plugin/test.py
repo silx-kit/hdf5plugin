@@ -658,6 +658,18 @@ class TestFromFilterOptionsMethods(unittest.TestCase):
                 (1, 0, 0, 256, 10, 0, 0, 0, 0, 1062232653, 3539053052, 0, 0),
                 hdf5plugin.SZ(pointwise_relative=1e-3),
             ),
+            (  # 2D chunk
+                (2, 0, 32, 32, 0, 1062232653, 3539053052, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ(absolute=1e-3),
+            ),
+            (  # 3D chunk
+                (3, 0, 32, 32, 4, 0, 1062232653, 3539053052, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ(absolute=1e-3),
+            ),
+            (  # 4D chunk
+                (4, 0, 16, 16, 2, 2, 1, 0, 0, 1062232653, 3539053052, 0, 0, 0, 0),
+                hdf5plugin.SZ(relative=1e-3),
+            ),
         ):
             with self.subTest(filter_options=filter_options):
                 compression_filter = hdf5plugin.SZ._from_filter_options(filter_options)
@@ -686,6 +698,14 @@ class TestFromFilterOptionsMethods(unittest.TestCase):
             (
                 (1, 0, 0, 256, 3, 0, 0, 0, 0, 0, 0, 1062232653, 3539053052),
                 hdf5plugin.SZ3(peak_signal_to_noise_ratio=1e-3),
+            ),
+            (  # 3D chunk
+                (3, 0, 32, 32, 4, 0, 1062232653, 3539053052, 0, 0, 0, 0, 0, 0),
+                hdf5plugin.SZ3(absolute=1e-3),
+            ),
+            (  # 4D chunk
+                (4, 0, 16, 16, 2, 2, 2, 0, 0, 0, 0, 1062232653, 3539053052, 0, 0),
+                hdf5plugin.SZ3(norm2=1e-3),
             ),
         ):
             with self.subTest(filter_options=filter_options):
