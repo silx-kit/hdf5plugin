@@ -1,0 +1,41 @@
+name: AddressSanitizer
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Builds the pyterse extension with AddressSanitizer and UBSan and runs the
+  # Python tests against it.
+  pyterse-asan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip numpy pybind11
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DBUILD_TERSECODEC=OFF
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g"
+          -DPython_EXECUTABLE="$(python -c 'import sys; print(sys.executable)')"
+          -Dpybind11_DIR="$(python -m pybind11 --cmakedir)"
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        # The Python interpreter is not instrumented, so the ASan runtime has to be preloaded.
+        # libstdc++ is preloaded as well so that ASan can intercept __cxa_throw, which
+        # Python itself does not link.
+        # Leak detection is off because CPython and NumPy report leaks at exit.
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          export LD_PRELOAD="$(gcc -print-file-name=libasan.so) $(gcc -print-file-name=libstdc++.so)"
+          export PYTHONPATH="$PWD/build/pyterse"
+          python py_tests/pyterse_test.py -v
