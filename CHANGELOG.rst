@@ -1,3 +1,14 @@
+Unreleased
+----------
+
+- Compression filters and libraries:
+
+  * Added **Terse** filter: `TERSE/PROLIX (TRPX) v2.0 <https://github.com/senikm/trpx2.0>`_ (commit 93cf8e4)
+
+- Build:
+
+  * Added support of C++20 compile flag handling for filter extensions (previously only for static libraries)
+
 7.1.0: 01/09/02026
 ------------------
 

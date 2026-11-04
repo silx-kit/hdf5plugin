@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Builds tests/build_test.cpp with the compilers of the runner images and
+  # runs it.
+  posix:
+    name: ${{ matrix.os }} ${{ matrix.cxx }} ${{ matrix.flags }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, cxx: g++-11 }
+          - { os: ubuntu-22.04, cxx: g++-12 }
+          - { os: ubuntu-22.04, cxx: clang++-13 }
+          - { os: ubuntu-22.04, cxx: clang++-14 }
+          - { os: ubuntu-22.04, cxx: clang++-15 }
+          - { os: ubuntu-24.04, cxx: g++-13 }
+          - { os: ubuntu-24.04, cxx: g++-14 }
+          - { os: ubuntu-24.04, cxx: clang++-16 }
+          - { os: ubuntu-24.04, cxx: clang++-17 }
+          - { os: ubuntu-24.04, cxx: clang++-18 }
+          - { os: ubuntu-24.04, cxx: clang++-18, flags: -stdlib=libc++, packages: libc++-18-dev libc++abi-18-dev }
+          - { os: macos-26, cxx: clang++ }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install packages
+        if: matrix.packages
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.packages }}
+      - name: Build
+        run: ${{ matrix.cxx }} --version && ${{ matrix.cxx }} -std=c++20 -Wall -Wextra -Werror -pthread ${{ matrix.flags }} -I include tests/build_test.cpp -o build_test
+      - name: Test
+        run: ./build_test
+
+  windows:
+    name: ${{ matrix.os }} MSVC
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      # Sets up MSVC with vcvars64.bat of the Visual Studio found by vswhere.
+      - name: Build
+        shell: cmd
+        run: |
+          for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          cl /std:c++20 /permissive- /EHsc /W4 /WX /I include tests\build_test.cpp
+      - name: Test
+        run: .\build_test.exe

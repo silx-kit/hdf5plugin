@@ -282,6 +282,20 @@ compression_opts:
 - **psnr high** (big endian float64)
 - **psnr low**
 
+terse
+.....
+
+No options can be provided by the user, but the filter stores the following ``cd_values``:
+
+- **type_code**: Code of the dataset's integer data type:
+
+  * 0: int16
+  * 1: uint16
+  * 2: int32
+  * 3: uint32
+  * 4: int8
+  * 5: uint8
+
 zfp
 ...
 

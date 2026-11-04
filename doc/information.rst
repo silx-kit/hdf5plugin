@@ -83,6 +83,8 @@ HDF5 compression filters and compression libraries sources were obtained from:
 * `SZ3 plugin <https://github.com/szcompressor/SZ3>`_
   (commit `4bbe9df7e4bcb <https://github.com/szcompressor/SZ3/commit/4bbe9df7e4bcb6ae6339fcb3033100da07fe7434>`_)
   using `SZ3 <https://github.com/szcompressor/SZ3>`_ and ZStd.
+* `TERSE/PROLIX (TRPX v2.0) plugin <https://github.com/senikm/trpx2.0>`_
+  (commit `93cf8e4 <https://github.com/senikm/trpx2.0/tree/93cf8e4b7e832da3e318e9d37d73f70e3ce08eeb>`_).
 * `HDF5-ZFP plugin <https://github.com/LLNL/H5Z-ZFP>`_ (v1.1.1) using ZFP.
 * `ZStd plugin <https://github.com/HDFGroup/hdf5_plugins/tree/master/ZSTD>`_
   (commit `5573db8 <https://github.com/HDFGroup/hdf5_plugins/tree/5573db8f9706e1df262752a9247e90a3d4bd57bd/ZSTD>`_) using ZStd.
@@ -120,6 +122,7 @@ Please read the different licenses:
   * SPERR: `lib/H5Z-SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-SPERR/LICENSE>`_ and `lib/SPERR/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SPERR/LICENSE>`_
   * SZ: `lib/SZ/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ/copyright-and-BSD-license.txt>`_
   * SZ3: `lib/SZ3/copyright-and-BSD-license.txt <https://github.com/silx-kit/hdf5plugin/blob/main/lib/SZ3/copyright-and-BSD-license.txt>`_
+  * TERSE/PROLIX: `lib/trpx2.0/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/trpx2.0/LICENSE>`_
   * zfp: `lib/H5Z-ZFP/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/H5Z-ZFP/LICENSE>`_
   * zstd: `lib/HDF5Plugin-Zstandard/LICENSE <https://github.com/silx-kit/hdf5plugin/blob/main/lib/HDF5Plugin-Zstandard/LICENSE>`_
 
