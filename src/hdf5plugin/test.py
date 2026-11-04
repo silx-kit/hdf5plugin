@@ -405,6 +405,43 @@ class TestHDF5PluginRW(BaseTestHDF5PluginRW):
                 with self.assertRaises(ValueError):
                     self._test("terse", dtype=unsupported_dtype)
 
+    @unittest.skipUnless(should_test("terse"), "Terse filter not available")
+    def testTerseLargeChunk(self):
+        """Write/read test with terse filter plugin on a large detector-like chunk
+
+        The filter compresses chunks in sub-frames of 2**18 values which are
+        decoded concurrently, so this needs a chunk made of many sub-frames.
+        """
+        rng = numpy.random.default_rng(0)
+        # Eiger 4M frame with weak Poisson signal, masked pixels and module gaps
+        frame = rng.poisson(5.0, size=(2167, 2070))
+        masked = rng.random(frame.shape) < 0.05
+        filename = os.path.join(self.tempdir, "test_terse_large_chunk.h5")
+
+        for dtype in (numpy.uint16, numpy.int16, numpy.uint32, numpy.int32):
+            with self.subTest(dtype=dtype):
+                data = frame.astype(dtype)
+                max_value = numpy.iinfo(dtype).max
+                data[masked] = max_value
+                data[:, 1030:1040] = max_value
+                data[514:551, :] = max_value
+
+                with h5py.File(filename, "w") as f:
+                    f.create_dataset(
+                        "data",
+                        data=data,
+                        chunks=data.shape,
+                        compression=hdf5plugin.Terse(),
+                    )
+
+                with h5py.File(filename, "r") as f:
+                    # Read several times: concurrent decoding issues are not deterministic
+                    for _ in range(3):
+                        saved = f["data"][()]
+                        self.assertEqual(saved.dtype, data.dtype)
+                        self.assertTrue(numpy.array_equal(saved, data))
+        os.remove(filename)
+
     @unittest.skipUnless(should_test("zfp"), "ZFP filter not available")
     def testZfp(self):
         """Write/read test with zfp filter plugin"""
